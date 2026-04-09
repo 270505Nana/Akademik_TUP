@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  STUDENT
+  LECTURER
+  ACADEMIC_STAFF
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  username String  @unique
+  email    String  @unique
+  password String
+  no_telp  String?
+  role     Role?
+
+  academicStaff AcademicStaff?
+  lecturer      Lecturer?
+  student       Student?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+// Master Data Tim Akademik
+model AcademicStaff {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  userId Int @unique
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+// Master Data Dosen
+model ResearchGroup {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  lecturer Lecturer[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Lecturer {
+  id            Int    @id @default(autoincrement())
+  nip           String @unique
+  nidn          String @unique
+  lecturer_code String
+  name          String
+
+  researchGroupId Int
+  userId          Int @unique
+
+  researchGroup ResearchGroup @relation(fields: [researchGroupId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+
+  student Student[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+// Master Data Mahasiswa
+model Faculty {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  studyProgram StudyProgram[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model StudyProgram {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  facultyId Int
+
+  faculty Faculty @relation(fields: [facultyId], references: [id])
+
+  student Student[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Student {
+  id         Int    @id @default(autoincrement())
+  nim        String @unique
+  name       String
+  class_name String
+  sks        Int
+  ipk        Int
+  tak        Int
+
+  studyProgramId Int
+  userId         Int @unique
+  lecturerId     Int // Dosen Wali
+
+  studyProgram StudyProgram @relation(fields: [studyProgramId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+  lecturer     Lecturer     @relation(fields: [lecturerId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
