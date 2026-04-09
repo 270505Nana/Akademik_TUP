@@ -19,12 +19,13 @@ enum Role {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  username  String    @unique
-  email     String    @unique
-  password  String
-  noTelp    String?   @map("no_telp")
-  role      Role?
+  id       Int     @id @default(autoincrement())
+  username String  @unique
+  email    String  @unique
+  password String
+  noTelp   String? @map("no_telp")
+  role     Role?
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
@@ -33,213 +34,221 @@ model User {
   lecturer      Lecturer?
   student       Student?
 
-  @@map("user")
+  @@map("users")
 }
 
 // Master Data Tim Akademik
 model AcademicStaff {
-  id        Int       @id @default(autoincrement())
-  name      String
+  id   Int    @id @default(autoincrement())
+  name String
+
+  userId Int @unique @map("user_id")
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  userId Int  @unique @map("user_id")
-  user   User @relation(fields: [userId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+  skResponses SkResponse[]
 
-  skResponse SkResponse[]
-
-  @@map("academic_staff")
+  @@map("academic_staffs")
 }
 
 // Master Data Dosen
 model ResearchGroup {
-  id        Int       @id @default(autoincrement())
-  name      String
+  id   Int    @id @default(autoincrement())
+  name String
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  lecturer Lecturer[]
+  lecturers Lecturer[]
 
-  @@map("research_group")
+  @@map("research_groups")
 }
 
 model Lecturer {
-  id           Int       @id @default(autoincrement())
-  nip          String    @unique
-  nidn         String    @unique
-  lecturerCode String    @map("lecturer_code")
+  id           Int    @id @default(autoincrement())
+  nip          String @unique
+  nidn         String @unique
+  lecturerCode String @map("lecturer_code")
   name         String
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  deletedAt    DateTime? @map("deleted_at")
 
-  researchGroupId Int           @map("research_group_id")
-  researchGroup   ResearchGroup @relation(fields: [researchGroupId], references: [id])
+  researchGroupId Int @map("research_group_id")
+  userId          Int @unique @map("user_id")
 
-  userId Int  @unique @map("user_id")
-  user   User @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
-  student                         Student[]
-  skSubmissionsSupervisor1        SkSubmission[]         @relation("SkSubmissionSupervisor1")
-  skSubmissionsSupervisor2        SkSubmission[]         @relation("SkSubmissionSupervisor2")
-  skFilesSupervisor1              SkFile[]               @relation("SkFileSupervisor1")
-  skFilesSupervisor2              SkFile[]               @relation("SkFileSupervisor2")
-  sidangRegistrationSupervisor1   SidangRegistration[]   @relation("SidangRegistrationSupervisor1")
-  sidangRegistrationSupervisor2   SidangRegistration[]   @relation("SidangRegistrationSupervisor2")
-  yudisiumRegistrationSupervisor1 YudisiumRegistration[] @relation("YudisiumRegistrationSupervisor1")
-  yudisiumRegistrationSupervisor2 YudisiumRegistration[] @relation("YudisiumRegistrationSupervisor2")
+  researchGroup ResearchGroup @relation(fields: [researchGroupId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
 
-  @@map("lecturer")
+  students                         Student[]
+  skSubmissionsSupervisor1         SkSubmission[]         @relation("SkSubmissionSupervisor1")
+  skSubmissionsSupervisor2         SkSubmission[]         @relation("SkSubmissionSupervisor2")
+  skFilesSupervisor1               SkFile[]               @relation("SkFileSupervisor1")
+  skFilesSupervisor2               SkFile[]               @relation("SkFileSupervisor2")
+  sidangRegistrationsSupervisor1   SidangRegistration[]   @relation("SidangRegistrationSupervisor1")
+  sidangRegistrationsSupervisor2   SidangRegistration[]   @relation("SidangRegistrationSupervisor2")
+  yudisiumRegistrationsSupervisor1 YudisiumRegistration[] @relation("YudisiumRegistrationSupervisor1")
+  yudisiumRegistrationsSupervisor2 YudisiumRegistration[] @relation("YudisiumRegistrationSupervisor2")
+
+  @@map("lecturers")
 }
 
 // Master Data Mahasiswa
 model Faculty {
-  id        Int       @id @default(autoincrement())
-  name      String
+  id   Int    @id @default(autoincrement())
+  name String
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  studyProgram StudyProgram[]
+  studyPrograms StudyProgram[]
 
-  @@map("faculty")
+  @@map("faculties")
 }
 
 model StudyProgram {
-  id        Int       @id @default(autoincrement())
-  name      String
+  id   Int    @id @default(autoincrement())
+  name String
+
+  facultyId Int @map("faculty_id")
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  facultyId Int     @map("faculty_id")
-  faculty   Faculty @relation(fields: [facultyId], references: [id])
+  faculty  Faculty   @relation(fields: [facultyId], references: [id])
+  students Student[]
 
-  student Student[]
-
-  @@map("study_program")
+  @@map("study_programs")
 }
 
 model Student {
-  id        Int       @id @default(autoincrement())
-  nim       String    @unique
+  id        Int    @id @default(autoincrement())
+  nim       String @unique
   name      String
-  className String    @map("class_name")
+  className String @map("class_name")
   sks       Int
   ipk       Int
   tak       Int
+
+  studyProgramId    Int @map("study_program_id")
+  userId            Int @unique @map("user_id")
+  academicAdvisorId Int @map("lecturer_id") // Dosen Wali
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  studyProgramId Int          @map("study_program_id")
-  studyProgram   StudyProgram @relation(fields: [studyProgramId], references: [id])
+  studyProgram    StudyProgram @relation(fields: [studyProgramId], references: [id])
+  user            User         @relation(fields: [userId], references: [id])
+  academicAdvisor Lecturer     @relation(fields: [academicAdvisorId], references: [id])
 
-  userId Int  @unique @map("user_id")
-  user   User @relation(fields: [userId], references: [id])
+  skSubmissions         SkSubmission[]
+  skFiles               SkFile[]
+  sidangRegistrations   SidangRegistration[]
+  yudisiumRegistrations YudisiumRegistration[]
 
-  academicAdvisorId Int      @map("lecturer_id") // Dosen Wali
-  academicAdvisor   Lecturer @relation(fields: [academicAdvisorId], references: [id])
-
-  skSubmission         SkSubmission[]
-  skFile               SkFile[]
-  sidangRegistration   SidangRegistration[]
-  yudisiumRegistration YudisiumRegistration[]
-
-  @@map("student")
+  @@map("students")
 }
 
 // Surat Keputusan
 model SkFile {
-  id              Int       @id @default(autoincrement())
-  fileUrl         String    @map("file_url")
-  exp_date        DateTime  @db.Date
-  proposalTitleId String    @map("proposal_title_id")
-  proposalTitleEn String    @map("proposal_title_en")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
+  id              Int      @id @default(autoincrement())
+  fileUrl         String   @map("file_url")
+  exp_date        DateTime @db.Date
+  proposalTitleId String   @map("proposal_title_id")
+  proposalTitleEn String   @map("proposal_title_en")
 
-  studentId Int     @map("student_id")
-  student   Student @relation(fields: [studentId], references: [id])
+  studentId     Int @map("student_id")
+  supervisor1Id Int @map("supervisor_1_id")
+  supervisor2Id Int @map("supervisor_2_id")
 
-  supervisor1Id Int      @map("supervisor_1_id")
-  supervisor1   Lecturer @relation("SkFileSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
-
-  supervisor2Id Int      @map("supervisor_2_id")
-  supervisor2   Lecturer @relation("SkFileSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
-
-  @@map("sk_file")
-}
-
-model SkSubmission {
-  id              Int       @id @default(autoincrement())
-  proposalTitleId String    @map("proposal_title_id")
-  proposalTitleEn String    @map("proposal_title_en")
-  attachmentUrl   String    @map("attachment_url")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
-
-  studentId Int     @map("student_id")
-  student   Student @relation(fields: [studentId], references: [id])
-
-  supervisor1Id Int      @map("supervisor_1_id")
-  supervisor1   Lecturer @relation("SkSubmissionSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
-
-  supervisor2Id Int      @map("supervisor_2_id")
-  supervisor2   Lecturer @relation("SkSubmissionSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
-
-  skResponse SkResponse[]
-
-  @@map("sk_submission")
-}
-
-model SkResponse {
-  id                       Int       @id @default(autoincrement())
-  hasUploadedFinalProposal Boolean   @map("has_uploaded_final_proposal")
-  hasTakenLanguageTest     Boolean   @map("has_taken_language_test")
-  message                  String?
-  createdAt                DateTime  @default(now()) @map("created_at")
-  updatedAt                DateTime  @updatedAt @map("updated_at")
-  deletedAt                DateTime? @map("deleted_at")
-
-  academicStaffId Int
-  academicStaff   AcademicStaff @relation(fields: [academicStaffId], references: [id])
-
-  skSubmissionId Int
-  skSubmission   SkSubmission @relation(fields: [skSubmissionId], references: [id])
-
-  @@map("sk_response")
-}
-
-// Daftar Sidang
-model SidangPeriod {
-  id         Int       @id @default(autoincrement())
-  name       String
-  start_date DateTime  @db.Date
-  end_date   DateTime  @db.Date
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  deletedAt  DateTime? @map("deleted_at")
-
-  @@map("sidang_period")
-}
-
-model SidangScheme {
-  id        Int       @id @default(autoincrement())
-  name      String
-  field     Json?
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  sidangRegistration   SidangRegistration[]
-  yudisiumRegistration YudisiumRegistration[]
+  student     Student  @relation(fields: [studentId], references: [id])
+  supervisor1 Lecturer @relation("SkFileSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
+  supervisor2 Lecturer @relation("SkFileSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
 
-  @@map("sidang_scheme")
+  @@map("sk_files")
+}
+
+model SkSubmission {
+  id              Int    @id @default(autoincrement())
+  proposalTitleId String @map("proposal_title_id")
+  proposalTitleEn String @map("proposal_title_en")
+  attachmentUrl   String @map("attachment_url")
+
+  studentId     Int @map("student_id")
+  supervisor1Id Int @map("supervisor_1_id")
+  supervisor2Id Int @map("supervisor_2_id")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  student     Student  @relation(fields: [studentId], references: [id])
+  supervisor1 Lecturer @relation("SkSubmissionSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
+  supervisor2 Lecturer @relation("SkSubmissionSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
+
+  skResponses SkResponse[]
+
+  @@map("sk_submissions")
+}
+
+model SkResponse {
+  id                       Int     @id @default(autoincrement())
+  hasUploadedFinalProposal Boolean @map("has_uploaded_final_proposal")
+  hasTakenLanguageTest     Boolean @map("has_taken_language_test")
+  message                  String?
+
+  academicStaffId Int
+  skSubmissionId  Int
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  academicStaff AcademicStaff @relation(fields: [academicStaffId], references: [id])
+  skSubmission  SkSubmission  @relation(fields: [skSubmissionId], references: [id])
+
+  @@map("sk_responses")
+}
+
+// Daftar Sidang
+model SidangPeriod {
+  id         Int      @id @default(autoincrement())
+  name       String
+  start_date DateTime @db.Date
+  end_date   DateTime @db.Date
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("sidang_periods")
+}
+
+model SidangScheme {
+  id    Int    @id @default(autoincrement())
+  name  String
+  field Json?
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  sidangRegistrations   SidangRegistration[]
+  yudisiumRegistrations YudisiumRegistration[]
+
+  @@map("sidang_schemes")
 }
 
 model SidangRegistration {
@@ -251,54 +260,55 @@ model SidangRegistration {
   sk_exp_date   DateTime @db.Date
   thesisTitleId String   @map("thesis_title_id")
   thesisTitleEn String   @map("thesis_title_en")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  deletedAt     DateTime @map("deleted_at")
 
-  studentId Int     @map("student_id")
-  student   Student @relation(fields: [studentId], references: [id])
+  studentId      Int @map("student_id")
+  supervisor1Id  Int @map("supervisor_1_id")
+  supervisor2Id  Int @map("supervisor_2_id")
+  sidangSchemeId Int @map("sidang_scheme_id")
 
-  supervisor1Id Int      @map("supervisor_1_id")
-  supervisor1   Lecturer @relation("SidangRegistrationSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
-
-  supervisor2Id Int      @map("supervisor_2_id")
-  supervisor2   Lecturer @relation("SidangRegistrationSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
-
-  sidangSchemeId Int          @map("sidang_scheme_id")
-  sidangScheme   SidangScheme @relation(fields: [sidangSchemeId], references: [id])
-
-  sidangSubmission   SidangSubmission[]
-  cumlaudeSubmission CumlaudeSubmission[]
-
-  @@map("sidang_registration")
-}
-
-model SidangSubmission {
-  id        Int      @id @default(autoincrement())
-  data      Json
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   deletedAt DateTime @map("deleted_at")
 
-  sidangRegistrationId Int                @map("sidang_registration_id")
-  sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
+  student      Student      @relation(fields: [studentId], references: [id])
+  supervisor1  Lecturer     @relation("SidangRegistrationSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
+  supervisor2  Lecturer     @relation("SidangRegistrationSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
+  sidangScheme SidangScheme @relation(fields: [sidangSchemeId], references: [id])
 
-  @@map("sidang_submission")
+  sidangSubmissions SidangSubmission[]
+
+  @@map("sidang_registrations")
+}
+
+model SidangSubmission {
+  id   Int  @id @default(autoincrement())
+  data Json
+
+  sidangRegistrationId Int @map("sidang_registration_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime @map("deleted_at")
+
+  sidangRegistration SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
+
+  @@map("sidang_submissions")
 }
 
 // Daftar Yudisium
 
 model CumlaudeScheme {
-  id        Int       @id @default(autoincrement())
-  name      String
-  field     Json?
+  id    Int    @id @default(autoincrement())
+  name  String
+  field Json?
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  yudisiumRegistration YudisiumRegistration[]
+  yudisiumRegistrations YudisiumRegistration[]
 
-  @@map("cumlaude_scheme")
+  @@map("cumlaude_schemes")
 }
 
 model YudisiumRegistration {
@@ -310,37 +320,38 @@ model YudisiumRegistration {
   thesisTitleId String   @map("thesis_title_id")
   thesisTitleEn String   @map("thesis_title_en")
   isConfirmed   Boolean  @map("is_confirmed")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  deletedAt     DateTime @map("deleted_at")
 
-  studentId Int     @map("student_id")
-  student   Student @relation(fields: [studentId], references: [id])
+  studentId        Int @map("student_id")
+  supervisor1Id    Int @map("supervisor_1_id")
+  supervisor2Id    Int @map("supervisor_2_id")
+  sidangSchemeId   Int @map("sidang_scheme_id")
+  cumlaudeSchemeId Int @map("cumlaude_scheme_id")
 
-  supervisor1Id Int      @map("supervisor_1_id")
-  supervisor1   Lecturer @relation("YudisiumRegistrationSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
-
-  supervisor2Id Int      @map("supervisor_2_id")
-  supervisor2   Lecturer @relation("YudisiumRegistrationSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
-
-  sidangSchemeId Int          @map("sidang_scheme_id")
-  sidangScheme   SidangScheme @relation(fields: [sidangSchemeId], references: [id])
-
-  cumlaudeSchemeId Int            @map("cumlaude_scheme_id")
-  cumlaudeScheme   CumlaudeScheme @relation(fields: [cumlaudeSchemeId], references: [id])
-
-  @@map("yudisium_registration")
-}
-
-model CumlaudeSubmission {
-  id        Int      @id @default(autoincrement())
-  data      Json
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   deletedAt DateTime @map("deleted_at")
 
-  yudisiumRegistrationId Int                @map("yudisium_registration_id")
-  yudisiumRegistration   SidangRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
+  student             Student              @relation(fields: [studentId], references: [id])
+  supervisor1         Lecturer             @relation("YudisiumRegistrationSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
+  supervisor2         Lecturer             @relation("YudisiumRegistrationSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
+  sidangScheme        SidangScheme         @relation(fields: [sidangSchemeId], references: [id])
+  cumlaudeScheme      CumlaudeScheme       @relation(fields: [cumlaudeSchemeId], references: [id])
+  cumlaudeSubmissions CumlaudeSubmission[]
 
-  @@map("cumlaude_submission")
+  @@map("yudisium_registrations")
+}
+
+model CumlaudeSubmission {
+  id   Int  @id @default(autoincrement())
+  data Json
+
+  yudisiumRegistrationId Int @map("yudisium_registration_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime @map("deleted_at")
+
+  yudisiumRegistration YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
+
+  @@map("cumlaude_submissions")
 }
