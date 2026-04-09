@@ -19,113 +19,192 @@ enum Role {
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  username String  @unique
-  email    String  @unique
-  password String
-  no_telp  String?
-  role     Role?
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  email     String    @unique
+  password  String
+  noTelp    String?   @map("no_telp")
+  role      Role?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
   academicStaff AcademicStaff?
   lecturer      Lecturer?
   student       Student?
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  @@map("user")
 }
 
 // Master Data Tim Akademik
 model AcademicStaff {
-  id   Int    @id @default(autoincrement())
-  name String
+  id        Int       @id @default(autoincrement())
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
-  userId Int @unique
+  userId Int  @unique @map("user_id")
+  user   User @relation(fields: [userId], references: [id])
 
-  user User @relation(fields: [userId], references: [id])
+  skResponses SkResponse[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  @@map("academic_staff")
 }
 
 // Master Data Dosen
 model ResearchGroup {
-  id   Int    @id @default(autoincrement())
-  name String
+  id        Int       @id @default(autoincrement())
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
   lecturer Lecturer[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  @@map("research_group")
 }
 
 model Lecturer {
-  id            Int    @id @default(autoincrement())
-  nip           String @unique
-  nidn          String @unique
-  lecturer_code String
-  name          String
+  id           Int       @id @default(autoincrement())
+  nip          String    @unique
+  nidn         String    @unique
+  lecturerCode String    @map("lecturer_code")
+  name         String
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
 
-  researchGroupId Int
-  userId          Int @unique
+  researchGroupId Int           @map("research_group_id")
+  researchGroup   ResearchGroup @relation(fields: [researchGroupId], references: [id])
 
-  researchGroup ResearchGroup @relation(fields: [researchGroupId], references: [id])
-  user          User          @relation(fields: [userId], references: [id])
+  userId Int  @unique @map("user_id")
+  user   User @relation(fields: [userId], references: [id])
 
-  student Student[]
+  student                  Student[]
+  skSubmissionsSupervisor1 SkSubmission[] @relation("SkSubmissionSupervisor1")
+  skSubmissionsSupervisor2 SkSubmission[] @relation("SkSubmissionSupervisor2")
+  skFilesAsSupervisor1     SkFile[]       @relation("SkFileSupervisor1")
+  skFilesAsSupervisor2     SkFile[]       @relation("SkFileSupervisor2")
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  @@map("lecturer")
 }
 
 // Master Data Mahasiswa
 model Faculty {
-  id   Int    @id @default(autoincrement())
-  name String
+  id        Int       @id @default(autoincrement())
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
   studyProgram StudyProgram[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  @@map("faculty")
 }
 
 model StudyProgram {
-  id   Int    @id @default(autoincrement())
-  name String
+  id        Int       @id @default(autoincrement())
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
-  facultyId Int
-
-  faculty Faculty @relation(fields: [facultyId], references: [id])
+  facultyId Int     @map("faculty_id")
+  faculty   Faculty @relation(fields: [facultyId], references: [id])
 
   student Student[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  @@map("study_program")
 }
 
 model Student {
-  id         Int    @id @default(autoincrement())
-  nim        String @unique
-  name       String
-  class_name String
-  sks        Int
-  ipk        Int
-  tak        Int
+  id        Int       @id @default(autoincrement())
+  nim       String    @unique
+  name      String
+  className String    @map("class_name")
+  sks       Int
+  ipk       Int
+  tak       Int
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
-  studyProgramId Int
-  userId         Int @unique
-  lecturerId     Int // Dosen Wali
+  studyProgramId Int          @map("study_program_id")
+  studyProgram   StudyProgram @relation(fields: [studyProgramId], references: [id])
 
-  studyProgram StudyProgram @relation(fields: [studyProgramId], references: [id])
-  user         User         @relation(fields: [userId], references: [id])
-  lecturer     Lecturer     @relation(fields: [lecturerId], references: [id])
+  userId Int  @unique @map("user_id")
+  user   User @relation(fields: [userId], references: [id])
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  academicAdvisorId Int      @map("lecturer_id") // Dosen Wali
+  academicAdvisor   Lecturer @relation(fields: [academicAdvisorId], references: [id])
+
+  skSubmissions SkSubmission[]
+  skFile        SkFile[]
+
+  @@map("student")
+}
+
+// Surat Keputusan
+model SkFile {
+  id              Int       @id @default(autoincrement())
+  fileUrl         String    @map("file_url")
+  exp_date        DateTime  @db.Date
+  proposalTitleId String    @map("proposal_title_id")
+  proposalTitleEn String    @map("proposal_title_en")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  studentId Int     @map("student_id")
+  student   Student @relation(fields: [studentId], references: [id])
+
+  supervisor1Id Int      @map("supervisor_1_id")
+  supervisor1   Lecturer @relation("SkFileSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
+
+  supervisor2Id Int      @map("supervisor_2_id")
+  supervisor2   Lecturer @relation("SkFileSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
+
+  @@map("sk_file")
+}
+
+model SkSubmission {
+  id              Int       @id @default(autoincrement())
+  proposalTitleId String    @map("proposal_title_id")
+  proposalTitleEn String    @map("proposal_title_en")
+  attachmentUrl   String    @map("attachment_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  studentId Int     @map("student_id")
+  student   Student @relation(fields: [studentId], references: [id])
+
+  supervisor1Id Int      @map("supervisor_1_id")
+  supervisor1   Lecturer @relation("SkSubmissionSupervisor1", fields: [supervisor1Id], references: [id]) // Dosen Pembimbing 1
+
+  supervisor2Id Int      @map("supervisor_2_id")
+  supervisor2   Lecturer @relation("SkSubmissionSupervisor2", fields: [supervisor2Id], references: [id]) // Dosen Pembimbing 2
+
+  skResponses SkResponse[]
+
+  @@map("sk_submission")
+}
+
+model SkResponse {
+  id                       Int       @id @default(autoincrement())
+  hasUploadedFinalProposal Boolean   @map("has_uploaded_final_proposal")
+  hasTakenLanguageTest     Boolean   @map("has_taken_language_test")
+  message                  String?
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  deletedAt                DateTime? @map("deleted_at")
+
+  academicStaffId Int
+  academicStaff   AcademicStaff @relation(fields: [academicStaffId], references: [id])
+
+  skSubmissionId Int
+  skSubmission   SkSubmission @relation(fields: [skSubmissionId], references: [id])
+
+  @@map("sk_response")
 }
