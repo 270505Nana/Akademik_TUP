@@ -1,5 +1,6 @@
 import { AuthProvider } from "./context/AuthContext";
 import { Routes, Route, Navigate } from "react-router-dom";
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import LoginPage from "./pages/auth/Login";
 import RegisterPage from "./pages/auth/Register";
 import DashboardMahasiswa from "./pages/mahasiswa/Dashboard";

@@ -1,0 +1,89 @@
+.sidebar-container {
+    width: 280px;
+    background: #ffffff;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+}
+
+.sidebar-logo-section { padding: 20px; border-bottom: 1px solid #e0e0e0; }
+.sidebar-logo-content { display: flex; align-items: center; gap: 10px; }
+.sidebar-logo-text { font-weight: 800; font-size: 20px; color: #333; }
+.sidebar-logo-img { height: 35px; }
+
+.sidebar-nav-menu { padding: 20px 10px; flex-grow: 1; }
+
+/* menunya */
+.sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    color: #333;
+    font-weight: 500;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.sidebar-nav-item i { margin-right: 12px; font-size: 1.2rem; }
+
+.sidebar-nav-item.active, 
+.sub-item.active {
+    background-color: #8B1D1D !important;
+    color: #ffffff !important;
+}
+
+.parent-active {
+    background-color: #8B1D1D;
+    color: white;
+}
+
+.sidebar-dropdown-content {
+    padding-left: 10px;
+    margin-top: 5px;
+}
+
+.sub-item {
+    display: block;
+    padding: 10px 15px;
+    font-size: 0.85rem;
+    color: #8B1D1D; 
+    cursor: pointer;
+    border-radius: 6px;
+    margin-bottom: 2px;
+    transition: 0.2s;
+    border-left: 2px solid transparent;
+}
+
+.sub-item:hover:not(.active) {
+    background-color: #f8eeee;
+}
+
+.sidebar-user-footer { padding: 20px; border-top: 1px solid #e0e0e0; }
+.sidebar-user-profile { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+.sidebar-profile-icon { font-size: 2rem; color: #8B1D1D; }
+.sidebar-user-info { display: flex; flex-direction: column; }
+.sidebar-user-name { font-weight: 700; font-size: 0.85rem; }
+.sidebar-user-id { font-size: 0.75rem; color: #666; }
+
+.sidebar-btn-logout {
+    width: 100%; padding: 10px; border: none; background: none;
+    color: #8B1D1D; font-weight: bold; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; border-top: 1px solid #e0e0e0;
+}
+
+.ms-auto { margin-left: auto; }
+
+@media (max-width: 1024px) {
+    .sidebar-container { width: 80px; }
+    .sidebar-logo-text, .sidebar-user-info, .sidebar-nav-item span, .sidebar-dropdown-content, .ms-auto { 
+        display: none; 
+    }
+}
