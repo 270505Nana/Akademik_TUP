@@ -3,8 +3,9 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import LoginPage from "./pages/auth/Login";
 import RegisterPage from "./pages/auth/Register";
-import DashboardMahasiswa from "./pages/mahasiswa/DashboardMahasiswa";
+import DashboardMahasiswa from "./pages/mahasiswa/dashboard.jsx";
 import DashboardAkademik from "./pages/admin/dashboard.jsx";
+import DashboardDosen from "./pages/dosen/dashboard.jsx";
 // import ProtectedRoute from "./components/common/ProtectedRoute";
 
 
@@ -29,14 +30,14 @@ const App = () => {
         />
 
         {/* buat dosen */}
-        {/* <Route
-          path="/dosen/dashboard"/
-          element={
-            <ProtectedRoute allowedRoles={["dosen"]}>
-              <DashboardDosen />
-            </ProtectedRoute>
-          }
-        /> */}
+        <Route
+          path="/dosen/dashboard" element={<DashboardDosen />}
+          // element={
+          //   <ProtectedRoute allowedRoles={["dosen"]}>
+          //     <DashboardDosen />
+          //   </ProtectedRoute>
+          // }
+        />
 
         {/* buat admin */}
         <Route
