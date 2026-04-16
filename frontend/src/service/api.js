@@ -1,4 +1,3 @@
-
 import axios from "axios";
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const api = axios.create({
@@ -8,7 +7,6 @@ const api = axios.create({
   },
 });
 
-// REQUEST INTERCEPTOR -> add JWT token ke headernya
 api.interceptors.request.use(
   (config) => {
     const savedUser = localStorage.getItem("simta_user");
@@ -23,13 +21,12 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-//  RESPONSE INTERCEPTOR -> buat handle error 401 (redirect)
 api.interceptors.response.use(
-  (response) => response, // jika sukses, langsung kembalikan response
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("simta_user");
-      window.location.href = "/login"; // paksa kembali ke login
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }
