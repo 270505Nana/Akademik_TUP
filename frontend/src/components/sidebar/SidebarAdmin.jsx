@@ -23,7 +23,7 @@ const SidebarAdmin = ({
     setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
   };
 
-  const navSections = [
+  const menuSidebar = [
     {
       label: 'Utama',
       items: [
@@ -71,7 +71,7 @@ const SidebarAdmin = ({
         </div>
 
         <nav className="sidebar-nav">
-          {navSections.map((section, sIdx) => (
+          {menuSidebar.map((section, sIdx) => (
             <React.Fragment key={sIdx}>
               <div className="nav-section-label">{section.label}</div>
               {section.items.map((item, iIdx) => (
@@ -85,6 +85,7 @@ const SidebarAdmin = ({
                     {item.label}
                     {item.subItems && <ChevronDown className="nav-arrow" size={14} />}
                   </div>
+                  
                   {item.subItems && (
                     <motion.div 
                       initial={false}

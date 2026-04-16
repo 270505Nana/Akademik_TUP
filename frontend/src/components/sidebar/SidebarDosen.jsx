@@ -97,7 +97,7 @@ const SidebarDosen = ({
             title="Log Out"
           >
             <LogOut size={16} />
-          </button>
+        </button>
         </div>
       </aside>
       <div 

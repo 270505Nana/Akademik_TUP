@@ -10,36 +10,35 @@ import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import '../dashboard.css';
 
-const StatCard = ({ icon, label, value, sub, badge, badgeColor }) => (
-  <div className="stat-card">
-    <div className="stat-card-header">
-      <div className="stat-icon">{icon}</div>
+const CardAtas4 = ({ icon, label, value, sub, badge, badgeColor }) => (
+  <div className="CardAtas4">
+    <div className="CardAtas4-header">
+      <div className="CardAtas4-icon">{icon}</div>
       {badge && (
-        <span className="stat-badge" style={badgeColor ? { background: badgeColor.bg, color: badgeColor.text } : {}}>
+        <span className="CardAtas4-badge" style={badgeColor ? { background: badgeColor.bg, color: badgeColor.text } : {}}>
           {badge}
         </span>
       )}
     </div>
-    <div className="stat-body">
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{value}</div>
+    <div className="CardAtas4-body">
+      <div className="CardAtas4-label">{label}</div>
+      <div className="CardAtas4-value">{value}</div>
     </div>
-    <div className="stat-footer">
-      <div className="stat-divider"></div>
-      <div className="stat-sub" dangerouslySetInnerHTML={{ __html: sub }} />
+    <div className="CardAtas4-footer">
+      <div className="CardAtas4-divider"></div>
+      <div className="CardAtas4-sub" dangerouslySetInnerHTML={{ __html: sub }} />
     </div>
   </div>
 );
 
-const MonitoringTable = ({ onShowToast }) => {
-  const [selectedRow, setSelectedRow] = useState(null);
+const MonitoringProgress = ({ onShowToast }) => {
 
   const data = [
-    { id: 1,  name: 'Jeremy Cristo',           nim: '21040110', prodi: 'Teknik Informatika',  initial: 'JC', progres: 'Tahap 1',     step: '1/3', percent: 33,  status: 'revisi' },
-    { id: 2,  name: 'Aulia Ahmad Ghaus Adzam', nim: '21040160', prodi: 'Software Engineering', initial: 'AA', progres: 'Lengkap',     step: '5/5', percent: 100, status: 'lengkap', color: 'linear-gradient(135deg,#667EEA,#764BA2)' },
-    { id: 3,  name: 'Dika Hutagaol',           nim: '21040110', prodi: 'Sistem Informasi',    initial: 'DH', progres: 'Tahap 3',     step: '1/3', percent: 33,  status: 'revisi',  color: 'linear-gradient(135deg,#4FACFE,#00F2FE)' },
-    { id: 4,  name: 'Siti Aminah',             nim: '21040110', prodi: 'Teknik Industri',     initial: 'SA', progres: 'Tahap 2',     step: '1/3', percent: 33,  status: 'belum',   color: 'linear-gradient(135deg,#F093FB,#F5576C)' },
-    { id: 5,  name: 'Budi Santoso',            nim: '21040110', prodi: 'Teknologi Pangan',    initial: 'BS', progres: 'Pendaftaran', step: '1/3', percent: 20,  status: 'belum',   color: 'linear-gradient(135deg,#43E97B,#38F9D7)' },
+    { id: 1,  name: 'Jeremy Cristo', nim: '21040110', prodi: 'Teknik Informatika',  progres_sidang: 'Tahap 1',     percent: 25,  status: 'on-progress' },
+    { id: 2,  name: 'Stella',        nim: '21040160', prodi: 'Software Engineering',progres_sidang: 'Tahap 4',     percent: 100, status: 'lengkap' },
+    { id: 3,  name: 'Dika Hutagaol', nim: '21040110', prodi: 'Sistem Informasi',    progres_sidang: 'Tahap 3',     percent: 75,  status: 'on-progress' },
+    { id: 4,  name: 'Siti Aminah',   nim: '21040110', prodi: 'Teknik Industri',     progres_sidang: 'Tahap 2',     percent: 50,  status: 'on-progress' },
+    { id: 5,  name: 'Budi Santoso',  nim: '21040110', prodi: 'Teknologi Pangan',    progres_sidang: 'Tahap 4',     percent: 100,  status: 'selesai' },
   ];
 
   return (
@@ -50,11 +49,8 @@ const MonitoringTable = ({ onShowToast }) => {
           <p>Daftar mahasiswa yang sedang dalam proses tugas akhir.</p>
         </div>
         <div className="header-actions">
-          <button className="btn-filter" onClick={() => onShowToast('Panel filter akan segera tersedia.', <Filter size={14} />, 'info')}>
-            <Filter size={14} /> Filter
-          </button>
           <button className="btn-export" onClick={() => onShowToast('Mengekspor data ke Excel… Harap tunggu.', <Download size={14} />, 'success')}>
-            <Download size={14} /> Ekspor
+            <Download size={14} /> Eksport
           </button>
         </div>
       </div>
@@ -63,49 +59,48 @@ const MonitoringTable = ({ onShowToast }) => {
         <table className="simta-table">
           <thead>
             <tr>
-              <th style={{ width: '46px' }}>No</th>
-              <th>Mahasiswa</th>
-              <th>Progres</th>
-              <th>Status</th>
-              <th>Aksi</th>
+              <th className="text-center" style={{ width: '46px' }}>No</th>
+              <th className="text-center">Mahasiswa</th>
+              <th className="text-center">Prodi</th>
+              <th className="text-center">Progres Regist Sidang</th>
+              <th className="text-center">Status Regist Sidang</th>
+              <th className="text-center">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {data.map((item) => (
-              <tr
-                key={item.id}
-                className={selectedRow === item.id ? 'selected' : ''}
-                onClick={() => setSelectedRow(item.id === selectedRow ? null : item.id)}
-              >
+              <tr key={item.id}>
                 <td className="text-center fw-semibold" style={{ color: 'var(--text-muted)' }}>{item.id}</td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    <div className="avatar-sm" style={item.color ? { background: item.color } : {}}>{item.initial}</div>
-                    <div className="mahasiswa-info">
-                      <div className="name">{item.name}</div>
-                      <div className="nim-prodi">{item.nim}</div>
+                <td className="text-center">
+                  <div className="mahasiswa-info">
+                    <div className="name">{item.name}</div>
+                    <div className="nim-prodi">{item.nim}</div>
+                  </div>
+                </td>
+                <td className="text-center">
+                  <div className="text-gray-600 font-medium">{item.prodi}</div>
+                </td>
+                <td className="text-center">
+                  <div className="flex flex-col items-center">
+                    <div className="progres-badge">{item.progres_sidang}</div>
+                    <div className="progres-bar-wrap">
+                      <div
+                        className="progres-bar-fill"
+                        style={{
+                          width: `${item.percent}%`,
+                          background: (item.status === 'lengkap' || item.status === 'selesai') ? 'linear-gradient(90deg,#22C55E,#16A34A)' : undefined
+                        }}
+                      />
                     </div>
                   </div>
                 </td>
-                <td>
-                  <div className="progres-badge">{item.progres} ({item.step})</div>
-                  <div className="progres-bar-wrap">
-                    <div
-                      className="progres-bar-fill"
-                      style={{
-                        width: `${item.percent}%`,
-                        background: item.status === 'lengkap' ? 'linear-gradient(90deg,#22C55E,#16A34A)' : undefined
-                      }}
-                    />
-                  </div>
-                </td>
-                <td>
+                <td className="text-center">
                   <span className={`badge-status ${item.status}`}>
-                    {item.status}
+                    {item.status.replace('-', ' ')}
                   </span>
                 </td>
-                <td>
-                  <div className="flex items-center gap-1">
+                <td className="text-center">
+                  <div className="flex items-center justify-center gap-1">
                     {item.status === 'lengkap' ? (
                       <button className="btn-detail" onClick={(e) => { e.stopPropagation(); onShowToast(`Membuka detail berkas <strong>${item.name}</strong>…`, <Eye size={12} />, 'info'); }}>
                         Detail
@@ -138,7 +133,6 @@ const MonitoringTable = ({ onShowToast }) => {
   );
 };
 
-
 const DashboardAkademik = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toasts, setToasts]           = useState([]);
@@ -151,69 +145,59 @@ const DashboardAkademik = () => {
 
   return (
     <>
-      {/* Sidebar */}
-      <SidebarAdmin
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onShowToast={showToast}
-      />
-
+      <SidebarAdmin isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onShowToast={showToast} />
       <div id="main-content">
-
+        <header className="topbar">
+          <button className="topbar-toggle" onClick={() => setSidebarOpen(true)}>
+            <Menu size={20} />
+          </button>
+          <div className="topbar-brand">Beranda</div>
+          <div className="topbar-right">
+            <div className="flex items-center gap-2">
+              <div className="text-right hidden sm:block">
+                <div className="text-sm font-bold">Budiono</div>
+                <div className="text-xs text-muted">Administrator</div>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs">
+                AD
+              </div>
+            </div>
+          </div>
+        </header>
         <main className="page-body">
-          {/* Welcome */}
           <div className="welcome-card">
             <h5>Selamat Datang Kembali, Pak Budiono! 👋</h5>
-            <p>Sistem terakhir disinkronkan pada pukul 09:15 hari ini.</p>
           </div>
 
           <div className="stat-grid mb-6">
-            <StatCard
-              icon={<CalendarCheck size={24} />}
-              label="Periode Aktif"
-              badge="Aktif"
-              value="Sidang Periode Ganjil"
-              sub="2024/2025 &nbsp;&nbsp; Berakhir dlm 12 Hari"
-            />
-            <StatCard
-              icon={<Users size={24} />}
-              label="Total Pendaftar"
-              value="12"
-              sub="Berkas menunggu tinjauan"
-            />
-            <StatCard
-              icon={<FileText size={24} />}
-              label="Perlu Verifikasi"
-              value="128"
-              sub="Mahasiswa TA"
-            />
-            <StatCard
-              icon={<Printer size={24} />}
-              label="SK Siap Cetak"
-              value="45"
-              sub="Dokumen yudisium siap"
-            />
+            <CardAtas4 icon={<CalendarCheck size={24} />} label="Periode Aktif" badge="Aktif" value="Sidang Periode Genap" sub="2025/2026 Berakhir dlm 12 Hari" />
+            <CardAtas4 icon={<Users size={24} />} label="Total Pendaftar Sidang" value="1000 Mahasiswa" sub="Periode Genap 2025/2026" />
+            <CardAtas4 icon={<Printer size={24} />} label="Jumlah Pengajuan SK" value="45 Mahasiswa" sub="Berkas menunggu verifikasi" />
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-            <div className="xl:col-span-8">
-              <MonitoringTable onShowToast={showToast} />
+          <div className="flex flex-col xl:grid xl:grid-cols-12 gap-6">
+            <div className="xl:col-span-9">
+              <div className="deadline-card mb-4">
+                <div className="dl-header">
+                  <div className="dl-icon"><AlertCircle size={14} /></div>
+                  <div className="dl-title">Batas Waktu</div>
+                </div>
+                <p className="dl-desc">Sisa <strong>2 hari</strong> verifikasi berkas pendaftaran sidang.</p>
+              </div>
+              <MonitoringProgress onShowToast={showToast} />
             </div>
 
-            <div className="xl:col-span-4">
-              {/* akti baru */}
-              <div className="activity-card">
+            <div className="xl:col-span-3">
+              <div className="activity-card mt-0">
                 <div className="ac-header">
                   <h6><Activity size={14} className="inline mr-2" style={{ color: 'var(--primary)' }} />Aktivitas</h6>
                   <a href="#">Semua</a>
                 </div>
-
-                {/* data statis, belum aku konekin sama be */}
                 <div className="activity-list">
                   {[
-                    { initial: 'ME', name: 'Meisari',      action: 'upload Berkas Yudisium.',          time: '10:00 AM' },
-                    { initial: 'DP', name: 'Dosen', action: 'tambah nilai Naufal Ari.',     time: '09:40 AM', color: 'linear-gradient(135deg,#667EEA,#764BA2)' },
-                    { initial: 'DH', name: 'Dika', action: 'upload Berkas Sidang',            time: '09:40 AM', color: 'linear-gradient(135deg,#4FACFE,#00F2FE)' },
+                    { initial: 'ME', name: 'Meisari', action: 'upload Berkas Yudisium.', time: '10:00 AM' },
+                    { initial: 'DP', name: 'Dosen', action: 'tambah nilai Naufal Ari.', time: '09:40 AM', color: 'linear-gradient(135deg,#667EEA,#764BA2)' },
+                    { initial: 'DH', name: 'Dika', action: 'upload Berkas Sidang', time: '09:40 AM', color: 'linear-gradient(135deg,#4FACFE,#00F2FE)' },
                   ].map((act, idx) => (
                     <div className="activity-item" key={idx}>
                       <div className="act-avatar" style={act.color ? { background: act.color } : {}}>{act.initial}</div>
@@ -225,44 +209,20 @@ const DashboardAkademik = () => {
                   ))}
                 </div>
               </div>
-
-              <div className="deadline-card">
-                <div className="dl-header">
-                  <div className="dl-icon"><AlertCircle size={14} /></div>
-                  <div className="dl-title">Batas Waktu</div>
-                </div>
-                <p className="dl-desc">
-                  Sisa <strong>2 hari</strong> verifikasi.
-                </p>
-                <button className="btn-tindak" onClick={() => showToast('Mengarahkan ke halaman verifikasi…', <ArrowRightCircle size={14} />, 'warning')}>
-                  Tindak Lanjuti
-                </button>
-              </div>
             </div>
           </div>
         </main>
-
-        <footer className="page-footer">
-          © 2026 SIMTA &mdash; Telkom University Purwokerto
-        </footer>
-
+        <footer className="page-footer">© 2026 SIMTA &mdash; Telkom University Purwokerto</footer>
         <div className="toast-container-custom">
           <AnimatePresence>
             {toasts.map(toast => (
-              <motion.div
-                key={toast.id}
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 40 }}
-                className={`simta-toast ${toast.type}`}
-              >
+              <motion.div key={toast.id} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }} className={`simta-toast ${toast.type}`}>
                 <span className="toast-icon">{toast.icon}</span>
                 <span className="toast-msg" dangerouslySetInnerHTML={{ __html: toast.message }} />
               </motion.div>
             ))}
           </AnimatePresence>
         </div>
-
       </div>
     </>
   );
