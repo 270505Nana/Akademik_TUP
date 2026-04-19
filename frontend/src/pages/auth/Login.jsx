@@ -89,6 +89,7 @@ const LoginPage = () => {
               <BsMortarboardFill />
               Mahasiswa
             </button>
+
             <button
               className={`role-btn ${activeTab === "dosen" ? "active" : ""}`}
               onClick={() => { setActiveTab("dosen"); setError(""); }}
@@ -97,6 +98,7 @@ const LoginPage = () => {
               <BsPersonBadgeFill />
               Dosen/Pegawai
             </button>
+
           </div>
 
           <p className="sso-label">SSO LOGIN</p>
@@ -147,12 +149,11 @@ const LoginPage = () => {
               </div>
             </div>
 
-            {error && <p className="form-error">{error}</p>}
-
-            <button type="submit" className="btn-login" disabled={isLoading}>
+            <button type="submit" className="btn-login" disabled={isLoading} onClick={() => navigate('/mahasiswa/dashboard')}>
               <span>{isLoading ? "Memproses..." : "Login"}</span>
               {!isLoading && <BsArrowRightCircleFill />}
             </button>
+
           </form>
 
           <p className="forgot-text">
