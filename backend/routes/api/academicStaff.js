@@ -85,6 +85,7 @@ router.put(
   "/:userId",
   verifyToken,
   upsertAcademicStaffValidator,
+  validate,
   upsertAcademicStaff,
 );
 

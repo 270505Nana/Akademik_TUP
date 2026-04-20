@@ -14,9 +14,11 @@ const register = async (req, res) => {
       return res.status(400).json({ message: "Email already used" });
     }
 
-    const existingPhone = await prisma.user.findUnique({ where: { phone } });
-    if (existingPhone) {
-      return res.status(400).json({ message: "Phone already used" });
+    if (phone) {
+      const existingPhone = await prisma.user.findUnique({ where: { phone } });
+      if (existingPhone) {
+        return res.status(400).json({ message: "Phone already used" });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

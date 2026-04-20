@@ -6,6 +6,15 @@ const connectionString = process.env.DATABASE_URL;
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 
-const prisma = new PrismaClient({ adapter });
+const hideTimestamps = { createdAt: true, updatedAt: true, deletedAt: true };
+
+const prisma = new PrismaClient({
+  adapter,
+  omit: {
+    researchGroup: hideTimestamps,
+    faculty: hideTimestamps,
+    studyProgram: hideTimestamps,
+  },
+});
 
 module.exports = prisma;

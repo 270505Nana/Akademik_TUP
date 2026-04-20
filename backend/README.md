@@ -23,6 +23,13 @@ npx prisma db seed
 npm start
 ```
 
+## Jalankan Setiap Setelah Merubah Schema
+
+```sh
+npx prisma db push
+npx prisma generate
+```
+
 ## Help
 
 - [Prisma Documentation](https://www.prisma.io/docs/prisma-orm/quickstart/prisma-postgres)

@@ -36,7 +36,7 @@ const {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [username, email, password, confirmPassword, phone]
+ *             required: [username, email, password, confirmPassword]
  *             properties:
  *               username:
  *                 type: string
@@ -48,6 +48,10 @@ const {
  *                 type: string
  *               phone:
  *                 type: string
+ *                 nullable: true
+ *               role:
+ *                 type: string
+ *                 enum: [STUDENT, LECTURER, ACADEMIC_STAFF]
  *     responses:
  *       201:
  *         description: Registration successful

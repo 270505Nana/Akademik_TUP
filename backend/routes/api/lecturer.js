@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  getLecturer,
+  getLecturers,
   upsertLecturer,
   getLecturerByUserId,
 } = require("../../controllers/lecturerController");
@@ -39,7 +39,7 @@ const {
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, getLecturer);
+router.get("/", verifyToken, getLecturers);
 
 /**
  * @swagger
@@ -93,7 +93,13 @@ router.get("/", verifyToken, getLecturer);
  *       500:
  *         description: Internal server error
  */
-router.put("/:userId", verifyToken, upsertLecturerValidator, upsertLecturer);
+router.put(
+  "/:userId",
+  verifyToken,
+  upsertLecturerValidator,
+  validate,
+  upsertLecturer,
+);
 
 /**
  * @swagger
