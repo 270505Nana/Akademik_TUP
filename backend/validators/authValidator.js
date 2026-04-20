@@ -9,7 +9,10 @@ const registerValidator = [
     .isEmail()
     .withMessage("Invalid email"),
 
-  body("phone").isMobilePhone().withMessage("Invalid phone number"),
+  body("phone")
+    .optional({ nullable: true })
+    .isMobilePhone()
+    .withMessage("Invalid phone number"),
 
   body("password")
     .notEmpty()
@@ -29,8 +32,8 @@ const registerValidator = [
 
   body("role")
     .optional()
-    .isIn(["ADMIN", "STUDENT", "LECTURER"])
-    .withMessage("Role must be ADMIN, STUDENT, or LECTURER"),
+    .isIn(["STUDENT", "LECTURER", "ACADEMIC_STAFF"])
+    .withMessage("Role must be STUDENT, LECTURER, or ACADEMIC_STAFF"),
 ];
 
 const loginValidator = [

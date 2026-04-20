@@ -9,7 +9,11 @@ const upsertLecturerValidator = [
   body("name").notEmpty().withMessage("Name is required"),
   body("researchGroupId")
     .notEmpty()
-    .withMessage("Research group id is required"),
+    .withMessage("Research group id is required")
+    .bail()
+    .isInt()
+    .withMessage("Research group id must be an integer")
+    .toInt(),
 ];
 
 module.exports = { upsertLecturerValidator };
