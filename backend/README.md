@@ -19,6 +19,10 @@ npx prisma generate
 # Run seeder
 npx prisma db seed
 
-# Run service
+# Run service (development-only)
 npm start
 ```
+
+## Help
+
+- [Prisma Documentation](https://www.prisma.io/docs/prisma-orm/quickstart/prisma-postgres)
