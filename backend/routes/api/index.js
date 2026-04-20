@@ -7,6 +7,8 @@ router.use("/academic-staff", require("./academicStaff"));
 
 router.use("/research-groups", require("./researchGroup"));
 router.use("/lecturers", require("./lecturer"));
+
+router.use("/faculties", require("./faculty"));
 // router.use('/students', require('./student'))
 
 module.exports = router;
