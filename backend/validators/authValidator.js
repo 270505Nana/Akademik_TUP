@@ -2,17 +2,21 @@ const { body } = require("express-validator");
 
 const registerValidator = [
   body("username").notEmpty().withMessage("Username is required"),
+
   body("email")
     .notEmpty()
     .withMessage("Email is required")
     .isEmail()
     .withMessage("Invalid email"),
+
   body("phone").isMobilePhone().withMessage("Invalid phone number"),
+
   body("password")
     .notEmpty()
     .withMessage("Password is required")
     .isLength({ min: 8 })
     .withMessage("Password must be at least 8 characters"),
+
   body("confirmPassword")
     .notEmpty()
     .withMessage("Confirm password is required")
@@ -22,6 +26,11 @@ const registerValidator = [
       }
       return true;
     }),
+
+  body("role")
+    .optional()
+    .isIn(["ADMIN", "STUDENT", "LECTURER"])
+    .withMessage("Role must be ADMIN, STUDENT, or LECTURER"),
 ];
 
 const loginValidator = [
@@ -30,6 +39,7 @@ const loginValidator = [
     .withMessage("Email is required")
     .isEmail()
     .withMessage("Invalid email"),
+
   body("password")
     .notEmpty()
     .withMessage("Password is required")
