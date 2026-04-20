@@ -32,7 +32,7 @@ const upsertAcademicStaff = async (req, res) => {
     const { name } = req.body;
 
     const academicStaff = await prisma.academicStaff.upsert({
-      where: { userId: userId },
+      where: { userId },
       update: { name },
       create: { name, userId },
     });
@@ -54,7 +54,7 @@ const getAcademicStaffByUserId = async (req, res) => {
     const userId = parseInt(req.params.userId);
 
     const academicStaff = await prisma.academicStaff.findUnique({
-      where: { userId: userId },
+      where: { userId },
     });
 
     if (!academicStaff) {

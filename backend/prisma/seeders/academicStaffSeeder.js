@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const prisma = require("../client");
 
 async function seedAcademicStaff() {
-  console.log("Seeding academic staff...");
+  console.log("- Seeding academic staff...");
 
   const password = await bcrypt.hash("12345678", 10);
   const role = "ACADEMIC_STAFF";
@@ -40,7 +40,7 @@ async function seedAcademicStaff() {
     skipDuplicates: true,
   });
 
-  console.log("Academic staff seeded successful");
+  console.log("- Academic staff seeded successful");
 }
 
 module.exports = { seedAcademicStaff };
