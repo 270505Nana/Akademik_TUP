@@ -2,13 +2,13 @@ const bcrypt = require("bcrypt");
 
 const prisma = require("../client");
 
-async function seedFacultyProdi() {
-  console.log("- Seeding faculty & prodi...");
+async function seedFacultyStudyProgram() {
+  console.log("- Seeding faculty & study program...");
 
   const faculties = [
     {
       name: "Fakultas Informatika (FIF)",
-      prodies: [
+      studyPrograms: [
         { name: "S1 Informatika" },
         { name: "S1 Rekayasa Perangkat Lunak (Software Engineering)" },
         { name: "S1 Sains Data (Data Science)" },
@@ -16,7 +16,7 @@ async function seedFacultyProdi() {
     },
     {
       name: "Fakultas Teknik Elektro (FTE)",
-      prodies: [
+      studyPrograms: [
         { name: "S1 Teknik Telekomunikasi" },
         { name: "S1 Teknik Elektro" },
         { name: "S1 Teknik Biomedis" },
@@ -24,7 +24,7 @@ async function seedFacultyProdi() {
     },
     {
       name: "Fakultas Rekayasa Industri (FRI)",
-      prodies: [
+      studyPrograms: [
         { name: "S1 Teknik Industri" },
         { name: "S1 Sistem Informasi" },
         { name: "S1 Teknik Logistik" },
@@ -33,18 +33,18 @@ async function seedFacultyProdi() {
     },
     {
       name: "Fakultas Industri Kreatif (FIK)",
-      prodies: [
+      studyPrograms: [
         { name: "S1 Desain Komunikasi Visual (DKV)" },
         { name: "S1 Desain Produk" },
       ],
     },
     {
       name: "Fakultas Ekonomi dan Bisnis (FEB)",
-      prodies: [{ name: "S1 Bisnis Digital" }],
+      studyPrograms: [{ name: "S1 Bisnis Digital" }],
     },
     {
       name: "Fakultas Ilmu Terapan (FIT)",
-      prodies: [{ name: "D3 Teknologi Telekomunikasi" }],
+      studyPrograms: [{ name: "D3 Teknologi Telekomunikasi" }],
     },
   ];
 
@@ -61,18 +61,18 @@ async function seedFacultyProdi() {
       });
     }
 
-    for (const prodiData of facultyData.prodies) {
-      const existingProdi = await prisma.studyProgram.findFirst({
+    for (const studyProgramData of facultyData.studyPrograms) {
+      const existingStudyProgram = await prisma.studyProgram.findFirst({
         where: {
-          name: prodiData.name,
+          name: studyProgramData.name,
           facultyId: faculty.id,
         },
       });
 
-      if (!existingProdi) {
+      if (!existingStudyProgram) {
         await prisma.studyProgram.create({
           data: {
-            name: prodiData.name,
+            name: studyProgramData.name,
             facultyId: faculty.id,
           },
         });
@@ -80,7 +80,7 @@ async function seedFacultyProdi() {
     }
   }
 
-  console.log("- Faculty & prodi seeded successful");
+  console.log("- Faculty & study program seeded successful");
 }
 
-module.exports = { seedFacultyProdi };
+module.exports = { seedFacultyStudyProgram };

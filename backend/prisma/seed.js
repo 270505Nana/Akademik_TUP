@@ -3,7 +3,9 @@ const prisma = require("./client");
 const { seedAcademicStaff } = require("./seeders/academicStaffSeeder");
 const { seedResearchGroup } = require("./seeders/researchGroupSeeder");
 const { seedLecturer } = require("./seeders/lecturerSeeder");
-const { seedFacultyProdi } = require("./seeders/facultyProdiSeeder");
+const {
+  seedFacultyStudyProgram,
+} = require("./seeders/facultyStudyProgramSeeder");
 
 async function main() {
   console.log("- Starting seeding...");
@@ -11,7 +13,7 @@ async function main() {
   await seedAcademicStaff();
   await seedResearchGroup();
   await seedLecturer();
-  await seedFacultyProdi();
+  await seedFacultyStudyProgram();
 
   console.log("- Seeding finished");
 }
