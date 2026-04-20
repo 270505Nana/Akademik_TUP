@@ -6,7 +6,7 @@ router.use("/auth", require("./auth"));
 router.use("/academic-staff", require("./academicStaff"));
 
 router.use("/research-groups", require("./researchGroup"));
-// router.use('/lecturers', require('./lecturer'))
+router.use("/lecturers", require("./lecturer"));
 // router.use('/students', require('./student'))
 
 module.exports = router;
