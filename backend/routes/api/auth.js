@@ -1,19 +1,21 @@
 const express = require("express");
+
 const router = express.Router();
+
 const {
   register,
   login,
   getUser,
 } = require("../../controllers/authController");
-const { verifyToken } = require("../../middlewares/auth");
-const { validationResult } = require("express-validator");
-const { registerValidator } = require("../../validators/authValidator");
 
-const validate = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array });
-  next();
-};
+const { verifyToken } = require("../../middlewares/auth");
+
+const { validate } = require("../../middlewares/validate");
+
+const {
+  registerValidator,
+  loginValidator,
+} = require("../../validators/authValidator");
 
 /**
  * @swagger
@@ -80,7 +82,7 @@ router.post("/register", registerValidator, validate, register);
  *       401:
  *         description: Invalid email or password
  */
-router.post("/login", login);
+router.post("/login", loginValidator, validate, login);
 
 /**
  * @swagger

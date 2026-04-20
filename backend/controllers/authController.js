@@ -1,5 +1,7 @@
 const bcrypt = require("bcrypt");
+
 const jwt = require("jsonwebtoken");
+
 const prisma = require("../prisma/client");
 
 // Register Mahasiswa
@@ -43,7 +45,7 @@ const login = async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { email },
-      omit: { password: true },
+      // omit: { password: true },
     });
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -60,10 +62,12 @@ const login = async (req, res) => {
       { expiresIn: "1d" },
     );
 
+    const { password: _, ...userWithoutPassword } = user;
+
     res.json({
       message: "Login successful",
       token,
-      data: user,
+      data: userWithoutPassword,
     });
   } catch (error) {
     res
