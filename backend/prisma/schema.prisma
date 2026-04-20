@@ -107,9 +107,9 @@ model Student {
   nim                   String                 @unique
   name                  String
   className             String
-  sks                   Int
-  ipk                   Int
-  tak                   Int
+  sks                   Int?
+  ipk                   Float?
+  tak                   Int?
   studyProgram          StudyProgram           @relation(fields: [studyProgramId], references: [id])
   studyProgramId        Int
   user                  User                   @relation(fields: [userId], references: [id])
@@ -200,7 +200,7 @@ model SidangRegistration {
   deletedAt          DateTime
   programType        String
   sks                Int
-  ipk                Int
+  ipk                Float
   tak                Int
   sk_exp_date        DateTime           @db.Date
   thesisTitleId      String
@@ -243,7 +243,7 @@ model YudisiumRegistration {
   updatedAt           DateTime             @updatedAt
   deletedAt           DateTime
   programType         String
-  ipk                 Int
+  ipk                 Float
   tak                 Int
   sk_exp_date         DateTime             @db.Date
   thesisTitleId       String
