@@ -126,6 +126,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--body-bg);
 .badge-outline-blue { border: 1px solid #3B82F6; color: #3B82F6; }
 .badge-outline-green { border: 1px solid #10B981; color: #10B981; }
 .badge-outline-orange { border: 1px solid #F59E0B; color: #F59E0B; }
+.badge-outline-dark { border: 1px solid #1E293B; color: #1E293B; }
 
 /* CARD AKTIVITAS - ADMIN */
 .ac-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
