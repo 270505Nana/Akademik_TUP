@@ -161,7 +161,7 @@ const PengajuanSK = () => {
 
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '30px' }}>
-            <div className="contact-badge">
+            <div className="contact-badge" onClick={() => window.open('https://wa.me/6285117001281', '_blank')}>
               <MessageCircle size={14} /> Contact Person : (kontak pada hari dan jam kerja) Helpdesk Layanan Sidang-Yudisium TUP wa.me/+6285117001281
             </div>
           </div>
@@ -183,7 +183,8 @@ const PengajuanSK = () => {
               <label>Nama</label>
               <div className="input-with-icon">
                 <User className="field-icon" size={18} />
-                <input type="text" placeholder="Masukan Nama Jawaban Anda" value={formData.nama} onChange={(e) => setFormData({...formData, nama: e.target.value})} />
+                {/* <input type="text" placeholder="Masukan Nama Jawaban Anda" value={formData.nama} onChange={(e) => setFormData({...formData, nama: e.target.value})} /> */}
+                <input type="text" placeholder="Masukan Nama Jawaban Anda"  />
               </div>
             </div>
 
@@ -217,6 +218,10 @@ const PengajuanSK = () => {
                   <option value="">Pilih Program Studi Anda</option>
                   <option value="S1 Teknik Informatika">S1 Teknik Informatika</option>
                   <option value="S1 Sistem Informasi">S1 Sistem Informasi</option>
+                  <option value="S1 Rekayasa Perangkat Lunak">S1 Rekayasa Perangkat Lunak</option>
+                  <option value="S1 Teknik Industri">S1 Teknik Industri</option>
+                  <option value="S1 Data Science">S1 Data Science</option>
+                  <option value="S1 Bisnis Digital">S1 Bisnis Digital</option>
                 </select>
               </div>
             </div>
@@ -344,8 +349,9 @@ const PengajuanSK = () => {
                   <UploadCloud size={48} />
                 </div>
                 <div className="upload-text">
-                  <p><strong>Tarik & Lepas file di sini</strong></p>
-                  <p>atau klik untuk pilih memilih dari komputer</p>
+                  {/* <p><strong>Tarik & Lepas file di sini</strong></p> */}
+                  <p><strong>klik untuk memilih dari komputer</strong></p>
+                  {/* <p>atau klik untuk pilih memilih dari komputer</p> */}
                   <div className="file-type-badges">
                     <span>PDF</span>
                     <span>JPG/PNG</span>
@@ -394,7 +400,7 @@ const PengajuanSK = () => {
       </div>
 
       <footer className="bottom-actions">
-        <button className="btn-submit">
+        <button className="btn-submit" onClick={() => navigate('/mahasiswa/dashboard')}>
           Simpan Pengajuan
         </button>
       </footer>

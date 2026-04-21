@@ -3,7 +3,7 @@ import {
   CalendarCheck, FileText, Printer, 
   Filter, Download, MoreVertical, Activity, Clock, 
   AlertCircle, ArrowRightCircle, ChevronLeft, ChevronRight,
-  Eye, CheckCircle2, Menu, Users
+  Eye, CheckCircle2, Menu, Users, User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -11,18 +11,23 @@ import SidebarDosen from '../../components/sidebar/SidebarDosen';
 import '../dashboard.css';
 
 const StatusBadge = ({ text }) => {
-  if (text === 'Belum Terbit') return <span className="badge-pill-red">{text}</span>;
-  if (text === 'Dalam Proses') return <span className="badge-pill-blue">{text}</span>;
-  if (text === 'Sudah Terbit') return <span className="badge-pill-green">{text}</span>;
+  const t = text.toLowerCase();
+  
+  if (t === 'belum terbit') return <span className="badge-pill-red">{text}</span>;
+  if (t === 'dalam proses') return <span className="badge-pill-blue">{text}</span>;
+  if (t === 'sudah terbit') return <span className="badge-pill-green">{text}</span>;
 
   if (text.startsWith('Tahap')) return (
     <span className="badge-outline-orange">
-      {text} <Clock size={12} />
+      {text} <Clock size={12} className="inline ml-1" />
     </span>
   );
-  if (text === 'Belum registrasi') return <span className="badge-outline-red">{text}</span>;
-  if (text === 'Proses Verifikasi') return <span className="badge-outline-blue">{text}</span>;
-  if (text === 'Terverifikasi') return <span className="badge-outline-green">{text}</span>;
+  
+  if (t === 'belum registrasi') return <span className="badge-outline-red">{text}</span>;
+  if (t === 'revisi dokumen') return <span className="badge-outline-red">{text}</span>;
+  if (t === 'proses verifikasi') return <span className="badge-outline-blue">{text}</span>;
+  if (t === 'terverifikasi') return <span className="badge-outline-green">{text}</span>;
+  if (t === 'on progress') return <span className="badge-outline-dark">{text}</span>;
 
   return <span>{text}</span>;
 };
@@ -30,18 +35,18 @@ const StatusBadge = ({ text }) => {
 const MonitoringProgress = ({ onShowToast }) => {
 
   const data = [
-    { id: 1, name: 'Ghaza Zidane', nim: '12345678', sk: 'Belum Terbit', sidang: 'Tahap 1', yudisium: 'Tahap 1' },
-    { id: 2, name: 'Ghaza Zidane', nim: '12345678', sk: 'Belum Terbit', sidang: 'Belum registrasi', yudisium: 'Belum registrasi' },
-    { id: 3, name: 'Naufal Ari', nim: '12345678', sk: 'Belum Terbit', sidang: 'Proses Verifikasi', yudisium: 'Proses Verifikasi' },
-    { id: 4, name: 'Tiara klimantan', nim: '12345678', sk: 'Dalam Proses', sidang: 'Terverifikasi', yudisium: 'Terverifikasi' },
-    { id: 5, name: 'meisa laura', nim: '12345678', sk: 'Sudah Terbit', sidang: 'Tahap 4', yudisium: 'Tahap 4' },
+    { id: 1, name: 'Ghaza Zidane',     nim: '12345678',    sk: 'Dalam proses',    sidang: 'Belum registrasi', yudisium: 'Belum registrasi' },
+    { id: 2, name: 'Mei sari',         nim: '12345678',    sk: 'Belum Terbit',    sidang: 'Belum registrasi', yudisium: 'Belum registrasi' },
+    { id: 3, name: 'Naufal Ari',       nim: '12345678',    sk: 'Sudah Terbit',    sidang: 'Terverifikasi',    yudisium: 'Proses Verifikasi' },
+    { id: 4, name: 'Tiara klimantan',  nim: '12345678',    sk: 'Sudah Terbit',    sidang: 'Terverifikasi',    yudisium: 'Revisi Dokumen' },
+    { id: 5, name: 'Prajna P',         nim: '2311104016', sk: 'Sudah Terbit',    sidang: 'Terverifikasi',    yudisium: 'On Progress' },
   ];
 
   return (
     <div className="section-card">
       <div className="card-header-custom">
         <div className="title-block">
-          <h6>Progress Registrasi Mahasiswa Bimbingan</h6>
+          <h4 className="font-bold text-xl">Progres Registrasi Mahasiswa Bimbingan</h4>
         </div>
       </div>
 
@@ -49,23 +54,27 @@ const MonitoringProgress = ({ onShowToast }) => {
         <table className="simta-table">
           <thead>
             <tr>
-              <th className="text-center" style={{ width: '46px' }}>No</th>
               <th className="text-center">Mahasiswa</th>
+              <th className="text-center">NIM</th>
               <th className="text-center">Status SK</th>
               <th className="text-center">Status Registrasi Sidang</th>
-              <th className="text-center">Status Registrasi Yudisium</th>
-              <th className="text-center">Detail</th>
+              <th className="text-center">status registrasi yudisum</th>
+              <th className="text-center">Draft TA</th>
             </tr>
           </thead>
           <tbody>
             {data.map((item) => (
               <tr key={item.id}>
-                <td className="text-center fw-semibold" style={{ color: 'var(--text-muted)' }}>{item.id}</td>
-                <td className="text-center">
-                  <div className="mahasiswa-info">
-                    <div className="name">{item.name}</div>
-                    <div className="nim-prodi">NIM: {item.nim}</div>
+                <td className="text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                      <User size={18} />
+                    </div>
+                    <div className="font-bold text-sm">{item.name}</div>
                   </div>
+                </td>
+                <td className="text-center">
+                  <div className="text-sm">NIM: {item.nim}</div>
                 </td>
                 <td className="text-center"><StatusBadge text={item.sk} /></td>
                 <td className="text-center"><StatusBadge text={item.sidang} /></td>
@@ -73,12 +82,13 @@ const MonitoringProgress = ({ onShowToast }) => {
                 <td className="text-center">
                   <button 
                     className="btn-open-file"
+                    style={{ background: '#C0182A' }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onShowToast(`Membuka Detail <strong>${item.name}</strong>...`, <FileText size={14} />, 'info');
+                      onShowToast(`Membuka Berkas <strong>${item.name}</strong>...`, <FileText size={14} />, 'info');
                     }}
                   >
-                    Detail
+                    Buka Berkas
                   </button>
                 </td>
               </tr>
@@ -88,7 +98,7 @@ const MonitoringProgress = ({ onShowToast }) => {
       </div>
 
       <div className="table-footer">
-        <span className="page-info">Menampilkan <strong>5</strong> dari <strong>128</strong></span>
+        <span className="page-info">Menampilkan <strong>1</strong> dari <strong>1</strong></span>
         <div className="flex gap-2">
           <button className="btn-paging" onClick={() => onShowToast('Navigasi ke halaman: <strong>Sebelumnya</strong>', <ChevronLeft size={14} />, 'info')}>
             <ChevronLeft size={14} />

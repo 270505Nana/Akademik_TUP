@@ -33,13 +33,14 @@ const CardAtas4 = ({ icon, label, value, sub, badge, badgeColor }) => (
 
 const MonitoringProgress = ({ onShowToast }) => {
 
-  const data = [
-    { id: 1,  name: 'Jeremy Cristo', nim: '21040110', prodi: 'Teknik Informatika',  progres_sidang: 'Tahap 1',     percent: 25,  status: 'on-progress' },
-    { id: 2,  name: 'Stella',        nim: '21040160', prodi: 'Software Engineering',progres_sidang: 'Tahap 4',     percent: 100, status: 'lengkap' },
-    { id: 3,  name: 'Dika Hutagaol', nim: '21040110', prodi: 'Sistem Informasi',    progres_sidang: 'Tahap 3',     percent: 75,  status: 'on-progress' },
-    { id: 4,  name: 'Siti Aminah',   nim: '21040110', prodi: 'Teknik Industri',     progres_sidang: 'Tahap 2',     percent: 50,  status: 'on-progress' },
-    { id: 5,  name: 'Budi Santoso',  nim: '21040110', prodi: 'Teknologi Pangan',    progres_sidang: 'Tahap 4',     percent: 100,  status: 'selesai' },
-  ];
+ const data = [
+  { id: 1, name: 'Jeremy Cristo',    nim: '21040110',  progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
+  { id: 2, name: 'Stella',           nim: '21040160',  progres_sidang: 'Tahap 2', percent: 100, status: 'terverifikasi' },
+  { id: 3, name: 'Dika Hutagaol',    nim: '21040110',  progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
+  { id: 4, name: 'Siti Aminah',      nim: '21040110',  progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
+  { id: 5, name: 'Budi Santoso',     nim: '21040110',  progres_sidang: 'Tahap 2', percent: 100, status: 'proses-verifikasi' },
+  { id: 6, name: 'Prajna paramitha', nim: '231110406', progres_sidang: 'Tahap 2', percent: 100, status: 'terverifikasi' },
+];
 
   return (
     <div className="section-card">
@@ -56,7 +57,7 @@ const MonitoringProgress = ({ onShowToast }) => {
       </div>
 
       <div className="table-scroll-wrap">
-        <table className="simta-table">
+       <table className="simta-table">
           <thead>
             <tr>
               <th className="text-center" style={{ width: '46px' }}>No</th>
@@ -88,7 +89,7 @@ const MonitoringProgress = ({ onShowToast }) => {
                         className="progres-bar-fill"
                         style={{
                           width: `${item.percent}%`,
-                          background: (item.status === 'lengkap' || item.status === 'selesai') ? 'linear-gradient(90deg,#22C55E,#16A34A)' : undefined
+                          background: (item.status === 'terverifikasi' || item.percent === 100) ? 'linear-gradient(90deg,#22C55E,#16A34A)' : undefined
                         }}
                       />
                     </div>
@@ -101,7 +102,7 @@ const MonitoringProgress = ({ onShowToast }) => {
                 </td>
                 <td className="text-center">
                   <div className="flex items-center justify-center gap-1">
-                    {item.status === 'lengkap' ? (
+                    {item.status === 'terverifikasi' ? (
                       <button className="btn-detail" onClick={(e) => { e.stopPropagation(); onShowToast(`Membuka detail berkas <strong>${item.name}</strong>…`, <Eye size={12} />, 'info'); }}>
                         Detail
                       </button>
@@ -119,7 +120,7 @@ const MonitoringProgress = ({ onShowToast }) => {
       </div>
 
       <div className="table-footer">
-        <span className="page-info">Menampilkan <strong>5</strong> dari <strong>128</strong></span>
+        <span className="page-info">Menampilkan <strong>1</strong> dari <strong>1</strong></span>
         <div className="flex gap-2">
           <button className="btn-paging" onClick={() => onShowToast('Navigasi ke halaman: <strong>Sebelumnya</strong>', <ChevronLeft size={14} />, 'info')}>
             <ChevronLeft size={14} />

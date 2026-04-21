@@ -1,88 +1,143 @@
 import React, { useState } from 'react';
-import '../sidebar/sidebar.css';
-import logo from '../../assets/logo-simta.png'; 
+import { Link, useLocation } from 'react-router-dom';
+import { 
+  Home, 
+  Calendar, 
+  ChevronDown, 
+  FileCheck, 
+  Users, 
+  Settings, 
+  LogOut 
+} from 'lucide-react';
 
-const SidebarMahasiswa = () => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(true);
-  const [activeMenu, setActiveMenu] = useState('Registrasi Sidang (Sub)'); 
-  const handleMenuClick = (menuName) => {
-    setActiveMenu(menuName);
+import { motion } from 'motion/react';
+import './sidebar.css';
+
+const SidebarMahasiswa = ({ 
+  isOpen, 
+  onClose, 
+  onShowToast 
+}) => {
+  const location = useLocation();
+  const [expandedMenus, setExpandedMenus] = useState({});
+
+  const toggleMenu = (label) => {
+    setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  const menuSidebar = [
+    {
+      label: 'Utama',
+      items: [
+        { label: 'Beranda', icon: <Home className="nav-icon" />, path: '/mahasiswa/dashboard' }
+      ]
+    },
+    {
+      label: 'Sidang',
+      items: [
+        { 
+          label: 'Registrasi Sidang', 
+          icon: <Calendar className="nav-icon" />, 
+          subItems: ['Permohonan Penerbitan SK', 'Registrasi Sidang', 'Pembaruan SK Tugas Akhir', 'Registrasi Yudisium'] 
+        }
+      ]
+    },
+  ];
+
+  const getSubPath = (sub) => {
+    if (sub === 'Permohonan Penerbitan SK') return '/mahasiswa/pengajuan-sk';
+    if (sub === 'Registrasi Sidang') return '/mahasiswa/pendaftaran-sidang';
+    return '#';
   };
 
   return (
-    <aside className="sidebar-container">
-      <div className="sidebar-logo-section">
-        <div className="sidebar-logo-content">
-          <span className="sidebar-logo-text">SIMTA</span>
-          <img src={logo} alt="Logo" className="sidebar-logo-img" />
+    <>
+      <aside id="sidebar" className={isOpen ? 'open' : ''}>
+        <div className="sidebar-logo">
+          <div className="logo-icon">S</div>
+          <span className="logo-text">SIMTA</span>
         </div>
-      </div>
 
-      <nav className="sidebar-nav-menu">
+        <nav className="sidebar-nav">
+          {menuSidebar.map((section, sIdx) => (
+            <React.Fragment key={sIdx}>
+              <div className="nav-section-label">{section.label}</div>
+              {section.items.map((item, iIdx) => {
+                const isActive = item.path === location.pathname || 
+                  (item.subItems && item.subItems.some(sub => getSubPath(sub) === location.pathname));
 
-        <div 
-          className={`sidebar-nav-item ${activeMenu === 'Beranda' ? 'active' : ''}`}
-          onClick={() => handleMenuClick('Beranda')}
-        >
-          <i className="bi bi-house-door"></i> <span>Beranda</span>
-        </div>
-        
-        <div className="sidebar-nav-dropdown">
-          <div 
-            className={`sidebar-nav-item sidebar-dropdown-toggle ${activeMenu.includes('Registrasi') ? 'parent-active' : ''}`} 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                return (
+                  <div className="nav-item-group" key={iIdx}>
+                    {item.path ? (
+                      <Link 
+                        to={item.path}
+                        className={`nav-link-main ${location.pathname === item.path ? 'active' : ''}`}
+                        onClick={onClose}
+                      >
+                        {item.icon}
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <div 
+                        className={`nav-link-main ${isActive ? 'active' : ''}`}
+                        onClick={() => item.subItems && toggleMenu(item.label)}
+                        aria-expanded={expandedMenus[item.label]}
+                      >
+                        {item.icon}
+                        {item.label}
+                        {item.subItems && <ChevronDown className="nav-arrow" size={14} />}
+                      </div>
+                    )}
+                    
+                    {item.subItems && (
+                      <motion.div 
+                        initial={false}
+                        animate={{ height: expandedMenus[item.label] || isActive ? 'auto' : 0, opacity: expandedMenus[item.label] || isActive ? 1 : 0 }}
+                        className="overflow-hidden"
+                      >
+                        <ul className="sub-nav">
+                          {item.subItems.map((sub, subIdx) => (
+                            <li key={subIdx}>
+                              <Link 
+                                to={getSubPath(sub)}
+                                className={location.pathname === getSubPath(sub) ? 'active' : ''}
+                                onClick={onClose}
+                              >
+                                {sub}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </motion.div>
+                    )}
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </nav>
+
+        <div className="sidebar-user">
+          <div className="avatar">P</div>
+          <div className="user-info">
+            <div className="user-name">Prajna Paramitha</div>
+            <div className="user-role">Mahasiswa</div>
+          </div>
+          <button 
+            className="logout-btn" 
+            onClick={() => onShowToast('Anda telah keluar dari sistem.', <LogOut size={18} />, 'warning')}
+            title="Log Out"
           >
-            <i className="bi bi-people-fill"></i> <span>Registrasi Sidang</span>
-            <i className={`bi ${isDropdownOpen ? 'bi-chevron-up' : 'bi-chevron-down'} ms-auto`}></i>
-          </div>
-          
-          {isDropdownOpen && (
-            <div className="sidebar-dropdown-content">
-              <div 
-                className={`sub-item ${activeMenu === 'SK' ? 'active' : ''}`}
-                onClick={() => handleMenuClick('SK')}
-              >
-                Permohonan penerbitan SK
-              </div>
-              
-              <div 
-                className={`sub-item ${activeMenu === 'Registrasi Sidang (Sub)' ? 'active' : ''}`}
-                onClick={() => handleMenuClick('Registrasi Sidang (Sub)')}
-              >
-                Registrasi Sidang
-              </div>
-
-              <div 
-                className={`sub-item ${activeMenu === 'Pembaruan' ? 'active' : ''}`}
-                onClick={() => handleMenuClick('Pembaruan')}
-              >
-                Pembaruan SK Tugas Akhir
-              </div>
-
-              <div 
-                className={`sub-item ${activeMenu === 'Yudisium' ? 'active' : ''}`}
-                onClick={() => handleMenuClick('Yudisium')}
-              >
-                Registrasi Yudisium
-              </div>
-            </div>
-          )}
+            <LogOut size={16} />
+          </button>
         </div>
-      </nav>
-
-      <div className="sidebar-user-footer">
-        <div className="sidebar-user-profile">
-          <i className="bi bi-person-circle sidebar-profile-icon"></i>
-          <div className="sidebar-user-info">
-            <span className="sidebar-user-name">Meisari Mantiatini</span>
-            <span className="sidebar-user-id">NIP. 198205122010121003</span>
-          </div>
-        </div>
-        <button className="sidebar-btn-logout">
-          <i className="bi bi-box-arrow-right"></i> <span>Log Out</span>
-        </button>
-      </div>
-    </aside>
+      </aside>
+      <div 
+        id="sidebar-overlay" 
+        className={isOpen ? 'show' : ''} 
+        onClick={onClose}
+      />
+    </>
   );
 };
 
