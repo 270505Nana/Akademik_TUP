@@ -141,20 +141,25 @@ model SkFile {
 }
 
 model SkSubmission {
-  id                 Int          @id @default(autoincrement())
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-  deletedAt          DateTime?
-  proposalTitleId    String
-  proposalTitleEn    String
-  attachmentUrl      String
-  student            Student      @relation(fields: [studentId], references: [id])
-  studentId          Int
-  dosenPembimbing1   Lecturer     @relation("Pembimbing1SkSubmissions", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id Int
-  dosenPembimbing2   Lecturer     @relation("Pembimbing2SkSubmissions", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id Int
-  skResponses        SkResponse[]
+  id                       Int          @id @default(autoincrement())
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+  deletedAt                DateTime?
+  proposalTitleId          String
+  proposalTitleEn          String
+  attachmentUrl            String
+  hasUploadedFinalProposal Boolean
+  finalProposalDelayReason String?
+  hasTakenLanguageTest     Boolean
+  languageTestDelayReason  String?
+  isRevisi                 Boolean      @default(false)
+  student                  Student      @relation(fields: [studentId], references: [id])
+  studentId                Int
+  dosenPembimbing1         Lecturer     @relation("Pembimbing1SkSubmissions", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id       Int
+  dosenPembimbing2         Lecturer     @relation("Pembimbing2SkSubmissions", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id       Int
+  skResponses              SkResponse[]
 }
 
 model SkResponse {

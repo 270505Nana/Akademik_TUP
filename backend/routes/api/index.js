@@ -12,4 +12,6 @@ router.use("/faculties", require("./faculty"));
 router.use("/study-programs", require("./studyProgram"));
 router.use("/students", require("./student"));
 
+router.use("/sk-submissions", require("./skSubmission"));
+
 module.exports = router;
