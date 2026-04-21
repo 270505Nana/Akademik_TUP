@@ -4,6 +4,7 @@ const router = express.Router();
 
 const {
   createSkSubmission,
+  updateSkSubmission,
 } = require("../../controllers/skSubmissionController");
 
 const { verifyToken } = require("../../middlewares/auth");
@@ -12,6 +13,7 @@ const { validate } = require("../../middlewares/validate");
 
 const {
   createSkSubmissionValidator,
+  updateSkSubmissionValidator,
 } = require("../../validators/skSubmissionValidator");
 
 /**
@@ -97,5 +99,42 @@ const {
  */
 
 router.post("/", createSkSubmissionValidator, validate, createSkSubmission);
+
+/**
+ * @swagger
+ * /api/sk-submissions/{id}:
+ *   put:
+ *     summary: Update SK submission
+ *     tags: [SK Submission]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: SK submission id
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               finalProposalDelayReason:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Reason for final proposal delay (optional)
+ *                 example: null
+ *     responses:
+ *       200:
+ *         description: SK submission created successfully
+ *       404:
+ *         description: Student or supervisor not found
+ *       500:
+ *         description: Internal server error
+ */
+router.put("/:id", updateSkSubmissionValidator, validate, updateSkSubmission);
 
 module.exports = router;

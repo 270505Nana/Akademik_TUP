@@ -21,4 +21,17 @@ const createSkSubmissionValidator = [
     .withMessage("dosenPembimbing2Id is required"),
 ];
 
-module.exports = { createSkSubmissionValidator };
+const updateSkSubmissionValidator = [
+  body("proposalTitleId").optional(),
+  body("proposalTitleEn").optional(),
+  body("attachmentUrl").optional({ nullable: true }),
+  body("hasUploadedFinalProposal").optional(),
+  body("finalProposalDelayReason").optional({ nullable: true }),
+  body("hasTakenLanguageTest").optional(),
+  body("languageTestDelayReason").optional({ nullable: true }),
+  body("studentId").optional(),
+  body("dosenPembimbing1Id").optional(),
+  body("dosenPembimbing2Id").optional(),
+];
+
+module.exports = { createSkSubmissionValidator, updateSkSubmissionValidator };
