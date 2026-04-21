@@ -271,3 +271,12 @@ model CumlaudeSubmission {
   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
   yudisiumRegistrationId Int
 }
+
+model TemplateFile {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime
+  fileName  String
+  fileUrl   String
+}
