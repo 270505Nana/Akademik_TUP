@@ -1,6 +1,10 @@
 /* dashboard universal */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
 
+@theme {
+  --primary: #C0182A;
+}
+
 :root {
   --primary: #C0182A; --primary-dark: #8B0F1E; --primary-light: #E8424F; --primary-xlight: #FFF0F1;
   --accent: #FF6B6B; --body-bg: #F4F6FB; --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -24,6 +28,7 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--body-bg);
 .topbar-brand { font-weight: 700; font-size: 16px; color: var(--text-primary); margin-left: 8px; }
 @media (max-width: 991px) { 
   .topbar-toggle { display: flex; }
+  #main-content { margin-left: 0; }
 }
 
 /*  Common Utility Classes  */
