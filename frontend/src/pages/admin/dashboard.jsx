@@ -34,12 +34,12 @@ const CardAtas4 = ({ icon, label, value, sub, badge, badgeColor }) => (
 const MonitoringProgress = ({ onShowToast }) => {
 
  const data = [
-  { id: 1, name: 'Jeremy Cristo',    nim: '21040110',  progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
-  { id: 2, name: 'Stella',           nim: '21040160',  progres_sidang: 'Tahap 2', percent: 100, status: 'terverifikasi' },
-  { id: 3, name: 'Dika Hutagaol',    nim: '21040110',  progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
-  { id: 4, name: 'Siti Aminah',      nim: '21040110',  progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
-  { id: 5, name: 'Budi Santoso',     nim: '21040110',  progres_sidang: 'Tahap 2', percent: 100, status: 'proses-verifikasi' },
-  { id: 6, name: 'Prajna paramitha', nim: '231110406', progres_sidang: 'Tahap 2', percent: 100, status: 'terverifikasi' },
+  { id: 1, name: 'Jeremy Cristo',    nim: '21040110',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
+  { id: 2, name: 'Stella',           nim: '21040160',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 2', percent: 100, status: 'terverifikasi' },
+  { id: 3, name: 'Dika Hutagaol',    nim: '21040110',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
+  { id: 4, name: 'Siti Aminah',      nim: '21040110',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
+  { id: 5, name: 'Budi Santoso',     nim: '21040110',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 2', percent: 100, status: 'proses-verifikasi' },
+  { id: 6, name: 'Prajna paramitha', nim: '231110406', prodi: 'S1 Informatika', progres_sidang: 'Tahap 2', percent: 100, status: 'terverifikasi' },
 ];
 
   return (
@@ -101,7 +101,7 @@ const MonitoringProgress = ({ onShowToast }) => {
                   </span>
                 </td>
                 <td className="text-center">
-                  <div className="flex items-center justify-center gap-1">
+                  {/* <div className="flex items-center justify-center gap-1">
                     {item.status === 'terverifikasi' ? (
                       <button className="btn-detail" onClick={(e) => { e.stopPropagation(); onShowToast(`Membuka detail berkas <strong>${item.name}</strong>…`, <Eye size={12} />, 'info'); }}>
                         Detail
@@ -111,6 +111,14 @@ const MonitoringProgress = ({ onShowToast }) => {
                         Verif
                       </button>
                     )}
+                  </div> */}
+
+                  <div className="flex items-center justify-center gap-1">
+                    
+                      <button className="btn-detail" onClick={(e) => { e.stopPropagation(); onShowToast(`Membuka detail berkas <strong>${item.name}</strong>…`, <Eye size={12} />, 'info'); }}>
+                        Detail
+                      </button>
+                  
                   </div>
                 </td>
               </tr>
