@@ -44,8 +44,6 @@ export default function Step1() {
           <h4>Pendaftaran Sidang Telkom University Purwokerto</h4>
           <p>Sebelum melengkapi data pendaftaran sidang, silahkan pelajari dan pahami informasi terkait pendaftaran sidang pada tautan : <a href="https://tel-u.ac.id/panduansidangtup">https://tel-u.ac.id/panduansidangtup</a></p>
           <p><strong>Harap Baca Dengan Teliti</strong></p>
-          <p>Contact Person : (kontak pada hari dan jam kerja)</p>
-          <p>Helpdesk Layanan Sidang-Yudisium TUP <a href="#">wa.me/+6285117001281</a> (chat only)</p>
         </div>
         <div className="contact-person-badge" onClick={() => window.open('https://wa.me/6285117001281', '_blank')}>
                    <Mail size={16} />
@@ -68,7 +66,7 @@ export default function Step1() {
               <input 
                 type="text" 
                 className="input-field" 
-                placeholder="Masukan Nama Jawaban Anda"
+                placeholder="Masukan Nama Anda"
                 value={data.nama}
                 onChange={(e) => updateField('nama', e.target.value)}
               />
@@ -103,6 +101,10 @@ export default function Step1() {
                 <option value="">Pilih Program Studi Anda</option>
                 <option value="S1 Informatika">S1 Informatika</option>
                 <option value="S1 Sistem Informasi">S1 Sistem Informasi</option>
+                <option value="S1 Rekayasa Perangkat Lunak">S1 Rekayasa Perangkat Lunak</option>
+                <option value="S1 Sains Data">S1 Sains Data</option>
+                <option value="S1 Teknik Elektro">S1 Teknik Elektro</option>
+                <option value="S1 Teknik Industri">S1 Teknik Industri</option>
               </select>
             </div>
           </div>
@@ -240,7 +242,7 @@ export default function Step1() {
             </div>
           </div>
           <div className="input-group">
-            <label>Dosen Pembimbing 2</label>
+            <label>Kode Dosen Pembimbing 2</label>
             <div className="input-with-icon">
               <input 
                 type="text" 
@@ -309,23 +311,7 @@ export default function Step1() {
           </div>
         )}
 
-        <div className="input-group" style={{ marginTop: '2rem' }}>
-          <label>Periode Sidang *</label>
-          <div className="input-with-icon">
-            <Calendar className="input-icon" size={18} />
-            <select 
-              className="input-field"
-              value={data.periodeSidang || ''}
-              onChange={(e) => updateField('periodeSidang', e.target.value)}
-            >
-              <option value="">Pilih Periode Sidang</option>
-              {periodes.map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
-          <span className="helper-text">Pilih periode pelaksanaan sidang yang aktif.</span>
-        </div>
+       
 
         <div className="input-group" style={{ marginTop: '2rem' }}>
           <label>Judul Tugas Akhir (Bahasa Indonesia) *</label>
