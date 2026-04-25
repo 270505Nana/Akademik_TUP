@@ -1,4 +1,3 @@
-
 import { Search, User, GraduationCap, Calendar, Mail, FileText, CheckCircle2, ChevronLeft, ChevronRight, Download, UploadCloud, Info, AlertTriangle, Check } from 'lucide-react';
 import { useSidangContext } from '../../context/SidangFormContext';
 
@@ -12,7 +11,6 @@ export default function Step1() {
 
   const programs = ['Reguler', 'Alih Jenjang'];
   const skemas = ['Sidang Reguler', 'Non Sidang', 'Capstone', 'Sidang Khusus Prodi'];
-  const periodes = ['Periode 1 - 2024', 'Periode 2 - 2024', 'Periode 3 - 2024'];
   const jalurNonSidangOptions = ['Publikasi Jurnal', 'Proceeding International', 'HKI'];
   
   const toggleJalurNonSidang = (option) => {
@@ -44,10 +42,12 @@ export default function Step1() {
           <h4>Pendaftaran Sidang Telkom University Purwokerto</h4>
           <p>Sebelum melengkapi data pendaftaran sidang, silahkan pelajari dan pahami informasi terkait pendaftaran sidang pada tautan : <a href="https://tel-u.ac.id/panduansidangtup">https://tel-u.ac.id/panduansidangtup</a></p>
           <p><strong>Harap Baca Dengan Teliti</strong></p>
+          <p>Contact Person : (kontak pada hari dan jam kerja)</p>
+          <p>Helpdesk Layanan Sidang-Yudisium TUP <a href="#">wa.me/+6285117001281</a> (chat only)</p>
         </div>
         <div className="contact-person-badge" onClick={() => window.open('https://wa.me/6285117001281', '_blank')}>
-                   <Mail size={16} />
-                   <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP wa.me/+6285117001281</span>
+            <Mail size={16} />
+            <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP wa.me/+6285117001281</span>
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export default function Step1() {
               <input 
                 type="text" 
                 className="input-field" 
-                placeholder="Masukan Nama Anda"
+                placeholder="Masukan Nama Jawaban Anda"
                 value={data.nama}
                 onChange={(e) => updateField('nama', e.target.value)}
               />
@@ -101,10 +101,6 @@ export default function Step1() {
                 <option value="">Pilih Program Studi Anda</option>
                 <option value="S1 Informatika">S1 Informatika</option>
                 <option value="S1 Sistem Informasi">S1 Sistem Informasi</option>
-                <option value="S1 Rekayasa Perangkat Lunak">S1 Rekayasa Perangkat Lunak</option>
-                <option value="S1 Sains Data">S1 Sains Data</option>
-                <option value="S1 Teknik Elektro">S1 Teknik Elektro</option>
-                <option value="S1 Teknik Industri">S1 Teknik Industri</option>
               </select>
             </div>
           </div>
@@ -151,7 +147,7 @@ export default function Step1() {
                 placeholder="0.00"
                 value={data.ipk}
                 onChange={(e) => {
-                  // Allow numbers and one decimal point
+                  
                   const val = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
                   updateField('ipk', val);
                 }}
@@ -242,7 +238,7 @@ export default function Step1() {
             </div>
           </div>
           <div className="input-group">
-            <label>Kode Dosen Pembimbing 2</label>
+            <label>Dosen Pembimbing 2</label>
             <div className="input-with-icon">
               <input 
                 type="text" 
@@ -310,8 +306,6 @@ export default function Step1() {
             </div>
           </div>
         )}
-
-       
 
         <div className="input-group" style={{ marginTop: '2rem' }}>
           <label>Judul Tugas Akhir (Bahasa Indonesia) *</label>

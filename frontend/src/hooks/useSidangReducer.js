@@ -1,3 +1,28 @@
+import { SECTIONS, DOCUMENT_CONFIG } from '../requirement/sidangDocument';
+
+const generateDocuments = () => {
+  const docs = [];
+  Object.entries(DOCUMENT_CONFIG).forEach(([section, names]) => {
+    names.forEach((name, idx) => {
+      docs.push({
+        id: `${section}-${idx + 1}`,
+        section,
+        name,
+        fileUrl: null,
+        status: 'pending',
+        fileName: '',
+        fileSize: '',
+        error: null
+      });
+    });
+  });
+  return docs;
+};
+
+const initialActiveDocIds = {};
+Object.keys(SECTIONS).forEach(key => {
+  initialActiveDocIds[SECTIONS[key]] = `${SECTIONS[key]}-1`;
+});
 
 export const initialFormState = {
   step: 1,
@@ -18,25 +43,13 @@ export const initialFormState = {
     kelompokKeilmuan: null,
     judulId: '',
     judulEn: '',
-    periodeSidang: null, // sidang_period_id
-    jalurNonSidang: [], // From Skema Sidang Data Example
-    testBahasaPersyaratan: null, // "Sudah" | "Belum"
+    jalurNonSidang: [], 
+    testBahasaPersyaratan: null,
+    linkPaperJurnal: '',
+    linkPaperProceeding: '',
   },
-  documents: [
-    { id: 1, name: 'BERKAS FORM VALIDASI DOSEN WALI', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 2, name: 'BERKAS REKOMENDASI SIDANG PEMBIMBIMB', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 3, name: 'BERKAS SCAN PERNYATAAN BIODATA IJAZAH BERMATERAI', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 4, name: 'BERKAS DUMMY IJAZAH BERMATERAI', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 5, name: 'BERKAS SCAN SCAN AKTA KELAHIRAN', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 6, name: 'BERKAS SCAN IJAZAH TERAKHIR', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 7, name: 'BERKAS SCAN KHS DENGAN TTD DOSWAL/KAPRODI', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 8, name: 'BERKAS LOG BIMBINGAN', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 9, name: 'BERKAS PEMAKLUMAN TEST BAHASA(OPSIONAL)', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 10, name: 'BERKAS SERTIFIKAT TAK', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 11, name: 'BERKAS REKOMENDASI BERKAS EVIDENCE TA/PA IGRACIAS PEMBIMBING', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-    { id: 12, name: 'BERKAS KELENGKAPAN DOK SIDANG', fileUrl: null, status: 'pending', fileName: '', fileSize: '' },
-  ],
-  activeDocId: 1
+  documents: generateDocuments(),
+  activeDocIds: initialActiveDocIds
 };
 
 export function formReducer(state, action) {
@@ -60,13 +73,34 @@ export function formReducer(state, action) {
         }
       };
     case 'SET_ACTIVE_DOC':
-      return { ...state, activeDocId: action.value };
+      return { 
+        ...state, 
+        activeDocIds: {
+          ...state.activeDocIds,
+          [action.section]: action.value
+        }
+      };
     case 'UPLOAD_DOCUMENT':
-      const uploadedDocs = state.documents.map(doc => 
-        doc.id === action.docId 
-          ? { ...doc, fileUrl: action.fileUrl, fileName: action.fileName, fileSize: action.fileSize, status: 'uploaded', error: null } 
-          : doc
-      );
+      // Find the document being uploaded
+      const targetDoc = state.documents.find(d => d.id === action.docId);
+      
+      const uploadedDocs = state.documents.map(doc => {
+        // Direct match
+        if (doc.id === action.docId) {
+          return { ...doc, fileUrl: action.fileUrl, fileName: action.fileName, fileSize: action.fileSize, status: 'uploaded', error: null };
+        }
+        
+        // SYNC LOGIC: If it's a "shared" document like LoA or Camera Ready 
+        // between Jurnal and Proceeding (matching names)
+        if (targetDoc && (targetDoc.section === SECTIONS.JURNAL || targetDoc.section === SECTIONS.PROCEEDING)) {
+          const sharedNames = ['BERKAS LoA', 'BERKAS PERSETUJUAN PUBLIKASI TA SEBAGAI PENGGANTI SIDANG', 'BERKAS CAMERA READY PAPER', 'BERKAS RESPONSE'];
+          if (sharedNames.includes(targetDoc.name) && doc.name === targetDoc.name && (doc.section === SECTIONS.JURNAL || doc.section === SECTIONS.PROCEEDING)) {
+            return { ...doc, fileUrl: action.fileUrl, fileName: action.fileName, fileSize: action.fileSize, status: 'uploaded', error: null };
+          }
+        }
+        
+        return doc;
+      });
       return { ...state, documents: uploadedDocs };
     case 'SET_DOCUMENT_ERROR':
       const errorDocs = state.documents.map(doc => 
