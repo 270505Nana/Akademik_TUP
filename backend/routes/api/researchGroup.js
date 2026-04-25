@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  getResearchGroups,
+  listResearchGroups,
 } = require("../../controllers/researchGroupController");
 
 const { verifyToken } = require("../../middlewares/auth");
@@ -33,6 +33,6 @@ const { validate } = require("../../middlewares/validate");
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, getResearchGroups);
+router.get("/", verifyToken, listResearchGroups);
 
 module.exports = router;

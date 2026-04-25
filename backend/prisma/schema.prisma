@@ -22,14 +22,14 @@ model User {
 }
 
 model AcademicStaff {
-  id           Int            @id @default(autoincrement())
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  deletedAt    DateTime?
-  name         String
-  userId       Int            @unique
-  user         User           @relation(fields: [userId], references: [id])
-  SktaResponse SktaResponse[]
+  id            Int            @id @default(autoincrement())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  name          String
+  user          User           @relation(fields: [userId], references: [id])
+  userId        Int            @unique
+  sktaResponses SktaResponse[]
 }
 
 model ResearchGroup {
@@ -42,25 +42,25 @@ model ResearchGroup {
 }
 
 model Lecturer {
-  id                                                   Int                    @id @default(autoincrement())
-  createdAt                                            DateTime               @default(now())
-  updatedAt                                            DateTime               @updatedAt
-  deletedAt                                            DateTime?
-  nip                                                  String                 @unique
-  nidn                                                 String                 @unique
-  lecturerCode                                         String
-  name                                                 String
-  researchGroupId                                      Int
-  userId                                               Int                    @unique
-  researchGroup                                        ResearchGroup          @relation(fields: [researchGroupId], references: [id])
-  user                                                 User                   @relation(fields: [userId], references: [id])
-  pembimbing1SidangRegistrations                       SidangRegistration[]   @relation("Pembimbing1SidangRegistrations")
-  pembimbing2SidangRegistrations                       SidangRegistration[]   @relation("Pembimbing2SidangRegistrations")
-  SktaRequest_SktaRequest_dosenPembimbing1IdToLecturer SktaRequest[]          @relation("SktaRequest_dosenPembimbing1IdToLecturer")
-  SktaRequest_SktaRequest_dosenPembimbing2IdToLecturer SktaRequest[]          @relation("SktaRequest_dosenPembimbing2IdToLecturer")
-  students                                             Student[]
-  pembimbing1YudisiumRegistrations                     YudisiumRegistration[] @relation("Pembimbing1YudisiumRegistrations")
-  pembimbing2YudisiumRegistrations                     YudisiumRegistration[] @relation("Pembimbing2YudisiumRegistrations")
+  id                               Int                    @id @default(autoincrement())
+  createdAt                        DateTime               @default(now())
+  updatedAt                        DateTime               @updatedAt
+  deletedAt                        DateTime?
+  nip                              String                 @unique
+  nidn                             String                 @unique
+  lecturerCode                     String
+  name                             String
+  researchGroup                    ResearchGroup          @relation(fields: [researchGroupId], references: [id])
+  researchGroupId                  Int
+  user                             User                   @relation(fields: [userId], references: [id])
+  userId                           Int                    @unique
+  students                         Student[]
+  pembimbing1SktaRequests          SktaRequest[]          @relation("Pembimbing1SktaRequests")
+  pembimbing2SktaRequests          SktaRequest[]          @relation("Pembimbing2SktaRequests")
+  pembimbing1SidangRegistrations   SidangRegistration[]   @relation("Pembimbing1SidangRegistrations")
+  pembimbing2SidangRegistrations   SidangRegistration[]   @relation("Pembimbing2SidangRegistrations")
+  pembimbing1YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing1YudisiumRegistrations")
+  pembimbing2YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing2YudisiumRegistrations")
 }
 
 model Faculty {
@@ -96,7 +96,9 @@ model Student {
   tak                   Int?
   studyProgramId        Int
   userId                Int                    @unique
-  dosenWaliId           Int
+  dosenWali             Lecturer               @relation(fields: [dosenWaliId], references: [id])
+  dosenWaliId           Int // Dosen Wali
+  sktaRequests          SktaRequest[]
   sidangRegistrations   SidangRegistration[]
   SktaRequest           SktaRequest[]
   dosenWali             Lecturer               @relation(fields: [dosenWaliId], references: [id])
@@ -105,6 +107,63 @@ model Student {
   yudisiumRegistrations YudisiumRegistration[]
 }
 
+// Surat Keputusan TA
+model SktaRequest {
+  id                 Int                 @id @default(autoincrement())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deletedAt          DateTime?
+  proposalTitleId    String
+  proposalTitleEn    String
+  student            Student             @relation(fields: [studentId], references: [id])
+  studentId          Int
+  dosenPembimbing1   Lecturer            @relation("Pembimbing1SktaRequests", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id Int
+  dosenPembimbing2   Lecturer            @relation("Pembimbing2SktaRequests", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id Int
+  sktaRequestUploads SktaRequestUpload[]
+  sktaResponses      SktaResponse[]
+}
+
+model SktaRequestUpload {
+  id            Int         @id @default(autoincrement())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+  name          String
+  fileUrl       String
+  sktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id])
+  sktaRequestId Int
+}
+
+model SktaResponse {
+  id                       Int                  @id @default(autoincrement())
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  deletedAt                DateTime?
+  hasUploadedFinalProposal Boolean
+  hasTakenLanguageTest     Boolean
+  message                  String?
+  expDate                  DateTime?            @db.Date
+  academicStaff            AcademicStaff        @relation(fields: [academicStaffId], references: [id])
+  academicStaffId          Int
+  sktaRequest              SktaRequest          @relation(fields: [sktaRequestId], references: [id])
+  sktaRequestId            Int
+  sktaResponseUploads      SktaResponseUpload[]
+}
+
+model SktaResponseUpload {
+  id             Int          @id @default(autoincrement())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+  name           String
+  fileUrl        String
+  sktaResponse   SktaResponse @relation(fields: [sktaResponseId], references: [id])
+  sktaResponseId Int
+}
+
+// Daftar Sidang
 model SidangPeriod {
   id         Int       @id @default(autoincrement())
   createdAt  DateTime  @default(now())

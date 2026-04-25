@@ -4,8 +4,8 @@ const jwt = require("jsonwebtoken");
 
 const prisma = require("../prisma/client");
 
-// Get All Kelompok Keahlian
-const getResearchGroups = async (req, res) => {
+// Daftar Semua Kelompok Keahlian
+const listResearchGroups = async (req, res) => {
   try {
     const researchGroups = await prisma.researchGroup.findMany();
 
@@ -20,5 +20,5 @@ const getResearchGroups = async (req, res) => {
 };
 
 module.exports = {
-  getResearchGroups,
+  listResearchGroups,
 };
