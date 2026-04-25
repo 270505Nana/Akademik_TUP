@@ -2,11 +2,7 @@ const express = require("express");
 
 const router = express.Router();
 
-const {
-  register,
-  login,
-  getUser,
-} = require("../../controllers/authController");
+const { register, login, user } = require("../../controllers/authController");
 
 const { verifyToken } = require("../../middlewares/auth");
 
@@ -104,6 +100,6 @@ router.post("/login", loginValidator, validate, login);
  *       403:
  *         description: Invalid token
  */
-router.get("/user", verifyToken, getUser);
+router.get("/user", verifyToken, user);
 
 module.exports = router;

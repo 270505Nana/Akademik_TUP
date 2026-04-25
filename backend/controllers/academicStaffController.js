@@ -4,8 +4,8 @@ const jwt = require("jsonwebtoken");
 
 const prisma = require("../prisma/client");
 
-// Get Academic Staff
-const getAcademicStaff = async (req, res) => {
+// Daftar Semua Academic Staff
+const listAcademicStaff = async (req, res) => {
   try {
     const academicStaff = await prisma.academicStaff.findMany();
 
@@ -48,8 +48,8 @@ const upsertAcademicStaff = async (req, res) => {
   }
 };
 
-// Get Academic Staff By User Id
-const getAcademicStaffByUserId = async (req, res) => {
+// Find Academic Staff By User Id
+const findAcademicStaffByUserId = async (req, res) => {
   try {
     const userId = parseInt(req.params.userId);
 
@@ -70,7 +70,7 @@ const getAcademicStaffByUserId = async (req, res) => {
 };
 
 module.exports = {
-  getAcademicStaff,
+  listAcademicStaff,
   upsertAcademicStaff,
-  getAcademicStaffByUserId,
+  findAcademicStaffByUserId,
 };
