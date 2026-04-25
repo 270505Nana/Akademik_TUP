@@ -16,8 +16,10 @@ npx prisma generate
 ## Run
 
 ```sh
-# Run seeder
+# Setup DB
+npx prisma db push
 npx prisma db seed
+npx prisma generate
 
 # Run service (development-only)
 npm start

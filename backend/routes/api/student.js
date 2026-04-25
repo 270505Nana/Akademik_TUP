@@ -3,9 +3,9 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  getStudents,
+  listStudents,
   upsertStudent,
-  getStudentByUserId,
+  findStudentByUserId,
 } = require("../../controllers/studentController");
 
 const { verifyToken } = require("../../middlewares/auth");
@@ -37,7 +37,7 @@ const { upsertStudentValidator } = require("../../validators/studentValidator");
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, getStudents);
+router.get("/", verifyToken, listStudents);
 
 /**
  * @swagger
@@ -144,6 +144,6 @@ router.put(
  *       500:
  *         description: Internal server error
  */
-router.get("/:userId", verifyToken, getStudentByUserId);
+router.get("/:userId", verifyToken, findStudentByUserId);
 
 module.exports = router;
