@@ -6,14 +6,18 @@ const { seedLecturer } = require("./seeders/lecturerSeeder");
 const {
   seedFacultyStudyProgram,
 } = require("./seeders/facultyStudyProgramSeeder");
+const { seedStudent } = require("./seeders/studentSeeder");
 
 async function main() {
   console.log("- Starting seeding...");
 
   await seedAcademicStaff();
+
   await seedResearchGroup();
   await seedLecturer();
+
   await seedFacultyStudyProgram();
+  await seedStudent();
 
   console.log("- Seeding finished");
 }
