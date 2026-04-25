@@ -7,6 +7,7 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 
 const hideTimestamps = { createdAt: true, updatedAt: true, deletedAt: true };
+const hidedeletedAt = { deletedAt: true };
 
 const prisma = new PrismaClient({
   adapter,
@@ -14,6 +15,11 @@ const prisma = new PrismaClient({
     researchGroup: hideTimestamps,
     faculty: hideTimestamps,
     studyProgram: hideTimestamps,
+
+    academicStaff: hidedeletedAt,
+    lecturer: hideTimestamps,
+    student: hideTimestamps,
+    sktaRequest: hideTimestamps,
   },
 });
 
