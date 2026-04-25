@@ -44,7 +44,7 @@ function PendaftaranSidangContent() {
   };
 
   const handleSubmit = async () => {
-    // Basic validation 
+    // Basic validasi buat yg masih kocong sm yg step 1blm 
     /*
     const incompleteDocs = documents.filter(d => d.status !== 'completed');
     if (incompleteDocs.length > 0) {
@@ -62,8 +62,6 @@ function PendaftaranSidangContent() {
 
     try {
       setIsSubmitting(true);
-      
-      // Simulation of payload preparation
       const payload = {
         student_id: user?.id, 
         dosbing_1_id: data.pembimbing1_id || data.pembimbing1, 
@@ -85,7 +83,6 @@ function PendaftaranSidangContent() {
       console.log('Sending to BE (Simulation):', payload);
       // await api.post('/api/sidang/daftar', payload);
       
-      // Clear draft storage
       localStorage.removeItem('sidang_form_draft');
       
       alert('Berhasil Daftar Sidang');
