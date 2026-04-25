@@ -1,20 +1,17 @@
 import axios from "axios";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 const api = axios.create({
   baseURL: BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
 api.interceptors.request.use(
   (config) => {
-    const savedUser = localStorage.getItem("simta_user");
-    if (savedUser) {
-      const { token } = JSON.parse(savedUser);
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    const token = localStorage.getItem("simta_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -26,6 +23,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("simta_user");
+      localStorage.removeItem("simta_token");
       window.location.href = "/login";
     }
     return Promise.reject(error);
@@ -33,21 +31,23 @@ api.interceptors.response.use(
 );
 
 export default api;
-// authservisenya smeentara gabung aja,masih pake sso disini aku setnya, blm yg usn biasa
-export const loginUser = async ({ ssoUsername, password, role }) => {
-  const response = await api.post("/api/auth/login", {
-    sso_username: ssoUsername,
+
+export const registerUser = async ({ username, email, no_telp, password, confirmPassword }) => {
+  const response = await api.post("/api/auth/register", {
+    username,
+    email,
+    phone: no_telp,          
     password,
-    role, 
+    confirmPassword,          
+    role: "STUDENT",          
   });
   return response.data;
 };
 
-export const registerUser = async ({ username, email, no_telp, password }) => {
-  const response = await api.post("/api/auth/register", {
-    username,
+// SSO nya aku hapus dl sementara, karena sekarang pakai login biasa
+export const loginUser = async ({ email, password }) => {
+  const response = await api.post("/api/auth/login", {
     email,
-    no_telp: no_telp,
     password,
   });
   return response.data;
