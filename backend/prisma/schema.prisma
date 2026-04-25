@@ -1,20 +1,9 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-}
-
-enum Role {
-  STUDENT
-  LECTURER
-  ACADEMIC_STAFF
 }
 
 model User {
@@ -32,7 +21,6 @@ model User {
   student       Student?
 }
 
-// Master Data Tim Akademik
 model AcademicStaff {
   id            Int            @id @default(autoincrement())
   createdAt     DateTime       @default(now())
@@ -44,7 +32,6 @@ model AcademicStaff {
   sktaResponses SktaResponse[]
 }
 
-// Master Data Dosen
 model ResearchGroup {
   id        Int        @id @default(autoincrement())
   createdAt DateTime   @default(now())
@@ -76,7 +63,6 @@ model Lecturer {
   pembimbing2YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing2YudisiumRegistrations")
 }
 
-// Master Data Mahasiswa
 model Faculty {
   id            Int            @id @default(autoincrement())
   createdAt     DateTime       @default(now())
@@ -92,9 +78,9 @@ model StudyProgram {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   name      String
-  faculty   Faculty   @relation(fields: [facultyId], references: [id])
   facultyId Int
   students  Student[]
+  faculty   Faculty   @relation(fields: [facultyId], references: [id])
 }
 
 model Student {
@@ -108,14 +94,16 @@ model Student {
   sks                   Int?
   ipk                   Float?
   tak                   Int?
-  studyProgram          StudyProgram           @relation(fields: [studyProgramId], references: [id])
   studyProgramId        Int
-  user                  User                   @relation(fields: [userId], references: [id])
   userId                Int                    @unique
   dosenWali             Lecturer               @relation(fields: [dosenWaliId], references: [id])
   dosenWaliId           Int // Dosen Wali
   sktaRequests          SktaRequest[]
   sidangRegistrations   SidangRegistration[]
+  SktaRequest           SktaRequest[]
+  dosenWali             Lecturer               @relation(fields: [dosenWaliId], references: [id])
+  studyProgram          StudyProgram           @relation(fields: [studyProgramId], references: [id])
+  user                  User                   @relation(fields: [userId], references: [id])
   yudisiumRegistrations YudisiumRegistration[]
 }
 
@@ -211,14 +199,14 @@ model SidangRegistration {
   skta_exp_date      DateTime           @db.Date
   thesisTitleId      String
   thesisTitleEn      String
-  student            Student            @relation(fields: [studentId], references: [id])
   studentId          Int
-  dosenPembimbing1   Lecturer           @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
   dosenPembimbing1Id Int
-  dosenPembimbing2   Lecturer           @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
   dosenPembimbing2Id Int
-  sidangScheme       SidangScheme       @relation(fields: [sidangSchemeId], references: [id])
   sidangSchemeId     Int
+  dosenPembimbing1   Lecturer           @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id])
+  dosenPembimbing2   Lecturer           @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id])
+  sidangScheme       SidangScheme       @relation(fields: [sidangSchemeId], references: [id])
+  student            Student            @relation(fields: [studentId], references: [id])
   sidangSubmissions  SidangSubmission[]
 }
 
@@ -228,11 +216,10 @@ model SidangSubmission {
   updatedAt            DateTime           @updatedAt
   deletedAt            DateTime
   data                 Json
-  sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
   sidangRegistrationId Int
+  sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
 }
 
-// Daftar Yudisium
 model CumlaudeScheme {
   id                    Int                    @id @default(autoincrement())
   createdAt             DateTime               @default(now())
@@ -255,17 +242,17 @@ model YudisiumRegistration {
   thesisTitleId       String
   thesisTitleEn       String
   isConfirmed         Boolean
-  student             Student              @relation(fields: [studentId], references: [id])
   studentId           Int
-  dosenPembimbing1    Lecturer             @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
   dosenPembimbing1Id  Int
-  dosenPembimbing2    Lecturer             @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
   dosenPembimbing2Id  Int
-  sidangScheme        SidangScheme         @relation(fields: [sidangSchemeId], references: [id])
   sidangSchemeId      Int
-  cumlaudeScheme      CumlaudeScheme       @relation(fields: [cumlaudeSchemeId], references: [id])
   cumlaudeSchemeId    Int
   cumlaudeSubmissions CumlaudeSubmission[]
+  cumlaudeScheme      CumlaudeScheme       @relation(fields: [cumlaudeSchemeId], references: [id])
+  dosenPembimbing1    Lecturer             @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id])
+  dosenPembimbing2    Lecturer             @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id])
+  sidangScheme        SidangScheme         @relation(fields: [sidangSchemeId], references: [id])
+  student             Student              @relation(fields: [studentId], references: [id])
 }
 
 model CumlaudeSubmission {
@@ -274,6 +261,67 @@ model CumlaudeSubmission {
   updatedAt              DateTime             @updatedAt
   deletedAt              DateTime
   data                   Json
-  yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
   yudisiumRegistrationId Int
+  yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
+}
+
+model SktaRequest {
+  id                                                Int                 @id @default(autoincrement())
+  createdAt                                         DateTime            @default(now())
+  updatedAt                                         DateTime
+  deletedAt                                         DateTime?
+  proposalTitleId                                   String
+  proposalTitleEn                                   String
+  studentId                                         Int
+  dosenPembimbing1Id                                Int
+  dosenPembimbing2Id                                Int
+  Lecturer_SktaRequest_dosenPembimbing1IdToLecturer Lecturer            @relation("SktaRequest_dosenPembimbing1IdToLecturer", fields: [dosenPembimbing1Id], references: [id])
+  Lecturer_SktaRequest_dosenPembimbing2IdToLecturer Lecturer            @relation("SktaRequest_dosenPembimbing2IdToLecturer", fields: [dosenPembimbing2Id], references: [id])
+  Student                                           Student             @relation(fields: [studentId], references: [id])
+  SktaRequestUpload                                 SktaRequestUpload[]
+  SktaResponse                                      SktaResponse[]
+}
+
+model SktaRequestUpload {
+  id            Int         @id @default(autoincrement())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime
+  deletedAt     DateTime?
+  sktaRequestId Int
+  filename      String
+  path          String
+  SktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id])
+}
+
+model SktaResponse {
+  id                       Int                  @id @default(autoincrement())
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime
+  deletedAt                DateTime?
+  hasUploadedFinalProposal Boolean
+  hasTakenLanguageTest     Boolean
+  message                  String?
+  academicStaffId          Int
+  expDate                  DateTime?            @db.Date
+  sktaRequestId            Int
+  AcademicStaff            AcademicStaff        @relation(fields: [academicStaffId], references: [id])
+  SktaRequest              SktaRequest          @relation(fields: [sktaRequestId], references: [id])
+  SktaResponseUpload       SktaResponseUpload[]
+}
+
+model SktaResponseUpload {
+  id             Int          @id @default(autoincrement())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  deletedAt      DateTime?
+  sktaResponseId Int
+  filename       String
+  path           String
+  SktaResponse   SktaResponse @relation(fields: [sktaResponseId], references: [id])
+}
+
+enum Role {
+  STUDENT
+  LECTURER
+  ACADEMIC_STAFF
 }
