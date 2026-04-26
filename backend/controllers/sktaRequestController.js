@@ -150,4 +150,30 @@ const updateSktaRequest = async (req, res) => {
   }
 };
 
-module.exports = { listSktaRequests, createSktaRequest, updateSktaRequest };
+// Find SKTA Request By Mahasiswa Id
+const findSktaRequestByStudentId = async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId);
+
+    const sktaRequest = await prisma.sktaRequest.findUnique({
+      where: { studentId },
+    });
+
+    if (!sktaRequest) {
+      return res.status(404).json({ message: "SKTA request data not found" });
+    }
+
+    res.json({ data: sktaRequest });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
+
+module.exports = {
+  listSktaRequests,
+  createSktaRequest,
+  updateSktaRequest,
+  findSktaRequestByStudentId,
+};
