@@ -1,11 +1,14 @@
 import { AuthProvider } from "./context/AuthContext";
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import LoginPage from "./pages/auth/Login";
 import RegisterPage from "./pages/auth/Register";
 import DashboardMahasiswa from "./pages/mahasiswa/dashboard.jsx";
 import DashboardAkademik from "./pages/admin/dashboard.jsx";
 import DashboardDosen from "./pages/dosen/dashboard.jsx";
+import PengajuanSK from "./pages/mahasiswa/pengajuanSK.jsx";
+import PendaftaranSidang from "./pages/mahasiswa/pendaftaransidang.jsx";
 // import ProtectedRoute from "./components/common/ProtectedRoute";
 
 
@@ -20,14 +23,9 @@ const App = () => {
         <Route path="/register" element={<RegisterPage />} />
 
         {/* mhs */}
-        <Route
-          path="/mahasiswa/dashboard" element={<DashboardMahasiswa />}
-          // element={
-          //   <ProtectedRoute allowedRoles={["mahasiswa"]}>
-          //     <DashboardMahasiswa />
-          //   </ProtectedRoute>
-          // }
-        />
+        <Route path="/mahasiswa/dashboard" element={<DashboardMahasiswa />}/>
+        <Route path="/mahasiswa/pengajuan-sk" element={<PengajuanSK />} /> 
+        <Route path="/mahasiswa/pendaftaran-sidang" element={<PendaftaranSidang />} /> 
 
         {/* buat dosen */}
         <Route
@@ -60,7 +58,6 @@ const App = () => {
           }
         />
         
-        {/* Catch-all: redirect ke login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </AuthProvider>

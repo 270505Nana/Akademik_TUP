@@ -11,6 +11,8 @@ import {
   BsEyeSlashFill
 } from "react-icons/bs";
 
+// Placeholders for missing assets to avoid build errors if they don't exist
+// User can replace these with actual files in src/assets/
 import bgLogin from "../../assets/bg-login.png";
 import logoSimta from "../../assets/logo-simta.png";
 import logoTelkom from "../../assets/logo-telkom.png";
@@ -31,31 +33,64 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
-    try {
-      const data = await loginUser({ ssoUsername, password, role: activeTab });
-      login({ ...data.user, token: data.token });
-      if (data.user.role === "mahasiswa") navigate("/mahasiswa/dashboard");
-      else if (data.user.role === "dosen") navigate("/dosen/dashboard");
-      else if (data.user.role === "akademik") navigate("/akademik/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.message || "Login gagal, coba lagi.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  e.preventDefault();
+  setError("");
 
+  // Validasi sederhana sebelum hit API
+  if (!ssoUsername.trim()) { setError("Email tidak boleh kosong."); return; }
+  if (!password)            { setError("Password tidak boleh kosong."); return; }
+
+  setIsLoading(true);
+  try {
+    const data = await loginUser({ email: ssoUsername, password });
+    // data = { message: "...", token: "eyJ...", data: { id, email, role, ... } }
+
+    // ✅ Gabungkan user data + token jadi satu object untuk AuthContext
+    login({
+      ...data.data,      // user fields: id, email, username, role, dll
+      token: data.token, // token ikut masuk
+    });
+
+    // ✅ Map role dari BE ke route FE
+    const roleMap = {
+      STUDENT:       "/mahasiswa/dashboard",
+      LECTURER:      "/dosen/dashboard",
+      ACADEMIC_STAFF: "/akademik/dashboard",
+    };
+
+    const role = data.data?.role;
+    const destination = roleMap[role] || "/dashboard";
+    navigate(destination);
+
+  } catch (err) {
+    // Tampilkan pesan error dari BE
+    const msg =
+      err.response?.data?.message ||
+      err.response?.data?.errors?.[0]?.msg ||
+      "Login gagal. Periksa email dan password kamu.";
+    setError(msg);
+    console.log("Login error detail:", err.response?.data);
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="login-wrapper">
       <div className="left-panel">
-        <img src={bgLogin} alt="Background" className="bg-image" />
+        <img 
+          src={bgLogin} 
+          alt="Background" 
+          className="bg-image" 
+          onError={(e) => { 
+            e.target.onerror = null;
+            e.target.src = "https://images.unsplash.com/photo-1557683311-eac922347aa1?q=80&w=2029&auto=format&fit=crop"; 
+          }} 
+        />
         <div className="left-overlay" />
 
         <div className="left-content">
           <div className="brand-logo">
-            <img src={logoSimta} alt="Logo SIMTA" className="logo-img" />
+            <img src={logoSimta} alt="Logo SIMTA" className="logo-img" onError={(e) => { e.target.style.display = 'none'; }} />
           </div>
 
           <div className="brand-text">
@@ -77,7 +112,7 @@ const LoginPage = () => {
 
         <div className="form-card">
           <div className="form-logo">
-            <img src={logoTelkom} alt="Logo Telkom" className="form-logo-img" />
+            <img src={logoTelkom} alt="Logo Telkom" className="form-logo-img" onError={(e) => { e.target.style.display = 'none'; }} />
           </div>
 
           <div className="role-toggle">
@@ -89,6 +124,7 @@ const LoginPage = () => {
               <BsMortarboardFill />
               Mahasiswa
             </button>
+
             <button
               className={`role-btn ${activeTab === "dosen" ? "active" : ""}`}
               onClick={() => { setActiveTab("dosen"); setError(""); }}
@@ -97,11 +133,13 @@ const LoginPage = () => {
               <BsPersonBadgeFill />
               Dosen/Pegawai
             </button>
+
           </div>
 
           <p className="sso-label">SSO LOGIN</p>
 
           <form onSubmit={handleSubmit}>
+            {error && <div className="form-error">{error}</div>}
             <div className="form-group">
               <label className="form-label" htmlFor="ssoUsername">SSO Username</label>
               <div className="input-wrapper">
@@ -147,12 +185,11 @@ const LoginPage = () => {
               </div>
             </div>
 
-            {error && <p className="form-error">{error}</p>}
-
             <button type="submit" className="btn-login" disabled={isLoading}>
               <span>{isLoading ? "Memproses..." : "Login"}</span>
               {!isLoading && <BsArrowRightCircleFill />}
             </button>
+
           </form>
 
           <p className="forgot-text">

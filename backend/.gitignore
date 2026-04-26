@@ -146,3 +146,6 @@ vite.config.ts.timestamp-*
 /generated/prisma
 
 *-old*
+
+/uploads/*
+!/uploads/.gitkeep
