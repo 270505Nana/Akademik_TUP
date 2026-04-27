@@ -1,9 +1,10 @@
 var express = require("express");
-const { verifyToken } = require("../middlewares/auth");
+
+var router = express.Router();
+
 const {
   downloadTemplateUpload,
 } = require("../controllers/templateUploadController");
-var router = express.Router();
 
 /* GET home page. */
 router.get("/", function (req, res, next) {
