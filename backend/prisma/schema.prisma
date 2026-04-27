@@ -179,13 +179,13 @@ model SktaResponseUpload {
 
 // Daftar Sidang
 model SidangPeriod {
-  id         Int       @id @default(autoincrement())
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
-  name       String
-  start_date DateTime  @db.Date
-  end_date   DateTime  @db.Date
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  name      String
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime  @map("end_date") @db.Date
 }
 
 model SidangScheme {
@@ -203,12 +203,12 @@ model SidangRegistration {
   id                 Int                @id @default(autoincrement())
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
-  deletedAt          DateTime
+  deletedAt          DateTime?
   programType        String
   sks                Int
   ipk                Float
   tak                Int
-  skta_exp_date      DateTime           @db.Date
+  sktaExpDate        DateTime           @map("skta_exp_date") @db.Date
   thesisTitleId      String
   thesisTitleEn      String
   student            Student            @relation(fields: [studentId], references: [id])
@@ -226,7 +226,7 @@ model SidangSubmission {
   id                   Int                @id @default(autoincrement())
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
-  deletedAt            DateTime
+  deletedAt            DateTime?
   data                 Json
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
   sidangRegistrationId Int
@@ -247,11 +247,11 @@ model YudisiumRegistration {
   id                  Int                  @id @default(autoincrement())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
-  deletedAt           DateTime
+  deletedAt           DateTime?
   programType         String
   ipk                 Float
   tak                 Int
-  skta_exp_date       DateTime             @db.Date
+  sktaExpDate         DateTime             @map("skta_exp_date") @db.Date
   thesisTitleId       String
   thesisTitleEn       String
   isConfirmed         Boolean
@@ -272,17 +272,19 @@ model CumlaudeSubmission {
   id                     Int                  @id @default(autoincrement())
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
-  deletedAt              DateTime
+  deletedAt              DateTime?
   data                   Json
   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
   yudisiumRegistrationId Int
 }
 
-model TemplateFile {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime
-  fileName  String
-  fileUrl   String
+model TemplateUpload {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  name      String
+  slug      String    @unique // contoh: formulir-penerbitan-skta
+  filename  String
+  path      String
 }
