@@ -1,13 +1,14 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useYudisiumForm } from '../../context/YudisiumFormContext';
 import { BsPerson, BsHash, BsMortarboard, BsAward, BsBuildings, BsChevronLeft, BsChevronRight, BsCheck, BsInfoCircleFill } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
+import CustomAlert from '../common/CustomAlert';
 
 const Step1Yudisium = () => {
   const { state, dispatch } = useYudisiumForm();
   const navigate = useNavigate();
   const { data } = state;
+  const [error, setError] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -40,6 +41,35 @@ const Step1Yudisium = () => {
     }
   };
 
+  const validateStep1 = () => {
+    const requiredFields = [
+      'nama', 'nim', 'prodi', 'tak', 'program', 
+      'doswal', 'skemaSidang', 'jalurYudisium', 
+      'judulId', 'judulEn'
+    ];
+    
+    const isAnyEmpty = requiredFields.some(field => {
+      if (field === 'skemaTambahan') return data.skemaTambahan.length === 0;
+      return !data[field] || data[field].toString().trim() === '';
+    });
+
+    if (isAnyEmpty) {
+      setError(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return false;
+    }
+    
+    setError(false);
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep1()) {
+      dispatch({ type: 'SET_STEP', value: 2 });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="yudisium-page-container">
       
@@ -65,6 +95,14 @@ const Step1Yudisium = () => {
         <span className="step-label-red">Step 1</span>
         <h2 className="step-title-red">Pendaftaran Yudisium Telkom University Purwokerto</h2>
       </div>
+
+      {error && (
+        <CustomAlert 
+          type="error" 
+          message="Mohon Lengkapi Semua Dokumen Sebelum Submit" 
+          style={{ marginBottom: '2rem' }} 
+        />
+      )}
 
       <div className="form-section">
         <div className="section-divider">
@@ -253,11 +291,11 @@ const Step1Yudisium = () => {
           <button className="nav-arrow-btn" disabled><BsChevronLeft /></button>
           <div className="page-numbers">
             <div className="page-number active">1</div>
-            <div className="page-number" onClick={() => dispatch({ type: 'SET_STEP', value: 2 })}>2</div>
+            <div className="page-number" onClick={handleNext}>2</div>
           </div>
-          <button className="nav-arrow-btn" onClick={() => dispatch({ type: 'SET_STEP', value: 2 })}><BsChevronRight /></button>
+          <button className="nav-arrow-btn" onClick={handleNext}><BsChevronRight /></button>
         </div>
-        <button className="btn-submit-yudisium" onClick={() => dispatch({ type: 'SET_STEP', value: 2 })}>
+        <button className="btn-submit-yudisium" onClick={handleNext}>
           Simpan & Lanjutkan
         </button>
       </div>
@@ -266,4 +304,3 @@ const Step1Yudisium = () => {
 };
 
 export default Step1Yudisium;
-
