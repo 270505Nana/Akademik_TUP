@@ -1,0 +1,642 @@
+:root {
+  --primary-red: #bb2825;
+  --bg-light: #f9f9fb;
+  --border-grey: #e2e8f0;
+  --text-dark: #1a202c;
+  --text-grey: #718096;
+  --success-green: #48bb78;
+  --error-red: #f56565;
+  --white: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  line-height: 1.5;
+}
+
+/* Common Layout Wrapper */
+.page-wrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.top-header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 0 0.5rem;
+}
+
+.btn-back-square {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f1f5f9;
+  border: none;
+  padding: 0.8rem 1.4rem;
+  border-radius: 10px;
+  color: #1e293b;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back-square:hover {
+  background: #e2e8f0;
+}
+
+.header-logos {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.simta-brand-logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+}
+
+.telkom-brand-logo {
+  height: 55px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-divider {
+  width: 1px;
+  height: 40px;
+  background: #e2e8f0;
+}
+
+.simta-container {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #fee2e2;
+  padding: 3rem 2.5rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Step Headers */
+.step-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.step-label-red {
+  color: #c0182a;
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.step-title-red {
+  color: #c0182a;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+/* Form Styles */
+.form-section {
+  margin-bottom: 3rem;
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+}
+
+.section-divider h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-group label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-grey);
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+  border: 1px solid var(--border-grey);
+  border-radius: 8px;
+  background: #fdfdfd;
+  font-size: 0.95rem;
+}
+
+.input-field.read-only {
+  background-color: #f7fafc !important;
+  cursor: not-allowed;
+  color: #718096;
+  border-color: #e2e8f0;
+}
+
+/* Textareas */
+.textarea-field {
+  width: 100%;
+  min-height: 120px;
+  padding: 1rem;
+  border: 1px solid var(--border-grey);
+  border-radius: 12px;
+  background: #f9fafb;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.textarea-container {
+  margin-top: 1.5rem;
+}
+
+.textarea-container label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
+/* Yudisium Specific Styles */
+.yudisium-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.instruction-box {
+  background: #fffdf0;
+  border: 1px solid #fcebb6;
+  border-radius: 16px;
+  padding: 2.5rem;
+  padding-bottom: 5.5rem;
+  margin-bottom: 2.5rem;
+  position: relative;
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.instruction-icon-circle {
+  width: 56px;
+  height: 56px;
+  background: #fdf6b2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #723b10;
+  flex-shrink: 0;
+}
+
+.instruction-content {
+  flex: 1;
+}
+
+.instruction-content h3 {
+  color: #b91c1c;
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.instruction-content p {
+  font-size: 0.95rem;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.instruction-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.contact-floating-badge {
+  position: absolute;
+  bottom: 25px;
+  right: 25px;
+  background: #b91c1c;
+  color: white;
+  padding: 10px 24px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.contact-floating-badge a {
+  color: white;
+  text-decoration: none;
+}
+
+/* Step 1 Yudisium Pills */
+.radio-pill-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.radio-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: all 0.2s;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.radio-pill.active {
+  background: white;
+  border-color: #c0182a;
+  box-shadow: 0 4px 6px -1px rgba(192, 24, 42, 0.1);
+}
+
+.check-icon-box {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.active .check-icon-box {
+  background: #c0182a;
+  border-color: #c0182a;
+  color: white;
+}
+
+.sub-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  margin-top: 2rem;
+}
+
+.vertical-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.choice-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #334155;
+}
+
+.choice-item input[type="radio"],
+.choice-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #c0182a;
+}
+
+.choice-subtext {
+  font-size: 0.75rem;
+  color: #f56565;
+}
+
+/* Step 2 Document Sidebar UI */
+.doc-upload-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.doc-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.doc-upload-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.doc-upload-item:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+}
+
+.doc-upload-item.active {
+  border-color: #3b82f6;
+  background: #f0f7ff;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
+}
+
+.doc-upload-item.done {
+  border-color: #10b981;
+}
+
+.doc-id-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.doc-upload-item.active .doc-id-circle {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.doc-upload-item.done .doc-id-circle {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.doc-upload-item.done .doc-id-circle::after {
+  content: "✔";
+  font-size: 0.8rem;
+}
+
+.doc-id-circle span {
+  display: inline;
+}
+
+.doc-upload-item.done .doc-id-circle span {
+  display: none;
+}
+
+.doc-upload-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+}
+
+.upload-panel-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.breadcrumb-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+}
+
+.template-download-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.template-info h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.template-info p {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.download-btn-red {
+  background: #b91c1c;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dropzone-container {
+  border: 2px dashed #cbd5e0;
+  border-radius: 12px;
+  padding: 3rem;
+  text-align: center;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: border-color 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dropzone-container:hover {
+  border-color: #c0182a;
+}
+
+.cloud-icon {
+  width: 64px;
+  height: 64px;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+}
+
+.drop-text-blue {
+  font-size: 1rem;
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.drop-text-blue span {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.format-pills {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 1rem;
+}
+
+.format-pill {
+  background: white;
+  padding: 4px 12px;
+  border-radius: 99px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+/* Pagination & Submit */
+.footer-pagination-yudisium {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.nav-arrows {
+  display: flex;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.nav-arrow-btn {
+  padding: 8px 12px;
+  background: white;
+  border: none;
+  cursor: pointer;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 8px;
+}
+
+.page-number {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.page-number.active {
+  background: #c0182a;
+  color: white;
+  border-color: #c0182a;
+}
+
+.btn-submit-yudisium {
+  background: #c0182a;
+  color: white;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+/* Quill Editor Customization */
+.quill-editor-wrapper .ql-toolbar.ql-snow {
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  padding: 12px;
+}
+
+.quill-editor-wrapper .ql-container.ql-snow {
+  border: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.quill-editor-wrapper .ql-editor {
+  min-height: 200px;
+}
+
+.quill-editor-wrapper .ql-editor.ql-blank::before {
+  font-style: normal;
+  color: #94a3b8;
+  left: 15px;
+}
+
+.quill-editor-wrapper .ql-snow .ql-stroke {
+  stroke: #64748b;
+}
+
+.quill-editor-wrapper .ql-snow .ql-fill {
+  fill: #64748b;
+}
+
+.quill-editor-wrapper .ql-snow .ql-picker {
+  color: #64748b;
+}
