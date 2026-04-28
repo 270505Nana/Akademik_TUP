@@ -47,6 +47,7 @@ const SidebarMahasiswa = ({
   const getSubPath = (sub) => {
     if (sub === 'Permohonan Penerbitan SK') return '/mahasiswa/pengajuan-sk';
     if (sub === 'Registrasi Sidang') return '/mahasiswa/pendaftaran-sidang';
+    if (sub === 'Registrasi Yudisium') return '/mahasiswa/pendaftaran-yudisium';
     return '#';
   };
 

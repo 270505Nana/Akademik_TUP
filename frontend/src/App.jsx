@@ -9,6 +9,7 @@ import DashboardAkademik from "./pages/admin/dashboard.jsx";
 import DashboardDosen from "./pages/dosen/dashboard.jsx";
 import PengajuanSK from "./pages/mahasiswa/pengajuanSK.jsx";
 import PendaftaranSidang from "./pages/mahasiswa/pendaftaransidang.jsx";
+import PendaftaranYudisium from "./pages/mahasiswa/pendaftaranyudisium.jsx";
 // import ProtectedRoute from "./components/common/ProtectedRoute";
 
 
@@ -26,6 +27,7 @@ const App = () => {
         <Route path="/mahasiswa/dashboard" element={<DashboardMahasiswa />}/>
         <Route path="/mahasiswa/pengajuan-sk" element={<PengajuanSK />} /> 
         <Route path="/mahasiswa/pendaftaran-sidang" element={<PendaftaranSidang />} /> 
+        <Route path="/mahasiswa/pendaftaran-yudisium" element={<PendaftaranYudisium />} /> 
 
         {/* buat dosen */}
         <Route
