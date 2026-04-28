@@ -182,15 +182,34 @@ const Step2Yudisium = () => {
   };
 
   const checkIncomplete = () => {
-    // Check mandatory
+    // Check Step 1 mandatory fields
+    const step1Required = [
+      'nama', 'nim', 'prodi', 'tak', 'program', 
+      'doswal', 'skemaSidang', 'jalurYudisium', 
+      'judulId', 'judulEn'
+    ];
+    const step1Incomplete = step1Required.some(field => !data[field] || data[field].toString().trim() === '');
+    if (step1Incomplete) return true;
+
+    // Check mandatory docs for Step 2
     const mandatoryIncomplete = BERKAS_LIST.some(d => !data.berkas?.[d.name]);
     if (mandatoryIncomplete) return true;
 
-    // Check additional
+    // Check additional docs for specific jalur
     if (data.jalurYudisium !== 'Non Cumlaude') {
       for (const skema of data.skemaTambahan || []) {
         const config = SKEMA_CONFIG[skema];
         if (config && config.docs.some(d => !data.berkas?.[d.name])) return true;
+      }
+      
+      // Check evidenList for Cumlaude
+      if (data.jalurYudisium === 'Pengajuan Cumlaude' || data.jalurYudisium === 'Pengajuan Summa Cumlaude') {
+        const stripHtml = (html) => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          return doc.body.textContent || "";
+        };
+        const plainText = stripHtml(data.evidenList || '');
+        if (plainText.trim().length === 0) return true;
       }
     }
     return false;
@@ -198,7 +217,10 @@ const Step2Yudisium = () => {
 
   const handleSubmit = () => {
     setSubmitAttempted(true);
-    if (checkIncomplete()) return;
+    if (checkIncomplete()) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     alert('Pendaftaran Yudisium Berhasil Terkirim!');
   };
 
@@ -249,7 +271,7 @@ const Step2Yudisium = () => {
         {submitAttempted && checkIncomplete() && (
           <CustomAlert 
             type="error" 
-            message="Harap Lengkapi Semua Dokumen Sebelum Kamu Submit" 
+            message="Mohon Lengkapi Semua Dokumen Sebelum Submit" 
             style={{ marginBottom: '2.5rem' }}
           />
         )}
@@ -267,7 +289,7 @@ const Step2Yudisium = () => {
         ))}
 
         <UploadSection 
-          title="Harap Lengkapi Semua Dokumen Sebelum Kamu Submit"
+          title="LENGKAPI DOKUMEN WAJIB"
           docs={BERKAS_LIST}
           berkasData={data.berkas}
           onFileChange={handleFileChange}
