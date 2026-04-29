@@ -1,8 +1,7 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem("simta_user");
@@ -17,6 +16,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [loading] = useState(false);
+
   const login = (userData) => {
     const { token: tkn, ...rest } = userData;
     setUser(rest);
@@ -30,6 +30,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem("simta_user");
     localStorage.removeItem("simta_token");
+    localStorage.removeItem("student_data"); 
   };
 
   const isAuthenticated = !!user && !!token;

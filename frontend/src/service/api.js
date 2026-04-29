@@ -36,27 +36,18 @@ export const registerUser = async ({ username, email, no_telp, password, confirm
   const response = await api.post("/api/auth/register", {
     username,
     email,
-    phone: no_telp,          
+    no_telp,
     password,
-    confirmPassword,          
-    role: "STUDENT",          
+    confirmPassword,
   });
   return response.data;
 };
 
-// SSO nya aku hapus dl sementara, karena sekarang pakai login biasa
 export const loginUser = async ({ email, password }) => {
-  const response = await api.post("/api/auth/login", {
-    email,
-    password,
-  });
+  const response = await api.post("/api/auth/login", { email, password });
   return response.data;
 };
 
 export const logoutUser = async () => {
-  try {
-    await api.post("/api/auth/logout");
-  } catch (e) {
-    console.warn("Logout BE gagal, tetap logout FE:", e.message);
-  }
+
 };
