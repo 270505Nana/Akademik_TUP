@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --red-primary   : #8B1A1A;
+  --red-dark      : #6B1212;
+  --red-blob      : rgba(139, 26, 26, 0.18);
+  --gray-100      : #f5f5f5;
+  --gray-200      : #ebebeb;
+  --gray-200-border : #e2e8f0;
+  --gray-400      : #9e9e9e;
+  --gray-600      : #5a5a5a;
+  --gray-900      : #1a1a1a;
+  --white         : #ffffff;
+  --shadow-btn    : 0 6px 20px rgba(139, 26, 26, 0.40);
+  --shadow-card   : 0 10px 25px rgba(0, 0, 0, 0.05);
+  --radius-input  : 10px;
+  --radius-btn    : 10px;
+  --transition    : 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.data-diri-wrapper {
+  min-height: 100vh;
+  background-color: var(--gray-100);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+}
+
+.blob-1 { width: 400px; height: 400px; background: var(--red-blob); top: -100px; right: -100px; }
+.blob-2 { width: 300px; height: 300px; background: rgba(139, 26, 26, 0.1); bottom: -50px; left: -50px; }
+
+.data-diri-card {
+  position: relative;
+  z-index: 1;
+  background: var(--white);
+  width: 100%;
+  max-width: 600px;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.header-section { text-align: center; margin-bottom: 32px; }
+.form-logo {
+  width: 64px; height: 64px;
+  margin: 0 auto 16px;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200-border);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.form-logo-img { width: 80%; height: 80%; object-fit: contain; }
+
+.title { font-size: 1.5rem; font-weight: 800; color: var(--gray-900); margin-bottom: 8px; }
+.subtitle { font-size: 0.875rem; color: var(--gray-600); }
+
+.error-alert {
+  background: #fef2f2; color: #b91c1c; padding: 12px; border-radius: 8px;
+  margin-bottom: 20px; font-size: 0.875rem; text-align: center; border: 1px solid #fecaca;
+}
+
+.form-grid { display: flex; flex-direction: column; gap: 20px; }
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-label { font-size: 0.875rem; font-weight: 600; color: var(--red-primary); display: flex; align-items: center; gap: 8px; }
+
+.input-wrapper { position: relative; display: flex; align-items: center; }
+.input-icon { position: absolute; left: 14px; color: var(--gray-400); }
+.form-input, .form-select {
+  width: 100%; padding: 12px 14px 12px 42px;
+  background: var(--gray-100); border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-input); font-size: 0.95rem; outline: none; transition: all var(--transition);
+}
+
+.form-input.disabled { background: #f1f5f9; color: var(--gray-400); cursor: not-allowed; }
+.form-input:focus, .form-select:focus { border-color: var(--red-primary); background: var(--white); box-shadow: 0 0 0 3px rgba(139, 26, 26, 0.1); }
+
+.search-container { position: relative; }
+.dropdown-list {
+  position: absolute; top: 100%; left: 0; right: 0; background: white;
+  border: 1.5px solid var(--gray-200); border-top: none; z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;
+}
+.dropdown-item { padding: 10px 14px; font-size: 0.875rem; cursor: pointer; }
+.dropdown-item:hover { background: var(--gray-100); }
+.dropdown-item.disabled { color: #94a3b8; cursor: default; }
+
+.clear-search-btn {
+  position: absolute; right: 12px; background: var(--gray-200);
+  border: none; width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--gray-600); cursor: pointer;
+}
+
+.btn-submit {
+  margin-top: 24px; padding: 14px; background: var(--red-primary);
+  color: var(--white); border: none; border-radius: var(--radius-btn);
+  font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+  box-shadow: var(--shadow-btn); transition: all var(--transition);
+}
+.btn-submit:hover { background: var(--red-dark); transform: translateY(-2px); }
+
+@media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }

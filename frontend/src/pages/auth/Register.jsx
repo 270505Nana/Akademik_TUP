@@ -74,8 +74,15 @@ const RegisterPage = () => {
         confirmPassword: formData.confirmPassword, 
       });
 
-      setAlert({ type: "success", msg: "Akun berhasil dibuat! Mengalihkan ke halaman login..." });
-      setTimeout(() => navigate("/login"), 2000);
+      navigate("/login", {
+        state: {
+          alert: {
+            type: "success",
+            msg: "Berhasil register! Silahkan Login.",
+          },
+        },
+        replace: true,
+      });
 
     } catch (err) {
       const msg = err.response?.data?.message || "Registrasi gagal, coba lagi.";
@@ -89,11 +96,21 @@ const RegisterPage = () => {
     <div className="login-wrapper register-wrapper">
 
       <div className="left-panel">
-        <img src={bgLogin} alt="Background" className="bg-image" />
+        <img 
+            src={bgLogin} 
+            alt="Background" 
+            className="bg-image" 
+            onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1557683311-eac922347aa1?q=80&w=2029&auto=format&fit=crop"; }}
+        />
         <div className="left-overlay" />
         <div className="left-content">
           <div className="brand-logo">
-            <img src={logoSimta} alt="Logo SIMTA" className="logo-img" />
+            <img 
+                src={logoSimta} 
+                alt="Logo SIMTA" 
+                className="logo-img" 
+                onError={(e) => { e.target.src = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"; }}
+            />
           </div>
           <div className="brand-text">
             <p className="brand-welcome">Selamat Datang di</p>
@@ -108,7 +125,6 @@ const RegisterPage = () => {
         </div>
       </div>
 
-      
       <div className="right-panel">
         <div className="blob blob-top-right" />
         <div className="blob blob-bottom-left" />
@@ -117,7 +133,12 @@ const RegisterPage = () => {
 
           <div className="register-header">
             <div className="form-logo">
-              <img src={logoTelkom} alt="Logo Telkom" className="form-logo-img" />
+              <img 
+                src={logoTelkom} 
+                alt="Logo Telkom" 
+                className="form-logo-img" 
+                onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/id/thumb/0/03/Logo_Telkom_University.png/1200px-Logo_Telkom_University.png"; }}
+              />
             </div>
           </div>
 
