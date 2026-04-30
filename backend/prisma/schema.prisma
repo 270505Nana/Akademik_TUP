@@ -60,7 +60,7 @@ model Lecturer {
   updatedAt                        DateTime               @updatedAt
   deletedAt                        DateTime?
   nip                              String                 @unique
-  nidn                             String                 @unique
+  nidn                             String?                @unique
   lecturerCode                     String
   name                             String
   researchGroup                    ResearchGroup          @relation(fields: [researchGroupId], references: [id])

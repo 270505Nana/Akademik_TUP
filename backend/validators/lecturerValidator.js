@@ -2,7 +2,7 @@ const { body } = require("express-validator");
 
 const upsertLecturerValidator = [
   body("nip").notEmpty().withMessage("NIP is required"),
-  body("nidn").notEmpty().withMessage("NIDN is required"),
+  body("nidn").optional({ nullable: true, checkFalsy: true }),
   body("lecturerCode")
     .notEmpty()
     .withMessage("Lecturer code (kode dosen) is required"),
