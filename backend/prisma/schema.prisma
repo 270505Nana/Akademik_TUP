@@ -105,6 +105,7 @@ model Student {
   nim                   String                 @unique
   name                  String
   className             String
+  year                  String                 @default("2023") // TODO: development-only
   sks                   Int?
   ipk                   Float?
   tak                   Int?
@@ -287,4 +288,5 @@ model TemplateUpload {
   slug      String    @unique // contoh: formulir-penerbitan-skta
   filename  String
   path      String
+  isPublish Boolean   @default(false)
 }
