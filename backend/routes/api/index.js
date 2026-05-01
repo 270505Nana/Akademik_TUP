@@ -16,4 +16,6 @@ router.use("/skta-requests", require("./sktaRequest"));
 router.use("/skta-responses", require("./sktaResponse"));
 router.use("/templates", require("./templateUpload"));
 
+router.use("/sidang-periods", require("./sidangPeriod"));
+
 module.exports = router;
