@@ -55,25 +55,25 @@ model ResearchGroup {
 }
 
 model Lecturer {
-  id                               Int                    @id @default(autoincrement())
-  createdAt                        DateTime               @default(now())
-  updatedAt                        DateTime               @updatedAt
-  deletedAt                        DateTime?
-  nip                              String                 @unique
-  nidn                             String?                @unique
-  lecturerCode                     String
-  name                             String
-  researchGroup                    ResearchGroup          @relation(fields: [researchGroupId], references: [id])
-  researchGroupId                  Int
-  user                             User                   @relation(fields: [userId], references: [id])
-  userId                           Int                    @unique
-  students                         Student[]
-  pembimbing1SktaRequests          SktaRequest[]          @relation("Pembimbing1SktaRequests")
-  pembimbing2SktaRequests          SktaRequest[]          @relation("Pembimbing2SktaRequests")
-  pembimbing1SidangRegistrations   SidangRegistration[]   @relation("Pembimbing1SidangRegistrations")
-  pembimbing2SidangRegistrations   SidangRegistration[]   @relation("Pembimbing2SidangRegistrations")
-  pembimbing1YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing1YudisiumRegistrations")
-  pembimbing2YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing2YudisiumRegistrations")
+  id                             Int                  @id @default(autoincrement())
+  createdAt                      DateTime             @default(now())
+  updatedAt                      DateTime             @updatedAt
+  deletedAt                      DateTime?
+  nip                            String               @unique
+  nidn                           String?              @unique
+  lecturerCode                   String
+  name                           String
+  researchGroup                  ResearchGroup        @relation(fields: [researchGroupId], references: [id])
+  researchGroupId                Int
+  user                           User                 @relation(fields: [userId], references: [id])
+  userId                         Int                  @unique
+  students                       Student[]
+  pembimbing1SktaRequests        SktaRequest[]        @relation("Pembimbing1SktaRequests")
+  pembimbing2SktaRequests        SktaRequest[]        @relation("Pembimbing2SktaRequests")
+  pembimbing1SidangRegistrations SidangRegistration[] @relation("Pembimbing1SidangRegistrations")
+  pembimbing2SidangRegistrations SidangRegistration[] @relation("Pembimbing2SidangRegistrations")
+  // pembimbing1YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing1YudisiumRegistrations")
+  // pembimbing2YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing2YudisiumRegistrations")
 }
 
 // Master Data Mahasiswa
@@ -98,26 +98,26 @@ model StudyProgram {
 }
 
 model Student {
-  id                    Int                    @id @default(autoincrement())
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  deletedAt             DateTime?
-  nim                   String                 @unique
-  name                  String
-  className             String
-  year                  String
-  sks                   Int?
-  ipk                   Float?
-  tak                   Int?
-  studyProgram          StudyProgram           @relation(fields: [studyProgramId], references: [id])
-  studyProgramId        Int
-  user                  User                   @relation(fields: [userId], references: [id])
-  userId                Int                    @unique
-  dosenWali             Lecturer               @relation(fields: [dosenWaliId], references: [id])
-  dosenWaliId           Int // Dosen Wali
-  sktaRequests          SktaRequest[]
-  sidangRegistrations   SidangRegistration[]
-  yudisiumRegistrations YudisiumRegistration[]
+  id                  Int                  @id @default(autoincrement())
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
+  nim                 String               @unique
+  name                String
+  className           String
+  year                String
+  sks                 Int?
+  ipk                 Float?
+  tak                 Int?
+  studyProgram        StudyProgram         @relation(fields: [studyProgramId], references: [id])
+  studyProgramId      Int
+  user                User                 @relation(fields: [userId], references: [id])
+  userId              Int                  @unique
+  dosenWali           Lecturer             @relation(fields: [dosenWaliId], references: [id])
+  dosenWaliId         Int // Dosen Wali
+  sktaRequests        SktaRequest[]
+  sidangRegistrations SidangRegistration[]
+  // yudisiumRegistrations YudisiumRegistration[]
 }
 
 // Surat Keputusan TA
@@ -187,97 +187,99 @@ model SidangPeriod {
   name      String
   startDate DateTime  @map("start_date") @db.Date
   endDate   DateTime  @map("end_date") @db.Date
+  isOpen    Boolean
 }
 
-model SidangScheme {
-  id                    Int                    @id @default(autoincrement())
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  deletedAt             DateTime?
-  name                  String
-  field                 Json?
-  sidangRegistrations   SidangRegistration[]
-  yudisiumRegistrations YudisiumRegistration[]
+model SidangRegistrationPeriod {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  name      String
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime  @map("end_date") @db.Date
+  isOpen    Boolean
 }
 
 model SidangRegistration {
-  id                 Int                @id @default(autoincrement())
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  deletedAt          DateTime?
-  programType        String
-  sks                Int
-  ipk                Float
-  tak                Int
-  sktaExpDate        DateTime           @map("skta_exp_date") @db.Date
-  thesisTitleId      String
-  thesisTitleEn      String
-  student            Student            @relation(fields: [studentId], references: [id])
-  studentId          Int
-  dosenPembimbing1   Lecturer           @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id Int
-  dosenPembimbing2   Lecturer           @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id Int
-  sidangScheme       SidangScheme       @relation(fields: [sidangSchemeId], references: [id])
-  sidangSchemeId     Int
-  sidangSubmissions  SidangSubmission[]
+  id                        Int                        @id @default(autoincrement())
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  deletedAt                 DateTime?
+  programType               String
+  sidangScheme              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
+  sks                       Int
+  ipk                       Float
+  tak                       Int
+  sktaExpDate               DateTime                   @map("skta_exp_date") @db.Date
+  thesisTitleId             String
+  thesisTitleEn             String
+  student                   Student                    @relation(fields: [studentId], references: [id])
+  studentId                 Int
+  dosenPembimbing1          Lecturer                   @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id        Int
+  dosenPembimbing2          Lecturer                   @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id        Int
+  sidangRegistrationUploads SidangRegistrationUpload[]
 }
 
-model SidangSubmission {
+model SidangRegistrationUpload {
   id                   Int                @id @default(autoincrement())
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   deletedAt            DateTime?
-  data                 Json
+  name                 String
+  filename             String
+  path                 String
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
   sidangRegistrationId Int
 }
 
 // Daftar Yudisium
-model CumlaudeScheme {
-  id                    Int                    @id @default(autoincrement())
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  deletedAt             DateTime?
-  name                  String
-  field                 Json?
-  yudisiumRegistrations YudisiumRegistration[]
-}
+// model CumlaudeScheme {
+//   id                    Int                    @id @default(autoincrement())
+//   createdAt             DateTime               @default(now())
+//   updatedAt             DateTime               @updatedAt
+//   deletedAt             DateTime?
+//   name                  String
+//   field                 Json?
+//   yudisiumRegistrations YudisiumRegistration[]
+// }
 
-model YudisiumRegistration {
-  id                  Int                  @id @default(autoincrement())
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  deletedAt           DateTime?
-  programType         String
-  ipk                 Float
-  tak                 Int
-  sktaExpDate         DateTime             @map("skta_exp_date") @db.Date
-  thesisTitleId       String
-  thesisTitleEn       String
-  isConfirmed         Boolean
-  student             Student              @relation(fields: [studentId], references: [id])
-  studentId           Int
-  dosenPembimbing1    Lecturer             @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id  Int
-  dosenPembimbing2    Lecturer             @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id  Int
-  sidangScheme        SidangScheme         @relation(fields: [sidangSchemeId], references: [id])
-  sidangSchemeId      Int
-  cumlaudeScheme      CumlaudeScheme       @relation(fields: [cumlaudeSchemeId], references: [id])
-  cumlaudeSchemeId    Int
-  cumlaudeSubmissions CumlaudeSubmission[]
-}
+// model YudisiumRegistration {
+//   id                  Int                  @id @default(autoincrement())
+//   createdAt           DateTime             @default(now())
+//   updatedAt           DateTime             @updatedAt
+//   deletedAt           DateTime?
+//   programType         String
+//   ipk                 Float
+//   tak                 Int
+//   sktaExpDate         DateTime             @map("skta_exp_date") @db.Date
+//   thesisTitleId       String
+//   thesisTitleEn       String
+//   isConfirmed         Boolean
+//   student             Student              @relation(fields: [studentId], references: [id])
+//   studentId           Int
+//   dosenPembimbing1    Lecturer             @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+//   dosenPembimbing1Id  Int
+//   dosenPembimbing2    Lecturer             @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+//   dosenPembimbing2Id  Int
+//   sidangScheme        SidangScheme         @relation(fields: [sidangSchemeId], references: [id])
+//   sidangSchemeId      Int
+//   cumlaudeScheme      CumlaudeScheme       @relation(fields: [cumlaudeSchemeId], references: [id])
+//   cumlaudeSchemeId    Int
+//   cumlaudeSubmissions CumlaudeSubmission[]
+// }
 
-model CumlaudeSubmission {
-  id                     Int                  @id @default(autoincrement())
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  deletedAt              DateTime?
-  data                   Json
-  yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
-  yudisiumRegistrationId Int
-}
+// model CumlaudeSubmission {
+//   id                     Int                  @id @default(autoincrement())
+//   createdAt              DateTime             @default(now())
+//   updatedAt              DateTime             @updatedAt
+//   deletedAt              DateTime?
+//   data                   Json
+//   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
+//   yudisiumRegistrationId Int
+// }
 
 model TemplateUpload {
   id        Int       @id @default(autoincrement())
