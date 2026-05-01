@@ -49,5 +49,29 @@ export const loginUser = async ({ email, password }) => {
 };
 
 export const logoutUser = async () => {
+  // await api.post("/api/auth/logout");
+};
 
+// fetch data dosen
+export const getLecturers = async () => {
+  const response = await api.get("/api/lecturers");
+  return response.data?.data ?? response.data;
+};
+
+// fetch fakultas
+export const getFaculties = async () => {
+  const response = await api.get("/api/faculties");
+  return response.data?.data ?? response.data;
+};
+
+// fetch prodi
+export const getStudyPrograms = async () => {
+  const response = await api.get("/api/study-programs");
+  return response.data?.data ?? response.data;
+};
+
+// send request body
+export const saveStudentData = async (userId, payload) => {
+  const response = await api.put(`/api/students/${userId}`, payload);
+  return response.data;
 };
