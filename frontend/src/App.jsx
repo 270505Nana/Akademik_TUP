@@ -9,6 +9,8 @@ import LengkapiData from "./pages/mahasiswa/LengkapiData";
 import DashboardMahasiswa from "./pages/mahasiswa/dashboard";
 import DashboardAkademik from "./pages/admin/dashboard";
 import DashboardDosen from "./pages/dosen/dashboard";
+import PengajuanSK from "./pages/mahasiswa/pengajuanSK";
+import AturPeriode from "./pages/admin/aturperiode";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
 const Placeholder = ({ title }) => <div style={{ padding: '2rem', textAlign: 'center' }}><h2>{title} Page</h2><p>This is a placeholder for the {title} feature.</p></div>;
@@ -27,12 +29,10 @@ const App = () => {
           {/* Halaman Lengkapi Data */}
           <Route 
             path="/lengkapi-data" 
-            element={
-              <ProtectedRoute allowedRoles={["STUDENT"]}>
-                <LengkapiData />
-              </ProtectedRoute>
+            element={<ProtectedRoute allowedRoles={["STUDENT"]}><LengkapiData /></ProtectedRoute>
             } 
           />
+
           {/* Mahasiswa */}
           <Route 
             path="/mahasiswa/dashboard" 
@@ -42,7 +42,8 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          <Route path="/mahasiswa/pengajuan-sk" element={<ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}><Placeholder title="Pengajuan SK" /></ProtectedRoute>} /> 
+          {/* <Route path="/mahasiswa/pengajuan-sk" element={<ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}><Placeholder title="Pengajuan SK" /></ProtectedRoute>} />  */}
+          <Route path="/mahasiswa/pengajuan-sk" element={<PengajuanSK />} /> 
           <Route path="/mahasiswa/pendaftaran-sidang" element={<ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}><Placeholder title="Pendaftaran Sidang" /></ProtectedRoute>} /> 
           <Route path="/mahasiswa/pendaftaran-yudisium" element={<ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}><Placeholder title="Pendaftaran Yudisium" /></ProtectedRoute>} /> 
 
@@ -59,12 +60,13 @@ const App = () => {
           {/* Admin */}
           <Route
             path="/akademik/dashboard" 
-            element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
-                <DashboardAkademik />
-              </ProtectedRoute>
-            }
+            element={<DashboardAkademik />}
+            //   <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+            //     <DashboardAkademik />
+            //   </ProtectedRoute>
+            // }
           />
+          <Route path="/akademik/atur-periode" element={<AturPeriode />} />
 
           {/* 403 Forbidden */}
           <Route
