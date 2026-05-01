@@ -105,7 +105,7 @@ model Student {
   nim                 String               @unique
   name                String
   className           String
-  year                String
+  year                Int
   sks                 Int?
   ipk                 Float?
   tak                 Int?

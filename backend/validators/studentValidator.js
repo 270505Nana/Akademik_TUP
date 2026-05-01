@@ -4,6 +4,13 @@ const upsertStudentValidator = [
   body("nim").notEmpty().withMessage("NIM is required"),
   body("name").notEmpty().withMessage("Name is required"),
   body("className").notEmpty().withMessage("Class name is required"),
+  body("year")
+    .notEmpty()
+    .withMessage("Year name is required")
+    .bail()
+    .isInt()
+    .withMessage("Study program id must be an integer")
+    .toInt(),
   body("studyProgramId")
     .notEmpty()
     .withMessage("Study program id is required")

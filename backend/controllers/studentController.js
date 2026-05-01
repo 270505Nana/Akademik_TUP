@@ -29,8 +29,17 @@ const upsertStudent = async (req, res) => {
     if (user.role !== "STUDENT")
       return res.status(400).json({ message: "User is not an student" });
 
-    const { nim, name, className, sks, ipk, tak, studyProgramId, dosenWaliId } =
-      req.body;
+    const {
+      nim,
+      name,
+      className,
+      year,
+      sks,
+      ipk,
+      tak,
+      studyProgramId,
+      dosenWaliId,
+    } = req.body;
 
     const student = await prisma.student.upsert({
       where: { userId },
@@ -38,6 +47,7 @@ const upsertStudent = async (req, res) => {
         nim,
         name,
         className,
+        year,
         sks,
         ipk,
         tak,
@@ -48,6 +58,7 @@ const upsertStudent = async (req, res) => {
         nim,
         name,
         className,
+        year,
         sks,
         ipk,
         tak,

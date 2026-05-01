@@ -64,6 +64,7 @@ router.get("/", verifyToken, listStudents);
  *               nim,
  *               name,
  *               className,
+ *               year,
  *               studyProgramId,
  *               dosenWaliId
  *             ]
@@ -77,6 +78,9 @@ router.get("/", verifyToken, listStudents);
  *               className:
  *                 type: string
  *                 example: SE-07-01
+ *               year:
+ *                 type: string
+ *                 example: 2023
  *               sks:
  *                 type: integer
  *                 nullable: true
