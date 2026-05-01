@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Home, 
   Calendar, 
@@ -6,18 +6,43 @@ import {
   FileCheck, 
   Users, 
   Settings, 
-  LogOut 
+  LogOut,
+  FileText,
+  Database,
+  Layout
 } from 'lucide-react';
 
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
-import './sidebar.css';
+import '../../components/sidebar/sidebar.css';
 
 const SidebarAdmin = ({ 
   isOpen, 
   onClose, 
   onShowToast 
 }) => {
-  const [expandedMenus, setExpandedMenus] = useState({});
+  const location = useLocation();
+
+  const [expandedMenus, setExpandedMenus] = useState({
+    'Manajemen Sidang': false,
+    'Verifikasi Berkas': false,
+    'Manajemen Data Akademik': false,
+    'Layanan SK & SKL': false
+  });
+
+  // Auto expand menu if sub-item is active
+  useEffect(() => {
+    menuSidebar.forEach(section => {
+      section.items.forEach(item => {
+        if (item.subItems) {
+          const hasActiveSub = item.subItems.some(sub => location.pathname === sub.path);
+          if (hasActiveSub) {
+            setExpandedMenus(prev => ({ ...prev, [item.label]: true }));
+          }
+        }
+      });
+    });
+  }, [location.pathname]);
 
   const toggleMenu = (label) => {
     setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
@@ -27,36 +52,64 @@ const SidebarAdmin = ({
     {
       label: 'Utama',
       items: [
-        { label: 'Beranda', icon: <Home className="nav-icon" />, active: true }
+        { label: 'Beranda', icon: <Home className="nav-icon" />, path: '/akademik/dashboard' }
       ]
     },
     {
-      label: 'Sidang',
+      label: 'Pengaturan Periode',
+      items: [
+        { label: 'Kelola Periode Sidang & Yudisium', icon: <Calendar className="nav-icon" />, path: '/akademik/atur-periode' }
+      ]
+    },
+    {
+      label: 'Kegiatan Sidang',
       items: [
         { 
           label: 'Manajemen Sidang', 
-          icon: <Calendar className="nav-icon" />, 
-          subItems: ['Atur Periode', 'Atur Persyaratan', 'Penjadwalan'] 
+          icon: <Layout className="nav-icon" />, 
+          subItems: [
+            { label: 'Penjadwalan Sidang', path: '/akademik/penjadwalan' },
+            { label: 'Atur Persyaratan Berkas', path: '/akademik/atur-persyaratan' }
+          ]
         }
       ]
     },
     {
-      label: 'Reposi Data',
+      label: 'Proses Verifikasi',
       items: [
         { 
-          label: 'Verifikasi Data', 
+          label: 'Verifikasi Berkas', 
           icon: <FileCheck className="nav-icon" />, 
-          subItems: ['Monitoring Progres', 'Verifikasi Berkas', 'Ekspor Data'] 
-        },
+          subItems: [
+            { label: 'Verifikasi Sidang', path: '/akademik/verifikasi-sidang' },
+            { label: 'Verifikasi Yudisium', path: '/akademik/verifikasi-yudisium' }
+          ] 
+        }
+      ]
+    },
+    {
+      label: 'Master Data',
+      items: [
         { 
-          label: 'Layanan SK', 
-          icon: <Users className="nav-icon" />, 
-          subItems: ['Permohonan SK', 'Upload SK'] 
-        },
+          label: 'Manajemen Data Akademik', 
+          icon: <Database className="nav-icon" />, 
+          subItems: [
+            { label: 'Manajemen Data Dosen', path: '/akademik/data-dosen' },
+            { label: 'Manajemen Data KK', path: '/akademik/data-kk' }
+          ] 
+        }
+      ]
+    },
+    {
+      label: 'Layanan Mahasiswa',
+      items: [
         { 
-          label: 'Manajemen Sidang', 
-          icon: <Settings className="nav-icon" />, 
-          subItems: ['Kirim Reminder'] 
+          label: 'Layanan SK & SKL', 
+          icon: <FileText className="nav-icon" />, 
+          subItems: [
+            { label: 'Permohonan SK TA', path: '/akademik/permohonan-sk' },
+            { label: 'Upload SKL & Transkrip Nilai', path: '/akademik/upload-skl' }
+          ] 
         }
       ]
     }
@@ -77,7 +130,7 @@ const SidebarAdmin = ({
               {section.items.map((item, iIdx) => (
                 <div className="nav-item-group" key={iIdx}>
                   <div 
-                    className={`nav-link-main ${item.active ? 'active' : ''}`}
+                    className={`nav-link-main ${location.pathname === item.path || (item.subItems && item.subItems.some(sub => location.pathname === sub.path)) ? 'active' : ''}`}
                     onClick={() => item.subItems && toggleMenu(item.label)}
                     aria-expanded={expandedMenus[item.label]}
                   >
@@ -93,9 +146,19 @@ const SidebarAdmin = ({
                       className="overflow-hidden"
                     >
                       <ul className="sub-nav">
-                        {item.subItems.map((sub, subIdx) => (
-                          <li key={subIdx}><a href="#">{sub}</a></li>
-                        ))}
+                        {item.subItems.map((sub, subIdx) => {
+                          const isActiveSub = location.pathname === sub.path;
+                          return (
+                            <li key={subIdx}>
+                              <Link 
+                                to={sub.path} 
+                                className={isActiveSub ? 'active-sub' : ''}
+                              >
+                                {sub.label}
+                              </Link>
+                            </li>
+                          );
+                        })}
                       </ul>
                     </motion.div>
                   )}
