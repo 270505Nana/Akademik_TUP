@@ -79,7 +79,7 @@ router.get("/", verifyToken, listStudents);
  *                 type: string
  *                 example: SE-07-01
  *               year:
- *                 type: string
+ *                 type: integer
  *                 example: 2023
  *               sks:
  *                 type: integer
