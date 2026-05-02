@@ -193,14 +193,22 @@ const LengkapiData = () => {
     }
 
     // Request body dikirim ke BE
-   const payload = {
-    nim:            formData.nim,
-    name:           formData.namaLengkap,    
-    className:      formData.kelas,
-    year:           formData.angkatan,  
-    studyProgramId: Number(formData.studyProgramId),
-    dosenWaliId:    Number(formData.dosenWaliId),
-  };
+    const payload = {
+      nim:            formData.nim,
+      name:           formData.namaLengkap,
+      className:      formData.kelas,
+      year:           Number(formData.angkatan), 
+      studyProgramId: Number(formData.studyProgramId),
+      dosenWaliId:    Number(formData.dosenWaliId),
+      sks:            null,  
+      ipk:            null,  
+      tak:            null,  
+    };
+
+    console.log("user object:", user);
+    console.log("userId:", user?.id);
+    console.log("payload:", payload);
+
     setIsSubmitting(true);
     try {
       // apinya (PUT data student)
