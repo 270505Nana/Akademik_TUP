@@ -129,7 +129,7 @@ router.get("/slug/:slug", verifyToken, findTemplateUploadBySlug);
 /**
  * @swagger
  * /api/templates/{id}:
- *   put:
+ *   patch:
  *     summary: Update template upload by id
  *     tags: [Template Upload]
  *     security:
@@ -175,7 +175,7 @@ router.get("/slug/:slug", verifyToken, findTemplateUploadBySlug);
  *       500:
  *         description: Internal server error
  */
-router.put(
+router.patch(
   "/:id",
   verifyToken,
   upload("templates").single("templateFile"),

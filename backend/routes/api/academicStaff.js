@@ -44,7 +44,7 @@ router.get("/", verifyToken, listAcademicStaff);
 /**
  * @swagger
  * /api/academic-staff/{userId}:
- *   put:
+ *   patch:
  *     summary: Create or update academic staff data by user ID
  *     tags: [Academic Staff]
  *     security:
@@ -81,7 +81,7 @@ router.get("/", verifyToken, listAcademicStaff);
  *       500:
  *         description: Internal server error
  */
-router.put(
+router.patch(
   "/:userId",
   verifyToken,
   upsertAcademicStaffValidator,

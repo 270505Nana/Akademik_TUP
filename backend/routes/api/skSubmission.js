@@ -103,7 +103,7 @@ router.post("/", createSkSubmissionValidator, validate, createSkSubmission);
 /**
  * @swagger
  * /api/sk-submissions/{id}:
- *   put:
+ *   patch:
  *     summary: Update SK submission
  *     tags: [SK Submission]
  *     security:
@@ -135,6 +135,6 @@ router.post("/", createSkSubmissionValidator, validate, createSkSubmission);
  *       500:
  *         description: Internal server error
  */
-router.put("/:id", updateSkSubmissionValidator, validate, updateSkSubmission);
+router.patch("/:id", updateSkSubmissionValidator, validate, updateSkSubmission);
 
 module.exports = router;

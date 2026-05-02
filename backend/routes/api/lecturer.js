@@ -44,7 +44,7 @@ router.get("/", verifyToken, listLecturers);
 /**
  * @swagger
  * /api/lecturers/{userId}:
- *   put:
+ *   patch:
  *     summary: Create or update lecturer data by user ID
  *     tags: [Lecturer]
  *     security:
@@ -93,7 +93,7 @@ router.get("/", verifyToken, listLecturers);
  *       500:
  *         description: Internal server error
  */
-router.put(
+router.patch(
   "/:userId",
   verifyToken,
   upsertLecturerValidator,

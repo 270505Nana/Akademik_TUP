@@ -118,7 +118,7 @@ router.post(
 /**
  * @swagger
  * /api/skta-responses/{id}:
- *   put:
+ *   patch:
  *     summary: Update an SKTA response
  *     tags: [SKTA Response]
  *     security:
@@ -182,7 +182,7 @@ router.post(
  *         description: Internal server error
  */
 
-router.put(
+router.patch(
   "/:id",
   verifyToken,
   upload("skta").single("sktaFile"),
