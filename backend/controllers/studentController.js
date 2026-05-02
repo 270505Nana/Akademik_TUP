@@ -33,13 +33,14 @@ const upsertStudent = async (req, res) => {
       nim,
       name,
       className,
-      year,
       sks,
       ipk,
-      tak,
-      studyProgramId,
-      dosenWaliId,
+      tak
     } = req.body;
+
+    const year = parseInt(req.body.year);
+    const studyProgramId = parseInt(req.body.studyProgramId);
+    const dosenWaliId = parseInt(req.body.dosenWaliId);
 
     const student = await prisma.student.upsert({
       where: { userId },
