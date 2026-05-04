@@ -397,7 +397,7 @@ const LengkapiData = () => {
 
           <button type="submit" className="btn-submit" disabled={isSubmitting}>
             <Save size={20} />
-            {isSubmitting ? "Menyimpan..." : "Simpan & Lanjutkan"}
+            {isSubmitting ? "Menyimpan..." : "Simpan"}
           </button>
 
         </form>
