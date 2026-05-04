@@ -1,7 +1,9 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+
+  // cek token di localstorage
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem("simta_user");
@@ -15,8 +17,7 @@ export const AuthProvider = ({ children }) => {
     return localStorage.getItem("simta_token") || null;
   });
 
-  const [loading] = useState(false);
-
+  // login
   const login = (userData) => {
     const { token: tkn, ...rest } = userData;
     setUser(rest);
@@ -24,13 +25,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("simta_user",  JSON.stringify(rest));
     localStorage.setItem("simta_token", tkn);
   };
-
+  
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("simta_user");
     localStorage.removeItem("simta_token");
-    localStorage.removeItem("student_data"); 
+    localStorage.removeItem("student_data");
   };
 
   const isAuthenticated = !!user && !!token;
@@ -39,7 +40,6 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user,
       token,
-      loading,
       login,
       logout,
       isAuthenticated,
