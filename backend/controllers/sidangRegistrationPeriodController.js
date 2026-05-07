@@ -53,7 +53,7 @@ const createSidangRegistrationPeriod = async (req, res) => {
   try {
     const { name, startDate, endDate, isOpen } = req.body;
 
-    const newSidangRegistrationPeriod =
+    const sidangRegistrationPeriod =
       await prisma.sidangRegistrationPeriod.create({
         data: {
           name,
@@ -65,7 +65,7 @@ const createSidangRegistrationPeriod = async (req, res) => {
 
     res.status(201).json({
       message: "Sidang period created successfully",
-      data: newSidangRegistrationPeriod,
+      data: sidangRegistrationPeriod,
     });
   } catch (error) {
     res
@@ -94,7 +94,7 @@ const updateSidangRegistrationPeriod = async (req, res) => {
       });
     }
 
-    const updatedSidangRegistrationPeriod =
+    const sidangRegistrationPeriod =
       await prisma.sidangRegistrationPeriod.update({
         where: {
           id: parseInt(id),
@@ -109,7 +109,7 @@ const updateSidangRegistrationPeriod = async (req, res) => {
 
     res.json({
       message: "Sidang period updated successfully",
-      data: updatedSidangRegistrationPeriod,
+      data: sidangRegistrationPeriod,
     });
   } catch (error) {
     res

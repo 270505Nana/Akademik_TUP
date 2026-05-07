@@ -51,7 +51,7 @@ const createSidangPeriod = async (req, res) => {
   try {
     const { name, startDate, endDate, isOpen } = req.body;
 
-    const newSidangPeriod = await prisma.sidangPeriod.create({
+    const sidangPeriod = await prisma.sidangPeriod.create({
       data: {
         name,
         startDate: new Date(startDate),
@@ -62,7 +62,7 @@ const createSidangPeriod = async (req, res) => {
 
     res.status(201).json({
       message: "Sidang period created successfully",
-      data: newSidangPeriod,
+      data: sidangPeriod,
     });
   } catch (error) {
     res
@@ -90,7 +90,7 @@ const updateSidangPeriod = async (req, res) => {
       });
     }
 
-    const updatedSidangPeriod = await prisma.sidangPeriod.update({
+    const sidangPeriod = await prisma.sidangPeriod.update({
       where: {
         id: parseInt(id),
       },
@@ -104,7 +104,7 @@ const updateSidangPeriod = async (req, res) => {
 
     res.json({
       message: "Sidang period updated successfully",
-      data: updatedSidangPeriod,
+      data: sidangPeriod,
     });
   } catch (error) {
     res
