@@ -34,14 +34,15 @@ model User {
 
 // Master Data Tim Akademik
 model AcademicStaff {
-  id            Int            @id @default(autoincrement())
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  deletedAt     DateTime?
-  name          String
-  user          User           @relation(fields: [userId], references: [id])
-  userId        Int            @unique
-  sktaResponses SktaResponse[]
+  id                          Int                          @id @default(autoincrement())
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  deletedAt                   DateTime?
+  name                        String
+  user                        User                         @relation(fields: [userId], references: [id])
+  userId                      Int                          @unique
+  sktaResponses               SktaResponse[]
+  sidangRegistrationResponses SidangRegistrationResponse[]
 }
 
 // Master Data Dosen
@@ -157,8 +158,9 @@ model SktaResponse {
   deletedAt                DateTime?
   hasUploadedFinalProposal Boolean
   hasTakenLanguageTest     Boolean
-  message                  String?
   expDate                  DateTime?            @db.Date
+  message                  String?
+  isEdit                   DateTime?
   academicStaff            AcademicStaff        @relation(fields: [academicStaffId], references: [id])
   academicStaffId          Int
   sktaRequest              SktaRequest          @relation(fields: [sktaRequestId], references: [id])
@@ -202,25 +204,26 @@ model SidangRegistrationPeriod {
 }
 
 model SidangRegistration {
-  id                        Int                        @id @default(autoincrement())
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime                   @updatedAt
-  deletedAt                 DateTime?
-  programType               String
-  sidangScheme              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
-  sks                       Int
-  ipk                       Float
-  tak                       Int
-  sktaExpDate               DateTime                   @map("skta_exp_date") @db.Date
-  thesisTitleId             String
-  thesisTitleEn             String
-  student                   Student                    @relation(fields: [studentId], references: [id])
-  studentId                 Int
-  dosenPembimbing1          Lecturer                   @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id        Int
-  dosenPembimbing2          Lecturer                   @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id        Int
-  sidangRegistrationUploads SidangRegistrationUpload[]
+  id                          Int                          @id @default(autoincrement())
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  deletedAt                   DateTime?
+  programType                 String
+  sidangScheme                Json? // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
+  sks                         Int
+  ipk                         Float
+  tak                         Int
+  sktaExpDate                 DateTime                     @map("skta_exp_date") @db.Date
+  thesisTitleId               String
+  thesisTitleEn               String
+  student                     Student                      @relation(fields: [studentId], references: [id])
+  studentId                   Int
+  dosenPembimbing1            Lecturer                     @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id          Int
+  dosenPembimbing2            Lecturer                     @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id          Int
+  sidangRegistrationUploads   SidangRegistrationUpload[]
+  sidangRegistrationResponses SidangRegistrationResponse[]
 }
 
 model SidangRegistrationUpload {
@@ -231,6 +234,19 @@ model SidangRegistrationUpload {
   name                 String
   filename             String
   path                 String
+  sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
+  sidangRegistrationId Int
+}
+
+model SidangRegistrationResponse {
+  id                   Int                @id @default(autoincrement())
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  deletedAt            DateTime?
+  message              String?
+  isEdit               DateTime?
+  academicStaff        AcademicStaff      @relation(fields: [academicStaffId], references: [id])
+  academicStaffId      Int
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
   sidangRegistrationId Int
 }
