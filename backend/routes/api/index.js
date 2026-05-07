@@ -21,5 +21,6 @@ router.use(
   "/sidang-registration-periods",
   require("./sidangRegsitrationPeriod"),
 );
+router.use("/sidang-registrations", require("./sidangRegistration"));
 
 module.exports = router;
