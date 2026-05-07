@@ -69,7 +69,7 @@ const SidebarAdmin = ({
           icon: <Layout className="nav-icon" />, 
           subItems: [
             { label: 'Penjadwalan Sidang', path: '/akademik/penjadwalan' },
-            { label: 'Atur Persyaratan Berkas', path: '/akademik/atur-persyaratan' }
+            { label: 'Atur Persyaratan Berkas', path: '/akademik/atur-berkas' }
           ]
         }
       ]
@@ -129,15 +129,26 @@ const SidebarAdmin = ({
               <div className="nav-section-label">{section.label}</div>
               {section.items.map((item, iIdx) => (
                 <div className="nav-item-group" key={iIdx}>
-                  <div 
-                    className={`nav-link-main ${location.pathname === item.path || (item.subItems && item.subItems.some(sub => location.pathname === sub.path)) ? 'active' : ''}`}
-                    onClick={() => item.subItems && toggleMenu(item.label)}
-                    aria-expanded={expandedMenus[item.label]}
-                  >
-                    {item.icon}
-                    {item.label}
-                    {item.subItems && <ChevronDown className="nav-arrow" size={14} />}
-                  </div>
+                  {item.subItems ? (
+                    <div 
+                      className={`nav-link-main ${item.subItems.some(sub => location.pathname === sub.path) ? 'active' : ''}`}
+                      onClick={() => toggleMenu(item.label)}
+                      aria-expanded={expandedMenus[item.label]}
+                    >
+                      {item.icon}
+                      {item.label}
+                      <ChevronDown className="nav-arrow" size={14} />
+                    </div>
+                  ) : (
+                    <Link 
+                      to={item.path} 
+                      className={`nav-link-main ${location.pathname === item.path ? 'active' : ''}`}
+                      onClick={onClose}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </Link>
+                  )}
                   
                   {item.subItems && (
                     <motion.div 
@@ -153,6 +164,7 @@ const SidebarAdmin = ({
                               <Link 
                                 to={sub.path} 
                                 className={isActiveSub ? 'active-sub' : ''}
+                                onClick={onClose}
                               >
                                 {sub.label}
                               </Link>
