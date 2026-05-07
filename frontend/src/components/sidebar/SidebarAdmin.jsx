@@ -88,7 +88,7 @@ const SidebarAdmin = ({
       ]
     },
     {
-      label: 'Master Data',
+      label: 'Data Akademik',
       items: [
         { 
           label: 'Manajemen Data Akademik', 
@@ -108,7 +108,7 @@ const SidebarAdmin = ({
           icon: <FileText className="nav-icon" />, 
           subItems: [
             { label: 'Permohonan SK TA', path: '/akademik/permohonan-sk' },
-            { label: 'Upload SKL & Transkrip Nilai', path: '/akademik/upload-skl' }
+            { label: 'Upload SKL & transkrip nilai', path: '/akademik/upload-skl' }
           ] 
         }
       ]
