@@ -4,6 +4,7 @@ const prisma = require("../prisma/client");
 const listSidangPeriods = async (req, res) => {
   try {
     const sidangPeriods = await prisma.sidangPeriod.findMany({
+      where: { deletedAt: null },
       orderBy: {
         createdAt: "desc",
       },
@@ -24,9 +25,10 @@ const getSidangPeriodById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const sidangPeriod = await prisma.sidangPeriod.findUnique({
+    const sidangPeriod = await prisma.sidangPeriod.findFirst({
       where: {
         id: parseInt(id),
+        deletedAt: null,
       },
     });
 
@@ -78,9 +80,10 @@ const updateSidangPeriod = async (req, res) => {
     const { name, startDate, endDate, isOpen } = req.body;
 
     // Cek apakah sidang period ada
-    const sidangPeriodExists = await prisma.sidangPeriod.findUnique({
+    const sidangPeriodExists = await prisma.sidangPeriod.findFirst({
       where: {
         id: parseInt(id),
+        deletedAt: null,
       },
     });
 
@@ -131,10 +134,9 @@ const deleteSidangPeriod = async (req, res) => {
       });
     }
 
-    await prisma.sidangPeriod.delete({
-      where: {
-        id: parseInt(id),
-      },
+    await prisma.sidangPeriod.update({
+      where: { id: parseInt(id) },
+      data: { deletedAt: new Date() },
     });
 
     res.json({

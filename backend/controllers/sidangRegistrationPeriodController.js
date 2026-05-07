@@ -5,6 +5,7 @@ const listSidangRegistrationPeriods = async (req, res) => {
   try {
     const sidangRegistrationPeriods =
       await prisma.sidangRegistrationPeriod.findMany({
+        where: { deletedAt: null },
         orderBy: {
           createdAt: "desc",
         },
@@ -26,9 +27,10 @@ const getSidangRegistrationPeriodById = async (req, res) => {
     const { id } = req.params;
 
     const sidangRegistrationPeriod =
-      await prisma.sidangRegistrationPeriod.findUnique({
+      await prisma.sidangRegistrationPeriod.findFirst({
         where: {
           id: parseInt(id),
+          deletedAt: null,
         },
       });
 
@@ -82,9 +84,10 @@ const updateSidangRegistrationPeriod = async (req, res) => {
 
     // Cek apakah sidang period ada
     const sidangRegistrationPeriodExists =
-      await prisma.sidangRegistrationPeriod.findUnique({
+      await prisma.sidangRegistrationPeriod.findFirst({
         where: {
           id: parseInt(id),
+          deletedAt: null,
         },
       });
 
@@ -137,10 +140,9 @@ const deleteSidangRegistrationPeriod = async (req, res) => {
       });
     }
 
-    await prisma.sidangRegistrationPeriod.delete({
-      where: {
-        id: parseInt(id),
-      },
+    await prisma.sidangRegistrationPeriod.update({
+      where: { id: parseInt(id) },
+      data: { deletedAt: new Date() },
     });
 
     res.json({
