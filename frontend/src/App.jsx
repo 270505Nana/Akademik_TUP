@@ -11,6 +11,7 @@ import DashboardAkademik from "./pages/admin/dashboard";
 import DashboardDosen from "./pages/dosen/dashboard";
 import PengajuanSK from "./pages/mahasiswa/pengajuanSK";
 import AturPeriode from "./pages/admin/aturperiode";
+import PermohonanSK from "./pages/admin/permohonanSK";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
 const Placeholder = ({ title }) => <div style={{ padding: '2rem', textAlign: 'center' }}><h2>{title} Page</h2><p>This is a placeholder for the {title} feature.</p></div>;
@@ -67,6 +68,7 @@ const App = () => {
             // }
           />
           <Route path="/akademik/atur-periode" element={<AturPeriode />} />
+          <Route path="/akademik/permohonan-sk" element={<PermohonanSK />} />
 
           {/* 403 Forbidden */}
           <Route
