@@ -7,8 +7,7 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Request interceptor: buat token ke semua request
-// KL udh exp jga di handle di response interceptor, jd g usah cek exp di sini
+// Request interceptor (buat token)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("simta_token");
@@ -19,8 +18,7 @@ api.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
-
-// Response interceptor
+//  Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -36,7 +34,7 @@ api.interceptors.response.use(
 
 export default api;
 
-// AUTHENTICATION
+// AUTH
 export const registerUser = async ({ username, email, no_telp, password, confirmPassword }) => {
   const response = await api.post("/api/auth/register", {
     username,
@@ -53,39 +51,75 @@ export const loginUser = async ({ email, password }) => {
   return response.data;
 };
 
-export const logoutUser = async () => {
-  // await api.post("/api/auth/logout");
-};
-
-// STUDENT
-
+//  STUDENT 
 export const getStudentData = async (userId) => {
   const response = await api.get(`/api/students/${userId}`);
   return response.data?.data ?? response.data;
 };
 
 export const saveStudentData = async (userId, payload) => {
-  const response = await api.put(`/api/students/${userId}`, payload);
+  const response = await api.patch(`/api/students/${userId}`, payload);
   return response.data;
 };
 
-// DOSEN
-
+//  LECTURER 
 export const getLecturers = async () => {
   const response = await api.get("/api/lecturers");
   return response.data?.data ?? response.data;
 };
 
-// FAKULTAS
-
+//  FACULTY 
 export const getFaculties = async () => {
   const response = await api.get("/api/faculties");
   return response.data?.data ?? response.data;
 };
 
-// PRODI
-
+//  STUDY PROGRAM 
 export const getStudyPrograms = async () => {
   const response = await api.get("/api/study-programs");
   return response.data?.data ?? response.data;
+};
+
+//  SKTA REQUEST 
+export const getSKTARequest = async (studentId) => {
+  try {
+    const response = await api.get(`/api/skta-requests/${studentId}`);
+    return response.data?.data ?? response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+};
+
+/**
+ * POST /api/skta-requests
+ *
+ * @param {string} proposalTitleId    
+ * @param {string} proposalTitleEn    
+ * @param {number} studentId          
+ * @param {number} dosenPembimbing1Id 
+ * @param {number} dosenPembimbing2Id 
+ * @param {File}   evidence           
+ */
+
+export const submitSKTARequest = async ({
+  proposalTitleId,
+  proposalTitleEn,
+  studentId,
+  dosenPembimbing1Id,
+  dosenPembimbing2Id,
+  evidence,
+}) => {
+  const formData = new FormData();
+  formData.append("proposalTitleId",    proposalTitleId);
+  formData.append("proposalTitleEn",    proposalTitleEn);
+  formData.append("studentId",          String(studentId));
+  formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
+  formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
+  formData.append("evidence",           evidence);
+
+  const response = await api.post("/api/skta-requests", formData, {
+    headers: { "Content-Type": undefined },
+  });
+  return response.data;
 };

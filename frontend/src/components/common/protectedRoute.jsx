@@ -7,6 +7,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
   const { user, isAuthenticated }                             = useAuth();
   const { isComplete, isStudentLoading, fetchAndLoadStudent } = useStudent();
   const location = useLocation();
+
   const [isServerChecking, setIsServerChecking] = useState(false);
   const [serverCheckDone, setServerCheckDone]   = useState(false);
 
@@ -26,21 +27,24 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
         setServerCheckDone(true);
       });
     }
-
     if (!isStudentLoading && isComplete) {
-      setServerCheckDone(true); //lngsg true kl datanya ada di lcalstorage
+      setServerCheckDone(true);
     }
-  }, [isStudentLoading, isComplete, isAuthenticated, user?.id, requireCompleteProfile]);
+  }, [isStudentLoading, isComplete, isAuthenticated, user?.id, requireCompleteProfile, fetchAndLoadStudent]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+
+
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/forbidden" replace />;
   }
-  if (requireCompleteProfile && (isStudentLoading || isServerChecking)) {
+
+  if (requireCompleteProfile && (isStudentLoading || isServerChecking || !serverCheckDone)) {
     return <LoadingScreen />;
   }
+
   if (
     user.role === "STUDENT" &&
     requireCompleteProfile &&

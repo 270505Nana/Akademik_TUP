@@ -1,47 +1,47 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, IdCard, GraduationCap, Building2, BookOpen, Users, Search, Save, Hash } from 'lucide-react';
+import { User, IdCard, GraduationCap, Building2, BookOpen, Users, Search, Save } from 'lucide-react';
 import { useStudent } from '../../context/StudentContext';
-import { useAuth } from '../../context/AuthContext'; //fetch userID dari login
-import { getLecturers, getFaculties, getStudyPrograms, saveStudentData } from "../../service/api"; //API Fetch data
+import { useAuth } from '../../context/AuthContext';
+import { getLecturers, getFaculties, getStudyPrograms, saveStudentData } from "../../service/api";
 import "../../components/kelengkapan_data/lengkapidata.css";
 import logoTelkom from "../../assets/logo-telkom.png";
 
 const LengkapiData = () => {
   const navigate = useNavigate();
   const { updateStudent } = useStudent();
-  const { user } = useAuth(); //fetch data user dari AuthContext
-  // inputan user
+  const { user } = useAuth();
+
   const [formData, setFormData] = useState({
     namaLengkap:     '',
     nim:             '',
-    kelas:           '', 
-    angkatan:        '', 
-    fakultasId:      '', 
-    fakultasNama:    '', 
-    studyProgramId:  '', 
-    studyProgramNama:'', 
-    dosenWaliId:     '', 
-    dosenWaliKode:   '', 
-    dosenWaliNama:   '', 
-    dosenWaliNip:    '', 
+    kelas:           '',
+    angkatan:        '',
+    fakultasId:      '',
+    fakultasNama:    '',
+    studyProgramId:  '',
+    studyProgramNama:'',
+    dosenWaliId:     '',
+    dosenWaliKode:   '',
+    dosenWaliNama:   '',
+    dosenWaliNip:    '',
   });
 
   const [searchQuery, setSearchQuery] = useState({ dosenWali: '' });
   const [showDropdown, setShowDropdown] = useState({ dosenWali: false });
   const [errors, setErrors] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false); 
-  // State data dari API
-  const [lecturers,     setLecturers]     = useState([]);
-  const [faculties,     setFaculties]     = useState([]); 
-  const [studyPrograms, setStudyPrograms] = useState([]); 
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [loadingDosen,   setLoadingDosen]   = useState(true);
-  const [loadingFakultas, setLoadingFakultas] = useState(true); 
-  const [loadingProdi,   setLoadingProdi]   = useState(false);  
-  const [errorDosen,     setErrorDosen]     = useState(null);
-  const [errorFakultas,  setErrorFakultas]  = useState(null);   
-  //Fetch data dosen dari API   
+  const [lecturers,     setLecturers]     = useState([]);
+  const [faculties,     setFaculties]     = useState([]);
+  const [studyPrograms, setStudyPrograms] = useState([]);
+
+  const [loadingDosen,    setLoadingDosen]    = useState(true);
+  const [loadingFakultas, setLoadingFakultas] = useState(true);
+  const [loadingProdi,    setLoadingProdi]    = useState(false);
+  const [errorDosen,      setErrorDosen]      = useState(null);
+  const [errorFakultas,   setErrorFakultas]   = useState(null);
+
   useEffect(() => {
     const fetchDosen = async () => {
       try {
@@ -63,7 +63,7 @@ const LengkapiData = () => {
     };
     fetchDosen();
   }, []);
-  // Fetch semua fakultas dari API 
+
   useEffect(() => {
     const fetchFakultas = async () => {
       try {
@@ -79,7 +79,7 @@ const LengkapiData = () => {
     };
     fetchFakultas();
   }, []);
-  // Fetch semua prodi dari API
+
   useEffect(() => {
     const fetchProdi = async () => {
       try {
@@ -114,7 +114,7 @@ const LengkapiData = () => {
     }
   }, []);
 
-  // save draft ke localStorage
+  // Autosave draft ke localStorage
   useEffect(() => {
     localStorage.setItem('student_form_draft', JSON.stringify(formData));
   }, [formData]);
@@ -129,7 +129,6 @@ const LengkapiData = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
     if (name === 'fakultasId') {
       const selected = faculties.find(f => f.id === Number(value));
       setFormData(prev => ({
@@ -156,10 +155,8 @@ const LengkapiData = () => {
     if (type === 'dosenWali') {
       setFormData(prev => ({
         ...prev,
-        dosenWaliId:   '',
-        dosenWaliKode: '',
-        dosenWaliNama: '',
-        dosenWaliNip:  '',
+        dosenWaliId: '', dosenWaliKode: '',
+        dosenWaliNama: '', dosenWaliNip: '',
       }));
       setSearchQuery(prev => ({ ...prev, dosenWali: '' }));
     }
@@ -169,10 +166,10 @@ const LengkapiData = () => {
     if (type === 'dosenWali') {
       setFormData(prev => ({
         ...prev,
-        dosenWaliId:   lecturer.id,   
-        dosenWaliKode: lecturer.kode, 
-        dosenWaliNama: lecturer.nama, 
-        dosenWaliNip:  lecturer.nip,  
+        dosenWaliId:   lecturer.id,
+        dosenWaliKode: lecturer.kode,
+        dosenWaliNama: lecturer.nama,
+        dosenWaliNip:  lecturer.nip,
       }));
       setSearchQuery(prev => ({
         ...prev,
@@ -192,29 +189,27 @@ const LengkapiData = () => {
       return;
     }
 
-    // Request body dikirim ke BE
     const payload = {
       nim:            formData.nim,
       name:           formData.namaLengkap,
       className:      formData.kelas,
-      year:           Number(formData.angkatan), 
+      year:           Number(formData.angkatan),
       studyProgramId: Number(formData.studyProgramId),
       dosenWaliId:    Number(formData.dosenWaliId),
-      sks:            null,  
-      ipk:            null,  
-      tak:            null,  
+      sks:            null,
+      ipk:            null,
+      tak:            null,
     };
-
-    console.log("user object:", user);
-    console.log("userId:", user?.id);
-    console.log("payload:", payload);
 
     setIsSubmitting(true);
     try {
-      // apinya (PUT data student)
-      await saveStudentData(user.id, payload);
-      // Save ke StudentContext (cek isComplete di ProtectedRoute)
-      updateStudent(formData);
+      const result = await saveStudentData(user.id, payload);
+      const studentDbId = result?.data?.id ?? result?.id ?? null;
+      updateStudent({
+        ...formData,
+        studentId: studentDbId,
+      });
+
       localStorage.removeItem('student_form_draft');
       navigate('/mahasiswa/dashboard');
 
@@ -262,7 +257,6 @@ const LengkapiData = () => {
 
         <form onSubmit={handleSubmit} className="form-grid">
 
-          {/* Nama Lengkap */}
           <div className="form-group">
             <label className="form-label"><User size={16} /> Nama Lengkap</label>
             <div className="input-wrapper">
@@ -275,7 +269,6 @@ const LengkapiData = () => {
             </div>
           </div>
 
-          {/* NIM & Angkatan */}
           <div className="form-row">
             <div className="form-group">
               <label className="form-label"><IdCard size={16} /> NIM</label>
@@ -303,7 +296,6 @@ const LengkapiData = () => {
 
           <div className="form-group">
             <label className="form-label"><GraduationCap size={16} /> Kelas</label>
-
             <div className="input-wrapper">
               <GraduationCap className="input-icon" size={18} />
               <input
@@ -353,7 +345,6 @@ const LengkapiData = () => {
             </div>
           </div>
 
-          {/* Dosen Wali */}
           <div className="form-group search-container">
             <label className="form-label"><Users size={16} /> Dosen Wali</label>
             <div className="input-wrapper">
@@ -386,7 +377,6 @@ const LengkapiData = () => {
             </div>
           </div>
 
-          {/* NIP Dosen Wali (auto-fill) */}
           <div className="form-group">
             <label className="form-label">NIP Dosen Wali (Otomatis)</label>
             <input
