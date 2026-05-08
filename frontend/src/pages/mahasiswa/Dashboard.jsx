@@ -8,7 +8,6 @@ import illustration from "../../assets/karakter-dashboard.png";
 import { useAuth } from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
-
 const CardAtas4 = ({ icon, label, value, sub, badge, badgeColor }) => (
   <div className="CardAtas4">
     <div className="CardAtas4-header">
@@ -35,7 +34,8 @@ const CardAtas4 = ({ icon, label, value, sub, badge, badgeColor }) => (
 
 const DashboardMahasiswa = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user } = useAuth();
+
+  const { user }    = useAuth();
   const { student } = useStudent();
 
   const namaDisplay      = student?.namaLengkap     || user?.username || 'Mahasiswa';
