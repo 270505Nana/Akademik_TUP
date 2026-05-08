@@ -6,8 +6,6 @@ const StudentContext = createContext(undefined);
 export const StudentProvider = ({ children }) => {
   const [student, setStudent]       = useState(null);
   const [isComplete, setIsComplete] = useState(false);
-
-  // isStudentLoading = true wktu localstrorage proses checkhing
   const [isStudentLoading, setIsStudentLoading] = useState(true);
 
   useEffect(() => {
@@ -19,30 +17,29 @@ export const StudentProvider = ({ children }) => {
         setIsComplete(true);
       } catch (e) {
         console.error('Gagal parse student_data dari localStorage:', e);
-        localStorage.removeItem('student_data'); // bersihkan data rusak
+        localStorage.removeItem('student_data');
       }
     }
-    // proses checking done, boleh render ProtectedRoute
     setIsStudentLoading(false);
   }, []);
 
-  // abis submit form lengkapi data
   const updateStudent = (data) => {
     setStudent(data);
     setIsComplete(true);
     localStorage.setItem('student_data', JSON.stringify(data));
   };
 
-  // fetchAndLoadStudent: fallback fetch dari BE, user yg udh lengkap trs login ulang
   const fetchAndLoadStudent = async (userId) => {
     try {
       const [studentData, rawLecturers, rawStudyPrograms, rawFaculties] = await Promise.all([
-        getStudentData(userId),   
-        getLecturers(),           
-        getStudyPrograms(),       
-        getFaculties(),           
+        getStudentData(userId),
+        getLecturers(),
+        getStudyPrograms(),
+        getFaculties(),
       ]);
+
       if (!studentData?.nim) return false;
+
       const matchedProdi = rawStudyPrograms.find(
         (p) => p.id === Number(studentData.studyProgramId)
       );
@@ -54,6 +51,8 @@ export const StudentProvider = ({ children }) => {
       );
 
       const mapped = {
+        studentId:        studentData.id                                  ?? null,
+
         namaLengkap:      studentData.name                                ?? '',
         nim:              studentData.nim                                  ?? '',
         kelas:            studentData.className                            ?? '',
@@ -75,7 +74,7 @@ export const StudentProvider = ({ children }) => {
       return true;
 
     } catch (err) {
-      if (err.response?.status === 404) { //buat mhs baru
+      if (err.response?.status === 404) {
         console.info('Data student belum ada di server (404), arahkan ke lengkapi-data');
       } else {
         console.error('Gagal fetch data student dari server:', err);
@@ -87,6 +86,7 @@ export const StudentProvider = ({ children }) => {
   const logoutStudentData = () => {
     setStudent(null);
     setIsComplete(false);
+    setIsStudentLoading(false); 
     localStorage.removeItem('student_data');
   };
 
@@ -94,7 +94,7 @@ export const StudentProvider = ({ children }) => {
     <StudentContext.Provider value={{
       student,
       isComplete,
-      isStudentLoading,   
+      isStudentLoading,
       updateStudent,
       fetchAndLoadStudent,
       logoutStudentData,

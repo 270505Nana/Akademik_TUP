@@ -103,7 +103,6 @@ const App = () => {
               </div>
             }
           />
-
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </StudentProvider>
