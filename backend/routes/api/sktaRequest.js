@@ -5,7 +5,9 @@ const router = express.Router();
 const {
   listSktaRequests,
   createSktaRequest,
+  updateSktaRequest,
   findSktaRequestByStudentId,
+  downloadSktaRequestUpload,
 } = require("../../controllers/sktaRequestController");
 
 const { verifyToken } = require("../../middlewares/auth");
@@ -14,6 +16,7 @@ const { upload } = require("../../middlewares/upload");
 
 const {
   createSktaRequestValidator,
+  updateSktaRequestValidator,
 } = require("../../validators/sktaRequestValidator");
 
 /**
@@ -65,6 +68,7 @@ router.get("/", verifyToken, listSktaRequests);
  *               - dosenPembimbing1Id
  *               - dosenPembimbing2Id
  *               - evidence
+ *               - evidenceIgracias
  *             properties:
  *               proposalTitleId:
  *                 type: string
@@ -85,6 +89,10 @@ router.get("/", verifyToken, listSktaRequests);
  *                 type: string
  *                 format: binary
  *                 description: Evidence file in PDF format
+ *               evidenceIgracias:
+ *                 type: string
+ *                 format: binary
+ *                 description: Evidence Igracias file in PDF format
  *     responses:
  *       200:
  *         description: SKTA request submitted successful
@@ -103,10 +111,127 @@ router.get("/", verifyToken, listSktaRequests);
 router.post(
   "/",
   verifyToken,
-  upload("skta-evidence").single("evidence"),
+  upload("skta-evidence").fields([
+    { name: "evidence", maxCount: 1 },
+    { name: "evidenceIgracias", maxCount: 1 },
+  ]),
   createSktaRequestValidator,
   validate,
   createSktaRequest,
+);
+
+/**
+ * @swagger
+ * /api/skta-requests/{id}:
+ *   patch:
+ *     summary: Update an SKTA request
+ *     tags: [SKTA Request]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: SKTA request ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - proposalTitleId
+ *               - proposalTitleEn
+ *               - studentId
+ *               - dosenPembimbing1Id
+ *               - dosenPembimbing2Id
+ *               - evidence
+ *               - evidenceIgracias
+ *             properties:
+ *               proposalTitleId:
+ *                 type: string
+ *                 example: Sistem Informasi Akademik Berbasis Web
+ *               proposalTitleEn:
+ *                 type: string
+ *                 example: Web Based Academic Information System
+ *               studentId:
+ *                 type: integer
+ *                 example: 1
+ *               dosenPembimbing1Id:
+ *                 type: integer
+ *                 example: 2
+ *               dosenPembimbing2Id:
+ *                 type: integer
+ *                 example: 3
+ *               evidence:
+ *                 type: string
+ *                 format: binary
+ *                 description: Evidence file in PDF format
+ *               evidenceIgracias:
+ *                 type: string
+ *                 format: binary
+ *                 description: Evidence Igracias file in PDF format
+ *     responses:
+ *       200:
+ *         description: SKTA request updated successful
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
+ *       404:
+ *         description: SKTA request, student, or lecturer not found
+ *       500:
+ *         description: Internal server error
+ */
+
+router.patch(
+  "/:id",
+  verifyToken,
+  upload("skta-evidence").fields([
+    { name: "evidence", maxCount: 1 },
+    { name: "evidenceIgracias", maxCount: 1 },
+  ]),
+  updateSktaRequestValidator,
+  validate,
+  updateSktaRequest,
+);
+
+/**
+ * @swagger
+ * /api/skta-requests/uploads/{uploadId}/download:
+ *   get:
+ *     summary: Download an SKTA request upload file
+ *     tags: [SKTA Request]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: uploadId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: SKTA request upload ID
+ *     responses:
+ *       200:
+ *         description: File downloaded successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
+ *       404:
+ *         description: SKTA request upload or file not found
+ *       500:
+ *         description: Internal server error
+ */
+
+router.get(
+  "/uploads/:uploadId/download",
+  verifyToken,
+  downloadSktaRequestUpload,
 );
 
 /**

@@ -1,13 +1,31 @@
 const fs = require("fs");
 const { validationResult } = require("express-validator");
 
+const removeUploadedFiles = (files) => {
+  if (!files) {
+    return;
+  }
+
+  if (Array.isArray(files)) {
+    files.forEach((file) => {
+      if (file?.path) {
+        fs.unlink(file.path, () => {});
+      }
+    });
+
+    return;
+  }
+
+  Object.values(files).forEach((value) => {
+    removeUploadedFiles(value);
+  });
+};
+
 const validate = (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    if (req.file?.path) {
-      fs.unlink(req.file.path, () => {});
-    }
+    removeUploadedFiles(req.file || req.files);
 
     return res.status(422).json({
       message: "Validation error",

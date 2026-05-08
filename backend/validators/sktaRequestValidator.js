@@ -1,5 +1,22 @@
 const { body } = require("express-validator");
 
+const allowedMimeTypes = ["application/pdf"];
+
+const validateRequiredPdfFile = (fieldName) =>
+  body(fieldName).custom((value, { req }) => {
+    const file = req.files?.[fieldName]?.[0];
+
+    if (!file) {
+      throw new Error(`${fieldName} file is required`);
+    }
+
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new Error("invalid file type");
+    }
+
+    return true;
+  });
+
 const createSktaRequestValidator = [
   body("proposalTitleId").notEmpty().withMessage("proposalTitleId is required"),
   body("proposalTitleEn").notEmpty().withMessage("proposalTitleEn is required"),
@@ -18,23 +35,13 @@ const createSktaRequestValidator = [
     .isInt()
     .withMessage("dosenPembimbing2Id is required")
     .toInt(),
-  body("evidence").custom((value, { req }) => {
-    if (!req.file) {
-      throw new Error("evidence file is required");
-    }
-
-    const allowedMimeTypes = [
-      "application/pdf",
-      // "image/jpeg",
-      // "image/png"
-    ];
-
-    if (!allowedMimeTypes.includes(req.file.mimetype)) {
-      throw new Error("invalid file type");
-    }
-
-    return true;
-  }),
+  validateRequiredPdfFile("evidence"),
+  validateRequiredPdfFile("evidenceIgracias"),
 ];
 
-module.exports = { createSktaRequestValidator };
+const updateSktaRequestValidator = [...createSktaRequestValidator];
+
+module.exports = {
+  createSktaRequestValidator,
+  updateSktaRequestValidator,
+};
