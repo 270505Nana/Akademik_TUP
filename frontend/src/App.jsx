@@ -91,6 +91,7 @@ const App = () => {
           {/* Admin */}
           <Route path="/akademik/dashboard"  element={<DashboardAkademik />} />
           <Route path="/akademik/atur-periode" element={<AturPeriode />} />
+          <Route path="/akademik/permohonan-sk" element={<PermohonanSK />} />
           <Route path="/akademik/atur-berkas" element={<AturBerkas />} />
 
           {/* 403 Forbidden */}
