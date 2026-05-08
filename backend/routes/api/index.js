@@ -21,5 +21,10 @@ router.use(
   "/sidang-registration-periods",
   require("./sidangRegsitrationPeriod"),
 );
+router.use("/sidang-registrations", require("./sidangRegistration"));
+router.use(
+  "/sidang-registration-responses",
+  require("./sidangRegistrationResponse"),
+);
 
 module.exports = router;

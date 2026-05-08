@@ -5,6 +5,7 @@ const listSidangRegistrationPeriods = async (req, res) => {
   try {
     const sidangRegistrationPeriods =
       await prisma.sidangRegistrationPeriod.findMany({
+        where: { deletedAt: null },
         orderBy: {
           createdAt: "desc",
         },
@@ -26,9 +27,10 @@ const getSidangRegistrationPeriodById = async (req, res) => {
     const { id } = req.params;
 
     const sidangRegistrationPeriod =
-      await prisma.sidangRegistrationPeriod.findUnique({
+      await prisma.sidangRegistrationPeriod.findFirst({
         where: {
           id: parseInt(id),
+          deletedAt: null,
         },
       });
 
@@ -53,7 +55,7 @@ const createSidangRegistrationPeriod = async (req, res) => {
   try {
     const { name, startDate, endDate, isOpen } = req.body;
 
-    const newSidangRegistrationPeriod =
+    const sidangRegistrationPeriod =
       await prisma.sidangRegistrationPeriod.create({
         data: {
           name,
@@ -65,7 +67,7 @@ const createSidangRegistrationPeriod = async (req, res) => {
 
     res.status(201).json({
       message: "Sidang period created successfully",
-      data: newSidangRegistrationPeriod,
+      data: sidangRegistrationPeriod,
     });
   } catch (error) {
     res
@@ -82,9 +84,10 @@ const updateSidangRegistrationPeriod = async (req, res) => {
 
     // Cek apakah sidang period ada
     const sidangRegistrationPeriodExists =
-      await prisma.sidangRegistrationPeriod.findUnique({
+      await prisma.sidangRegistrationPeriod.findFirst({
         where: {
           id: parseInt(id),
+          deletedAt: null,
         },
       });
 
@@ -94,7 +97,7 @@ const updateSidangRegistrationPeriod = async (req, res) => {
       });
     }
 
-    const updatedSidangRegistrationPeriod =
+    const sidangRegistrationPeriod =
       await prisma.sidangRegistrationPeriod.update({
         where: {
           id: parseInt(id),
@@ -109,7 +112,7 @@ const updateSidangRegistrationPeriod = async (req, res) => {
 
     res.json({
       message: "Sidang period updated successfully",
-      data: updatedSidangRegistrationPeriod,
+      data: sidangRegistrationPeriod,
     });
   } catch (error) {
     res
@@ -137,10 +140,9 @@ const deleteSidangRegistrationPeriod = async (req, res) => {
       });
     }
 
-    await prisma.sidangRegistrationPeriod.delete({
-      where: {
-        id: parseInt(id),
-      },
+    await prisma.sidangRegistrationPeriod.update({
+      where: { id: parseInt(id) },
+      data: { deletedAt: new Date() },
     });
 
     res.json({

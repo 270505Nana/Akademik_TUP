@@ -42,7 +42,7 @@ router.get("/", verifyToken, listStudents);
 /**
  * @swagger
  * /api/students/{userId}:
- *   patch:
+ *   put:
  *     summary: Create or update student data by user ID
  *     tags: [Student]
  *     security:
@@ -113,7 +113,7 @@ router.get("/", verifyToken, listStudents);
  *       500:
  *         description: Internal server error
  */
-router.patch(
+router.put(
   "/:userId",
   verifyToken,
   upsertStudentValidator,

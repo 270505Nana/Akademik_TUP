@@ -25,6 +25,7 @@ const withFileUrl = (req, data) => ({
 const listTemplateUploads = async (req, res) => {
   try {
     const templateUploads = await prisma.templateUpload.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
     });
     const data = templateUploads.map((item) => withFileUrl(req, item));
@@ -75,8 +76,8 @@ const findTemplateUploadBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    const templateUpload = await prisma.templateUpload.findUnique({
-      where: { slug },
+    const templateUpload = await prisma.templateUpload.findFirst({
+      where: { slug, deletedAt: null },
     });
     if (!templateUpload) {
       return res.status(404).json({ message: "Template upload not found" });
@@ -101,7 +102,7 @@ const updateTemplateUpload = async (req, res) => {
     const file = req.file;
 
     const templateUpload = await prisma.templateUpload.findFirst({
-      where: { id },
+      where: { id, deletedAt: null },
     });
     if (!templateUpload) {
       if (file?.path) {
@@ -158,11 +159,10 @@ const deleteTemplateUpload = async (req, res) => {
       return res.status(404).json({ message: "Template upload not found" });
     }
 
-    await prisma.templateUpload.delete({ where: { id } });
-
-    if (templateUpload.path && fs.existsSync(templateUpload.path)) {
-      fs.unlink(templateUpload.path, () => {});
-    }
+    await prisma.templateUpload.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
 
     res.json({ message: "Template upload deleted successfully" });
   } catch (error) {
