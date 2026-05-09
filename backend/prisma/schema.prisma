@@ -84,6 +84,7 @@ model Faculty {
   updatedAt     DateTime       @updatedAt
   deletedAt     DateTime?
   name          String
+  isPublish     Boolean        @default(true)
   studyPrograms StudyProgram[]
 }
 
@@ -93,6 +94,7 @@ model StudyProgram {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   name      String
+  isPublish Boolean   @default(true)
   faculty   Faculty   @relation(fields: [facultyId], references: [id])
   facultyId Int
   students  Student[]
