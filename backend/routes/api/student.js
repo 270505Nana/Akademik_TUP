@@ -13,6 +13,7 @@ const { verifyToken } = require("../../middlewares/auth");
 const { validate } = require("../../middlewares/validate");
 
 const { upsertStudentValidator } = require("../../validators/studentValidator");
+const { isStudent } = require("../../middlewares/authorize");
 
 /**
  * @swagger
@@ -116,6 +117,7 @@ router.get("/", verifyToken, listStudents);
 router.put(
   "/:userId",
   verifyToken,
+  isStudent,
   upsertStudentValidator,
   validate,
   upsertStudent,

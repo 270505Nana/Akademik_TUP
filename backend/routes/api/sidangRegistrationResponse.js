@@ -14,6 +14,7 @@ const {
   createSidangRegistrationResponseValidator,
   updateSidangRegistrationResponseValidator,
 } = require("../../validators/sidangRegistrationResponseValidator");
+const { isAcademicStaff } = require("../../middlewares/authorize");
 
 /**
  * @swagger
@@ -148,6 +149,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
+  isAcademicStaff,
   createSidangRegistrationResponseValidator,
   validate,
   createSidangRegistrationResponse,
@@ -203,6 +205,7 @@ router.post(
 router.put(
   "/:id",
   verifyToken,
+  isAcademicStaff,
   updateSidangRegistrationResponseValidator,
   validate,
   updateSidangRegistrationResponse,
@@ -235,6 +238,11 @@ router.put(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, deleteSidangRegistrationResponse);
+router.delete(
+  "/:id",
+  verifyToken,
+  isAcademicStaff,
+  deleteSidangRegistrationResponse,
+);
 
 module.exports = router;

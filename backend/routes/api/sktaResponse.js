@@ -17,6 +17,7 @@ const {
   createSktaResponsetValidator,
   updateSktaResponsetValidator,
 } = require("../../validators/sktaResponseValidator");
+const { isAcademicStaff } = require("../../middlewares/authorize");
 
 /**
  * @swagger
@@ -43,7 +44,6 @@ const {
  *       500:
  *         description: Internal server error
  */
-
 router.get("/", verifyToken, listSktaResponses);
 
 /**
@@ -105,10 +105,10 @@ router.get("/", verifyToken, listSktaResponses);
  *       500:
  *         description: Internal server error
  */
-
 router.post(
   "/",
   verifyToken,
+  isAcademicStaff,
   upload("skta").single("sktaFile"),
   createSktaResponsetValidator,
   validate,
@@ -181,10 +181,10 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-
 router.patch(
   "/:id",
   verifyToken,
+  isAcademicStaff,
   upload("skta").single("sktaFile"),
   updateSktaResponsetValidator,
   validate,
@@ -218,7 +218,6 @@ router.patch(
  *       500:
  *         description: Internal server error
  */
-
 router.get("/:sktaRequestId", verifyToken, findSktaResponseBySktaRequestId);
 
 module.exports = router;

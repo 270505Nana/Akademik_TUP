@@ -15,6 +15,7 @@ const { validate } = require("../../middlewares/validate");
 const {
   upsertAcademicStaffValidator,
 } = require("../../validators/academicStaffValidator");
+const { isAcademicStaff } = require("../../middlewares/authorize");
 
 /**
  * @swagger
@@ -39,7 +40,7 @@ const {
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listAcademicStaff);
+router.get("/", verifyToken, isAcademicStaff, listAcademicStaff);
 
 /**
  * @swagger
@@ -84,6 +85,7 @@ router.get("/", verifyToken, listAcademicStaff);
 router.put(
   "/:userId",
   verifyToken,
+  isAcademicStaff,
   upsertAcademicStaffValidator,
   validate,
   upsertAcademicStaff,
@@ -116,6 +118,6 @@ router.put(
  *       500:
  *         description: Internal server error
  */
-router.get("/:userId", verifyToken, findAcademicStaffByUserId);
+router.get("/:userId", verifyToken, isAcademicStaff, findAcademicStaffByUserId);
 
 module.exports = router;

@@ -13,6 +13,7 @@ const {
   createSidangPeriodValidator,
   updateSidangPeriodValidator,
 } = require("../../validators/sidangPeriodValidator");
+const { isAcademicStaff } = require("../../middlewares/authorize");
 
 /**
  * @swagger
@@ -112,6 +113,7 @@ router.get("/:id", verifyToken, getSidangPeriodById);
 router.post(
   "/",
   verifyToken,
+  isAcademicStaff,
   createSidangPeriodValidator,
   validate,
   createSidangPeriod,
@@ -168,6 +170,7 @@ router.post(
 router.patch(
   "/:id",
   verifyToken,
+  isAcademicStaff,
   updateSidangPeriodValidator,
   validate,
   updateSidangPeriod,
@@ -198,6 +201,6 @@ router.patch(
  *       403:
  *         description: Invalid token
  */
-router.delete("/:id", verifyToken, deleteSidangPeriod);
+router.delete("/:id", verifyToken, isAcademicStaff, deleteSidangPeriod);
 
 module.exports = router;

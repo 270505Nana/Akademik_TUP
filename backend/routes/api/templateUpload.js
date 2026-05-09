@@ -19,6 +19,7 @@ const {
   createTemplateUploadValidator,
   updateTemplateUploadValidator,
 } = require("../../validators/templateUploadValidator");
+const { isAcademicStaff } = require("../../middlewares/authorize");
 
 /**
  * @swagger
@@ -91,6 +92,7 @@ router.get("/", verifyToken, listTemplateUploads);
 router.post(
   "/",
   verifyToken,
+  isAcademicStaff,
   upload("templates").single("templateFile"),
   createTemplateUploadValidator,
   validate,
@@ -178,6 +180,7 @@ router.get("/slug/:slug", verifyToken, findTemplateUploadBySlug);
 router.patch(
   "/:id",
   verifyToken,
+  isAcademicStaff,
   upload("templates").single("templateFile"),
   updateTemplateUploadValidator,
   validate,
@@ -211,6 +214,6 @@ router.patch(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, deleteTemplateUpload);
+router.delete("/:id", verifyToken, isAcademicStaff, deleteTemplateUpload);
 
 module.exports = router;
