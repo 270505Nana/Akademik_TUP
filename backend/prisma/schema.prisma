@@ -211,13 +211,14 @@ model SidangRegistration {
   updatedAt                   DateTime                     @updatedAt
   deletedAt                   DateTime?
   programType                 String
-  sidangScheme                Json? // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
   sks                         Int
   ipk                         Float
   tak                         Int
   sktaExpDate                 DateTime                     @map("skta_exp_date") @db.Date
   thesisTitleId               String
   thesisTitleEn               String
+  sidangScheme                String
+  jalurNonSidang              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
   student                     Student                      @relation(fields: [studentId], references: [id])
   studentId                   Int
   dosenPembimbing1            Lecturer                     @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
