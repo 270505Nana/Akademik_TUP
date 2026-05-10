@@ -80,7 +80,7 @@ export const getStudyPrograms = async () => {
   return response.data?.data ?? response.data;
 };
 
-//  SKTA REQUEST 
+//  SKTA REQUEST -> cek apakah mhs udh punya request sk sblmnya
 export const getSKTARequest = async (studentId) => {
   try {
     const response = await api.get(`/api/skta-requests/${studentId}`);
@@ -122,4 +122,33 @@ export const submitSKTARequest = async ({
     headers: { "Content-Type": undefined },
   });
   return response.data;
+};
+
+
+// PATCH /api/skta-requests/:id -> request ulang SK expired.
+export const resubmitSKTARequest = async ({
+  sktaRequestId, proposalTitleId, proposalTitleEn,
+  dosenPembimbing1Id, dosenPembimbing2Id, evidence,
+}) => {
+  const formData = new FormData();
+  formData.append("proposalTitleId",    proposalTitleId);
+  formData.append("proposalTitleEn",    proposalTitleEn);
+  formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
+  formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
+  if (evidence) formData.append("evidence", evidence);
+  const response = await api.patch(`/api/skta-requests/${sktaRequestId}`, formData, {
+    headers: { "Content-Type": undefined },
+  });
+  return response.data;
+};
+
+// buat status : dalam proses, belum terbit, sudah terbit, expired, revisi
+export const getSKTAResponse = async (sktaRequestId) => {
+  try {
+    const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
+    return response.data?.data ?? response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
 };

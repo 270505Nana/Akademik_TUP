@@ -7,6 +7,8 @@ export const StudentProvider = ({ children }) => {
   const [student, setStudent]       = useState(null);
   const [isComplete, setIsComplete] = useState(false);
   const [isStudentLoading, setIsStudentLoading] = useState(true);
+  const [sktaRequestId, setSktaRequestId] = useState(null);
+  // sktarequest save abis student request
 
   useEffect(() => {
     const savedData = localStorage.getItem('student_data');
@@ -20,6 +22,10 @@ export const StudentProvider = ({ children }) => {
         localStorage.removeItem('student_data');
       }
     }
+    const savedSktaRequestId = localStorage.getItem('skta_request_id');
+    if (savedSktaRequestId) {
+      setSktaRequestId(Number(savedSktaRequestId));
+    }
     setIsStudentLoading(false);
   }, []);
 
@@ -28,6 +34,13 @@ export const StudentProvider = ({ children }) => {
     setIsComplete(true);
     localStorage.setItem('student_data', JSON.stringify(data));
   };
+
+  // buat GET /api/skta-responses/{sktaRequestId} buat cek status pengajuan SK
+  const updateSktaRequestId = (id) => {
+    setSktaRequestId(id);
+    localStorage.setItem('skta_request_id', String(id));
+  };
+ 
 
   const fetchAndLoadStudent = async (userId) => {
     try {
