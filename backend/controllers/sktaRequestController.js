@@ -82,7 +82,6 @@ const createSktaRequest = async (req, res) => {
     } = req.body;
 
     const evidenceFile = getUploadedFile(req.files, "evidence");
-    const evidenceIgraciasFile = getUploadedFile(req.files, "evidenceIgracias");
 
     // Cek apakah ada data mahasiswa
     const student = await prisma.student.findFirst({
@@ -118,11 +117,6 @@ const createSktaRequest = async (req, res) => {
               name: `Evidence_SKTA_${student?.nim}_${student?.name}`,
               filename: evidenceFile.filename,
               path: evidenceFile.path,
-            },
-            {
-              name: `Evidence_Igracias_SKTA_${student?.nim}_${student?.name}`,
-              filename: evidenceIgraciasFile.filename,
-              path: evidenceIgraciasFile.path,
             },
           ],
         },
@@ -161,7 +155,6 @@ const updateSktaRequest = async (req, res) => {
     } = req.body;
 
     const evidenceFile = getUploadedFile(req.files, "evidence");
-    const evidenceIgraciasFile = getUploadedFile(req.files, "evidenceIgracias");
 
     // Cek apakah ada data mahasiswa
     const student = await prisma.student.findFirst({
@@ -198,11 +191,6 @@ const updateSktaRequest = async (req, res) => {
               name: `Evidence_SKTA_${student?.nim}_${student?.name}`,
               filename: evidenceFile.filename,
               path: evidenceFile.path,
-            },
-            {
-              name: `Evidence_Igracias_SKTA_${student?.nim}_${student?.name}`,
-              filename: evidenceIgraciasFile.filename,
-              path: evidenceIgraciasFile.path,
             },
           ],
         },
