@@ -10,6 +10,7 @@ import DashboardMahasiswa  from "./pages/mahasiswa/dashboard";
 import DashboardAkademik   from "./pages/admin/dashboard";
 import DashboardDosen      from "./pages/dosen/dashboard";
 import PengajuanSK         from "./pages/mahasiswa/pengajuanSK";
+import PermohonanSK         from "./pages/admin/permohonanSK";
 import AturPeriode         from "./pages/admin/aturperiode";
 import AturBerkas          from "./pages/admin/requirementdocs";
 import UploadSKL           from "./pages/admin/skltranskrip";
