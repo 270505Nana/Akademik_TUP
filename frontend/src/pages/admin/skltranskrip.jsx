@@ -195,7 +195,6 @@ const SklTranskrip = () => {
         </footer>
       </div>
 
-      {/* Upload Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="skl-modal-overlay">
