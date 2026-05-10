@@ -12,6 +12,8 @@ import DashboardDosen      from "./pages/dosen/dashboard";
 import PengajuanSK         from "./pages/mahasiswa/pengajuanSK";
 import AturPeriode         from "./pages/admin/aturperiode";
 import AturBerkas          from "./pages/admin/requirementdocs";
+import UploadSKL           from "./pages/admin/skltranskrip";
+
 import ProtectedRoute      from "./components/common/ProtectedRoute";
 
 const Placeholder = ({ title }) => (
@@ -28,7 +30,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
 
-          {/* Publik */}
+          
           <Route path="/login"    element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
@@ -93,6 +95,7 @@ const App = () => {
           <Route path="/akademik/atur-periode" element={<AturPeriode />} />
           <Route path="/akademik/permohonan-sk" element={<PermohonanSK />} />
           <Route path="/akademik/atur-berkas" element={<AturBerkas />} />
+          <Route path="/akademik/upload-skl" element={<UploadSKL />} />
 
           {/* 403 Forbidden */}
           <Route
