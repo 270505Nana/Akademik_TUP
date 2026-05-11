@@ -1,5 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const prisma = require("../prisma/client");
+const fs = require("fs");
+const path = require("path");
 
 // Sidang Registration List
 const listSidangRegistrations = asyncHandler(async (req, res) => {
@@ -26,14 +28,24 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
           name: true,
         },
       },
+      sidangRegistrationUploads: true,
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
+  // Append downloadUrls
+  const data = sidangRegistrations.map((reg) => ({
+    ...reg,
+    sidangRegistrationUploads: reg.sidangRegistrationUploads.map((upload) => ({
+      ...upload,
+      downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+    })),
+  }));
+
   res.json({
-    data: sidangRegistrations,
+    data,
   });
 });
 
@@ -67,6 +79,7 @@ const getSidangRegistrationById = asyncHandler(async (req, res) => {
           name: true,
         },
       },
+      sidangRegistrationUploads: true,
     },
   });
 
@@ -74,6 +87,11 @@ const getSidangRegistrationById = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Sidang registration not found");
   }
+
+  sidangRegistration.sidangRegistrationUploads = sidangRegistration.sidangRegistrationUploads.map((upload) => ({
+    ...upload,
+    downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+  }));
 
   res.json({
     data: sidangRegistration,
@@ -110,6 +128,7 @@ const getSidangRegistrationByStudentId = asyncHandler(async (req, res) => {
           name: true,
         },
       },
+      sidangRegistrationUploads: true,
     },
   });
 
@@ -117,6 +136,11 @@ const getSidangRegistrationByStudentId = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Sidang registration not found");
   }
+
+  sidangRegistration.sidangRegistrationUploads = sidangRegistration.sidangRegistrationUploads.map((upload) => ({
+    ...upload,
+    downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+  }));
 
   res.json({
     data: sidangRegistration,
@@ -446,8 +470,14 @@ const updateSidangRegistration = asyncHandler(async (req, res) => {
           name: true,
         },
       },
+      sidangRegistrationUploads: true,
     },
   });
+
+  updatedSidangRegistration.sidangRegistrationUploads = updatedSidangRegistration.sidangRegistrationUploads.map((upload) => ({
+    ...upload,
+    downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+  }));
 
   res.json({
     message: "Sidang registration updated successfully",
@@ -482,6 +512,117 @@ const deleteSidangRegistration = asyncHandler(async (req, res) => {
   });
 });
 
+
+// Upload Dokumen Persyaratan Sidang
+const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { slug, name } = req.body;
+  const file = req.files?.file?.[0] || req.file;
+
+  if (!file) {
+    res.status(400);
+    throw new Error("No file uploaded");
+  }
+
+  if (!slug || !name) {
+    if (file.path) fs.unlink(file.path, () => {});
+    res.status(400);
+    throw new Error("Slug and name are required");
+  }
+
+  const sidangRegistrationExists = await prisma.sidangRegistration.findUnique({
+    where: { id: parseInt(id) }
+  });
+
+  if (!sidangRegistrationExists) {
+    if (file.path) fs.unlink(file.path, () => {});
+    res.status(404);
+    throw new Error("Sidang registration not found");
+  }
+
+  // Check if an upload with this slug already exists for this registration
+  const existingUpload = await prisma.sidangRegistrationUpload.findFirst({
+    where: {
+      sidangRegistrationId: parseInt(id),
+      slug: slug
+    }
+  });
+
+  let uploadRecord;
+
+  if (existingUpload) {
+    // Delete old file from disk
+    if (existingUpload.path && fs.existsSync(existingUpload.path)) {
+       fs.unlinkSync(existingUpload.path);
+    }
+
+    uploadRecord = await prisma.sidangRegistrationUpload.update({
+      where: { id: existingUpload.id },
+      data: {
+        name,
+        filename: file.filename,
+        path: file.path
+      }
+    });
+  } else {
+    uploadRecord = await prisma.sidangRegistrationUpload.create({
+      data: {
+        name,
+        slug,
+        filename: file.filename,
+        path: file.path,
+        sidangRegistrationId: parseInt(id)
+      }
+    });
+  }
+
+  uploadRecord.downloadUrl = `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${uploadRecord.id}/download`;
+
+  res.status(200).json({
+    message: existingUpload ? "File updated successfully" : "File uploaded successfully",
+    data: uploadRecord
+  });
+});
+
+// Get All Uploaded Files by Sidang Registration ID
+const getSidangRegistrationFiles = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const uploads = await prisma.sidangRegistrationUpload.findMany({
+    where: { sidangRegistrationId: parseInt(id) }
+  });
+
+  const data = uploads.map(upload => ({
+    ...upload,
+    downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`
+  }));
+
+  res.json({ data });
+});
+
+// Download Sidang Registration Upload
+const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
+  const uploadId = parseInt(req.params.uploadId);
+
+  const upload = await prisma.sidangRegistrationUpload.findFirst({
+    where: { id: uploadId },
+  });
+
+  if (!upload) {
+    res.status(404);
+    throw new Error("Upload not found");
+  }
+
+  const filePath = path.resolve(process.cwd(), upload.path);
+
+  if (!fs.existsSync(filePath)) {
+    res.status(404);
+    throw new Error("File not found");
+  }
+
+  res.download(filePath, upload.filename);
+});
+
 module.exports = {
   listSidangRegistrations,
   getSidangRegistrationById,
@@ -490,4 +631,7 @@ module.exports = {
   submitSidangRegistration,
   updateSidangRegistration,
   deleteSidangRegistration,
+  uploadSidangRegistrationFile,
+  getSidangRegistrationFiles,
+  downloadSidangRegistrationFile
 };

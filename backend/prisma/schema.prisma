@@ -141,6 +141,7 @@ model SktaRequest {
   sktaResponses      SktaResponse[]
 }
 
+// Upload Evidence
 model SktaRequestUpload {
   id            Int         @id @default(autoincrement())
   createdAt     DateTime    @default(now())
@@ -148,6 +149,7 @@ model SktaRequestUpload {
   deletedAt     DateTime?
   name          String
   filename      String
+  slug          String      @default("evidence")
   path          String
   sktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id])
   sktaRequestId Int
@@ -170,6 +172,7 @@ model SktaResponse {
   sktaResponseUploads      SktaResponseUpload[]
 }
 
+// Upload SKTA
 model SktaResponseUpload {
   id             Int          @id @default(autoincrement())
   createdAt      DateTime     @default(now())
@@ -177,6 +180,7 @@ model SktaResponseUpload {
   deletedAt      DateTime?
   name           String
   filename       String
+  slug           String       @default("skta")
   path           String
   sktaResponse   SktaResponse @relation(fields: [sktaResponseId], references: [id])
   sktaResponseId Int
@@ -230,6 +234,7 @@ model SidangRegistration {
   sidangRegistrationResponses SidangRegistrationResponse[]
 }
 
+// Upload Dokumen Persyaratan
 model SidangRegistrationUpload {
   id                   Int                @id @default(autoincrement())
   createdAt            DateTime           @default(now())
@@ -237,6 +242,7 @@ model SidangRegistrationUpload {
   deletedAt            DateTime?
   name                 String
   filename             String
+  slug                 String // misal: formValidasiDosenWali
   path                 String
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
   sidangRegistrationId Int
@@ -307,7 +313,7 @@ model TemplateUpload {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   name      String
-  slug      String    @unique // contoh: formulir-penerbitan-skta
+  slug      String    @unique // contoh: formulirPenerbitanSkta
   filename  String
   path      String
   isPublish Boolean
