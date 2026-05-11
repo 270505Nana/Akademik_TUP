@@ -6,12 +6,14 @@ const {
   listSidangRegistrations,
   getSidangRegistrationById,
   getSidangRegistrationByStudentId,
-  createSidangRegistration,
+  saveSidangRegistration,
+  submitSidangRegistration,
   updateSidangRegistration,
   deleteSidangRegistration,
 } = require("../../controllers/sidangRegistrationController");
 const {
-  createSidangRegistrationValidator,
+  saveSidangRegistrationValidator,
+  submitSidangRegistrationValidator,
   updateSidangRegistrationValidator,
 } = require("../../validators/sidangRegistrationValidator");
 const { isStudent, isAcademicStaff } = require("../../middlewares/authorize");
@@ -101,70 +103,21 @@ router.get(
 
 /**
  * @swagger
- * /api/sidang-registrations:
+ * /api/sidang-registrations/save:
  *   post:
- *     summary: Create new sidang registration
+ *     summary: Save draft sidang registration
  *     tags: [Sidang Registration]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - programType
- *               - sks
- *               - ipk
- *               - tak
- *               - sktaExpDate
- *               - thesisTitleId
- *               - thesisTitleEn
- *               - studentId
- *               - dosenPembimbing1Id
- *               - dosenPembimbing2Id
- *             properties:
- *               programType:
- *                 type: string
- *                 example: "S2"
- *               sidangScheme:
- *                 type: array
- *                 nullable: true
- *                 items:
- *                   type: string
- *                 example: ["Publikasi Jurnal", "Proceeding International", "HKI"]
- *               sks:
- *                 type: integer
- *                 example: 6
- *               ipk:
- *                 type: number
- *                 example: 3.5
- *               tak:
- *                 type: integer
- *                 example: 2
- *               sktaExpDate:
- *                 type: string
- *                 format: date
- *                 example: "2026-12-31"
- *               thesisTitleId:
- *                 type: string
- *                 example: "Sistem Informasi Manajemen Akademik"
- *               thesisTitleEn:
- *                 type: string
- *                 example: "Academic Management Information System"
- *               studentId:
- *                 type: integer
- *                 example: 1
- *               dosenPembimbing1Id:
- *                 type: integer
- *                 example: 1
- *               dosenPembimbing2Id:
- *                 type: integer
- *                 example: 2
  *     responses:
  *       201:
- *         description: Sidang registration created successfully
+ *         description: Sidang registration saved as draft successfully
  *       400:
  *         description: Validation error
  *       401:
@@ -177,12 +130,49 @@ router.get(
  *         description: Internal server error
  */
 router.post(
-  "/",
+  "/save",
   verifyToken,
   isStudent,
-  createSidangRegistrationValidator,
+  saveSidangRegistrationValidator,
   validate,
-  createSidangRegistration,
+  saveSidangRegistration,
+);
+
+/**
+ * @swagger
+ * /api/sidang-registrations/submit:
+ *   post:
+ *     summary: Submit sidang registration
+ *     tags: [Sidang Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       201:
+ *         description: Sidang registration submitted successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
+ *       404:
+ *         description: Student or lecturer not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post(
+  "/submit",
+  verifyToken,
+  isStudent,
+  submitSidangRegistrationValidator,
+  validate,
+  submitSidangRegistration,
 );
 
 /**
@@ -206,33 +196,6 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
- *             properties:
- *               programType:
- *                 type: string
- *               sidangScheme:
- *                 type: array
- *                 nullable: true
- *                 items:
- *                   type: string
- *               sks:
- *                 type: integer
- *               ipk:
- *                 type: number
- *               tak:
- *                 type: integer
- *               sktaExpDate:
- *                 type: string
- *                 format: date
- *               thesisTitleId:
- *                 type: string
- *               thesisTitleEn:
- *                 type: string
- *               studentId:
- *                 type: integer
- *               dosenPembimbing1Id:
- *                 type: integer
- *               dosenPembimbing2Id:
- *                 type: integer
  *     responses:
  *       200:
  *         description: Sidang registration updated successfully

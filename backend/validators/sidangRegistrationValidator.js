@@ -1,6 +1,6 @@
 const { body } = require("express-validator");
 
-const createSidangRegistrationValidator = [
+const submitSidangRegistrationValidator = [
   body("programType")
     .notEmpty()
     .withMessage("Program type is required")
@@ -79,9 +79,9 @@ const createSidangRegistrationValidator = [
     .toInt(),
 ];
 
-const updateSidangRegistrationValidator = [
+const saveSidangRegistrationValidator = [
   body("programType")
-    .optional()
+    .optional({ nullable: true })
     .isString()
     .withMessage("Program type must be a string"),
 
@@ -90,47 +90,104 @@ const updateSidangRegistrationValidator = [
     .isArray()
     .withMessage("Sidang scheme must be an array if provided"),
 
-  body("sks").optional().isInt().withMessage("SKS must be an integer").toInt(),
+  body("sks").optional({ nullable: true }).isInt().withMessage("SKS must be an integer").toInt(),
 
-  body("ipk").optional().isFloat().withMessage("IPK must be a float").toFloat(),
+  body("ipk").optional({ nullable: true }).isFloat().withMessage("IPK must be a float").toFloat(),
 
-  body("tak").optional().isInt().withMessage("TAK must be an integer").toInt(),
+  body("tak").optional({ nullable: true }).isInt().withMessage("TAK must be an integer").toInt(),
 
   body("sktaExpDate")
-    .optional()
+    .optional({ nullable: true })
     .isISO8601()
     .withMessage("SKTA exp date must be a valid date (ISO 8601 format)"),
 
   body("thesisTitleId")
-    .optional()
+    .optional({ nullable: true })
     .isString()
     .withMessage("Thesis title ID must be a string"),
 
   body("thesisTitleEn")
-    .optional()
+    .optional({ nullable: true })
     .isString()
     .withMessage("Thesis title EN must be a string"),
 
   body("studentId")
-    .optional()
+    .optional({ nullable: true })
     .isInt()
     .withMessage("Student ID must be an integer")
     .toInt(),
 
   body("dosenPembimbing1Id")
-    .optional()
+    .optional({ nullable: true })
     .isInt()
     .withMessage("Dosen pembimbing 1 ID must be an integer")
     .toInt(),
 
   body("dosenPembimbing2Id")
-    .optional()
+    .optional({ nullable: true })
     .isInt()
     .withMessage("Dosen pembimbing 2 ID must be an integer")
     .toInt(),
 ];
 
+const updateSidangRegistrationValidator = [
+  body("programType")
+    .optional({ nullable: true })
+    .isString()
+    .withMessage("Program type must be a string"),
+
+  body("sidangScheme")
+    .optional({ nullable: true })
+    .isArray()
+    .withMessage("Sidang scheme must be an array if provided"),
+
+  body("sks").optional({ nullable: true }).isInt().withMessage("SKS must be an integer").toInt(),
+
+  body("ipk").optional({ nullable: true }).isFloat().withMessage("IPK must be a float").toFloat(),
+
+  body("tak").optional({ nullable: true }).isInt().withMessage("TAK must be an integer").toInt(),
+
+  body("sktaExpDate")
+    .optional({ nullable: true })
+    .isISO8601()
+    .withMessage("SKTA exp date must be a valid date (ISO 8601 format)"),
+
+  body("thesisTitleId")
+    .optional({ nullable: true })
+    .isString()
+    .withMessage("Thesis title ID must be a string"),
+
+  body("thesisTitleEn")
+    .optional({ nullable: true })
+    .isString()
+    .withMessage("Thesis title EN must be a string"),
+
+  body("studentId")
+    .optional({ nullable: true })
+    .isInt()
+    .withMessage("Student ID must be an integer")
+    .toInt(),
+
+  body("dosenPembimbing1Id")
+    .optional({ nullable: true })
+    .isInt()
+    .withMessage("Dosen pembimbing 1 ID must be an integer")
+    .toInt(),
+
+  body("dosenPembimbing2Id")
+    .optional({ nullable: true })
+    .isInt()
+    .withMessage("Dosen pembimbing 2 ID must be an integer")
+    .toInt(),
+    
+  body("isDraft")
+    .optional({ nullable: true })
+    .isBoolean()
+    .withMessage("isDraft must be boolean"),
+];
+
 module.exports = {
-  createSidangRegistrationValidator,
+  saveSidangRegistrationValidator,
+  submitSidangRegistrationValidator,
   updateSidangRegistrationValidator,
 };

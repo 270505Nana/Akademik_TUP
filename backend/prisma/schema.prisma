@@ -210,21 +210,22 @@ model SidangRegistration {
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
   deletedAt                   DateTime?
-  programType                 String
-  sks                         Int
-  ipk                         Float
-  tak                         Int
-  sktaExpDate                 DateTime                     @map("skta_exp_date") @db.Date
-  thesisTitleId               String
-  thesisTitleEn               String
-  sidangScheme                String
+  isDraft                     Boolean                      @default(true)
+  programType                 String?
+  sks                         Int?
+  ipk                         Float?
+  tak                         Int?
+  sktaExpDate                 DateTime?                    @map("skta_exp_date") @db.Date
+  thesisTitleId               String?
+  thesisTitleEn               String?
+  sidangScheme                String?
   jalurNonSidang              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
-  student                     Student                      @relation(fields: [studentId], references: [id])
-  studentId                   Int
-  dosenPembimbing1            Lecturer                     @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id          Int
-  dosenPembimbing2            Lecturer                     @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id          Int
+  student                     Student?                     @relation(fields: [studentId], references: [id])
+  studentId                   Int?
+  dosenPembimbing1            Lecturer?                    @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id          Int?
+  dosenPembimbing2            Lecturer?                    @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id          Int?
   sidangRegistrationUploads   SidangRegistrationUpload[]
   sidangRegistrationResponses SidangRegistrationResponse[]
 }
