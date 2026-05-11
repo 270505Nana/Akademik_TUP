@@ -27,10 +27,9 @@ const SidebarAdmin = ({
     'Manajemen Sidang': false,
     'Verifikasi Berkas': false,
     'Manajemen Data Akademik': false,
-    'Layanan SK & SKL': false
+    'Layanan SK TA & SKL': false
   });
 
-  // Auto expand menu if sub-item is active
   useEffect(() => {
     menuSidebar.forEach(section => {
       section.items.forEach(item => {

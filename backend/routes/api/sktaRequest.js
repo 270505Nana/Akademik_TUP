@@ -68,7 +68,6 @@ router.get("/", verifyToken, listSktaRequests);
  *               - dosenPembimbing1Id
  *               - dosenPembimbing2Id
  *               - evidence
- *               - evidenceIgracias
  *             properties:
  *               proposalTitleId:
  *                 type: string
@@ -89,10 +88,6 @@ router.get("/", verifyToken, listSktaRequests);
  *                 type: string
  *                 format: binary
  *                 description: Evidence file in PDF format
- *               evidenceIgracias:
- *                 type: string
- *                 format: binary
- *                 description: Evidence Igracias file in PDF format
  *     responses:
  *       200:
  *         description: SKTA request submitted successful
@@ -111,10 +106,7 @@ router.post(
   "/",
   verifyToken,
   isStudent,
-  upload("skta-evidence").fields([
-    { name: "evidence", maxCount: 1 },
-    { name: "evidenceIgracias", maxCount: 1 },
-  ]),
+  upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   createSktaRequestValidator,
   validate,
   createSktaRequest,
@@ -148,7 +140,6 @@ router.post(
  *               - dosenPembimbing1Id
  *               - dosenPembimbing2Id
  *               - evidence
- *               - evidenceIgracias
  *             properties:
  *               proposalTitleId:
  *                 type: string
@@ -169,10 +160,6 @@ router.post(
  *                 type: string
  *                 format: binary
  *                 description: Evidence file in PDF format
- *               evidenceIgracias:
- *                 type: string
- *                 format: binary
- *                 description: Evidence Igracias file in PDF format
  *     responses:
  *       200:
  *         description: SKTA request updated successful
@@ -191,10 +178,7 @@ router.patch(
   "/:id",
   verifyToken,
   isStudent,
-  upload("skta-evidence").fields([
-    { name: "evidence", maxCount: 1 },
-    { name: "evidenceIgracias", maxCount: 1 },
-  ]),
+  upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   updateSktaRequestValidator,
   validate,
   updateSktaRequest,

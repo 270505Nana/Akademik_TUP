@@ -36,7 +36,6 @@ const createSktaRequestValidator = [
     .withMessage("dosenPembimbing2Id is required")
     .toInt(),
   validateRequiredPdfFile("evidence"),
-  validateRequiredPdfFile("evidenceIgracias"),
 ];
 
 const updateSktaRequestValidator = [...createSktaRequestValidator];
