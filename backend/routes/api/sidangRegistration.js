@@ -9,7 +9,6 @@ const {
   getSidangRegistrationByStudentId,
   saveSidangRegistration,
   submitSidangRegistration,
-  updateSidangRegistration,
   deleteSidangRegistration,
   uploadSidangRegistrationFile,
   getSidangRegistrationFiles,
@@ -18,7 +17,6 @@ const {
 const {
   saveSidangRegistrationValidator,
   submitSidangRegistrationValidator,
-  updateSidangRegistrationValidator,
 } = require("../../validators/sidangRegistrationValidator");
 const { isStudent, isAcademicStaff } = require("../../middlewares/authorize");
 
@@ -120,7 +118,7 @@ router.get(
  *           schema:
  *             type: object
  *     responses:
- *       201:
+ *       200:
  *         description: Sidang registration saved as draft successfully
  *       400:
  *         description: Validation error
@@ -157,7 +155,7 @@ router.post(
  *           schema:
  *             type: object
  *     responses:
- *       201:
+ *       200:
  *         description: Sidang registration submitted successfully
  *       400:
  *         description: Validation error
@@ -177,50 +175,6 @@ router.post(
   submitSidangRegistrationValidator,
   validate,
   submitSidangRegistration,
-);
-
-/**
- * @swagger
- * /api/sidang-registrations/{id}:
- *   put:
- *     summary: Update sidang registration
- *     tags: [Sidang Registration]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: Sidang registration ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Sidang registration updated successfully
- *       400:
- *         description: Validation error
- *       401:
- *         description: Token not found
- *       403:
- *         description: Invalid token
- *       404:
- *         description: Sidang registration or reference data not found
- *       500:
- *         description: Internal server error
- */
-router.put(
-  "/:id",
-  verifyToken,
-  isStudent,
-  updateSidangRegistrationValidator,
-  validate,
-  updateSidangRegistration,
 );
 
 /**
@@ -284,7 +238,7 @@ router.delete("/:id", verifyToken, isAcademicStaff, deleteSidangRegistration);
  *                 description: The file to upload
  *               slug:
  *                 type: string
- *                 description: The unique identifier for this file type (e.g., 'formValidasiDosenWali')
+ *                 description: The unique identifier for this file type
  *               name:
  *                 type: string
  *                 description: Human readable name of the file
@@ -365,6 +319,5 @@ router.get(
   verifyToken,
   downloadSidangRegistrationFile
 );
-
 
 module.exports = router;

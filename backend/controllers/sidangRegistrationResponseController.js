@@ -180,6 +180,13 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
     },
   });
 
+  if (isEdit) {
+    await prisma.sidangRegistration.update({
+      where: { id: sidangRegistrationId },
+      data: { isDraft: true },
+    });
+  }
+
   res.status(201).json({
     message: "Sidang registration response created successfully",
     data: newResponse,
@@ -260,6 +267,13 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
       },
     },
   });
+
+  if (isEdit) {
+    await prisma.sidangRegistration.update({
+      where: { id: updateData.sidangRegistrationId || responseExists.sidangRegistrationId },
+      data: { isDraft: true },
+    });
+  }
 
   res.json({
     message: "Sidang registration response updated successfully",
