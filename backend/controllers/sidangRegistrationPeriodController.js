@@ -1,159 +1,127 @@
+const asyncHandler = require("express-async-handler");
 const prisma = require("../prisma/client");
 
 // Sidang Registration Period List
-const listSidangRegistrationPeriods = async (req, res) => {
-  try {
-    const sidangRegistrationPeriods =
-      await prisma.sidangRegistrationPeriod.findMany({
-        where: { deletedAt: null },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-
-    res.json({
-      data: sidangRegistrationPeriods,
+const listSidangRegistrationPeriods = asyncHandler(async (req, res) => {
+  const sidangRegistrationPeriods =
+    await prisma.sidangRegistrationPeriod.findMany({
+      where: { deletedAt: null },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
-  }
-};
+
+  res.json({
+    data: sidangRegistrationPeriods,
+  });
+});
 
 // Ambil Detail Sidang Register Period by ID
-const getSidangRegistrationPeriodById = async (req, res) => {
-  try {
-    const { id } = req.params;
+const getSidangRegistrationPeriodById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    const sidangRegistrationPeriod =
-      await prisma.sidangRegistrationPeriod.findFirst({
-        where: {
-          id: parseInt(id),
-          deletedAt: null,
-        },
-      });
-
-    if (!sidangRegistrationPeriod) {
-      return res.status(404).json({
-        message: "Sidang period not found",
-      });
-    }
-
-    res.json({
-      data: sidangRegistrationPeriod,
+  const sidangRegistrationPeriod =
+    await prisma.sidangRegistrationPeriod.findFirst({
+      where: {
+        id: parseInt(id),
+        deletedAt: null,
+      },
     });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+
+  if (!sidangRegistrationPeriod) {
+    res.status(404);
+    throw new Error("Sidang period not found");
   }
-};
+
+  res.json({
+    data: sidangRegistrationPeriod,
+  });
+});
 
 // Buat Sidang Register Period Baru
-const createSidangRegistrationPeriod = async (req, res) => {
-  try {
-    const { name, startDate, endDate, isOpen } = req.body;
+const createSidangRegistrationPeriod = asyncHandler(async (req, res) => {
+  const { name, startDate, endDate, isOpen } = req.body;
 
-    const sidangRegistrationPeriod =
-      await prisma.sidangRegistrationPeriod.create({
-        data: {
-          name,
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
-          isOpen: isOpen !== undefined ? isOpen : false,
-        },
-      });
-
-    res.status(201).json({
-      message: "Sidang period created successfully",
-      data: sidangRegistrationPeriod,
+  const sidangRegistrationPeriod =
+    await prisma.sidangRegistrationPeriod.create({
+      data: {
+        name,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        isOpen: isOpen !== undefined ? isOpen : false,
+      },
     });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
-  }
-};
+
+  res.status(201).json({
+    message: "Sidang period created successfully",
+    data: sidangRegistrationPeriod,
+  });
+});
 
 // Update Sidang Register Period
-const updateSidangRegistrationPeriod = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, startDate, endDate, isOpen } = req.body;
+const updateSidangRegistrationPeriod = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, startDate, endDate, isOpen } = req.body;
 
-    // Cek apakah sidang period ada
-    const sidangRegistrationPeriodExists =
-      await prisma.sidangRegistrationPeriod.findFirst({
-        where: {
-          id: parseInt(id),
-          deletedAt: null,
-        },
-      });
-
-    if (!sidangRegistrationPeriodExists) {
-      return res.status(404).json({
-        message: "Sidang period not found",
-      });
-    }
-
-    const sidangRegistrationPeriod =
-      await prisma.sidangRegistrationPeriod.update({
-        where: {
-          id: parseInt(id),
-        },
-        data: {
-          ...(name && { name }),
-          ...(startDate && { startDate: new Date(startDate) }),
-          ...(endDate && { endDate: new Date(endDate) }),
-          ...(isOpen !== undefined && { isOpen }),
-        },
-      });
-
-    res.json({
-      message: "Sidang period updated successfully",
-      data: sidangRegistrationPeriod,
+  // Cek apakah sidang period ada
+  const sidangRegistrationPeriodExists =
+    await prisma.sidangRegistrationPeriod.findFirst({
+      where: {
+        id: parseInt(id),
+        deletedAt: null,
+      },
     });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+
+  if (!sidangRegistrationPeriodExists) {
+    res.status(404);
+    throw new Error("Sidang period not found");
   }
-};
+
+  const sidangRegistrationPeriod =
+    await prisma.sidangRegistrationPeriod.update({
+      where: {
+        id: parseInt(id),
+      },
+      data: {
+        ...(name && { name }),
+        ...(startDate && { startDate: new Date(startDate) }),
+        ...(endDate && { endDate: new Date(endDate) }),
+        ...(isOpen !== undefined && { isOpen }),
+      },
+    });
+
+  res.json({
+    message: "Sidang period updated successfully",
+    data: sidangRegistrationPeriod,
+  });
+});
 
 // Hapus Sidang Register Period
-const deleteSidangRegistrationPeriod = async (req, res) => {
-  try {
-    const { id } = req.params;
+const deleteSidangRegistrationPeriod = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    // Cek apakah sidang registration period ada
-    const sidangRegistrationPeriodExists =
-      await prisma.sidangRegistrationPeriod.findUnique({
-        where: {
-          id: parseInt(id),
-        },
-      });
-
-    if (!sidangRegistrationPeriodExists) {
-      return res.status(404).json({
-        message: "Sidang registration period not found",
-      });
-    }
-
-    await prisma.sidangRegistrationPeriod.update({
-      where: { id: parseInt(id) },
-      data: { deletedAt: new Date() },
+  // Cek apakah sidang registration period ada
+  const sidangRegistrationPeriodExists =
+    await prisma.sidangRegistrationPeriod.findUnique({
+      where: {
+        id: parseInt(id),
+      },
     });
 
-    res.json({
-      message: "Sidang registration period deleted successfully",
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+  if (!sidangRegistrationPeriodExists) {
+    res.status(404);
+    throw new Error("Sidang registration period not found");
   }
-};
+
+  await prisma.sidangRegistrationPeriod.update({
+    where: { id: parseInt(id) },
+    data: { deletedAt: new Date() },
+  });
+
+  res.json({
+    message: "Sidang registration period deleted successfully",
+  });
+});
 
 module.exports = {
   listSidangRegistrationPeriods,

@@ -1,3 +1,4 @@
+const asyncHandler = require("express-async-handler");
 const prisma = require("../prisma/client");
 const fs = require("fs");
 const path = require("path");
@@ -22,25 +23,18 @@ const withFileUrl = (req, data) => ({
 });
 
 // Get all template uploads
-const listTemplateUploads = async (req, res) => {
-  try {
-    const templateUploads = await prisma.templateUpload.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: "desc" },
-    });
-    const data = templateUploads.map((item) => withFileUrl(req, item));
+const listTemplateUploads = asyncHandler(async (req, res) => {
+  const templateUploads = await prisma.templateUpload.findMany({
+    where: { deletedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
+  const data = templateUploads.map((item) => withFileUrl(req, item));
 
-    res.json({ data });
-  } catch (error) {
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
+  res.json({ data });
+});
 
 // Create template upload
-const createTemplateUpload = async (req, res) => {
+const createTemplateUpload = asyncHandler(async (req, res) => {
   try {
     const { name, slug } = req.body;
     const file = req.file;
@@ -63,39 +57,29 @@ const createTemplateUpload = async (req, res) => {
     if (req.file?.path) {
       fs.unlink(req.file.path, () => {});
     }
-
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    throw error;
   }
-};
+});
 
 // Get template upload by slug
-const findTemplateUploadBySlug = async (req, res) => {
-  try {
-    const { slug } = req.params;
+const findTemplateUploadBySlug = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
 
-    const templateUpload = await prisma.templateUpload.findFirst({
-      where: { slug, deletedAt: null },
-    });
-    if (!templateUpload) {
-      return res.status(404).json({ message: "Template upload not found" });
-    }
-
-    const data = withFileUrl(req, templateUpload);
-
-    res.json({ data });
-  } catch (error) {
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+  const templateUpload = await prisma.templateUpload.findFirst({
+    where: { slug, deletedAt: null },
+  });
+  if (!templateUpload) {
+    res.status(404);
+    throw new Error("Template upload not found");
   }
-};
+
+  const data = withFileUrl(req, templateUpload);
+
+  res.json({ data });
+});
 
 // Update template upload
-const updateTemplateUpload = async (req, res) => {
+const updateTemplateUpload = asyncHandler(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { name, slug } = req.body;
@@ -109,7 +93,8 @@ const updateTemplateUpload = async (req, res) => {
         fs.unlink(file.path, () => {});
       }
 
-      return res.status(404).json({ message: "Template upload not found" });
+      res.status(404);
+      throw new Error("Template upload not found");
     }
 
     const updatedTemplateUpload = await prisma.templateUpload.update({
@@ -139,67 +124,49 @@ const updateTemplateUpload = async (req, res) => {
     if (req.file?.path) {
       fs.unlink(req.file.path, () => {});
     }
-
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    throw error;
   }
-};
+});
 
 // Delete template upload
-const deleteTemplateUpload = async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
+const deleteTemplateUpload = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id);
 
-    const templateUpload = await prisma.templateUpload.findFirst({
-      where: { id },
-    });
-    if (!templateUpload) {
-      return res.status(404).json({ message: "Template upload not found" });
-    }
-
-    await prisma.templateUpload.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-
-    res.json({ message: "Template upload deleted successfully" });
-  } catch (error) {
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+  const templateUpload = await prisma.templateUpload.findFirst({
+    where: { id },
+  });
+  if (!templateUpload) {
+    res.status(404);
+    throw new Error("Template upload not found");
   }
-};
+
+  await prisma.templateUpload.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
+
+  res.json({ message: "Template upload deleted successfully" });
+});
 
 // Download template
-const downloadTemplateUpload = async (req, res) => {
-  try {
-    const slug = req.params.slug;
+const downloadTemplateUpload = asyncHandler(async (req, res) => {
+  const slug = req.params.slug;
 
-    const template = await prisma.templateUpload.findUnique({
-      where: { slug },
-    });
+  const template = await prisma.templateUpload.findUnique({
+    where: { slug },
+  });
 
-    if (!template) {
-      return res.status(404).json({
-        message: "Template not found",
-      });
-    }
-
-    const filePath = path.resolve(process.cwd(), template.path);
-    const ext = path.extname(template.filename || template.path || "") || "";
-    const downloadName = `${sanitizeFilename(template.name)}${ext}`;
-
-    res.download(filePath, downloadName);
-  } catch (error) {
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+  if (!template) {
+    res.status(404);
+    throw new Error("Template not found");
   }
-};
+
+  const filePath = path.resolve(process.cwd(), template.path);
+  const ext = path.extname(template.filename || template.path || "") || "";
+  const downloadName = `${sanitizeFilename(template.name)}${ext}`;
+
+  res.download(filePath, downloadName);
+});
 
 module.exports = {
   listTemplateUploads,

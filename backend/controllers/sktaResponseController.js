@@ -1,24 +1,18 @@
+const asyncHandler = require("express-async-handler");
 const prisma = require("../prisma/client");
 const fs = require("fs");
 
 // Membuat Respon Permohonan SKTA
-const listSktaResponses = async (req, res) => {
-  try {
-    const data = await prisma.sktaResponse.findMany();
+const listSktaResponses = asyncHandler(async (req, res) => {
+  const data = await prisma.sktaResponse.findMany();
 
-    res.json({
-      data,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
+  res.json({
+    data,
+  });
+});
 
 // Membuat Respon Permohonan SKTA
-const createSktaResponse = async (req, res) => {
+const createSktaResponse = asyncHandler(async (req, res) => {
   try {
     const {
       hasUploadedFinalProposal,
@@ -35,15 +29,19 @@ const createSktaResponse = async (req, res) => {
     const academicStaff = await prisma.academicStaff.findFirst({
       where: { id: academicStaffId },
     });
-    if (!academicStaff)
-      return res.status(404).json({ message: "Academic staff not found" });
+    if (!academicStaff) {
+      res.status(404);
+      throw new Error("Academic staff not found");
+    }
 
     // Cek apakah ada data request
     const sktaRequest = await prisma.sktaRequest.findFirst({
       where: { id: sktaRequestId },
     });
-    if (!sktaRequest)
-      return res.status(404).json({ message: "SKTA request not found" });
+    if (!sktaRequest) {
+      res.status(404);
+      throw new Error("SKTA request not found");
+    }
 
     const data = await prisma.sktaResponse.create({
       data: {
@@ -75,22 +73,20 @@ const createSktaResponse = async (req, res) => {
     if (req.file?.path) {
       fs.unlink(req.file.path, () => {});
     }
-
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    throw error;
   }
-};
+});
 
 // Update Respon Permohonan SKTA
-const updateSktaResponse = async (req, res) => {
+const updateSktaResponse = asyncHandler(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
 
     const sktaResponse = await prisma.sktaResponse.findFirst({ where: { id } });
-    if (!sktaResponse)
-      return res.status(404).json({ message: "SKTA response not found" });
+    if (!sktaResponse) {
+      res.status(404);
+      throw new Error("SKTA response not found");
+    }
 
     const {
       hasUploadedFinalProposal,
@@ -107,15 +103,19 @@ const updateSktaResponse = async (req, res) => {
     const academicStaff = await prisma.academicStaff.findFirst({
       where: { id: academicStaffId },
     });
-    if (!academicStaff)
-      return res.status(404).json({ message: "Academic staff not found" });
+    if (!academicStaff) {
+      res.status(404);
+      throw new Error("Academic staff not found");
+    }
 
     // Cek apakah ada data request
     const sktaRequest = await prisma.sktaRequest.findFirst({
       where: { id: sktaRequestId },
     });
-    if (!sktaRequest)
-      return res.status(404).json({ message: "SKTA request not found" });
+    if (!sktaRequest) {
+      res.status(404);
+      throw new Error("SKTA request not found");
+    }
 
     const data = await prisma.sktaResponse.update({
       where: { id },
@@ -148,34 +148,25 @@ const updateSktaResponse = async (req, res) => {
     if (req.file?.path) {
       fs.unlink(req.file.path, () => {});
     }
-
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    throw error;
   }
-};
+});
 
 // Find SKTA Response By SKTA Request Id
-const findSktaResponseBySktaRequestId = async (req, res) => {
-  try {
-    const sktaRequestId = parseInt(req.params.sktaRequestId);
+const findSktaResponseBySktaRequestId = asyncHandler(async (req, res) => {
+  const sktaRequestId = parseInt(req.params.sktaRequestId);
 
-    const sktaResponse = await prisma.sktaResponse.findUnique({
-      where: { sktaRequestId },
-    });
+  const sktaResponse = await prisma.sktaResponse.findUnique({
+    where: { sktaRequestId },
+  });
 
-    if (!sktaResponse) {
-      return res.status(404).json({ message: "SKTA response data not found" });
-    }
-
-    res.json({ data: sktaResponse });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+  if (!sktaResponse) {
+    res.status(404);
+    throw new Error("SKTA response data not found");
   }
-};
+
+  res.json({ data: sktaResponse });
+});
 
 module.exports = {
   listSktaResponses,

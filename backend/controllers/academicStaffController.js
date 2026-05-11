@@ -1,73 +1,60 @@
 const bcrypt = require("bcrypt");
-
 const jwt = require("jsonwebtoken");
-
+const asyncHandler = require("express-async-handler");
 const prisma = require("../prisma/client");
 
 // Daftar Semua Academic Staff
-const listAcademicStaff = async (req, res) => {
-  try {
-    const academicStaff = await prisma.academicStaff.findMany();
+const listAcademicStaff = asyncHandler(async (req, res) => {
+  const academicStaff = await prisma.academicStaff.findMany();
 
-    res.json({
-      data: academicStaff,
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
-  }
-};
+  res.json({
+    data: academicStaff,
+  });
+});
 
 // Update or Insert Academic Staff
-const upsertAcademicStaff = async (req, res) => {
-  try {
-    const userId = parseInt(req.params.userId);
+const upsertAcademicStaff = asyncHandler(async (req, res) => {
+  const userId = parseInt(req.params.userId);
 
-    const user = await prisma.user.findFirst({ where: { id: userId } });
-    if (!user) return res.status(404).json({ message: "User not found" });
-    if (user.role !== "ACADEMIC_STAFF")
-      return res.status(400).json({ message: "User is not an academic staff" });
-
-    const { name } = req.body;
-
-    const academicStaff = await prisma.academicStaff.upsert({
-      where: { userId },
-      update: { name },
-      create: { name, userId },
-    });
-
-    res.json({
-      message: "Create or update academic staff data successful",
-      data: academicStaff,
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+  const user = await prisma.user.findFirst({ where: { id: userId } });
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
   }
-};
+  if (user.role !== "ACADEMIC_STAFF") {
+    res.status(400);
+    throw new Error("User is not an academic staff");
+  }
+
+  const { name } = req.body;
+
+  const academicStaff = await prisma.academicStaff.upsert({
+    where: { userId },
+    update: { name },
+    create: { name, userId },
+  });
+
+  res.json({
+    message: "Create or update academic staff data successful",
+    data: academicStaff,
+  });
+});
 
 // Find Academic Staff By User Id
-const findAcademicStaffByUserId = async (req, res) => {
-  try {
-    const userId = parseInt(req.params.userId);
+const findAcademicStaffByUserId = asyncHandler(async (req, res) => {
+  const userId = parseInt(req.params.userId);
 
-    const academicStaff = await prisma.academicStaff.findUnique({
-      where: { userId },
-    });
+  const academicStaff = await prisma.academicStaff.findUnique({
+    where: { userId },
+  });
 
-    if (!academicStaff) {
-      return res.status(404).json({ message: "Academic staff data not found" });
-    }
-
-    res.json({ data: academicStaff });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+  if (!academicStaff) {
+    res.status(404);
+    throw new Error("Academic staff data not found");
   }
-};
+
+  res.json({ data: academicStaff });
+});
 
 module.exports = {
   listAcademicStaff,

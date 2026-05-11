@@ -1,3 +1,4 @@
+const asyncHandler = require("express-async-handler");
 const prisma = require("../prisma/client");
 const fs = require("fs");
 const path = require("path");
@@ -47,31 +48,24 @@ const removeUploadedFiles = (files) => {
 };
 
 // Membuat Permohonan SKTA
-const listSktaRequests = async (req, res) => {
-  try {
-    const sktaRequests = await prisma.sktaRequest.findMany({
-      include: {
-        sktaRequestUploads: true,
-      },
-    });
+const listSktaRequests = asyncHandler(async (req, res) => {
+  const sktaRequests = await prisma.sktaRequest.findMany({
+    include: {
+      sktaRequestUploads: true,
+    },
+  });
 
-    const data = sktaRequests.map((sktaRequest) =>
-      withSktaRequestDownloadUrls(req, sktaRequest),
-    );
+  const data = sktaRequests.map((sktaRequest) =>
+    withSktaRequestDownloadUrls(req, sktaRequest),
+  );
 
-    res.json({
-      data,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
+  res.json({
+    data,
+  });
+});
 
 // Membuat Permohonan SKTA
-const createSktaRequest = async (req, res) => {
+const createSktaRequest = asyncHandler(async (req, res) => {
   try {
     const {
       proposalTitleId,
@@ -88,21 +82,28 @@ const createSktaRequest = async (req, res) => {
     const student = await prisma.student.findFirst({
       where: { id: studentId },
     });
-    if (!student) return res.status(404).json({ message: "Student not found" });
+    if (!student) {
+      res.status(404);
+      throw new Error("Student not found");
+    }
 
     // Cek apakah ada data dospem 1
     const dosenPembimbing1 = await prisma.lecturer.findFirst({
       where: { id: dosenPembimbing1Id },
     });
-    if (!dosenPembimbing1)
-      return res.status(404).json({ message: "Dosen pembimbing 1 not found" });
+    if (!dosenPembimbing1) {
+      res.status(404);
+      throw new Error("Dosen pembimbing 1 not found");
+    }
 
     // Cek apakah ada data dospem 2
     const dosenPembimbing2 = await prisma.lecturer.findFirst({
       where: { id: dosenPembimbing2Id },
     });
-    if (!dosenPembimbing2)
-      return res.status(404).json({ message: "Dosen pembimbing 2 not found" });
+    if (!dosenPembimbing2) {
+      res.status(404);
+      throw new Error("Dosen pembimbing 2 not found");
+    }
 
     const data = await prisma.sktaRequest.create({
       data: {
@@ -135,22 +136,20 @@ const createSktaRequest = async (req, res) => {
     });
   } catch (error) {
     removeUploadedFiles(req.file || req.files);
-
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    throw error;
   }
-};
+});
 
 // Update Permohonan SKTA
-const updateSktaRequest = async (req, res) => {
+const updateSktaRequest = asyncHandler(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
 
     const sktaRequest = await prisma.sktaRequest.findFirst({ where: { id } });
-    if (!sktaRequest)
-      return res.status(404).json({ message: "SKTA request not found" });
+    if (!sktaRequest) {
+      res.status(404);
+      throw new Error("SKTA request not found");
+    }
 
     const {
       proposalTitleId,
@@ -167,21 +166,28 @@ const updateSktaRequest = async (req, res) => {
     const student = await prisma.student.findFirst({
       where: { id: studentId },
     });
-    if (!student) return res.status(404).json({ message: "Student not found" });
+    if (!student) {
+      res.status(404);
+      throw new Error("Student not found");
+    }
 
     // Cek apakah ada data dospem 1
     const dosenPembimbing1 = await prisma.lecturer.findFirst({
       where: { id: dosenPembimbing1Id },
     });
-    if (!dosenPembimbing1)
-      return res.status(404).json({ message: "Lecturer 1 not found" });
+    if (!dosenPembimbing1) {
+      res.status(404);
+      throw new Error("Lecturer 1 not found");
+    }
 
     // Cek apakah ada data dospem 2
     const dosenPembimbing2 = await prisma.lecturer.findFirst({
       where: { id: dosenPembimbing2Id },
     });
-    if (!dosenPembimbing2)
-      return res.status(404).json({ message: "Lecturer 2 not found" });
+    if (!dosenPembimbing2) {
+      res.status(404);
+      throw new Error("Lecturer 2 not found");
+    }
 
     const data = await prisma.sktaRequest.update({
       where: { id },
@@ -215,63 +221,50 @@ const updateSktaRequest = async (req, res) => {
     });
   } catch (error) {
     removeUploadedFiles(req.file || req.files);
-
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    throw error;
   }
-};
+});
 
 // Find SKTA Request By Mahasiswa Id
-const findSktaRequestByStudentId = async (req, res) => {
-  try {
-    const studentId = parseInt(req.params.studentId);
+const findSktaRequestByStudentId = asyncHandler(async (req, res) => {
+  const studentId = parseInt(req.params.studentId);
 
-    const sktaRequest = await prisma.sktaRequest.findFirst({
-      where: { studentId },
-      include: {
-        sktaRequestUploads: true,
-      },
-    });
+  const sktaRequest = await prisma.sktaRequest.findFirst({
+    where: { studentId },
+    include: {
+      sktaRequestUploads: true,
+    },
+  });
 
-    if (!sktaRequest) {
-      return res.status(404).json({ message: "SKTA request data not found" });
-    }
-
-    res.json({ data: withSktaRequestDownloadUrls(req, sktaRequest) });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+  if (!sktaRequest) {
+    res.status(404);
+    throw new Error("SKTA request data not found");
   }
-};
 
-const downloadSktaRequestUpload = async (req, res) => {
-  try {
-    const uploadId = parseInt(req.params.uploadId);
+  res.json({ data: withSktaRequestDownloadUrls(req, sktaRequest) });
+});
 
-    const upload = await prisma.sktaRequestUpload.findFirst({
-      where: { id: uploadId },
-    });
+const downloadSktaRequestUpload = asyncHandler(async (req, res) => {
+  const uploadId = parseInt(req.params.uploadId);
 
-    if (!upload) {
-      return res.status(404).json({ message: "SKTA request upload not found" });
-    }
+  const upload = await prisma.sktaRequestUpload.findFirst({
+    where: { id: uploadId },
+  });
 
-    const filePath = path.resolve(process.cwd(), upload.path);
-
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: "File not found" });
-    }
-
-    res.download(filePath, upload.filename);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+  if (!upload) {
+    res.status(404);
+    throw new Error("SKTA request upload not found");
   }
-};
+
+  const filePath = path.resolve(process.cwd(), upload.path);
+
+  if (!fs.existsSync(filePath)) {
+    res.status(404);
+    throw new Error("File not found");
+  }
+
+  res.download(filePath, upload.filename);
+});
 
 module.exports = {
   listSktaRequests,
