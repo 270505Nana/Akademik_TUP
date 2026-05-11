@@ -145,6 +145,20 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
       throw new Error("SKTA request not found");
     }
 
+    const editableResponse = await prisma.sktaResponse.findFirst({
+      where: {
+        sktaRequestId: id,
+        isEdit: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!editableResponse) {
+      res.status(403);
+      throw new Error("You cannot edit this SKTA request because it is already submitted and no edit permission is available.");
+    }
+
     const {
       proposalTitleId,
       proposalTitleEn,

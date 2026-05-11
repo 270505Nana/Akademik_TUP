@@ -19,6 +19,7 @@ const createSktaResponse = asyncHandler(async (req, res) => {
       hasTakenLanguageTest,
       message,
       expDate,
+      isEdit,
       academicStaffId,
       sktaRequestId,
     } = req.body;
@@ -48,7 +49,8 @@ const createSktaResponse = asyncHandler(async (req, res) => {
         hasUploadedFinalProposal,
         hasTakenLanguageTest,
         message,
-        expDate,
+        expDate: expDate ? new Date(expDate) : null,
+        isEdit: isEdit ? new Date(isEdit) : null,
         academicStaffId,
         sktaRequestId,
         ...(file
@@ -93,6 +95,7 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
       hasTakenLanguageTest,
       message,
       expDate,
+      isEdit,
       academicStaffId,
       sktaRequestId,
     } = req.body;
@@ -123,7 +126,8 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
         hasUploadedFinalProposal,
         hasTakenLanguageTest,
         message,
-        expDate,
+        expDate: expDate ? new Date(expDate) : null,
+        isEdit: isEdit ? new Date(isEdit) : null,
         academicStaffId,
         sktaRequestId,
         ...(file
