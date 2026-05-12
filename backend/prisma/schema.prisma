@@ -43,6 +43,7 @@ model AcademicStaff {
   userId                      Int                          @unique
   sktaResponses               SktaResponse[]
   sidangRegistrationResponses SidangRegistrationResponse[]
+  // yudisiumRegistrationResponses YudisiumRegistrationResponse[]
 }
 
 // Master Data Dosen
@@ -260,6 +261,84 @@ model SidangRegistrationResponse {
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
   sidangRegistrationId Int
 }
+
+// // Daftar Yudisium
+// model YudisiumPeriod {
+//   id        Int       @id @default(autoincrement())
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @updatedAt
+//   deletedAt DateTime?
+//   name      String
+//   startDate DateTime  @map("start_date") @db.Date
+//   endDate   DateTime  @map("end_date") @db.Date
+//   isOpen    Boolean
+// }
+
+// model YudisiumRegistrationPeriod {
+//   id        Int       @id @default(autoincrement())
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @updatedAt
+//   deletedAt DateTime?
+//   name      String
+//   startDate DateTime  @map("start_date") @db.Date
+//   endDate   DateTime  @map("end_date") @db.Date
+//   isOpen    Boolean
+// }
+
+// model YudisiumRegistration {
+//   id                            Int                            @id @default(autoincrement())
+//   createdAt                     DateTime                       @default(now())
+//   updatedAt                     DateTime                       @updatedAt
+//   deletedAt                     DateTime?
+//   isDraft                       Boolean                        @default(true)
+//   // wajib
+//   programType                   String? // Reguler, Alih Jenjang
+//   tak                           Int?
+//   thesisTitleId                 String?
+//   thesisTitleEn                 String?
+//   isConfirmed                   Boolean? // Saya telah memastikan bahwa Judul Tugas Akhir yang saya inputkan sudah sesuai dengan yang tertera pada iGracias.
+//   sidangScheme                  String?
+//   cumlaudeScheme                String? // Non Cumlaude, Pengajuan Cumlaude, Pengajuan Summa Cumlaude
+//   // wajib jika memilih selain non cumlaude
+//   jalurNonYudisium              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Pameran", "Lomba", "HKI"]
+//   eviden_cumlaude               String?                        @db.Text
+//   // wajib
+//   student                       Student?                       @relation(fields: [studentId], references: [id])
+//   studentId                     Int?
+//   dosenPembimbing1              Lecturer?                      @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+//   dosenPembimbing1Id            Int?
+//   dosenPembimbing2              Lecturer?                      @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+//   dosenPembimbing2Id            Int?
+//   yudisiumRegistrationUploads   YudisiumRegistrationUpload[]
+//   yudisiumRegistrationResponses YudisiumRegistrationResponse[]
+// }
+
+// // Upload Dokumen Persyaratan
+// model YudisiumRegistrationUpload {
+//   id                     Int                  @id @default(autoincrement())
+//   createdAt              DateTime             @default(now())
+//   updatedAt              DateTime             @updatedAt
+//   deletedAt              DateTime?
+//   name                   String
+//   filename               String
+//   slug                   String // misal: formValidasiDosenWali
+//   path                   String
+//   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
+//   yudisiumRegistrationId Int
+// }
+
+// model YudisiumRegistrationResponse {
+//   id                     Int                  @id @default(autoincrement())
+//   createdAt              DateTime             @default(now())
+//   updatedAt              DateTime             @updatedAt
+//   deletedAt              DateTime?
+//   message                String?
+//   isEdit                 DateTime?
+//   academicStaff          AcademicStaff        @relation(fields: [academicStaffId], references: [id])
+//   academicStaffId        Int
+//   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
+//   yudisiumRegistrationId Int
+// }
 
 // Daftar Yudisium
 // model CumlaudeScheme {
