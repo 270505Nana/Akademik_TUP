@@ -142,7 +142,7 @@ export const resubmitSKTARequest = async ({
   return response.data;
 };
 
-// buat status : dalam proses, belum terbit, sudah terbit, expired, revisi
+// buat status yg didapet dri kolom  : dalam proses, belum terbit, sudah terbit, expired, revisi
 export const getSKTAResponse = async (sktaRequestId) => {
   try {
     const response = await api.get(`/api/skta-responses/${sktaRequestId}`);

@@ -4,11 +4,10 @@ import { getStudentData, getLecturers, getFaculties, getStudyPrograms } from '..
 const StudentContext = createContext(undefined);
 
 export const StudentProvider = ({ children }) => {
-  const [student, setStudent]       = useState(null);
-  const [isComplete, setIsComplete] = useState(false);
+  const [student, setStudent]                   = useState(null);
+  const [isComplete, setIsComplete]             = useState(false);
   const [isStudentLoading, setIsStudentLoading] = useState(true);
-  const [sktaRequestId, setSktaRequestId] = useState(null);
-  // sktarequest save abis student request
+  const [sktaRequestId, setSktaRequestId] = useState(null); //save sktarequestid
 
   useEffect(() => {
     const savedData = localStorage.getItem('student_data');
@@ -22,6 +21,7 @@ export const StudentProvider = ({ children }) => {
         localStorage.removeItem('student_data');
       }
     }
+    // cek request yg ada sblmnya
     const savedSktaRequestId = localStorage.getItem('skta_request_id');
     if (savedSktaRequestId) {
       setSktaRequestId(Number(savedSktaRequestId));
@@ -35,13 +35,14 @@ export const StudentProvider = ({ children }) => {
     localStorage.setItem('student_data', JSON.stringify(data));
   };
 
-  // buat GET /api/skta-responses/{sktaRequestId} buat cek status pengajuan SK
+  //  Simpan sktaRequestId setelah POST /api/skta-requests
+  // Dipakai untuk GET /api/skta-responses/{sktaRequestId}
   const updateSktaRequestId = (id) => {
     setSktaRequestId(id);
     localStorage.setItem('skta_request_id', String(id));
   };
- 
 
+  // Fetch data student dari server 
   const fetchAndLoadStudent = async (userId) => {
     try {
       const [studentData, rawLecturers, rawStudyPrograms, rawFaculties] = await Promise.all([
@@ -65,18 +66,15 @@ export const StudentProvider = ({ children }) => {
 
       const mapped = {
         studentId:        studentData.id                                  ?? null,
-
         namaLengkap:      studentData.name                                ?? '',
         nim:              studentData.nim                                  ?? '',
         kelas:            studentData.className                            ?? '',
         angkatan:         String(studentData.year                         ?? ''),
-
         studyProgramId:   String(studentData.studyProgramId               ?? ''),
         studyProgramNama: matchedProdi?.name                              ?? '',
         fakultasId:       String(matchedFakultas?.id                      ??
                                  matchedProdi?.facultyId                  ?? ''),
         fakultasNama:     matchedFakultas?.name                           ?? '',
-
         dosenWaliId:      String(studentData.dosenWaliId                  ?? ''),
         dosenWaliKode:    matchedDosen?.lecturerCode ?? matchedDosen?.kode ?? '',
         dosenWaliNama:    matchedDosen?.name         ?? matchedDosen?.nama ?? '',
@@ -99,8 +97,10 @@ export const StudentProvider = ({ children }) => {
   const logoutStudentData = () => {
     setStudent(null);
     setIsComplete(false);
-    setIsStudentLoading(false); 
+    setIsStudentLoading(false);
+    setSktaRequestId(null);
     localStorage.removeItem('student_data');
+    localStorage.removeItem('skta_request_id');
   };
 
   return (
@@ -108,7 +108,9 @@ export const StudentProvider = ({ children }) => {
       student,
       isComplete,
       isStudentLoading,
+      sktaRequestId,
       updateStudent,
+      updateSktaRequestId,
       fetchAndLoadStudent,
       logoutStudentData,
     }}>
