@@ -3,7 +3,7 @@ import { ClipboardList, Save, Edit3, Trash2, LayoutPanelLeft, Menu, X } from 'lu
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
-import '../../components/admin/aturperiode.css';
+import '../../components/admin/css/aturperiode.css';
 
 const AturPeriode = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

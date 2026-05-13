@@ -4,7 +4,7 @@ import { User, IdCard, GraduationCap, Building2, BookOpen, Users, Search, Save }
 import { useStudent } from '../../context/StudentContext';
 import { useAuth } from '../../context/AuthContext';
 import { getLecturers, getFaculties, getStudyPrograms, saveStudentData } from "../../service/api";
-import "../../components/kelengkapan_data/lengkapidata.css";
+import "../../components/mahasiswa/lengkapidata.css";
 import logoTelkom from "../../assets/logo-telkom.png";
 
 const LengkapiData = () => {
