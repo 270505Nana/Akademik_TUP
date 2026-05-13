@@ -7,7 +7,7 @@ import Telulogo  from "../../assets/logo-telkom.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 import {getLecturers,getSKTARequest,getSKTAResponse,submitSKTARequest,resubmitSKTARequest,} from '../../service/api';
-import '../../components/sk/pengajuanSK.css';
+import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
 
 // status SK = dalam proses masih null semua responenya
 // revisi = ada message + udh respon tapi file SK belum ada
@@ -118,6 +118,9 @@ const SkStatusBanner = ({ status, sktaResponse, requestData }) => {
     </div>
   );
 };
+
+// kelompok keilmuan di-mapping dari researchGroupId dosen pembimbing 1
+// researchGroupId sesuai dengan field researchGroupId di tabel Lecturer
 const kelompokKeilmuan = [
   { id: 'kk1', researchGroupId: 1, label: 'ELECTRONICS AND TELECOMMUNICATIONS SCIENCE' },
   { id: 'kk2', researchGroupId: 2, label: 'INDUSTRIAL SYSTEMS ENGINEERING' },
@@ -161,15 +164,17 @@ const PengajuanSK = () => {
   const [actualFile,   setActualFile]   = useState(null);
   const [fileError,    setFileError]    = useState(null);
   const [submitError, setSubmitError] = useState(null);
+
   useEffect(() => {
     const fetchDosen = async () => {
       try {
         setLoadingDosen(true);
         const data = await getLecturers();
         const options = data.map((d) => ({
-          value:           d.id,
-          label:           `${d.lecturerCode ?? d.kode} — ${d.name ?? d.nama}`,
-          nama:            d.name ?? d.nama,
+          value: d.id,
+          label: `${d.lecturerCode ?? d.kode} — ${d.name ?? d.nama}`,
+          nama:  d.name ?? d.nama,
+          // researchGroupId dipakai untuk auto-set kelompok keilmuan
           researchGroupId: d.researchGroupId ?? null,
         }));
         setLecturerOptions(options);
@@ -181,9 +186,11 @@ const PengajuanSK = () => {
     };
     fetchDosen();
   }, []);
+
   useEffect(() => {
     const checkSKTAStatus = async () => {
       const studentId = student?.studentId;
+     
       if (!studentId) {
         navigate('/lengkapi-data', { replace: true });
         return;
@@ -242,6 +249,8 @@ const PengajuanSK = () => {
     setFormData(prev => {
       const updated = { ...prev, [field]: val, [namaField]: val?.nama || '' };
 
+      // auto-set kelompok keilmuan dari researchGroupId dosen pembimbing 1
+      // jika dosen 1 diganti/di-clear, kelompok ikut di-reset
       if (field === 'kode1') {
         if (val?.researchGroupId) {
           const matched = kelompokKeilmuan.find(
@@ -330,6 +339,7 @@ const PengajuanSK = () => {
       setPageStatus('form');
     }
   };
+
   const customSelectStyles = {
     control: (base, state) => ({
       ...base,
@@ -350,7 +360,6 @@ const PengajuanSK = () => {
       color: state.isSelected ? '#fff' : '#374151',
     }),
   };
-
 
   if (pageStatus === 'loading') {
     return (
@@ -395,6 +404,7 @@ const PengajuanSK = () => {
       </div>
     );
   }
+
   if (pageStatus === 'status_only') {
     return (
       <div className="sk-page-container">
@@ -431,6 +441,15 @@ const PengajuanSK = () => {
         {isExpired && (
           <SkStatusBanner
             status="expired"
+            sktaResponse={sktaResponse}
+            requestData={requestData}
+          />
+        )}
+
+        {/* banner revisi ditampilkan di atas form jika status revisi */}
+        {skStatus === 'revisi' && !isExpired && (
+          <SkStatusBanner
+            status="revisi"
             sktaResponse={sktaResponse}
             requestData={requestData}
           />
@@ -600,6 +619,7 @@ const PengajuanSK = () => {
             </div>
           </div>
 
+          {/* kelompok keilmuan otomatis dari researchGroupId dosen pembimbing 1 */}
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
               <label style={{ margin: 0 }}>Kelompok Keilmuan</label>

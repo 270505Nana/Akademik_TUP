@@ -16,6 +16,7 @@ import AturBerkas          from "./pages/admin/requirementdocs";
 import UploadSKL           from "./pages/admin/skltranskrip";
 
 import ProtectedRoute      from "./components/common/ProtectedRoute";
+import PendaftaranSidang from "./pages/mahasiswa/pendaftaransidang";
 
 const Placeholder = ({ title }) => (
   <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -68,7 +69,7 @@ const App = () => {
             path="/mahasiswa/pendaftaran-sidang"
             element={
               <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
-                <Placeholder title="Pendaftaran Sidang" />
+                <PendaftaranSidang />
               </ProtectedRoute>
             }
           />
