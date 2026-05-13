@@ -14,7 +14,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
-import '../../components/admin/skltranskrip.css';
+import '../../components/admin/css/skltranskrip.css';
 
 const SklTranskrip = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

@@ -14,7 +14,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
-import '../../components/admin/requirementdocs.css';
+import '../../components/admin/css/requirementdocs.css';
 const RequirementDoc = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
