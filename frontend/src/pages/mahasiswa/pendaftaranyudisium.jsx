@@ -1,12 +1,12 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import "../../components/yudisium/yudisium.css";
+import "../../components/mahasiswa/yudisium/yudisium.css";
 import logoSimta from '../../assets/logo-simta.png'; 
 import logoTelkom from '../../assets/logo-telkom.png';
 import { YudisiumFormProvider, useYudisiumForm } from '../../context/YudisiumFormContext';
-import Step1Yudisium from '../../components/yudisium/Step1Yudisium';
-import Step2Yudisium from '../../components/yudisium/Step2Yudisium';
+import Step1Yudisium from '../../components/mahasiswa/yudisium/Step1Yudisium';
+import Step2Yudisium from '../../components/mahasiswa/yudisium/Step2Yudisium';
 
 function YudisiumPageContent() {
   const navigate = useNavigate();

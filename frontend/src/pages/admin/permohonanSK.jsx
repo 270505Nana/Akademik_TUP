@@ -3,7 +3,7 @@ import { Search, Download, FileText, X, Eye, ChevronLeft, ChevronRight, Menu, Up
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
-import '../../components/admin/permohonanSK.css';
+import '../../components/admin/css/permohonanSK.css';
 
 // ─── Dummy Data ──────────────────────────────────────────────────────────────
 const DUMMY_DATA = [

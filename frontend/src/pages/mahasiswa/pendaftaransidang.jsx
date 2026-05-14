@@ -2,13 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Save, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import "../../components/sidang/sidang.css";
+import "../../components/mahasiswa/sidang/sidang.css";
 import logoSimta from '../../assets/logo-simta.png'; 
 import logoTelkom from '../../assets/logo-telkom.png';
 import { useSidangContext, SidangFormProvider } from '../../context/SidangFormContext';
 import { useAuth } from '../../context/AuthContext';
-import Step1 from '../../components/sidang/Step1Sidang';
-import Step2 from '../../components/sidang/Step2Sidang';
+import Step1 from '../../components/mahasiswa/sidang/Step1Sidang';
+import Step2 from '../../components/mahasiswa/sidang/Step2Sidang';
 import api from '../../service/api';
 
 function PendaftaranSidangContent() {

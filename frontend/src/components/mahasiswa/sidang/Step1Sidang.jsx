@@ -1,5 +1,5 @@
 import { Search, User, GraduationCap, Calendar, Mail, FileText, CheckCircle2, ChevronLeft, ChevronRight, Download, UploadCloud, Info, AlertTriangle, Check } from 'lucide-react';
-import { useSidangContext } from '../../context/SidangFormContext';
+import { useSidangContext } from '../../../context/SidangFormContext';
 
 export default function Step1() {
   const { state, dispatch } = useSidangContext();
@@ -12,11 +12,11 @@ export default function Step1() {
   const programs = ['Reguler', 'Alih Jenjang'];
   const skemas = ['Sidang Reguler', 'Non Sidang', 'Capstone', 'Sidang Khusus Prodi'];
   const jalurNonSidangOptions = ['Publikasi Jurnal', 'Proceeding International', 'HKI'];
-  
+
   const toggleJalurNonSidang = (option) => {
     const current = data.jalurNonSidang || [];
-    const next = current.includes(option) 
-      ? current.filter(i => i !== option) 
+    const next = current.includes(option)
+      ? current.filter(i => i !== option)
       : [...current, option];
     updateField('jalurNonSidang', next);
   };
@@ -46,8 +46,8 @@ export default function Step1() {
           <p>Helpdesk Layanan Sidang-Yudisium TUP <a href="#">wa.me/+6285117001281</a> (chat only)</p>
         </div>
         <div className="contact-person-badge" onClick={() => window.open('https://wa.me/6285117001281', '_blank')}>
-            <Mail size={16} />
-            <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP wa.me/+6285117001281</span>
+          <Mail size={16} />
+          <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP wa.me/+6285117001281</span>
         </div>
       </div>
 
@@ -63,9 +63,9 @@ export default function Step1() {
             <label>Nama</label>
             <div className="input-with-icon">
               <User className="input-icon" size={18} />
-              <input 
-                type="text" 
-                className="input-field" 
+              <input
+                type="text"
+                className="input-field"
                 placeholder="Masukan Nama Jawaban Anda"
                 value={data.nama}
                 onChange={(e) => updateField('nama', e.target.value)}
@@ -75,9 +75,9 @@ export default function Step1() {
           <div className="input-group">
             <label>NIM (NOMOR INDUK MAHASISWA) *</label>
             <div className="input-with-icon">
-              <input 
-                type="text" 
-                className="input-field" 
+              <input
+                type="text"
+                className="input-field"
                 style={{ paddingLeft: '1rem' }}
                 placeholder="Masukan NIM Anda"
                 value={data.nim}
@@ -93,7 +93,7 @@ export default function Step1() {
             <label>Program Studi</label>
             <div className="input-with-icon">
               <GraduationCap className="input-icon" size={18} />
-              <select 
+              <select
                 className="input-field"
                 value={data.prodi}
                 onChange={(e) => updateField('prodi', e.target.value)}
@@ -107,9 +107,9 @@ export default function Step1() {
           <div className="input-group">
             <label>Jumlah Total SKS Lulus</label>
             <div className="input-with-icon">
-              <input 
-                type="text" 
-                className="input-field" 
+              <input
+                type="text"
+                className="input-field"
                 style={{ paddingLeft: '1rem' }}
                 placeholder="0"
                 value={data.sks}
@@ -123,9 +123,9 @@ export default function Step1() {
           <div className="input-group">
             <label>TAK</label>
             <div className="input-with-icon">
-              <input 
-                type="text" 
-                className="input-field" 
+              <input
+                type="text"
+                className="input-field"
                 style={{ paddingLeft: '1rem' }}
                 placeholder="0"
                 value={data.tak}
@@ -140,14 +140,14 @@ export default function Step1() {
           <div className="input-group">
             <label>Nilai IPK Sebelum Sidang</label>
             <div className="input-with-icon">
-              <input 
-                type="text" 
-                className="input-field" 
+              <input
+                type="text"
+                className="input-field"
                 style={{ paddingLeft: '1rem' }}
                 placeholder="0.00"
                 value={data.ipk}
                 onChange={(e) => {
-                  
+
                   const val = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
                   updateField('ipk', val);
                 }}
@@ -164,8 +164,8 @@ export default function Step1() {
             <label>Program</label>
             <div className="program-selector">
               {programs.map(p => (
-                <div 
-                  key={p} 
+                <div
+                  key={p}
                   className={`program-card ${data.program === p ? 'active' : ''}`}
                   onClick={() => updateField('program', p)}
                 >
@@ -180,9 +180,9 @@ export default function Step1() {
           <div className="input-group">
             <label>Tanggal Batas Akhir SK iGracias</label>
             <div className="input-with-icon">
-              <input 
-                type="date" 
-                className="input-field" 
+              <input
+                type="date"
+                className="input-field"
                 style={{ paddingLeft: '1rem' }}
                 value={data.batasSk}
                 onChange={(e) => updateField('batasSk', e.target.value)}
@@ -198,9 +198,9 @@ export default function Step1() {
           <div className="input-group">
             <label>Kode Dosen Wali</label>
             <div className="input-with-icon">
-              <input 
-                type="text" 
-                className="input-field" 
+              <input
+                type="text"
+                className="input-field"
                 style={{ paddingLeft: '1rem' }}
                 placeholder="Masukan Kode Dosen Wali"
                 value={data.doswal}
@@ -211,9 +211,9 @@ export default function Step1() {
           <div className="input-group">
             <label>Kode Dosen Pembimbing 1</label>
             <div className="input-with-icon">
-              <input 
-                type="text" 
-                className="input-field" 
+              <input
+                type="text"
+                className="input-field"
                 style={{ paddingLeft: '1rem' }}
                 placeholder="Masukan Kode Pembimbing 1"
                 value={data.pembimbing1}
@@ -224,9 +224,9 @@ export default function Step1() {
           <div className="input-group">
             <label>NIP Dosen Wali</label>
             <div className="input-with-icon">
-              <input 
-                type="text" 
-                className="input-field" 
+              <input
+                type="text"
+                className="input-field"
                 style={{ paddingLeft: '1rem' }}
                 placeholder="Masukan NIP Dosen Wali"
                 value={data.nipDoswal}
@@ -240,9 +240,9 @@ export default function Step1() {
           <div className="input-group">
             <label>Dosen Pembimbing 2</label>
             <div className="input-with-icon">
-              <input 
-                type="text" 
-                className="input-field" 
+              <input
+                type="text"
+                className="input-field"
                 style={{ paddingLeft: '1rem' }}
                 placeholder="Masukan Kode Pembimbing 2"
                 value={data.pembimbing2}
@@ -257,8 +257,8 @@ export default function Step1() {
           <span className="helper-text">kk mengikuti Dosen Pembimbing 1</span>
           <div className="kelompok-keilmuan-grid">
             {keilmuans.map(k => (
-              <div 
-                key={k} 
+              <div
+                key={k}
                 className={`radio-item ${data.kelompokKeilmuan === k ? 'active' : ''}`}
                 onClick={() => updateField('kelompokKeilmuan', k)}
               >
@@ -273,8 +273,8 @@ export default function Step1() {
           <label>Skema Sidang *</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
             {skemas.map(s => (
-              <div 
-                key={s} 
+              <div
+                key={s}
                 className={`radio-item ${data.skema === s ? 'active' : ''}`}
                 onClick={() => updateField('skema', s)}
               >
@@ -291,8 +291,8 @@ export default function Step1() {
             <span className="helper-text">Pilih opsi publikasi yang sesuai</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
               {jalurNonSidangOptions.map(option => (
-                <div 
-                  key={option} 
+                <div
+                  key={option}
                   className={`program-card ${data.jalurNonSidang?.includes(option) ? 'active' : ''}`}
                   onClick={() => toggleJalurNonSidang(option)}
                   style={{ padding: '0.5rem 1rem' }}
@@ -309,7 +309,7 @@ export default function Step1() {
 
         <div className="input-group" style={{ marginTop: '2rem' }}>
           <label>Judul Tugas Akhir (Bahasa Indonesia) *</label>
-          <textarea 
+          <textarea
             className="textarea-field"
             placeholder="Masukan Judul Tugas Akhir (Bahasa Indonesia)"
             value={data.judulId}
@@ -319,7 +319,7 @@ export default function Step1() {
 
         <div className="input-group" style={{ marginTop: '2rem' }}>
           <label>Judul Tugas Akhir (Bahasa Inggris) *</label>
-          <textarea 
+          <textarea
             className="textarea-field"
             placeholder="Masukan Judul Tugas Akhir (Bahasa Inggris)"
             value={data.judulEn}
