@@ -71,6 +71,7 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAlert(null);
+
     const validationError = validate(formData);
     if (validationError) {
       setAlert({ type: validationError.type, msg: validationError.msg });
@@ -78,6 +79,7 @@ const RegisterPage = () => {
     }
 
     setIsLoading(true);
+
     try {
       await registerUser({
         username:        formData.username,
@@ -87,15 +89,23 @@ const RegisterPage = () => {
         confirmPassword: formData.confirmPassword, 
       });
 
-      navigate("/login", {
-        state: {
-          alert: {
-            type: "success",
-            msg: "Berhasil register! Silahkan Login.",
-          },
-        },
-        replace: true,
+      // SUCCESS HANDLING
+      setAlert({ 
+        type: "success", 
+        msg: "Registrasi berhasil! Silahkan Login." 
       });
+
+      setTimeout(() => {
+        navigate("/login", {
+          state: {
+            alert: {
+              type: "success",
+              msg: "Berhasil register! Silahkan Login.",
+            },
+          },
+          replace: true,
+        });
+      }, 1400);
 
     } catch (err) {
       const msg = err.response?.data?.message || "Registrasi gagal, coba lagi.";

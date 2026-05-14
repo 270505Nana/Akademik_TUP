@@ -1,132 +1,63 @@
-import React, { useState, useEffect } from "react";
-import {
-  ClipboardList,
-  Save,
-  Edit3,
-  Trash2,
-  LayoutPanelLeft,
-  Menu,
-  X,
-} from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import SidebarAdmin from "../../components/sidebar/SidebarAdmin";
-import CustomAlert from "../../components/common/CustomAlert";
-import {
-  createSidangPeriod,
-  getSidangPeriods,
-  updateSidangPeriod,
-} from "../../service/api";
-import "../../components/admin/css/aturperiode.css";
+import React, { useState, useEffect } from 'react';
+import { ClipboardList, Save, Edit3, Trash2, LayoutPanelLeft, Menu, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
+import CustomAlert from '../../components/common/CustomAlert';
+import '../../components/admin/css/aturperiode.css';
+import {getSidangPeriods,createSidangPeriod,updateSidangPeriod,deleteSidangPeriod,} from '../../service/api'
 
 const AturPeriode = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [periods, setPeriods] = useState([]);
   const [sidangPeriods, setSidangPeriods] = useState([]);
-
-  // Modal State
+  const [sidangLoading, setSidangLoading] = useState(true); 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState({
-    name: "",
-    startDate: "",
-    endDate: "",
-    isOpen: true,
-    type: "", // 'sidang' or 'yudisium'
+    name: '',startDate: '', endDate: '', type: '' // 'sidang' or 'yudisium'
   });
 
-  const [form, setForm] = useState({
-    name: "",
-    startDate: "",
-    endDate: "",
-  });
-
-  const [sidangForm, setSidangForm] = useState({
-    name: "",
-    startDate: "",
-    endDate: "",
-  });
+  const [form, setForm] = useState({ name: '',startDate: '',endDate: ''});
+  
+  const [sidangForm, setSidangForm] = useState({name: '',startDate: '', endDate: ''  });
 
   const [alert, setAlert] = useState({
-    show: false,
-    type: "success",
-    title: "",
-    message: "",
-  });
-  const [isLoadingSidang, setIsLoadingSidang] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null);
+    show: false,type: 'success', title: '', message: '' });
 
   useEffect(() => {
-    // Load periode yudisium dari localStorage
-    const savedYudisium = localStorage.getItem("simta_periods_yudisium");
+    const fetchSidang = async () => {
+      try {
+        setSidangLoading(true);
+        const data = await getSidangPeriods();
+        const normalized = (data ?? []).map(p => ({
+          ...p,
+          startDate: p.startDate?.slice(0, 10) ?? p.startDate,
+          endDate:   p.endDate?.slice(0, 10)   ?? p.endDate,
+        }));
+        setSidangPeriods(normalized);
+      } catch (err) {
+        console.error('Gagal fetch sidang periods:', err);
+        showAlert('error', 'Gagal', 'Gagal memuat data periode sidang dari server.');
+      } finally {
+        setSidangLoading(false);
+      }
+    };
+
+    // Yudisium dummy
+    const savedYudisium = localStorage.getItem('simta_periods_yudisium');
     if (savedYudisium) {
       setPeriods(JSON.parse(savedYudisium));
     } else {
       const defaults = [
-        {
-          id: "1",
-          name: "Gelombang 2 - Genap",
-          startDate: "2026-05-01",
-          endDate: "2026-05-15",
-        },
-        {
-          id: "2",
-          name: "Gelombang 1 - Genap",
-          startDate: "2026-04-01",
-          endDate: "2026-04-20",
-        },
-        {
-          id: "3",
-          name: "Yudisium Ganjil 2025",
-          startDate: "2025-12-01",
-          endDate: "2025-12-15",
-        },
+        { id: '1', name: 'Gelombang 2 - Genap',  startDate: '2026-05-01', endDate: '2026-05-15' },
+        { id: '2', name: 'Gelombang 1 - Genap',  startDate: '2026-04-01', endDate: '2026-04-20' },
+        { id: '3', name: 'Yudisium Ganjil 2025', startDate: '2025-12-01', endDate: '2025-12-15' },
       ];
       setPeriods(defaults);
       localStorage.setItem("simta_periods_yudisium", JSON.stringify(defaults));
     }
 
-    // Load periode sidang dari API
-    const loadSidangPeriods = async () => {
-      setIsLoadingSidang(true);
-      try {
-        const data = await getSidangPeriods();
-        const periods = Array.isArray(data) ? data : data.data || [];
-        setSidangPeriods(periods);
-        localStorage.setItem("simta_periods_sidang", JSON.stringify(periods));
-      } catch (error) {
-        console.error("Error loading sidang periods:", error);
-        // Fallback ke localStorage jika API gagal
-        const savedSidang = localStorage.getItem("simta_periods_sidang");
-        if (savedSidang) {
-          setSidangPeriods(JSON.parse(savedSidang));
-        } else {
-          const defaults = [
-            {
-              id: "s1",
-              name: "Periode Sidang Mei 2026",
-              startDate: "2026-05-10",
-              endDate: "2026-05-30",
-            },
-            {
-              id: "s2",
-              name: "Periode Sidang April 2026",
-              startDate: "2026-04-10",
-              endDate: "2026-04-30",
-            },
-          ];
-          setSidangPeriods(defaults);
-          localStorage.setItem(
-            "simta_periods_sidang",
-            JSON.stringify(defaults),
-          );
-        }
-      } finally {
-        setIsLoadingSidang(false);
-      }
-    };
-
-    loadSidangPeriods();
+    fetchSidang();
   }, []);
 
   // status [mendatang, aktif, selesai]
@@ -190,47 +121,19 @@ const AturPeriode = () => {
       showAlert("error", "Gagal", "Harap lengkapi semua bidang input.");
       return;
     }
-
     try {
-      const startDateTime = new Date(sidangForm.startDate).toISOString();
-      const endDateTime = new Date(sidangForm.endDate).toISOString();
-
-      await createSidangPeriod({
-        name: sidangForm.name,
-        startDate: startDateTime,
-        endDate: endDateTime,
-      });
-
-      setSidangForm({ name: "", startDate: "", endDate: "" });
-
-      // Reload data dari API
-      setIsLoadingSidang(true);
-      try {
-        const data = await getSidangPeriods();
-        const periods = Array.isArray(data) ? data : data.data || [];
-        setSidangPeriods(periods);
-        localStorage.setItem("simta_periods_sidang", JSON.stringify(periods));
-      } catch (error) {
-        console.error("Error reloading sidang periods:", error);
-      } finally {
-        setIsLoadingSidang(false);
-      }
-
-      showAlert(
-        "success",
-        "Berhasil",
-        "Data periode sidang telah berhasil disimpan.",
-      );
-    } catch (error) {
-      console.error("Error creating sidang period:", error);
-      console.error("Response data:", error.response?.data);
-
-      const errorMessage =
-        JSON.stringify(error.response?.data?.errors[0]?.message) ||
-        error.response?.data?.message ||
-        "Gagal menyimpan periode sidang.";
-
-      showAlert("error", "Gagal", errorMessage);
+      const created = await createSidangPeriod(sidangForm);
+      const normalized = {
+        ...created,
+        startDate: created.startDate?.slice(0, 10) ?? created.startDate,
+        endDate:   created.endDate?.slice(0, 10)   ?? created.endDate,
+      };
+      setSidangPeriods(prev => [normalized, ...prev]);
+      setSidangForm({ name: '', startDate: '', endDate: '' });
+      showAlert('success', 'Berhasil', 'Data periode sidang telah berhasil disimpan.');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Gagal menyimpan periode sidang.';
+      showAlert('error', 'Gagal', msg);
     }
   };
 
@@ -239,17 +142,22 @@ const AturPeriode = () => {
     setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 5000);
   };
 
-  const deletePeriod = (id, type) => {
-    if (type === "yudisium") {
-      const updated = periods.filter((p) => p.id !== id);
+  const deletePeriod = async (id, type) => {
+    if (type === 'yudisium') {
+      const updated = periods.filter(p => p.id !== id);
       setPeriods(updated);
-      localStorage.setItem("simta_periods_yudisium", JSON.stringify(updated));
+      localStorage.setItem('simta_periods_yudisium', JSON.stringify(updated));
+      showAlert('warning', 'Dihapus', 'Data periode telah dihapus.');
     } else {
-      const updated = sidangPeriods.filter((p) => p.id !== id);
-      setSidangPeriods(updated);
-      localStorage.setItem("simta_periods_sidang", JSON.stringify(updated));
+      try {
+        await deleteSidangPeriod(id);
+        setSidangPeriods(prev => prev.filter(p => p.id !== id));
+        showAlert('warning', 'Dihapus', 'Data periode sidang telah dihapus.');
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Gagal menghapus periode sidang.';
+        showAlert('error', 'Gagal', msg);
+      }
     }
-    showAlert("warning", "Dihapus", "Data periode telah dihapus.");
   };
 
   // Modal handlers
@@ -265,76 +173,46 @@ const AturPeriode = () => {
     setIsEditModalOpen(true);
   };
 
-  const openConfirmModal = (action) => {
-    setConfirmAction(action);
-    setIsConfirmModalOpen(true);
-  };
-
-  const handleConfirmUpdate = async () => {
-    setIsConfirmModalOpen(false);
-
+  const handleUpdate = async (e) => {
+    e.preventDefault();
     if (!editForm.name || !editForm.startDate || !editForm.endDate) {
       showAlert("error", "Gagal", "Harap lengkapi semua bidang input.");
       return;
     }
 
-    try {
-      if (editForm.type === "sidang") {
-        const startDateTime = new Date(editForm.startDate).toISOString();
-        const endDateTime = new Date(editForm.endDate).toISOString();
-
-        await updateSidangPeriod({
-          id: editingItem.id,
-          name: editForm.name,
-          startDate: startDateTime,
-          endDate: endDateTime,
-          isOpen: editForm.isOpen,
-        });
-
-        // Reload data dari API
-        setIsLoadingSidang(true);
-        try {
-          const data = await getSidangPeriods();
-          const periods = Array.isArray(data) ? data : data.data || [];
-          setSidangPeriods(periods);
-          localStorage.setItem("simta_periods_sidang", JSON.stringify(periods));
-        } catch (error) {
-          console.error("Error reloading sidang periods:", error);
-        } finally {
-          setIsLoadingSidang(false);
-        }
-      } else {
-        // Untuk yudisium, tetap gunakan localStorage
-        const updated = periods.map((p) =>
-          p.id === editingItem.id ? { ...p, ...editForm } : p,
-        );
-        setPeriods(updated);
-        localStorage.setItem("simta_periods_yudisium", JSON.stringify(updated));
-      }
-
-      setIsEditModalOpen(false);
-      showAlert(
-        "success",
-        "Berhasil",
-        `Periode ${editForm.name} telah diperbarui.`,
+    if (editForm.type === 'yudisium') {
+      // Yudisium masih localStorage
+      const updated = periods.map(p =>
+        p.id === editingItem.id ? { ...p, ...editForm } : p
       );
-    } catch (error) {
-      console.error("Error updating sidang period:", error);
-      console.error("Response data:", error.response?.data);
-
-      const errorMessage =
-        JSON.stringify(error.response?.data?.errors[0]?.message) ||
-        error.response?.data?.message ||
-        "Gagal menyimpan periode sidang.";
-
-      showAlert("error", "Gagal", errorMessage);
+      setPeriods(updated);
+      localStorage.setItem('simta_periods_yudisium', JSON.stringify(updated));
+      setIsEditModalOpen(false);
+      showAlert('success', 'Berhasil', `Periode ${editForm.name} telah diperbarui.`);
+    } else {
+      try {
+        const updated = await updateSidangPeriod(editingItem.id, {
+          name:      editForm.name,
+          startDate: editForm.startDate,
+          endDate:   editForm.endDate,
+        });
+        const normalized = {
+          ...updated,
+          startDate: updated.startDate?.slice(0, 10) ?? updated.startDate,
+          endDate:   updated.endDate?.slice(0, 10)   ?? updated.endDate,
+        };
+        setSidangPeriods(prev =>
+          prev.map(p => p.id === editingItem.id ? normalized : p)
+        );
+        setIsEditModalOpen(false);
+        showAlert('success', 'Berhasil', `Periode ${editForm.name} telah diperbarui.`);
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Gagal memperbarui periode sidang.';
+        showAlert('error', 'Gagal', msg);
+      }
     }
   };
 
-  const handleUpdate = (e) => {
-    e.preventDefault();
-    openConfirmModal("update");
-  };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -363,9 +241,6 @@ const AturPeriode = () => {
           </div>
 
           <div className="content-container">
-            <div className="breadcrumb">
-              Beranda / Pengaturan Periode / Kelola Periode
-            </div>
             <h2 className="page-title">Atur Periode</h2>
 
             <section className="card-main">
@@ -373,8 +248,11 @@ const AturPeriode = () => {
                 <ClipboardList className="card-icon-red" size={24} />
                 <h3>Tambah Periode Sidang</h3>
               </div>
+
               <div className="card-body">
+                {/* Form periode sidang */}
                 <form onSubmit={handleSaveSidang}>
+
                   <div className="form-grid">
                     <div className="form-group">
                       <label className="form-label">Nama Periode Sidang</label>
@@ -437,13 +315,16 @@ const AturPeriode = () => {
                 <LayoutPanelLeft className="card-icon-red" size={24} />
                 <h3>Daftar Periode Sidang</h3>
               </div>
+
               <div className="card-body" style={{ padding: 0 }}>
-                {isLoadingSidang ? (
-                  <div style={{ padding: "20px", textAlign: "center" }}>
-                    <p>Memuat data periode sidang...</p>
+
+                {sidangLoading ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#6B7280', fontSize: 13 }}>
+                    Memuat data periode sidang...
                   </div>
                 ) : (
                   <div className="table-responsive">
+
                     <table className="periode-table">
                       <thead>
                         <tr>
@@ -454,62 +335,51 @@ const AturPeriode = () => {
                           <th>Aksi</th>
                         </tr>
                       </thead>
+
                       <tbody>
                         {sidangPeriods.length === 0 ? (
                           <tr>
-                            <td
-                              colSpan="5"
-                              style={{ textAlign: "center", padding: "20px" }}
-                            >
-                              Tidak ada data periode sidang
+                            <td colSpan={5} style={{ textAlign: 'center', color: '#9CA3AF', padding: '24px', fontSize: 13 }}>
+                              Belum ada periode sidang.
                             </td>
                           </tr>
-                        ) : (
-                          sidangPeriods.map((period) => {
-                            const status = getSidangStatus(
-                              period.startDate,
-                              period.endDate,
-                              period.isOpen,
-                            );
-                            return (
-                              <tr key={period.id}>
-                                <td className="periode-name">{period.name}</td>
-                                <td>{formatDate(period.startDate)}</td>
-                                <td>{formatDate(period.endDate)}</td>
-                                <td>
-                                  <span
-                                    className={`badge badge-${status.toLowerCase()}`}
-                                  >
-                                    {status}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div className="action-stack">
-                                    <button
-                                      className="btn-outline"
-                                      onClick={() =>
-                                        openEditModal(period, "sidang")
-                                      }
-                                    >
+                        ) : sidangPeriods.map(period => {
+                          const status = getStatus(period.startDate, period.endDate);
+                          return (
+                            <tr key={period.id}>
+                              <td className="periode-name">{period.name}</td>
+                              <td>{formatDate(period.startDate)}</td>
+                              <td>{formatDate(period.endDate)}</td>
+                              <td>
+                                <span className={`badge badge-${status.toLowerCase()}`}>
+                                  {status}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="action-stack">
+                                  {status === 'Mendatang' && (
+                                    <button className="btn-outline" onClick={() => openEditModal(period, 'sidang')}>
                                       <Edit3 size={16} /> Edit
                                     </button>
-                                    {/* {status === "Aktif" && (
-                                      <button className="btn-outline btn-outline-red">
-                                        Tutup
+                                  )}
+                                  {status === 'Aktif' && (
+                                    <>
+                                      <button className="btn-outline btn-outline-red">Tutup</button>
+                                      <button className="btn-outline" onClick={() => openEditModal(period, 'sidang')}>
+                                        <Edit3 size={16} /> Edit
                                       </button>
-                                    )} */}
-                                    {status === "Selesai" && (
-                                      <button className="btn-outline">
-                                        Detail
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
+                                    </>
+                                  )}
+                                  {status === 'Selesai' && (
+                                    <button className="btn-outline">Detail</button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
+                      
                     </table>
                   </div>
                 )}
