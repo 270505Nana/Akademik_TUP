@@ -58,7 +58,7 @@ export const getStudentData = async (userId) => {
 };
 
 export const saveStudentData = async (userId, payload) => {
-  const response = await api.patch(`/api/students/${userId}`, payload);
+  const response = await api.put(`/api/students/${userId}`, payload);
   return response.data;
 };
 
@@ -81,6 +81,7 @@ export const getStudyPrograms = async () => {
 };
 
 //  SKTA REQUEST -> cek apakah mhs udh punya request sk sblmnya
+// berdasarkan studentId
 export const getSKTARequest = async (studentId) => {
   try {
     const response = await api.get(`/api/skta-requests/${studentId}`);
@@ -125,7 +126,7 @@ export const submitSKTARequest = async ({
 };
 
 
-// PATCH /api/skta-requests/:id -> request ulang SK expired.
+// PATCH /api/skta-requests/:id -> request ulang SK expired. dgn param
 export const resubmitSKTARequest = async ({
   sktaRequestId, proposalTitleId, proposalTitleEn,
   dosenPembimbing1Id, dosenPembimbing2Id, evidence,
@@ -151,4 +152,50 @@ export const getSKTAResponse = async (sktaRequestId) => {
     if (err.response?.status === 404) return null;
     throw err;
   }
+};
+
+// get periode sidang
+export const getSidangPeriods = async () => {
+  try {
+    const response = await api.get("/api/sidang-periods");
+    return response.data?.data ?? response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+};
+
+export const createSidangPeriod = async ({ name, startDate, endDate }) => {
+  const now = new Date();
+  const start = new Date(startDate);
+  const end   = new Date(endDate);
+  const isOpen = now >= start && now <= end;
+
+  const response = await api.post('/api/sidang-periods', {
+    name,
+    startDate: start.toISOString(),
+    endDate:   end.toISOString(),
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
+
+export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
+  const now = new Date();
+  const start = new Date (startDate);
+  const end = new Date(endDate);
+  const isOpen = now >= start && now <= end;
+
+  const response = await api.patch(`/api/sidang-periods/${id}`, {
+    name,
+    startDate: start.toISOString(),
+    endDate:   end.toISOString(),
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
+
+export const deleteSidangPeriod = async (id) => {
+  const response = await api.delete(`/api/sidang-periods/${id}`);
+  return response.data; 
 };
