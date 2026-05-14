@@ -161,13 +161,11 @@ const DashboardMahasiswa = () => {
                 badge="Aktif"
                 badgeColor={{ bg: '#22C55E', text: '#fff' }}
                 value="Pendaftaran Sidang<br/><span class='text-sm font-normal text-gray-500'>16 April - 20 Mei 2026</span>"
-                sub="Masa revisi 20 mei - 25 mei 2026"
               />
               <CardAtas4
                 icon={<SquarePen size={28} color="#C0182A" />}
                 label="Periode Genap-Ganjil"
                 value="Pendaftaran Yudisium<br/><span class='text-sm font-normal text-gray-500'>16 April - 20 Mei 2026</span>"
-                sub="Masa revisi 20 mei - 25 mei 2026"
               />
               <CardAtas4
                 icon={
