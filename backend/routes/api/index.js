@@ -27,4 +27,10 @@ router.use(
   require("./sidangRegistrationResponse"),
 );
 
+router.use("/yudisium-periods", require("./yudisiumPeriod"));
+router.use(
+  "/yudisium-registration-periods",
+  require("./yudisiumRegsitrationPeriod"),
+);
+
 module.exports = router;

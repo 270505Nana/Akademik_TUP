@@ -268,28 +268,28 @@ model SidangRegistrationResponse {
   sidangRegistrationId Int
 }
 
-// // Daftar Yudisium
-// model YudisiumPeriod {
-//   id        Int       @id @default(autoincrement())
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
-//   deletedAt DateTime?
-//   name      String
-//   startDate DateTime  @map("start_date") @db.Date
-//   endDate   DateTime  @map("end_date") @db.Date
-//   isOpen    Boolean
-// }
+// Daftar Yudisium
+model YudisiumPeriod {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  name      String
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime  @map("end_date") @db.Date
+  isOpen    Boolean
+}
 
-// model YudisiumRegistrationPeriod {
-//   id        Int       @id @default(autoincrement())
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
-//   deletedAt DateTime?
-//   name      String
-//   startDate DateTime  @map("start_date") @db.Date
-//   endDate   DateTime  @map("end_date") @db.Date
-//   isOpen    Boolean
-// }
+model YudisiumRegistrationPeriod {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  name      String
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime  @map("end_date") @db.Date
+  isOpen    Boolean
+}
 
 // model YudisiumRegistration {
 //   id                            Int                            @id @default(autoincrement())
