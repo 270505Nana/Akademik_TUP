@@ -165,3 +165,34 @@ export const getSKTAResponse = async (sktaRequestId) => {
     throw err;
   }
 };
+
+// SIDANG PERIOD
+export const getSidangPeriods = async () => {
+  const response = await api.get("/api/sidang-periods");
+  return response.data;
+};
+
+export const createSidangPeriod = async ({ name, startDate, endDate }) => {
+  const response = await api.post("/api/sidang-periods", {
+    name,
+    startDate,
+    endDate,
+  });
+  return response.data;
+};
+
+export const updateSidangPeriod = async ({
+  id,
+  name,
+  startDate,
+  endDate,
+  isOpen,
+}) => {
+  const response = await api.patch(`/api/sidang-periods/${id}`, {
+    name,
+    startDate,
+    endDate,
+    isOpen,
+  });
+  return response.data;
+};
