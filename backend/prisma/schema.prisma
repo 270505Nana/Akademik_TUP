@@ -189,25 +189,27 @@ model SktaResponseUpload {
 
 // Daftar Sidang
 model SidangPeriod {
-  id        Int       @id @default(autoincrement())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  name      String
-  startDate DateTime  @map("start_date") @db.Date
-  endDate   DateTime  @map("end_date") @db.Date
-  isOpen    Boolean
+  id                  Int                  @id @default(autoincrement())
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
+  name                String
+  startDate           DateTime             @map("start_date") @db.Date
+  endDate             DateTime             @map("end_date") @db.Date
+  isOpen              Boolean
+  sidangRegistrations SidangRegistration[]
 }
 
 model SidangRegistrationPeriod {
-  id        Int       @id @default(autoincrement())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  name      String
-  startDate DateTime  @map("start_date") @db.Date
-  endDate   DateTime  @map("end_date") @db.Date
-  isOpen    Boolean
+  id                  Int                  @id @default(autoincrement())
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
+  name                String
+  startDate           DateTime             @map("start_date") @db.Date
+  endDate             DateTime             @map("end_date") @db.Date
+  isOpen              Boolean
+  sidangRegistrations SidangRegistration[]
 }
 
 model SidangRegistration {
@@ -231,6 +233,10 @@ model SidangRegistration {
   dosenPembimbing1Id          Int?
   dosenPembimbing2            Lecturer?                    @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
   dosenPembimbing2Id          Int?
+  sidangPeriod                SidangPeriod?                @relation(fields: [sidangPeriodId], references: [id])
+  sidangPeriodId              Int?
+  sidangRegistrationPeriod    SidangRegistrationPeriod?    @relation(fields: [sidangRegistrationPeriodId], references: [id])
+  sidangRegistrationPeriodId  Int?
   sidangRegistrationUploads   SidangRegistrationUpload[]
   sidangRegistrationResponses SidangRegistrationResponse[]
 }
