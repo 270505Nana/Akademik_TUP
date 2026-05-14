@@ -20,19 +20,19 @@ const REQUIRED_SLUGS = [
 
 const NON_SIDANG_SLUGS = {
   "Publikasi Jurnal": [
-    "berkasLoa",
-    "berkasPersetujuanPublikasiTaSebagaiPenggantiSidang",
+    "berkasLoaJurnal",
+    "berkasPersetujuanPublikasiTaSebagaiPenggantiSidangJurnal",
     "berkasCameraReadyPaperYangSudahTerbit",
-    "berkasCameraReadyPaper",
+    "berkasCameraReadyPaperJurnal",
     "berkasRiwayatReviewOlehReviewers",
-    "berkasResponse",
+    "berkasResponseJurnal",
   ],
   "Proceeding International": [
-    "berkasLoa",
-    "berkasPersetujuanPublikasiTaSebagaiPenggantiSidang",
-    "berkasCameraReadyPaper",
+    "berkasLoaProceeding",
+    "berkasPersetujuanPublikasiTaSebagaiPenggantiSidangProceeding",
+    "berkasCameraReadyPaperProceeding",
     "berkasPaktaIntegritas",
-    "berkasResponse",
+    "berkasResponseProceeding",
   ],
   HKI: [
     "sertifikatHki",
@@ -251,9 +251,13 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
     studentId: studentId !== undefined ? parseInt(studentId) : undefined,
     dosenPembimbing1Id:
-      dosenPembimbing1Id !== undefined ? parseInt(dosenPembimbing1Id) : undefined,
+      dosenPembimbing1Id !== undefined
+        ? parseInt(dosenPembimbing1Id)
+        : undefined,
     dosenPembimbing2Id:
-      dosenPembimbing2Id !== undefined ? parseInt(dosenPembimbing2Id) : undefined,
+      dosenPembimbing2Id !== undefined
+        ? parseInt(dosenPembimbing2Id)
+        : undefined,
     isDraft: true,
   };
 
@@ -363,9 +367,13 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
     studentId: studentId !== undefined ? parseInt(studentId) : undefined,
     dosenPembimbing1Id:
-      dosenPembimbing1Id !== undefined ? parseInt(dosenPembimbing1Id) : undefined,
+      dosenPembimbing1Id !== undefined
+        ? parseInt(dosenPembimbing1Id)
+        : undefined,
     dosenPembimbing2Id:
-      dosenPembimbing2Id !== undefined ? parseInt(dosenPembimbing2Id) : undefined,
+      dosenPembimbing2Id !== undefined
+        ? parseInt(dosenPembimbing2Id)
+        : undefined,
   };
 
   const mergedData = { ...existingRegistration, ...updateData };
@@ -385,19 +393,19 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   ];
 
   const missingFields = requiredFields.filter(
-    (field) => mergedData[field] === null || mergedData[field] === undefined
+    (field) => mergedData[field] === null || mergedData[field] === undefined,
   );
 
   if (missingFields.length > 0) {
     res.status(400);
     throw new Error(
-      `Cannot submit. Missing required fields: ${missingFields.join(", ")}`
+      `Cannot submit. Missing required fields: ${missingFields.join(", ")}`,
     );
   }
 
   // 2. Validasi Uploaded Files
   const uploadedSlugs = existingRegistration.sidangRegistrationUploads.map(
-    (upload) => upload.slug
+    (upload) => upload.slug,
   );
 
   const missingFiles = [];
@@ -421,22 +429,37 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   if (missingFiles.length > 0) {
     res.status(400);
     throw new Error(
-      `Cannot submit. Missing required files: ${missingFiles.join(", ")}`
+      `Cannot submit. Missing required files: ${missingFiles.join(", ")}`,
     );
   }
 
   // Validasi referensi eksis
   if (mergedData.studentId) {
-    const s = await prisma.student.findUnique({ where: { id: mergedData.studentId } });
-    if (!s) { res.status(404); throw new Error("Student not found"); }
+    const s = await prisma.student.findUnique({
+      where: { id: mergedData.studentId },
+    });
+    if (!s) {
+      res.status(404);
+      throw new Error("Student not found");
+    }
   }
   if (mergedData.dosenPembimbing1Id) {
-    const d1 = await prisma.lecturer.findUnique({ where: { id: mergedData.dosenPembimbing1Id } });
-    if (!d1) { res.status(404); throw new Error("Dosen 1 not found"); }
+    const d1 = await prisma.lecturer.findUnique({
+      where: { id: mergedData.dosenPembimbing1Id },
+    });
+    if (!d1) {
+      res.status(404);
+      throw new Error("Dosen 1 not found");
+    }
   }
   if (mergedData.dosenPembimbing2Id) {
-    const d2 = await prisma.lecturer.findUnique({ where: { id: mergedData.dosenPembimbing2Id } });
-    if (!d2) { res.status(404); throw new Error("Dosen 2 not found"); }
+    const d2 = await prisma.lecturer.findUnique({
+      where: { id: mergedData.dosenPembimbing2Id },
+    });
+    if (!d2) {
+      res.status(404);
+      throw new Error("Dosen 2 not found");
+    }
   }
 
   updateData.isDraft = false; // Finalize submit
@@ -545,7 +568,7 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
   }
 
   uploadRecord.downloadUrl = `${req.protocol}://${req.get(
-    "host"
+    "host",
   )}/api/sidang-registrations/uploads/${uploadRecord.id}/download`;
 
   res.status(200).json({
@@ -567,7 +590,7 @@ const getSidangRegistrationFiles = asyncHandler(async (req, res) => {
   const data = uploads.map((upload) => ({
     ...upload,
     downloadUrl: `${req.protocol}://${req.get(
-      "host"
+      "host",
     )}/api/sidang-registrations/uploads/${upload.id}/download`,
   }));
 

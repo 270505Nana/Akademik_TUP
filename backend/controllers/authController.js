@@ -3,9 +3,49 @@ const jwt = require("jsonwebtoken");
 const asyncHandler = require("express-async-handler");
 const prisma = require("../prisma/client");
 
-// Register Mahasiswa
+const STUDENT_EMAIL_DOMAIN = "student.telkomuniversity.ac.id";
+const TELKOM_EMAIL_DOMAIN = "telkomuniversity.ac.id";
+
+const getEmailDomain = (email) => email.toLowerCase().split("@")[1];
+
+// Register
 const register = asyncHandler(async (req, res) => {
   const { username, email, password, phone, role } = req.body;
+  const emailDomain = getEmailDomain(email);
+  const normalizedRole = typeof role === "string" ? role.trim() : role;
+
+  if (
+    emailDomain !== STUDENT_EMAIL_DOMAIN &&
+    emailDomain !== TELKOM_EMAIL_DOMAIN
+  ) {
+    res.status(400);
+    throw new Error(
+      "Email domain must be student.telkomuniversity.ac.id or telkomuniversity.ac.id",
+    );
+  }
+
+  if (emailDomain === STUDENT_EMAIL_DOMAIN) {
+    if (normalizedRole && normalizedRole !== "STUDENT") {
+      res.status(400);
+      throw new Error("Role must be STUDENT for student email domain");
+    }
+  }
+
+  if (emailDomain === TELKOM_EMAIL_DOMAIN) {
+    if (!normalizedRole) {
+      res.status(400);
+      throw new Error(
+        "Role is required for telkomuniversity.ac.id email domain",
+      );
+    }
+
+    if (!["LECTURER", "ACADEMIC_STAFF"].includes(normalizedRole)) {
+      res.status(400);
+      throw new Error(
+        "Role must be LECTURER or ACADEMIC_STAFF for telkomuniversity.ac.id email domain",
+      );
+    }
+  }
 
   const existingEmail = await prisma.user.findUnique({ where: { email } });
   if (existingEmail) {
@@ -29,7 +69,7 @@ const register = asyncHandler(async (req, res) => {
       email,
       password: hashedPassword,
       phone,
-      role: role ?? "STUDENT",
+      role: normalizedRole ?? "STUDENT",
     },
     omit: { password: true },
   });

@@ -16,7 +16,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 //  Response interceptor
 api.interceptors.response.use(
@@ -29,13 +29,19 @@ api.interceptors.response.use(
       window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
 
 // AUTH
-export const registerUser = async ({ username, email, no_telp, password, confirmPassword }) => {
+export const registerUser = async ({
+  username,
+  email,
+  no_telp,
+  password,
+  confirmPassword,
+}) => {
   const response = await api.post("/api/auth/register", {
     username,
     email,
@@ -51,7 +57,7 @@ export const loginUser = async ({ email, password }) => {
   return response.data;
 };
 
-//  STUDENT 
+//  STUDENT
 export const getStudentData = async (userId) => {
   const response = await api.get(`/api/students/${userId}`);
   return response.data?.data ?? response.data;
@@ -62,19 +68,19 @@ export const saveStudentData = async (userId, payload) => {
   return response.data;
 };
 
-//  LECTURER 
+//  LECTURER
 export const getLecturers = async () => {
   const response = await api.get("/api/lecturers");
   return response.data?.data ?? response.data;
 };
 
-//  FACULTY 
+//  FACULTY
 export const getFaculties = async () => {
   const response = await api.get("/api/faculties");
   return response.data?.data ?? response.data;
 };
 
-//  STUDY PROGRAM 
+//  STUDY PROGRAM
 export const getStudyPrograms = async () => {
   const response = await api.get("/api/study-programs");
   return response.data?.data ?? response.data;
@@ -95,12 +101,12 @@ export const getSKTARequest = async (studentId) => {
 /**
  * POST /api/skta-requests
  *
- * @param {string} proposalTitleId    
- * @param {string} proposalTitleEn    
- * @param {number} studentId          
- * @param {number} dosenPembimbing1Id 
- * @param {number} dosenPembimbing2Id 
- * @param {File}   evidence           
+ * @param {string} proposalTitleId
+ * @param {string} proposalTitleEn
+ * @param {number} studentId
+ * @param {number} dosenPembimbing1Id
+ * @param {number} dosenPembimbing2Id
+ * @param {File}   evidence
  */
 
 export const submitSKTARequest = async ({
@@ -112,34 +118,40 @@ export const submitSKTARequest = async ({
   evidence,
 }) => {
   const formData = new FormData();
-  formData.append("proposalTitleId",    proposalTitleId);
-  formData.append("proposalTitleEn",    proposalTitleEn);
-  formData.append("studentId",          String(studentId));
+  formData.append("proposalTitleId", proposalTitleId);
+  formData.append("proposalTitleEn", proposalTitleEn);
+  formData.append("studentId", String(studentId));
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
-  formData.append("evidence",           evidence);
+  formData.append("evidence", evidence);
 
   const response = await api.post("/api/skta-requests", formData, {
     headers: { "Content-Type": undefined },
   });
   return response.data;
 };
-
-
 // PATCH /api/skta-requests/:id -> request ulang SK expired. dgn param
 export const resubmitSKTARequest = async ({
-  sktaRequestId, proposalTitleId, proposalTitleEn,
-  dosenPembimbing1Id, dosenPembimbing2Id, evidence,
+  sktaRequestId,
+  proposalTitleId,
+  proposalTitleEn,
+  dosenPembimbing1Id,
+  dosenPembimbing2Id,
+  evidence,
 }) => {
   const formData = new FormData();
-  formData.append("proposalTitleId",    proposalTitleId);
-  formData.append("proposalTitleEn",    proposalTitleEn);
+  formData.append("proposalTitleId", proposalTitleId);
+  formData.append("proposalTitleEn", proposalTitleEn);
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   if (evidence) formData.append("evidence", evidence);
-  const response = await api.patch(`/api/skta-requests/${sktaRequestId}`, formData, {
-    headers: { "Content-Type": undefined },
-  });
+  const response = await api.patch(
+    `/api/skta-requests/${sktaRequestId}`,
+    formData,
+    {
+      headers: { "Content-Type": undefined },
+    },
+  );
   return response.data;
 };
 
@@ -195,7 +207,3 @@ export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
   return response.data?.data ?? response.data;
 };
 
-export const deleteSidangPeriod = async (id) => {
-  const response = await api.delete(`/api/sidang-periods/${id}`);
-  return response.data; 
-};
