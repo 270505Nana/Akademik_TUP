@@ -17,6 +17,7 @@ import logoTelkom from "../../assets/logo-telkom.png";
 
 import { useAuth } from "../../context/AuthContext";
 import { loginUser } from "../../service/api";
+import CustomAlert from "../../components/common/CustomAlert";
 import "./Auth.css";
 
 const LoginPage = () => {
@@ -24,7 +25,7 @@ const LoginPage = () => {
   const [ssoUsername, setSsoUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [alert, setAlert] = useState(null);   // ← Gunakan CustomAlert
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
@@ -32,33 +33,67 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setAlert(null);
 
-    if (!ssoUsername.trim()) { setError("Email tidak boleh kosong."); return; }
-    if (!password) { setError("Password tidak boleh kosong."); return; }
+    if (!ssoUsername.trim()) {
+      setAlert({ type: "error", msg: "SSO Username tidak boleh kosong." });
+      return;
+    }
+    if (!password) {
+      setAlert({ type: "error", msg: "Password tidak boleh kosong." });
+      return;
+    }
 
     setIsLoading(true);
+
     try {
-      const data = await loginUser({ email: ssoUsername, password });
-      
-      login({
-        ...data.data,      
-        token: data.token,
+      const response = await loginUser({ 
+        email: ssoUsername, 
+        password 
       });
+
+      login({
+        ...response.data,
+        token: response.token,
+      });
+
+      const userRole = response.data?.role?.toUpperCase();
 
       const roleMap = {
         STUDENT: "/mahasiswa/dashboard",
         LECTURER: "/dosen/dashboard",
         ACADEMIC_STAFF: "/akademik/dashboard",
+        ADMIN: "/akademik/dashboard",
       };
 
-      const role = data.data?.role;
-      const destination = roleMap[role] || "/dashboard";
-      navigate(destination);
+      const destination = roleMap[userRole] || "/";
+
+      // Success Alert sebelum redirect
+      setAlert({ 
+        type: "success", 
+        msg: "Login berhasil! Mengarahkan ke dashboard..." 
+      });
+
+      setTimeout(() => {
+        navigate(destination, { replace: true });
+      }, 1200);
 
     } catch (err) {
-      const msg = err.response?.data?.message || "Login gagal. Periksa email dan password kamu.";
-      setError(msg);
+      console.error(err);
+      
+      let errorMsg = "Login gagal. Silakan coba lagi.";
+
+      const backendMsg = err.response?.data?.message?.toLowerCase();
+
+      if (backendMsg?.includes("tidak ditemukan") || backendMsg?.includes("not found")) {
+        errorMsg = "Akun dengan email ini tidak terdaftar.";
+      } else if (backendMsg?.includes("password") || backendMsg?.includes("salah") || backendMsg?.includes("invalid")) {
+        errorMsg = "Email atau Password yang Anda masukkan salah.";
+      } else if (backendMsg?.includes("belum diverifikasi")) {
+        errorMsg = "Akun Anda belum diverifikasi. Silakan hubungi admin.";
+      }
+
+      setAlert({ type: "error", msg: errorMsg });
     } finally {
       setIsLoading(false);
     }
@@ -96,18 +131,10 @@ const LoginPage = () => {
           </div>
 
           <div className="role-toggle">
-            <button
-              className={`role-btn ${activeTab === "mahasiswa" ? "active" : ""}`}
-              onClick={() => setActiveTab("mahasiswa")}
-              type="button"
-            >
+            <button className={`role-btn ${activeTab === "mahasiswa" ? "active" : ""}`} onClick={() => setActiveTab("mahasiswa")}>
               <BsMortarboardFill /> Mahasiswa
             </button>
-            <button
-              className={`role-btn ${activeTab === "dosen" ? "active" : ""}`}
-              onClick={() => setActiveTab("dosen")}
-              type="button"
-            >
+            <button className={`role-btn ${activeTab === "dosen" ? "active" : ""}`} onClick={() => setActiveTab("dosen")}>
               <BsPersonBadgeFill /> Dosen/Pegawai
             </button>
           </div>
@@ -115,7 +142,8 @@ const LoginPage = () => {
           <p className="sso-label">SSO LOGIN</p>
 
           <form onSubmit={handleSubmit}>
-            {error && <div className="form-error">{error}</div>}
+            {alert && <CustomAlert type={alert.type} message={alert.msg} />}
+
             <div className="form-group">
               <label className="form-label" htmlFor="ssoUsername">SSO Username</label>
               <div className="input-wrapper">

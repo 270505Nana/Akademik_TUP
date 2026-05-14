@@ -30,9 +30,7 @@ const App = () => {
     <AuthProvider>
       <StudentProvider>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-
-          
+          <Route path="/" element={<Navigate to="/login" replace />} />           
           <Route path="/login"    element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
@@ -82,22 +80,50 @@ const App = () => {
             }
           />
 
+
+{/* ================================================================================= */}
           {/* Dosen */}
           <Route
             path="/dosen/dashboard"
-            element={<DashboardDosen />}
-            //   <ProtectedRoute allowedRoles={["LECTURER"]}>
-            //     <DashboardDosen />
-            //   </ProtectedRoute>
-            // }
+            element={
+              <ProtectedRoute allowedRoles={["LECTURER"]}>
+                <DashboardDosen />
+              </ProtectedRoute>
+            }
           />
 
-          {/* Admin */}
-          <Route path="/akademik/dashboard"  element={<DashboardAkademik />} />
-          <Route path="/akademik/atur-periode" element={<AturPeriode />} />
-          <Route path="/akademik/permohonan-sk" element={<PermohonanSK />} />
-          <Route path="/akademik/atur-berkas" element={<AturBerkas />} />
-          <Route path="/akademik/upload-skl" element={<UploadSKL />} />
+{/* ================================================================================= */}
+
+          {/* Admin / Akademik */}
+          <Route
+            path="/akademik/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+                <DashboardAkademik />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route path="/akademik/atur-periode" element={
+            <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+              <AturPeriode />
+            </ProtectedRoute>
+          } />
+          <Route path="/akademik/permohonan-sk" element={
+            <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+              <PermohonanSK />
+            </ProtectedRoute>
+          } />
+          <Route path="/akademik/atur-berkas" element={
+            <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+              <AturBerkas />
+            </ProtectedRoute>
+          } />
+          <Route path="/akademik/upload-skl" element={
+            <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+              <UploadSKL />
+            </ProtectedRoute>
+          } />
 
           {/* 403 Forbidden */}
           <Route

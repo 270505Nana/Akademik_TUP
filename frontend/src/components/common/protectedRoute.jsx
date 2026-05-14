@@ -3,19 +3,32 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useStudent } from "../../context/StudentContext";
 
-const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false }) => {
-  const { user, isAuthenticated }                             = useAuth();
+const ProtectedRoute = ({ 
+  children, 
+  allowedRoles = [], 
+  requireCompleteProfile = false 
+}) => {
+  const { user, isAuthenticated } = useAuth();
   const { isComplete, isStudentLoading, fetchAndLoadStudent } = useStudent();
   const location = useLocation();
 
   const [isServerChecking, setIsServerChecking] = useState(false);
-  const [serverCheckDone, setServerCheckDone]   = useState(false);
+  const [serverCheckDone, setServerCheckDone] = useState(false);
+
+  // Normalisasi role (handle variasi dari backend)
+  const userRole = user?.role?.toUpperCase()?.trim();
+
+  // Cek apakah user diizinkan masuk
+  const hasRoleAccess = allowedRoles.length === 0 || 
+                        allowedRoles.includes(userRole);
 
   useEffect(() => {
+    // Hanya jalankan untuk mahasiswa yang butuh data lengkap
     if (
       requireCompleteProfile &&
       isAuthenticated &&
       user?.id &&
+      userRole === "STUDENT" &&
       !isStudentLoading &&
       !isComplete &&
       !serverCheckDone &&
@@ -27,26 +40,42 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
         setServerCheckDone(true);
       });
     }
+
     if (!isStudentLoading && isComplete) {
       setServerCheckDone(true);
     }
-  }, [isStudentLoading, isComplete, isAuthenticated, user?.id, requireCompleteProfile, fetchAndLoadStudent]);
+  }, [
+    isAuthenticated, 
+    user?.id, 
+    userRole, 
+    requireCompleteProfile, 
+    isStudentLoading, 
+    isComplete, 
+    fetchAndLoadStudent,
+    serverCheckDone,
+    isServerChecking
+  ]);
 
+  //  blm login
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  // role forbidden
+  if (allowedRoles.length > 0 && !hasRoleAccess) {
     return <Navigate to="/forbidden" replace />;
   }
 
-  if (requireCompleteProfile && (isStudentLoading || isServerChecking || !serverCheckDone)) {
+  if (
+    userRole === "STUDENT" &&
+    requireCompleteProfile &&
+    (isStudentLoading || isServerChecking || !serverCheckDone)
+  ) {
     return <LoadingScreen />;
   }
 
   if (
-    user.role === "STUDENT" &&
+    userRole === "STUDENT" &&
     requireCompleteProfile &&
     !isComplete &&
     location.pathname !== "/lengkapi-data"
