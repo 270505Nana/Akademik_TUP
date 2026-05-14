@@ -32,5 +32,10 @@ router.use(
   "/yudisium-registration-periods",
   require("./yudisiumRegsitrationPeriod"),
 );
+router.use("/yudisium-registrations", require("./yudisiumRegistration"));
+router.use(
+  "/yudisium-registration-responses",
+  require("./yudisiumRegistrationResponse"),
+);
 
 module.exports = router;
