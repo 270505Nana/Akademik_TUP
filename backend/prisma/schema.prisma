@@ -126,20 +126,21 @@ model Student {
 
 // Surat Keputusan TA
 model SktaRequest {
-  id                 Int                 @id @default(autoincrement())
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  deletedAt          DateTime?
-  proposalTitleId    String
-  proposalTitleEn    String
-  student            Student             @relation(fields: [studentId], references: [id])
-  studentId          Int
-  dosenPembimbing1   Lecturer            @relation("Pembimbing1SktaRequests", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id Int
-  dosenPembimbing2   Lecturer            @relation("Pembimbing2SktaRequests", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id Int
-  sktaRequestUploads SktaRequestUpload[]
-  sktaResponses      SktaResponse[]
+  id                  Int                  @id @default(autoincrement())
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
+  proposalTitleId     String
+  proposalTitleEn     String
+  student             Student              @relation(fields: [studentId], references: [id])
+  studentId           Int
+  dosenPembimbing1    Lecturer             @relation("Pembimbing1SktaRequests", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id  Int
+  dosenPembimbing2    Lecturer             @relation("Pembimbing2SktaRequests", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id  Int
+  sktaRequestUploads  SktaRequestUpload[]
+  sktaResponses       SktaResponse[]
+  sktaResponseUploads SktaResponseUpload[]
 }
 
 // Upload Evidence
@@ -157,34 +158,33 @@ model SktaRequestUpload {
 }
 
 model SktaResponse {
-  id                       Int                  @id @default(autoincrement())
-  createdAt                DateTime             @default(now())
-  updatedAt                DateTime             @updatedAt
+  id                       Int           @id @default(autoincrement())
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
   deletedAt                DateTime?
   hasUploadedFinalProposal Boolean
   hasTakenLanguageTest     Boolean
-  expDate                  DateTime?            @db.Date
+  expDate                  DateTime?     @db.Date
   message                  String?
   isEdit                   DateTime?
-  academicStaff            AcademicStaff        @relation(fields: [academicStaffId], references: [id])
+  academicStaff            AcademicStaff @relation(fields: [academicStaffId], references: [id])
   academicStaffId          Int
-  sktaRequest              SktaRequest          @relation(fields: [sktaRequestId], references: [id])
+  sktaRequest              SktaRequest   @relation(fields: [sktaRequestId], references: [id])
   sktaRequestId            Int
-  sktaResponseUploads      SktaResponseUpload[]
 }
 
 // Upload SKTA
 model SktaResponseUpload {
-  id             Int          @id @default(autoincrement())
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
-  name           String
-  filename       String
-  slug           String       @default("skta")
-  path           String
-  sktaResponse   SktaResponse @relation(fields: [sktaResponseId], references: [id])
-  sktaResponseId Int
+  id            Int         @id @default(autoincrement())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+  name          String
+  filename      String
+  slug          String      @default("skta")
+  path          String
+  sktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id])
+  sktaRequestId Int
 }
 
 // Daftar Sidang
