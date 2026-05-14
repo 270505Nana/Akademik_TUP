@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { 
   BsMortarboardFill, 
   BsPersonBadgeFill, 
@@ -27,8 +27,19 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  if (isAuthenticated) {
+    const role = user?.role?.toUpperCase();
+    const roleMap = {
+      STUDENT: "/mahasiswa/dashboard",
+      LECTURER: "/dosen/dashboard",
+      ACADEMIC_STAFF: "/akademik/dashboard",
+    };
+    const destination = roleMap[role] || "/mahasiswa/dashboard";
+    return <Navigate to={destination} replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,8 +63,8 @@ const LoginPage = () => {
         ACADEMIC_STAFF: "/akademik/dashboard",
       };
 
-      const role = data.data?.role;
-      const destination = roleMap[role] || "/dashboard";
+      const role = data.data?.role?.toUpperCase();
+      const destination = roleMap[role] || "/mahasiswa/dashboard";
       navigate(destination);
 
     } catch (err) {

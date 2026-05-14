@@ -2,24 +2,24 @@ import { AuthProvider } from "./context/AuthContext";
 import { StudentProvider } from "./context/StudentContext";
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import 'bootstrap-icons/font/bootstrap-icons.css';
-import LoginPage           from "./pages/auth/Login";
-import RegisterPage        from "./pages/auth/Register";
-import LengkapiData        from "./pages/mahasiswa/LengkapiData";
-import DashboardMahasiswa  from "./pages/mahasiswa/dashboard";
-import DashboardAkademik   from "./pages/admin/dashboard";
-import DashboardDosen      from "./pages/dosen/dashboard";
-import PengajuanSK         from "./pages/mahasiswa/pengajuanSK";
-import PermohonanSK         from "./pages/admin/permohonanSK";
-import AturPeriode         from "./pages/admin/aturperiode";
-import AturBerkas          from "./pages/admin/requirementdocs";
-import UploadSKL           from "./pages/admin/skltranskrip";
+import "bootstrap-icons/font/bootstrap-icons.css";
+import LoginPage from "./pages/auth/Login";
+import RegisterPage from "./pages/auth/Register";
+import LengkapiData from "./pages/mahasiswa/LengkapiData";
+import DashboardMahasiswa from "./pages/mahasiswa/dashboard";
+import DashboardAkademik from "./pages/admin/dashboard";
+import DashboardDosen from "./pages/dosen/dashboard";
+import PengajuanSK from "./pages/mahasiswa/pengajuanSK";
+import PermohonanSK from "./pages/admin/permohonanSK";
+import AturPeriode from "./pages/admin/aturperiode";
+import AturBerkas from "./pages/admin/requirementdocs";
+import UploadSKL from "./pages/admin/skltranskrip";
 
-import ProtectedRoute      from "./components/common/ProtectedRoute";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 import PendaftaranSidang from "./pages/mahasiswa/pendaftaransidang";
 
 const Placeholder = ({ title }) => (
-  <div style={{ padding: '2rem', textAlign: 'center' }}>
+  <div style={{ padding: "2rem", textAlign: "center" }}>
     <h2>{title} Page</h2>
     <p>This is a placeholder for the {title} feature.</p>
   </div>
@@ -32,8 +32,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
 
-          
-          <Route path="/login"    element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
           {/* Lengkapi Data */}
@@ -48,56 +47,49 @@ const App = () => {
 
           {/* Mahasiswa */}
           <Route
-            path="/mahasiswa/dashboard"
+            path="/mahasiswa"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
-                <DashboardMahasiswa />
-              </ProtectedRoute>
+              <ProtectedRoute
+                allowedRoles={["STUDENT"]}
+                requireCompleteProfile={true}
+              />
             }
-          />
-
-          <Route
-            path="/mahasiswa/pengajuan-sk"
-            element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
-                <PengajuanSK />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/mahasiswa/pendaftaran-sidang"
-            element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
-                <PendaftaranSidang />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/mahasiswa/pendaftaran-yudisium"
-            element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
-                <Placeholder title="Pendaftaran Yudisium" />
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardMahasiswa />} />
+            <Route path="pengajuan-sk" element={<PengajuanSK />} />
+            <Route path="pendaftaran-sidang" element={<PendaftaranSidang />} />
+            <Route
+              path="pendaftaran-yudisium"
+              element={<Placeholder title="Pendaftaran Yudisium" />}
+            />
+          </Route>
 
           {/* Dosen */}
           <Route
-            path="/dosen/dashboard"
-            element={<DashboardDosen />}
-            //   <ProtectedRoute allowedRoles={["LECTURER"]}>
-            //     <DashboardDosen />
-            //   </ProtectedRoute>
-            // }
-          />
+            path="/dosen"
+            element={
+              <ProtectedRoute allowedRoles={["LECTURER"]} />
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardDosen />} />
+          </Route>
 
           {/* Admin */}
-          <Route path="/akademik/dashboard"  element={<DashboardAkademik />} />
-          <Route path="/akademik/atur-periode" element={<AturPeriode />} />
-          <Route path="/akademik/permohonan-sk" element={<PermohonanSK />} />
-          <Route path="/akademik/atur-berkas" element={<AturBerkas />} />
-          <Route path="/akademik/upload-skl" element={<UploadSKL />} />
+          <Route
+            path="/akademik"
+            element={
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]} />
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardAkademik />} />
+            <Route path="atur-periode" element={<AturPeriode />} />
+            <Route path="permohonan-sk" element={<PermohonanSK />} />
+            <Route path="atur-berkas" element={<AturBerkas />} />
+            <Route path="upload-skl" element={<UploadSKL />} />
+          </Route>
 
           {/* 403 Forbidden */}
           <Route

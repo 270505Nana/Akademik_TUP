@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useStudent } from "../../context/StudentContext";
 
@@ -14,6 +14,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
   useEffect(() => {
     if (
       requireCompleteProfile &&
+      user?.role === "STUDENT" &&
       isAuthenticated &&
       user?.id &&
       !isStudentLoading &&
@@ -30,7 +31,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
     if (!isStudentLoading && isComplete) {
       setServerCheckDone(true);
     }
-  }, [isStudentLoading, isComplete, isAuthenticated, user?.id, requireCompleteProfile, fetchAndLoadStudent]);
+  }, [isStudentLoading, isComplete, isAuthenticated, user?.id, user?.role, requireCompleteProfile, fetchAndLoadStudent]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -41,7 +42,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
     return <Navigate to="/forbidden" replace />;
   }
 
-  if (requireCompleteProfile && (isStudentLoading || isServerChecking || !serverCheckDone)) {
+  if (requireCompleteProfile && user?.role === "STUDENT" && (isStudentLoading || isServerChecking || !serverCheckDone)) {
     return <LoadingScreen />;
   }
 
@@ -54,7 +55,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
     return <Navigate to="/lengkapi-data" replace />;
   }
 
-  return children;
+  return children ? children : <Outlet />;
 };
 
 const LoadingScreen = () => (
