@@ -7,6 +7,7 @@ const {
   seedFacultyStudyProgram,
 } = require("./seeders/facultyStudyProgramSeeder");
 const { seedStudent } = require("./seeders/studentSeeder");
+// const { seedTemplateUpload } = require("./seeders/templateUploadSeeder");
 
 async function main() {
   console.log("- Starting seeding...");
@@ -18,6 +19,7 @@ async function main() {
 
   await seedFacultyStudyProgram();
   await seedStudent();
+  // await seedTemplateUpload();
 
   console.log("- Seeding finished");
 }
