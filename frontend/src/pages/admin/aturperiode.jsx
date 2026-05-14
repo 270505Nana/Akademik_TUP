@@ -54,7 +54,7 @@ const AturPeriode = () => {
         { id: '3', name: 'Yudisium Ganjil 2025', startDate: '2025-12-01', endDate: '2025-12-15' },
       ];
       setPeriods(defaults);
-      localStorage.setItem('simta_periods_yudisium', JSON.stringify(defaults));
+      localStorage.setItem("simta_periods_yudisium", JSON.stringify(defaults));
     }
 
     fetchSidang();
@@ -65,34 +65,60 @@ const AturPeriode = () => {
     const now = new Date();
     const startDate = new Date(start);
     const endDate = new Date(end);
-    if (now < startDate) return 'Mendatang';
-    if (now > endDate) return 'Selesai';
-    return 'Aktif';
+    if (now < startDate) return "Mendatang";
+    if (now > endDate) return "Selesai";
+    return "Aktif";
   };
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toISOString().slice(0, 10);
+  };
+
+  const getSidangStatus = (start, end, isOpen) => {
+    if (isOpen === true) return "Aktif";
+
+    const now = new Date();
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (now < startDate) return "Mendatang";
+    if (now > endDate) return "Selesai";
+    return "Aktif";
   };
 
   const handleSaveYudisium = (e) => {
     e.preventDefault();
     if (!form.name || !form.startDate || !form.endDate) {
-      showAlert('error', 'Gagal', 'Harap lengkapi semua bidang input.');
+      showAlert("error", "Gagal", "Harap lengkapi semua bidang input.");
       return;
     }
     const newPeriod = { id: Date.now().toString(), ...form };
     const updated = [newPeriod, ...periods];
     setPeriods(updated);
-    localStorage.setItem('simta_periods_yudisium', JSON.stringify(updated));
-    setForm({ name: '', startDate: '', endDate: '' });
-    showAlert('success', 'Berhasil', 'Data periode yudisium telah berhasil disimpan.');
+    localStorage.setItem("simta_periods_yudisium", JSON.stringify(updated));
+    setForm({ name: "", startDate: "", endDate: "" });
+    showAlert(
+      "success",
+      "Berhasil",
+      "Data periode yudisium telah berhasil disimpan.",
+    );
   };
 
   const handleSaveSidang = async (e) => {
     e.preventDefault();
     if (!sidangForm.name || !sidangForm.startDate || !sidangForm.endDate) {
-      showAlert('error', 'Gagal', 'Harap lengkapi semua bidang input.');
+      showAlert("error", "Gagal", "Harap lengkapi semua bidang input.");
       return;
     }
     try {
@@ -113,7 +139,7 @@ const AturPeriode = () => {
 
   const showAlert = (type, title, message) => {
     setAlert({ show: true, type, title, message });
-    setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 5000);
+    setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 5000);
   };
 
   const deletePeriod = async (id, type) => {
@@ -139,9 +165,10 @@ const AturPeriode = () => {
     setEditingItem(item);
     setEditForm({
       name: item.name,
-      startDate: item.startDate,
-      endDate: item.endDate,
-      type: type
+      startDate: formatDateForInput(item.startDate),
+      endDate: formatDateForInput(item.endDate),
+      isOpen: item.isOpen ?? true,
+      type: type,
     });
     setIsEditModalOpen(true);
   };
@@ -149,7 +176,7 @@ const AturPeriode = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!editForm.name || !editForm.startDate || !editForm.endDate) {
-      showAlert('error', 'Gagal', 'Harap lengkapi semua bidang input.');
+      showAlert("error", "Gagal", "Harap lengkapi semua bidang input.");
       return;
     }
 
@@ -163,7 +190,6 @@ const AturPeriode = () => {
       setIsEditModalOpen(false);
       showAlert('success', 'Berhasil', `Periode ${editForm.name} telah diperbarui.`);
     } else {
-      // Sidang → hit API
       try {
         const updated = await updateSidangPeriod(editingItem.id, {
           name:      editForm.name,
@@ -189,16 +215,21 @@ const AturPeriode = () => {
 
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
       <SidebarAdmin
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onShowToast={(msg, icon, type) => showAlert(type === 'warning' ? 'warning' : 'success', 'Info', msg)}
+        onShowToast={(msg, icon, type) =>
+          showAlert(type === "warning" ? "warning" : "success", "Info", msg)
+        }
       />
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="mobile-menu-bar">
-          <button onClick={() => setSidebarOpen(true)} className="mobile-menu-btn">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="mobile-menu-btn"
+          >
             <Menu size={20} />
           </button>
           <span className="mobile-menu-title">SIMTA</span>
@@ -225,30 +256,54 @@ const AturPeriode = () => {
                   <div className="form-grid">
                     <div className="form-group">
                       <label className="form-label">Nama Periode Sidang</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
+                      <input
+                        type="text"
+                        className="form-control"
                         placeholder="Contoh: Periode Sidang Semester Genap 2025/2026"
                         value={sidangForm.name}
-                        onChange={e => setSidangForm({ ...sidangForm, name: e.target.value })}
+                        onChange={(e) =>
+                          setSidangForm({ ...sidangForm, name: e.target.value })
+                        }
                       />
                     </div>
                     <div className="form-grid-inner">
                       <div className="form-group">
                         <label className="form-label">Tanggal Mulai</label>
-                        <input type="date" className="form-control" value={sidangForm.startDate} onChange={e => setSidangForm({ ...sidangForm, startDate: e.target.value })} />
+                        <input
+                          type="date"
+                          className="form-control"
+                          value={sidangForm.startDate}
+                          onChange={(e) =>
+                            setSidangForm({
+                              ...sidangForm,
+                              startDate: e.target.value,
+                            })
+                          }
+                        />
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{ display: "flex", alignItems: "center" }}>
                         <span className="date-separator">s/d</span>
                         <div className="form-group" style={{ flex: 1 }}>
                           <label className="form-label">Tanggal Selesai</label>
-                          <input type="date" className="form-control" value={sidangForm.endDate} onChange={e => setSidangForm({ ...sidangForm, endDate: e.target.value })} />
+                          <input
+                            type="date"
+                            className="form-control"
+                            value={sidangForm.endDate}
+                            onChange={(e) =>
+                              setSidangForm({
+                                ...sidangForm,
+                                endDate: e.target.value,
+                              })
+                            }
+                          />
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="btn-submit-container">
-                    <button type="submit" className="btn-primary-red"><Save size={16} /> Simpan Periode Sidang</button>
+                    <button type="submit" className="btn-primary-red">
+                      <Save size={16} /> Simpan Periode Sidang
+                    </button>
                   </div>
                 </form>
               </div>
@@ -341,31 +396,51 @@ const AturPeriode = () => {
                 <form onSubmit={handleSaveYudisium}>
                   <div className="form-grid">
                     <div className="form-group">
-                      <label className="form-label">Nama Periode Yudisium</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
+                      <label className="form-label">
+                        Nama Periode Yudisium
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
                         placeholder="Contoh: Semester Genap 2025/2026 - Gel 2"
                         value={form.name}
-                        onChange={e => setForm({ ...form, name: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, name: e.target.value })
+                        }
                       />
                     </div>
                     <div className="form-grid-inner">
                       <div className="form-group">
                         <label className="form-label">Tanggal Mulai</label>
-                        <input type="date" className="form-control" value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} />
+                        <input
+                          type="date"
+                          className="form-control"
+                          value={form.startDate}
+                          onChange={(e) =>
+                            setForm({ ...form, startDate: e.target.value })
+                          }
+                        />
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{ display: "flex", alignItems: "center" }}>
                         <span className="date-separator">s/d</span>
                         <div className="form-group" style={{ flex: 1 }}>
                           <label className="form-label">Tanggal Selesai</label>
-                          <input type="date" className="form-control" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} />
+                          <input
+                            type="date"
+                            className="form-control"
+                            value={form.endDate}
+                            onChange={(e) =>
+                              setForm({ ...form, endDate: e.target.value })
+                            }
+                          />
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="btn-submit-container">
-                    <button type="submit" className="btn-primary-red"><Save size={16} /> Simpan Periode Yudisium</button>
+                    <button type="submit" className="btn-primary-red">
+                      <Save size={16} /> Simpan Periode Yudisium
+                    </button>
                   </div>
                 </form>
               </div>
@@ -390,27 +465,54 @@ const AturPeriode = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {periods.map(period => {
-                        const status = getStatus(period.startDate, period.endDate);
+                      {periods.map((period) => {
+                        const status = getStatus(
+                          period.startDate,
+                          period.endDate,
+                        );
                         return (
                           <tr key={period.id}>
                             <td className="periode-name">{period.name}</td>
                             <td>{formatDate(period.startDate)}</td>
                             <td>{formatDate(period.endDate)}</td>
-                            <td><span className={`badge badge-${status.toLowerCase()}`}>{status}</span></td>
+                            <td>
+                              <span
+                                className={`badge badge-${status.toLowerCase()}`}
+                              >
+                                {status}
+                              </span>
+                            </td>
                             <td>
                               <div className="action-stack">
-                                {status === 'Mendatang' && (
-                                  <button className="btn-outline" onClick={() => openEditModal(period, 'yudisium')}><Edit3 size={16} /> Edit</button>
+                                {status === "Mendatang" && (
+                                  <button
+                                    className="btn-outline"
+                                    onClick={() =>
+                                      openEditModal(period, "yudisium")
+                                    }
+                                  >
+                                    <Edit3 size={16} /> Edit
+                                  </button>
                                 )}
-                                {status === 'Aktif' && (
+                                {status === "Aktif" && (
                                   <>
-                                    <button className="btn-outline btn-outline-red">Tutup</button>
-                                    <button className="btn-outline" onClick={() => openEditModal(period, 'yudisium')}><Edit3 size={16} /> Edit</button>
+                                    <button className="btn-outline btn-outline-red">
+                                      Tutup
+                                    </button>
+                                    <button
+                                      className="btn-outline"
+                                      onClick={() =>
+                                        openEditModal(period, "yudisium")
+                                      }
+                                    >
+                                      <Edit3 size={16} /> Edit
+                                    </button>
                                   </>
                                 )}
-                                {status === 'Selesai' && (
-                                  <button className="btn-outline">Detail</button>
+                                {status === "Selesai" && (
+                                  <button className="btn-outline">
+                                    Detail
+                                  </button>
                                 )}
                               </div>
                             </td>
@@ -430,7 +532,7 @@ const AturPeriode = () => {
       <AnimatePresence>
         {isEditModalOpen && (
           <div className="modal-overlay">
-            <motion.div 
+            <motion.div
               className="modal-container"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -438,7 +540,10 @@ const AturPeriode = () => {
             >
               <div className="modal-header">
                 <h3>Edit {editingItem?.name}</h3>
-                <button className="btn-close" onClick={() => setIsEditModalOpen(false)}>
+                <button
+                  className="btn-close"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
                   <X size={20} />
                 </button>
               </div>
@@ -447,37 +552,119 @@ const AturPeriode = () => {
                   <div className="form-grid">
                     <div className="form-group">
                       <label className="form-label">Nama Periode</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
+                      <input
+                        type="text"
+                        className="form-control"
                         value={editForm.name}
-                        onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, name: e.target.value })
+                        }
                       />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Tanggal Mulai</label>
-                      <input 
-                        type="date" 
-                        className="form-control" 
+                      <input
+                        type="date"
+                        className="form-control"
                         value={editForm.startDate}
-                        onChange={e => setEditForm({ ...editForm, startDate: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            startDate: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Tanggal Berakhir</label>
-                      <input 
-                        type="date" 
-                        className="form-control" 
+                      <input
+                        type="date"
+                        className="form-control"
                         value={editForm.endDate}
-                        onChange={e => setEditForm({ ...editForm, endDate: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, endDate: e.target.value })
+                        }
                       />
                     </div>
+                    {editForm.type === "sidang" && (
+                      <div className="form-group">
+                        <label className="form-label">Status Buka</label>
+                        <select
+                          className="form-control"
+                          value={editForm.isOpen ? "true" : "false"}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              isOpen: e.target.value === "true",
+                            })
+                          }
+                        >
+                          <option value="true">Buka</option>
+                          <option value="false">Tutup</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                 </form>
               </div>
               <div className="modal-footer">
-                <button className="btn-cancel" onClick={() => setIsEditModalOpen(false)}>Batal</button>
-                <button form="editForm" type="submit" className="btn-save-modal">Update Periode</button>
+                <button
+                  className="btn-cancel"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button
+                  form="editForm"
+                  type="submit"
+                  className="btn-save-modal"
+                >
+                  Update Periode
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirm Modal */}
+      <AnimatePresence>
+        {isConfirmModalOpen && (
+          <div className="modal-overlay">
+            <motion.div
+              className="modal-container"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="modal-header">
+                <h3>Konfirmasi Perubahan</h3>
+                <button
+                  className="btn-close"
+                  onClick={() => setIsConfirmModalOpen(false)}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="modal-body">
+                <p>
+                  Apakah Anda yakin ingin memperbarui periode{" "}
+                  <strong>{editForm.name}</strong>?
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn-cancel"
+                  onClick={() => setIsConfirmModalOpen(false)}
+                >
+                  Batal
+                </button>
+                <button
+                  className="btn-save-modal"
+                  onClick={handleConfirmUpdate}
+                >
+                  Ya, Perbarui
+                </button>
               </div>
             </motion.div>
           </div>
@@ -486,8 +673,21 @@ const AturPeriode = () => {
 
       <AnimatePresence>
         {alert.show && (
-          <motion.div className="alert-overlay" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }}>
-            <CustomAlert type={alert.type} title={alert.title} message={alert.message} style={{ margin: 0, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+          <motion.div
+            className="alert-overlay"
+            initial={{ x: 300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 300, opacity: 0 }}
+          >
+            <CustomAlert
+              type={alert.type}
+              title={alert.title}
+              message={alert.message}
+              style={{
+                margin: 0,
+                boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>

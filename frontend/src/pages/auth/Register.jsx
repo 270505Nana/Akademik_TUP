@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
 
 import bgLogin    from "../../assets/bg-login.png";
@@ -7,6 +7,7 @@ import logoSimta  from "../../assets/logo-simta.png";
 import logoTelkom from "../../assets/logo-telkom.png";
 
 import { registerUser } from "../../service/api";
+import { useAuth } from "../../context/AuthContext";
 import CustomAlert from "../../components/common/CustomAlert";
 import "./Auth.css";
 
@@ -48,7 +49,19 @@ const RegisterPage = () => {
   const [alert,      setAlert]      = useState(null); 
   const [isLoading,  setIsLoading]  = useState(false);
 
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  if (isAuthenticated) {
+    const role = user?.role?.toUpperCase();
+    const roleMap = {
+      STUDENT: "/mahasiswa/dashboard",
+      LECTURER: "/dosen/dashboard",
+      ACADEMIC_STAFF: "/akademik/dashboard",
+    };
+    const destination = roleMap[role] || "/mahasiswa/dashboard";
+    return <Navigate to={destination} replace />;
+  }
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

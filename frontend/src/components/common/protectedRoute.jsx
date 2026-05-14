@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useStudent } from "../../context/StudentContext";
 
@@ -20,6 +20,7 @@ const ProtectedRoute = ({
   useEffect(() => {
     if (
       requireCompleteProfile &&
+      user?.role === "STUDENT" &&
       isAuthenticated &&
       user?.id &&
       userRole === "STUDENT" &&
@@ -77,7 +78,7 @@ const ProtectedRoute = ({
     return <Navigate to="/lengkapi-data" replace />;
   }
 
-  return children;
+  return children ? children : <Outlet />;
 };
 
 const LoadingScreen = () => (
