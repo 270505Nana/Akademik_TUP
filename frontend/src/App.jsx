@@ -54,15 +54,9 @@ const App = () => {
     <AuthProvider>
       <StudentProvider>
         <Routes>
-
-          {/* ── Root redirect ──────────────────────────────────────────── */}
           <Route path="/" element={<Navigate to="/login" replace />} />
-
-          {/* ── Auth (public) ──────────────────────────────────────────── */}
           <Route path="/login"    element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-
-          {/* ── Lengkapi Data (STUDENT only, belum perlu profil lengkap) ─ */}
           <Route
             path="/lengkapi-data"
             element={
@@ -71,8 +65,6 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-
-          {/* ── Mahasiswa (STUDENT + profil harus lengkap) ─────────────── */}
           <Route
             path="/mahasiswa/dashboard"
             element={
