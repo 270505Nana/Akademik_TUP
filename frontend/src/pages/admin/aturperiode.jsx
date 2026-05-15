@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
 import '../../components/admin/css/aturperiode.css';
-import {getSidangPeriods,createSidangPeriod,updateSidangPeriod,deleteSidangPeriod,} from '../../service/api'
+import {getSidangPeriods,createSidangPeriod,updateSidangPeriod,} from '../../service/api'
 
 const AturPeriode = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,9 +18,7 @@ const AturPeriode = () => {
   });
 
   const [form, setForm] = useState({ name: '',startDate: '',endDate: ''});
-  
   const [sidangForm, setSidangForm] = useState({name: '',startDate: '', endDate: ''  });
-
   const [alert, setAlert] = useState({
     show: false,type: 'success', title: '', message: '' });
 
