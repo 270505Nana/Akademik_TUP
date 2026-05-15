@@ -1,53 +1,69 @@
 import { useState } from "react";
 import { useNavigate, Link, Navigate } from "react-router-dom";
-import { 
-  BsMortarboardFill, 
-  BsPersonBadgeFill, 
-  BsPersonFill, 
-  BsLockFill, 
-  BsArrowRightCircleFill, 
+import {
+  BsMortarboardFill,
+  BsPersonBadgeFill,
+  BsPersonFill,
+  BsLockFill,
+  BsArrowRightCircleFill,
   BsQuestionCircle,
   BsEyeFill,
-  BsEyeSlashFill
+  BsEyeSlashFill,
 } from "react-icons/bs";
 
-import bgLogin from "../../assets/bg-login.png";
-import logoSimta from "../../assets/logo-simta.png";
+import bgLogin    from "../../assets/bg-login.png";
+import logoSimta  from "../../assets/logo-simta.png";
 import logoTelkom from "../../assets/logo-telkom.png";
 
-import { useAuth } from "../../context/AuthContext";
+import { useAuth }   from "../../context/AuthContext";
 import { loginUser } from "../../service/api";
-import CustomAlert from "../../components/common/CustomAlert";
+import CustomAlert   from "../../components/common/CustomAlert";
 import "./Auth.css";
 
+// ── Mapping: tab yang boleh untuk role apa ──────────────────────────────────
+// Tab "mahasiswa" → hanya STUDENT
+// Tab "dosen"     → LECTURER dan ACADEMIC_STAFF
+const TAB_ALLOWED_ROLES = {
+  mahasiswa: ["STUDENT"],
+  dosen:     ["LECTURER", "ACADEMIC_STAFF"],
+};
+
 const LoginPage = () => {
-  const [activeTab, setActiveTab] = useState("mahasiswa");
-  const [ssoUsername, setSsoUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [activeTab,    setActiveTab]    = useState("mahasiswa");
+  const [ssoUsername,  setSsoUsername]  = useState("");
+  const [password,     setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [alert, setAlert] = useState(null);   // ← Gunakan CustomAlert
-  const [isLoading, setIsLoading] = useState(false);
+  const [alert,        setAlert]        = useState(null); // { type, msg }
+  const [isLoading,    setIsLoading]    = useState(false);
 
   const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  if (isAuthenticated) {
-    const role = user?.role?.toUpperCase();
+  // ── Kalau sudah login, redirect sesuai role ──────────────────────────────
+  if (isAuthenticated && user) {
     const roleMap = {
-      STUDENT: "/mahasiswa/dashboard",
-      LECTURER: "/dosen/dashboard",
+      STUDENT:        "/mahasiswa/dashboard",
+      LECTURER:       "/dosen/dashboard",
       ACADEMIC_STAFF: "/akademik/dashboard",
     };
-    const destination = roleMap[role] || "/mahasiswa/dashboard";
-    return <Navigate to={destination} replace />;
+    return <Navigate to={roleMap[user.role] || "/login"} replace />;
   }
+
+  // ── Ganti tab: reset form & alert ───────────────────────────────────────
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setAlert(null);
+    setSsoUsername("");
+    setPassword("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAlert(null);
 
+    // ── Validasi input kosong ────────────────────────────────────────────
     if (!ssoUsername.trim()) {
-      setAlert({ type: "error", msg: "SSO Username tidak boleh kosong." });
+      setAlert({ type: "error", msg: "Email tidak boleh kosong." });
       return;
     }
     if (!password) {
@@ -56,55 +72,62 @@ const LoginPage = () => {
     }
 
     setIsLoading(true);
-
     try {
-      const response = await loginUser({ 
-        email: ssoUsername, 
-        password 
-      });
+      const data = await loginUser({ email: ssoUsername, password });
 
-      login({
-        ...response.data,
-        token: response.token,
-      });
+      // ── Ambil & normalkan role dari response backend ─────────────────
+      const role = data.data?.role?.toUpperCase()?.trim();
 
-      const userRole = response.data?.role?.toUpperCase();
-
-      const roleMap = {
-        STUDENT: "/mahasiswa/dashboard",
-        LECTURER: "/dosen/dashboard",
-        ACADEMIC_STAFF: "/akademik/dashboard",
-        ADMIN: "/akademik/dashboard",
-      };
-
-      const destination = roleMap[userRole] || "/";
-
-      // Success Alert sebelum redirect
-      setAlert({ 
-        type: "success", 
-        msg: "Login berhasil! Mengarahkan ke dashboard..." 
-      });
-
-      setTimeout(() => {
-        navigate(destination, { replace: true });
-      }, 2500);
-
-    } catch (err) {
-      console.error(err);
-      
-      let errorMsg = "Login gagal. Silakan coba lagi.";
-
-      const backendMsg = err.response?.data?.message?.toLowerCase();
-
-      if (backendMsg?.includes("tidak ditemukan") || backendMsg?.includes("not found")) {
-        errorMsg = "Akun dengan email ini tidak terdaftar.";
-      } else if (backendMsg?.includes("password") || backendMsg?.includes("salah") || backendMsg?.includes("invalid")) {
-        errorMsg = "Email atau Password yang Anda masukkan salah.";
-      } else if (backendMsg?.includes("belum diverifikasi")) {
-        errorMsg = "Akun Anda belum diverifikasi. Silakan hubungi admin.";
+      // ── VALIDASI TAB vs ROLE ─────────────────────────────────────────
+      // Cek apakah role yang dikembalikan backend sesuai tab yang dipilih
+      // Token TIDAK disimpan jika role tidak sesuai tab
+      const allowedRolesForTab = TAB_ALLOWED_ROLES[activeTab];
+      if (!allowedRolesForTab.includes(role)) {
+        const errMsg =
+          activeTab === "mahasiswa"
+            ? "Akun ini bukan akun mahasiswa. Silakan login melalui tab Dosen/Pegawai."
+            : "Akun ini adalah akun mahasiswa. Silakan login melalui tab Mahasiswa.";
+        setAlert({ type: "error", msg: errMsg });
+        return; // ← early return, login() tidak dipanggil, token tidak tersimpan
       }
 
-      setAlert({ type: "error", msg: errorMsg });
+      // ── Validasi lolos → simpan token ke context & localStorage ─────
+      // AuthContext.login() menyimpan ke:
+      //   localStorage["simta_user"]  = { id, username, email, role, ... }
+      //   localStorage["simta_token"] = JWT token string
+      login({
+        ...data.data,
+        role,              // pastikan role sudah uppercase
+        token: data.token,
+      });
+
+      // ── Redirect berdasarkan role ────────────────────────────────────
+      const destination = {
+        STUDENT:        "/mahasiswa/dashboard",
+        LECTURER:       "/dosen/dashboard",
+        ACADEMIC_STAFF: "/akademik/dashboard",
+      }[role] || "/login";
+
+      setAlert({ type: "success", msg: "Login berhasil! Mengarahkan ke dashboard..." });
+      setTimeout(() => navigate(destination, { replace: true }), 1200);
+
+    } catch (err) {
+      const backendMsg = err.response?.data?.message?.toLowerCase() || "";
+
+      let errMsg = "Login gagal. Periksa email dan password kamu.";
+      if (backendMsg.includes("tidak ditemukan") || backendMsg.includes("not found")) {
+        errMsg = "Akun dengan email ini tidak terdaftar.";
+      } else if (
+        backendMsg.includes("password") ||
+        backendMsg.includes("salah") ||
+        backendMsg.includes("invalid")
+      ) {
+        errMsg = "Email atau password yang kamu masukkan salah.";
+      } else if (backendMsg.includes("belum diverifikasi")) {
+        errMsg = "Akun kamu belum diverifikasi. Silakan hubungi admin.";
+      }
+
+      setAlert({ type: "error", msg: errMsg });
     } finally {
       setIsLoading(false);
     }
@@ -112,6 +135,8 @@ const LoginPage = () => {
 
   return (
     <div className="login-wrapper">
+
+      {/* ── Left Panel ──────────────────────────────────────────────────── */}
       <div className="left-panel">
         <img src={bgLogin} alt="Background" className="bg-image" />
         <div className="left-overlay" />
@@ -132,6 +157,7 @@ const LoginPage = () => {
         </div>
       </div>
 
+      {/* ── Right Panel ─────────────────────────────────────────────────── */}
       <div className="right-panel">
         <div className="blob blob-top-right" />
         <div className="blob blob-bottom-left" />
@@ -141,56 +167,89 @@ const LoginPage = () => {
             <img src={logoTelkom} alt="Logo Telkom" className="form-logo-img" />
           </div>
 
+          {/* ── Role Tab ──────────────────────────────────────────────── */}
           <div className="role-toggle">
-            <button className={`role-btn ${activeTab === "mahasiswa" ? "active" : ""}`} onClick={() => setActiveTab("mahasiswa")}>
+            <button
+              className={`role-btn ${activeTab === "mahasiswa" ? "active" : ""}`}
+              onClick={() => handleTabChange("mahasiswa")}
+              type="button"
+            >
               <BsMortarboardFill /> Mahasiswa
             </button>
-            <button className={`role-btn ${activeTab === "dosen" ? "active" : ""}`} onClick={() => setActiveTab("dosen")}>
+            <button
+              className={`role-btn ${activeTab === "dosen" ? "active" : ""}`}
+              onClick={() => handleTabChange("dosen")}
+              type="button"
+            >
               <BsPersonBadgeFill /> Dosen/Pegawai
             </button>
           </div>
 
           <p className="sso-label">SSO LOGIN</p>
 
-          <form onSubmit={handleSubmit}>
-            {alert && <CustomAlert type={alert.type} message={alert.msg} />}
+          {/* ── Alert ─────────────────────────────────────────────────── */}
+          {alert && (
+            <CustomAlert
+              type={alert.type}
+              message={alert.msg}
+            />
+          )}
 
+          {/* ── Form ──────────────────────────────────────────────────── */}
+          <form onSubmit={handleSubmit} noValidate>
             <div className="form-group">
-              <label className="form-label" htmlFor="ssoUsername">SSO Username</label>
+              <label className="form-label" htmlFor="ssoUsername">
+                SSO Username
+              </label>
               <div className="input-wrapper">
                 <BsPersonFill className="input-icon" />
                 <input
                   id="ssoUsername"
                   type="email"
                   className="form-input"
-                  placeholder={activeTab === "mahasiswa" ? "nama@student.telkomuniversity.ac.id" : "nama@telkomuniversity.ac.id"}
+                  placeholder={
+                    activeTab === "mahasiswa"
+                      ? "nama@student.telkomuniversity.ac.id"
+                      : "nama@telkomuniversity.ac.id"
+                  }
                   value={ssoUsername}
-                  onChange={(e) => setSsoUsername(e.target.value)}
-                  required
+                  onChange={(e) => { setSsoUsername(e.target.value); setAlert(null); }}
+                  autoComplete="email"
                 />
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="password">Password</label>
+              <label className="form-label" htmlFor="password">
+                Password
+              </label>
               <div className="input-wrapper">
                 <BsLockFill className="input-icon" />
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   className="form-input"
-                  placeholder="Enter your Password"
+                  placeholder="Masukkan password kamu"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
+                  onChange={(e) => { setPassword(e.target.value); setAlert(null); }}
+                  autoComplete="current-password"
                 />
-                <button type="button" className="toggle-pw" onClick={() => setShowPassword(!showPassword)}>
+                <button
+                  type="button"
+                  className="toggle-pw"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label="Tampilkan password"
+                >
                   {showPassword ? <BsEyeSlashFill /> : <BsEyeFill />}
                 </button>
               </div>
             </div>
 
-            <button type="submit" className="btn-login" disabled={isLoading}>
+            <button
+              type="submit"
+              className="btn-login"
+              disabled={isLoading}
+            >
               <span>{isLoading ? "Memproses..." : "Login"}</span>
               {!isLoading && <BsArrowRightCircleFill />}
             </button>
@@ -201,6 +260,7 @@ const LoginPage = () => {
             <a href="#" className="forgot-link">Hub helpdesk</a>
           </p>
 
+          {/* Register link hanya muncul di tab Mahasiswa */}
           {activeTab === "mahasiswa" && (
             <p className="login-redirect">
               Belum punya akun?&nbsp;

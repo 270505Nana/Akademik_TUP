@@ -9,10 +9,10 @@ import { useStudent } from '../../context/StudentContext';
 import {getLecturers,getSKTARequest,getSKTAResponse,submitSKTARequest,resubmitSKTARequest,} from '../../service/api';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
 
-// status SK = dalam proses masih null semua responenya
-// revisi = ada message + udh respon tapi file SK belum ada
-// expired
-// sudah terbit = terbit aja
+// status SK "dalam proses" masih null semua responenya
+// revisi/belum terbit = ada yang belum lengkap dokumennya, dan ada message + udh respon tapi file SK belum ada
+// expired = udah respon, file SK ada, tapi expDate udh lewat
+// sudah terbit = dokumen lengkap, udah respon, file SK ada, dan expDate masih berlaku
 const getSkStatus = (sktaResponse) => {
   if (!sktaResponse) return 'dalam_proses';
 
@@ -206,15 +206,11 @@ const PengajuanSK = () => {
 
         setRequestData(existingRequest);
         const reqId = existingRequest.id;
-        if (!sktaRequestId) {
-          updateSktaRequestId(reqId);
-        }
+        updateSktaRequestId(reqId); 
         const response = await getSKTAResponse(reqId);
         setSktaResponse(response);
-
         const status = getSkStatus(response);
         setSkStatus(status);
-
         if (status === 'revisi' || status === 'expired') {
           setIsExpired(status === 'expired');
           setFormData(prev => ({
@@ -248,9 +244,6 @@ const PengajuanSK = () => {
 
     setFormData(prev => {
       const updated = { ...prev, [field]: val, [namaField]: val?.nama || '' };
-
-      // auto-set kelompok keilmuan dari researchGroupId dosen pembimbing 1
-      // jika dosen 1 diganti/di-clear, kelompok ikut di-reset
       if (field === 'kode1') {
         if (val?.researchGroupId) {
           const matched = kelompokKeilmuan.find(

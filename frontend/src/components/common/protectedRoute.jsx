@@ -1,29 +1,21 @@
 import { useState, useEffect } from "react";
-import { Navigate, useLocation, Outlet } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useStudent } from "../../context/StudentContext";
 
-const ProtectedRoute = ({ 
-  children, 
-  allowedRoles = [], 
-  requireCompleteProfile = false 
-}) => {
-  const { user, isAuthenticated } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false }) => {
+  const { user, isAuthenticated }                             = useAuth();
   const { isComplete, isStudentLoading, fetchAndLoadStudent } = useStudent();
   const location = useLocation();
+
   const [isServerChecking, setIsServerChecking] = useState(false);
-  const [serverCheckDone, setServerCheckDone] = useState(false);
-  const userRole = user?.role?.toUpperCase()?.trim();
-  const hasRoleAccess = allowedRoles.length === 0 || 
-                        allowedRoles.includes(userRole);
+  const [serverCheckDone, setServerCheckDone]   = useState(false);
 
   useEffect(() => {
     if (
       requireCompleteProfile &&
-      user?.role === "STUDENT" &&
       isAuthenticated &&
       user?.id &&
-      userRole === "STUDENT" &&
       !isStudentLoading &&
       !isComplete &&
       !serverCheckDone &&
@@ -35,42 +27,26 @@ const ProtectedRoute = ({
         setServerCheckDone(true);
       });
     }
-
     if (!isStudentLoading && isComplete) {
       setServerCheckDone(true);
     }
-  }, [
-    isAuthenticated, 
-    user?.id, 
-    userRole, 
-    requireCompleteProfile, 
-    isStudentLoading, 
-    isComplete, 
-    fetchAndLoadStudent,
-    serverCheckDone,
-    isServerChecking
-  ]);
+  }, [isStudentLoading, isComplete, isAuthenticated, user?.id, requireCompleteProfile, fetchAndLoadStudent]);
 
-  //  blm login
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // role forbidden
-  if (allowedRoles.length > 0 && !hasRoleAccess) {
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/forbidden" replace />;
   }
 
-  if (
-    userRole === "STUDENT" &&
-    requireCompleteProfile &&
-    (isStudentLoading || isServerChecking || !serverCheckDone)
-  ) {
+  if (requireCompleteProfile && (isStudentLoading || isServerChecking || !serverCheckDone)) {
     return <LoadingScreen />;
   }
 
   if (
-    userRole === "STUDENT" &&
+    user.role === "STUDENT" &&
     requireCompleteProfile &&
     !isComplete &&
     location.pathname !== "/lengkapi-data"
@@ -78,7 +54,7 @@ const ProtectedRoute = ({
     return <Navigate to="/lengkapi-data" replace />;
   }
 
-  return children ? children : <Outlet />;
+  return children;
 };
 
 const LoadingScreen = () => (

@@ -7,7 +7,9 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Request interceptor (buat token)
+// ------------------------------------------- INTERCEPTORS -------------------------------------------
+
+// Request Interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("simta_token");
@@ -16,9 +18,10 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error),
+  (error) => Promise.reject(error)
 );
-//  Response interceptor
+
+// Response Interceptor - Session Expired Handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -26,29 +29,22 @@ api.interceptors.response.use(
       localStorage.removeItem("simta_user");
       localStorage.removeItem("simta_token");
       localStorage.removeItem("student_data");
-      window.location.href = "/login";
+      // localStorage.removeItem("skta_request_id");
+
+      const event = new CustomEvent('auth-expired', {
+        detail: { message: "Maaf sesi anda sudah habis, silahkan login kembali" }
+      });
+      window.dispatchEvent(event);
+
+      window.location.href = "/login?expired=true";
     }
     return Promise.reject(error);
-  },
+  }
 );
 
-export default api;
-
-// AUTH
-export const registerUser = async ({
-  username,
-  email,
-  no_telp,
-  password,
-  confirmPassword,
-}) => {
-  const response = await api.post("/api/auth/register", {
-    username,
-    email,
-    no_telp,
-    password,
-    confirmPassword,
-  });
+// ------------------------------------------- AUTH -------------------------------------------
+export const registerUser = async ({ username, email, no_telp, password, confirmPassword }) => {
+  const response = await api.post("/api/auth/register", { username, email, no_telp, password, confirmPassword });
   return response.data;
 };
 
@@ -57,7 +53,7 @@ export const loginUser = async ({ email, password }) => {
   return response.data;
 };
 
-//  STUDENT
+// ------------------------------------------- MAHASISWA SIDE -------------------------------------------
 export const getStudentData = async (userId) => {
   const response = await api.get(`/api/students/${userId}`);
   return response.data?.data ?? response.data;
@@ -68,26 +64,7 @@ export const saveStudentData = async (userId, payload) => {
   return response.data;
 };
 
-//  LECTURER
-export const getLecturers = async () => {
-  const response = await api.get("/api/lecturers");
-  return response.data?.data ?? response.data;
-};
-
-//  FACULTY
-export const getFaculties = async () => {
-  const response = await api.get("/api/faculties");
-  return response.data?.data ?? response.data;
-};
-
-//  STUDY PROGRAM
-export const getStudyPrograms = async () => {
-  const response = await api.get("/api/study-programs");
-  return response.data?.data ?? response.data;
-};
-
-//  SKTA REQUEST -> cek apakah mhs udh punya request sk sblmnya
-// berdasarkan studentId
+// Cek request SK milik mahasiswa sendiri
 export const getSKTARequest = async (studentId) => {
   try {
     const response = await api.get(`/api/skta-requests/${studentId}`);
@@ -98,25 +75,8 @@ export const getSKTARequest = async (studentId) => {
   }
 };
 
-/**
- * POST /api/skta-requests
- *
- * @param {string} proposalTitleId
- * @param {string} proposalTitleEn
- * @param {number} studentId
- * @param {number} dosenPembimbing1Id
- * @param {number} dosenPembimbing2Id
- * @param {File}   evidence
- */
-
-export const submitSKTARequest = async ({
-  proposalTitleId,
-  proposalTitleEn,
-  studentId,
-  dosenPembimbing1Id,
-  dosenPembimbing2Id,
-  evidence,
-}) => {
+// Submit pengajuan SK baru (Mahasiswa)
+export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, studentId, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
   const formData = new FormData();
   formData.append("proposalTitleId", proposalTitleId);
   formData.append("proposalTitleEn", proposalTitleEn);
@@ -126,36 +86,26 @@ export const submitSKTARequest = async ({
   formData.append("evidence", evidence);
 
   const response = await api.post("/api/skta-requests", formData, {
-    headers: { "Content-Type": undefined },
+    headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
 };
-// PATCH /api/skta-requests/:id -> request ulang SK expired. dgn param
-export const resubmitSKTARequest = async ({
-  sktaRequestId,
-  proposalTitleId,
-  proposalTitleEn,
-  dosenPembimbing1Id,
-  dosenPembimbing2Id,
-  evidence,
-}) => {
+
+// Resubmit SK (jika expired)
+export const resubmitSKTARequest = async ({ sktaRequestId, proposalTitleId, proposalTitleEn, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
   const formData = new FormData();
   formData.append("proposalTitleId", proposalTitleId);
   formData.append("proposalTitleEn", proposalTitleEn);
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   if (evidence) formData.append("evidence", evidence);
-  const response = await api.patch(
-    `/api/skta-requests/${sktaRequestId}`,
-    formData,
-    {
-      headers: { "Content-Type": undefined },
-    },
-  );
+
+  const response = await api.patch(`/api/skta-requests/${sktaRequestId}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return response.data;
 };
 
-// buat status yg didapet dri kolom  : dalam proses, belum terbit, sudah terbit, expired, revisi
 export const getSKTAResponse = async (sktaRequestId) => {
   try {
     const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
@@ -166,10 +116,11 @@ export const getSKTAResponse = async (sktaRequestId) => {
   }
 };
 
-// list semua pengajuan SK MHS
+// ------------------------------------------- ADMIN SIDE (Permohonan SK) -------------------------------------------
+// List semua pengajuan SK (Admin)
 export const getAllSktaRequests = async (params = {}) => {
   const response = await api.get('/api/skta-requests', { params });
-  return response.data;
+  return response.data;   
 };
 
 export const getSktaRequestById = async (id) => {
@@ -177,12 +128,7 @@ export const getSktaRequestById = async (id) => {
   return response.data;
 };
 
-// status SKTA Response: pending, approved, rejected, expired, revision_needed
-export const getAllSktaResponses = async () => {
-  const response = await api.get('/api/skta-responses');
-  return response.data;
-};
-
+// Response Admin
 export const getSktaResponseByRequestId = async (sktaRequestId) => {
   try {
     const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
@@ -201,10 +147,9 @@ export const createOrUpdateSktaResponse = async (payload) => {
   return api.post('/api/skta-responses', data);
 };
 
-// Upload File SK Final 
 export const uploadSkFinal = async (sktaResponseId, file) => {
   const formData = new FormData();
-  formData.append('file', file);        // sesuaikan nama field di backend
+  formData.append('file', file);
   formData.append('sktaResponseId', sktaResponseId);
 
   const response = await api.post(`/api/skta-responses/${sktaResponseId}/uploads`, formData, {
@@ -221,7 +166,11 @@ export const downloadEvidence = async (uploadId) => {
   return response.data;
 };
 
-// --------------------------------------------------------------------------------------------------
+// ------------------------------------------- LAINNYA (Sidang, dll) -------------------------------------------
+export const getLecturers = async () => api.get("/api/lecturers").then(r => r.data?.data ?? r.data);
+export const getFaculties = async () => api.get("/api/faculties").then(r => r.data?.data ?? r.data);
+export const getStudyPrograms = async () => api.get("/api/study-programs").then(r => r.data?.data ?? r.data);
+
 // get periode sidang
 export const getSidangPeriods = async () => {
   try {
@@ -263,3 +212,4 @@ export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
   return response.data?.data ?? response.data;
 };
 
+export default api;
