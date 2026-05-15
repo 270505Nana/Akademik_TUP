@@ -51,6 +51,9 @@ const removeUploadedFiles = (files) => {
 const listSktaRequests = asyncHandler(async (req, res) => {
   const sktaRequests = await prisma.sktaRequest.findMany({
     include: {
+      student: true,
+      dosenPembimbing1: true,
+      dosenPembimbing2: true,
       sktaRequestUploads: true,
     },
   });
@@ -92,7 +95,9 @@ const createSktaRequest = asyncHandler(async (req, res) => {
     });
     if (existingRequest) {
       res.status(409);
-      throw new Error("Mahasiswa sudah memiliki pengajuan SK. Untuk pembaruan SK yang expired, gunakan fitur perbarui SK.");
+      throw new Error(
+        "Mahasiswa sudah memiliki pengajuan SK. Untuk pembaruan SK yang expired, gunakan fitur perbarui SK.",
+      );
     }
     // Cek apakah ada data dospem 1
     const dosenPembimbing1 = await prisma.lecturer.findFirst({
@@ -171,12 +176,16 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
       where: { sktaRequestId: id },
     });
 
-    const isExpired = sktaResponse?.expDate && new Date(sktaResponse.expDate) < new Date();
-    const isEditable = sktaResponse?.isEdit && new Date(sktaResponse.isEdit) > new Date();
+    const isExpired =
+      sktaResponse?.expDate && new Date(sktaResponse.expDate) < new Date();
+    const isEditable =
+      sktaResponse?.isEdit && new Date(sktaResponse.isEdit) > new Date();
 
     if (!isExpired && !isEditable) {
       res.status(403);
-      throw new Error("Tidak dapat mengubah pengajuan SK ini. SK masih aktif atau belum mendapat izin edit.");
+      throw new Error(
+        "Tidak dapat mengubah pengajuan SK ini. SK masih aktif atau belum mendapat izin edit.",
+      );
     }
 
     const {
@@ -254,6 +263,9 @@ const findSktaRequestByStudentId = asyncHandler(async (req, res) => {
   const sktaRequest = await prisma.sktaRequest.findFirst({
     where: { studentId },
     include: {
+      student: true,
+      dosenPembimbing1: true,
+      dosenPembimbing2: true,
       sktaRequestUploads: true,
     },
   });
