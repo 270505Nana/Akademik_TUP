@@ -6,6 +6,7 @@ const {
   listStudents,
   upsertStudent,
   findStudentByUserId,
+  findStudentById,
 } = require("../../controllers/studentController");
 
 const { verifyToken } = require("../../middlewares/auth");
@@ -151,5 +152,34 @@ router.put(
  *         description: Internal server error
  */
 router.get("/:userId", verifyToken, findStudentByUserId);
+
+/**
+ * @swagger
+ * /api/students/{id}:
+ *   get:
+ *     summary: Get student data by ID
+ *     tags: [Student]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: User ID of student
+ *     responses:
+ *       200:
+ *         description: Student data retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
+ *       404:
+ *         description: Student data not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get("/:id", verifyToken, findStudentById);
 
 module.exports = router;

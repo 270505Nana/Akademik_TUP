@@ -81,8 +81,25 @@ const findStudentByUserId = asyncHandler(async (req, res) => {
   res.json({ data: student });
 });
 
+// Find Mahasiswa By Id
+const findStudentById = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  const student = await prisma.student.findUnique({
+    where: { id },
+  });
+
+  if (!student) {
+    res.status(404);
+    throw new Error("Student data not found");
+  }
+
+  res.json({ data: student });
+});
+
 module.exports = {
   listStudents,
   upsertStudent,
   findStudentByUserId,
+  findStudentById,
 };
