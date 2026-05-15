@@ -11,19 +11,13 @@ const ProtectedRoute = ({
   const { user, isAuthenticated } = useAuth();
   const { isComplete, isStudentLoading, fetchAndLoadStudent } = useStudent();
   const location = useLocation();
-
   const [isServerChecking, setIsServerChecking] = useState(false);
   const [serverCheckDone, setServerCheckDone] = useState(false);
-
-  // Normalisasi role (handle variasi dari backend)
   const userRole = user?.role?.toUpperCase()?.trim();
-
-  // Cek apakah user diizinkan masuk
   const hasRoleAccess = allowedRoles.length === 0 || 
                         allowedRoles.includes(userRole);
 
   useEffect(() => {
-    // Hanya jalankan untuk mahasiswa yang butuh data lengkap
     if (
       requireCompleteProfile &&
       user?.role === "STUDENT" &&
