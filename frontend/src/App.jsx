@@ -1,51 +1,27 @@
-import { AuthProvider }    from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 import { StudentProvider } from "./context/StudentContext";
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import "bootstrap-icons/font/bootstrap-icons.css";
+import 'bootstrap-icons/font/bootstrap-icons.css';
+import LoginPage           from "./pages/auth/Login";
+import RegisterPage        from "./pages/auth/Register";
+import LengkapiData        from "./pages/mahasiswa/LengkapiData";
+import DashboardMahasiswa  from "./pages/mahasiswa/dashboard";
+import DashboardAkademik   from "./pages/admin/dashboard";
+import DashboardDosen      from "./pages/dosen/dashboard";
+import PengajuanSK         from "./pages/mahasiswa/pengajuanSK";
+import PermohonanSK         from "./pages/admin/permohonanSK";
+import AturPeriode         from "./pages/admin/aturperiode";
+import AturBerkas          from "./pages/admin/requirementdocs";
+import UploadSKL           from "./pages/admin/skltranskrip";
 
-// Auth
-import LoginPage    from "./pages/auth/Login";
-import RegisterPage from "./pages/auth/Register";
-
-// Mahasiswa
-import LengkapiData       from "./pages/mahasiswa/LengkapiData";
-import DashboardMahasiswa from "./pages/mahasiswa/dashboard";
-import PengajuanSK        from "./pages/mahasiswa/pengajuanSK";
-import PendaftaranSidang  from "./pages/mahasiswa/pendaftaransidang";
-
-// Dosen
-import DashboardDosen from "./pages/dosen/dashboard";
-
-// Admin / Akademik
-import DashboardAkademik from "./pages/admin/dashboard";
-import PermohonanSK      from "./pages/admin/permohonanSK";
-import AturPeriode       from "./pages/admin/aturperiode";
-import AturBerkas        from "./pages/admin/requirementdocs";
-import UploadSKL         from "./pages/admin/skltranskrip";
-
-import ProtectedRoute from "./components/common/ProtectedRoute";
+import ProtectedRoute      from "./components/common/ProtectedRoute";
+import PendaftaranSidang from "./pages/mahasiswa/pendaftaransidang";
 
 const Placeholder = ({ title }) => (
-  <div style={{ padding: "2rem", textAlign: "center" }}>
+  <div style={{ padding: '2rem', textAlign: 'center' }}>
     <h2>{title} Page</h2>
     <p>This is a placeholder for the {title} feature.</p>
-  </div>
-);
-
-// ── 403 Forbidden ─────────────────────────────────────────────────────────────
-const ForbiddenPage = () => (
-  <div style={{ textAlign: "center", padding: "4rem" }}>
-    <h2>403 — Akses Ditolak</h2>
-    <p>Kamu tidak memiliki izin untuk mengakses halaman ini.</p>
-  </div>
-);
-
-// ── 404 Not Found ─────────────────────────────────────────────────────────────
-const NotFoundPage = () => (
-  <div style={{ textAlign: "center", padding: "4rem" }}>
-    <h2>404 — Halaman Tidak Ditemukan</h2>
-    <p>Halaman yang kamu cari tidak tersedia.</p>
   </div>
 );
 
@@ -55,8 +31,12 @@ const App = () => {
       <StudentProvider>
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
+
+          
           <Route path="/login"    element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+
+          {/* Lengkapi Data */}
           <Route
             path="/lengkapi-data"
             element={
@@ -65,26 +45,30 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* Mahasiswa */}
           <Route
             path="/mahasiswa/dashboard"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile>
+              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
                 <DashboardMahasiswa />
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/mahasiswa/pengajuan-sk"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile>
+              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
                 <PengajuanSK />
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/mahasiswa/pendaftaran-sidang"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile>
+              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
                 <PendaftaranSidang />
               </ProtectedRoute>
             }
@@ -92,13 +76,13 @@ const App = () => {
           <Route
             path="/mahasiswa/pendaftaran-yudisium"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile>
+              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
                 <Placeholder title="Pendaftaran Yudisium" />
               </ProtectedRoute>
             }
           />
 
-          {/* ── Dosen (LECTURER only) ──────────────────────────────────── */}
+          {/* Dosen */}
           <Route
             path="/dosen/dashboard"
             element={
@@ -108,11 +92,11 @@ const App = () => {
             }
           />
 
-          {/* ── Akademik / Admin ───────────────────────────────────────── */}
+          {/* Admin */}
           <Route
             path="/akademik/dashboard"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
                 <DashboardAkademik />
               </ProtectedRoute>
             }
@@ -120,7 +104,7 @@ const App = () => {
           <Route
             path="/akademik/atur-periode"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
                 <AturPeriode />
               </ProtectedRoute>
             }
@@ -128,7 +112,7 @@ const App = () => {
           <Route
             path="/akademik/permohonan-sk"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
                 <PermohonanSK />
               </ProtectedRoute>
             }
@@ -136,7 +120,7 @@ const App = () => {
           <Route
             path="/akademik/atur-berkas"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
                 <AturBerkas />
               </ProtectedRoute>
             }
@@ -144,16 +128,23 @@ const App = () => {
           <Route
             path="/akademik/upload-skl"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
                 <UploadSKL />
               </ProtectedRoute>
             }
           />
 
-          {/* ── Error pages ────────────────────────────────────────────── */}
-          <Route path="/forbidden" element={<ForbiddenPage />} />
-          <Route path="/not-found" element={<NotFoundPage />} />
-
+          {/* 403 Forbidden */}
+          <Route
+            path="/forbidden"
+            element={
+              <div style={{ textAlign: "center", padding: "4rem" }}>
+                <h2>403 — Akses Ditolak</h2>
+                <p>Kamu tidak memiliki izin untuk mengakses halaman ini.</p>
+              </div>
+            }
+          />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </StudentProvider>
     </AuthProvider>
