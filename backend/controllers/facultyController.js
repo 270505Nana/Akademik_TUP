@@ -42,7 +42,7 @@ const findFacultyById = asyncHandler(async (req, res) => {
     where: { id },
   });
 
-  if (!faculty || faculty.deletedAt !== null) {
+  if (!faculty || faculty.deletedAt != null) {
     res.status(404);
     throw new Error("Faculty not found");
   }
@@ -57,7 +57,7 @@ const updateFaculty = asyncHandler(async (req, res) => {
 
   const faculty = await prisma.faculty.findUnique({ where: { id } });
 
-  if (!faculty || faculty.deletedAt !== null) {
+  if (!faculty || faculty.deletedAt != null) {
     res.status(404);
     throw new Error("Faculty not found");
   }
@@ -81,7 +81,7 @@ const deleteFaculty = asyncHandler(async (req, res) => {
 
   const faculty = await prisma.faculty.findUnique({ where: { id } });
 
-  if (!faculty || faculty.deletedAt !== null) {
+  if (!faculty || faculty.deletedAt != null) {
     res.status(404);
     throw new Error("Faculty not found");
   }
@@ -103,7 +103,7 @@ const toggleFacultyPublish = asyncHandler(async (req, res) => {
 
   const faculty = await prisma.faculty.findUnique({ where: { id } });
 
-  if (!faculty || faculty.deletedAt !== null) {
+  if (!faculty || faculty.deletedAt != null) {
     res.status(404);
     throw new Error("Faculty not found");
   }

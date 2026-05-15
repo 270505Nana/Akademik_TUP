@@ -22,7 +22,7 @@ const createStudyProgram = asyncHandler(async (req, res) => {
     where: { id: facultyId },
   });
 
-  if (!faculty || faculty.deletedAt !== null) {
+  if (!faculty || faculty.deletedAt != null) {
     res.status(404);
     throw new Error("Faculty not found");
   }
@@ -51,7 +51,7 @@ const findStudyProgramById = asyncHandler(async (req, res) => {
     include: { faculty: true },
   });
 
-  if (!studyProgram || studyProgram.deletedAt !== null) {
+  if (!studyProgram || studyProgram.deletedAt != null) {
     res.status(404);
     throw new Error("Study program not found");
   }
@@ -68,7 +68,7 @@ const updateStudyProgram = asyncHandler(async (req, res) => {
     where: { id },
   });
 
-  if (!studyProgram || studyProgram.deletedAt !== null) {
+  if (!studyProgram || studyProgram.deletedAt != null) {
     res.status(404);
     throw new Error("Study program not found");
   }
@@ -79,7 +79,7 @@ const updateStudyProgram = asyncHandler(async (req, res) => {
       where: { id: facultyId },
     });
 
-    if (!faculty || faculty.deletedAt !== null) {
+    if (!faculty || faculty.deletedAt != null) {
       res.status(404);
       throw new Error("Faculty not found");
     }
@@ -108,7 +108,7 @@ const deleteStudyProgram = asyncHandler(async (req, res) => {
     where: { id },
   });
 
-  if (!studyProgram || studyProgram.deletedAt !== null) {
+  if (!studyProgram || studyProgram.deletedAt != null) {
     res.status(404);
     throw new Error("Study program not found");
   }
@@ -133,7 +133,7 @@ const toggleStudyProgramPublish = asyncHandler(async (req, res) => {
     where: { id },
   });
 
-  if (!studyProgram || studyProgram.deletedAt !== null) {
+  if (!studyProgram || studyProgram.deletedAt != null) {
     res.status(404);
     throw new Error("Study program not found");
   }
