@@ -28,7 +28,7 @@ const getSidangPeriodById = asyncHandler(async (req, res) => {
 
   if (!sidangPeriod) {
     res.status(404);
-    throw new Error("Sidang period not found");
+    throw new Error("Periode sidang tidak ditemukan");
   }
 
   res.json({
@@ -70,7 +70,7 @@ const updateSidangPeriod = asyncHandler(async (req, res) => {
 
   if (!sidangPeriodExists) {
     res.status(404);
-    throw new Error("Sidang period not found");
+    throw new Error("Periode sidang tidak ditemukan");
   }
 
   const sidangPeriod = await prisma.sidangPeriod.update({
@@ -104,7 +104,7 @@ const deleteSidangPeriod = asyncHandler(async (req, res) => {
 
   if (!sidangPeriodExists) {
     res.status(404);
-    throw new Error("Sidang period not found");
+    throw new Error("Periode sidang tidak ditemukan");
   }
 
   await prisma.sidangPeriod.update({

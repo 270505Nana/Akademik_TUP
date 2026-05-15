@@ -28,7 +28,7 @@ const getYudisiumPeriodById = asyncHandler(async (req, res) => {
 
   if (!yudisiumPeriod) {
     res.status(404);
-    throw new Error("Yudisium period not found");
+    throw new Error("Periode yudisium tidak ditemukan");
   }
 
   res.json({
@@ -70,7 +70,7 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
 
   if (!yudisiumPeriodExists) {
     res.status(404);
-    throw new Error("Yudisium period not found");
+    throw new Error("Periode yudisium tidak ditemukan");
   }
 
   const yudisiumPeriod = await prisma.sidangPeriod.update({
@@ -104,7 +104,7 @@ const deleteYudisiumPeriod = asyncHandler(async (req, res) => {
 
   if (!yudisiumPeriodExists) {
     res.status(404);
-    throw new Error("Yudisium period not found");
+    throw new Error("Periode yudisium tidak ditemukan");
   }
 
   await prisma.sidangPeriod.update({

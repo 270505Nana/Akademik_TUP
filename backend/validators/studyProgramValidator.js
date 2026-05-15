@@ -3,20 +3,20 @@ const { body } = require("express-validator");
 const createStudyProgramValidator = [
   body("name")
     .notEmpty()
-    .withMessage("Study program name is required")
+    .withMessage("Nama program studi wajib diisi")
     .bail()
     .isLength({ min: 3 })
-    .withMessage("Study program name must be at least 3 characters")
+    .withMessage("Nama program studi minimal 3 karakter")
     .bail()
     .isLength({ max: 100 })
-    .withMessage("Study program name must not exceed 100 characters")
+    .withMessage("Nama program studi maksimal 100 karakter")
     .trim(),
   body("facultyId")
     .notEmpty()
-    .withMessage("Faculty ID is required")
+    .withMessage("ID fakultas wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Faculty ID must be an integer")
+    .withMessage("ID fakultas harus berupa integer")
     .toInt(),
 ];
 
@@ -24,21 +24,21 @@ const updateStudyProgramValidator = [
   body("name")
     .optional()
     .notEmpty()
-    .withMessage("Study program name cannot be empty")
+    .withMessage("Nama program studi tidak boleh kosong")
     .bail()
     .isLength({ min: 3 })
-    .withMessage("Study program name must be at least 3 characters")
+    .withMessage("Nama program studi minimal 3 karakter")
     .bail()
     .isLength({ max: 100 })
-    .withMessage("Study program name must not exceed 100 characters")
+    .withMessage("Nama program studi maksimal 100 karakter")
     .trim(),
   body("facultyId")
     .optional()
     .notEmpty()
-    .withMessage("Faculty ID cannot be empty")
+    .withMessage("ID fakultas tidak boleh kosong")
     .bail()
     .isInt()
-    .withMessage("Faculty ID must be an integer")
+    .withMessage("ID fakultas harus berupa integer")
     .toInt(),
 ];
 

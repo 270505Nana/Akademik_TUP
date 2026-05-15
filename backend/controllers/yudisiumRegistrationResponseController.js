@@ -72,7 +72,7 @@ const getYudisiumRegistrationResponseById = asyncHandler(async (req, res) => {
 
   if (!response) {
     res.status(404);
-    throw new Error("Yudisium registration response not found");
+    throw new Error("Respon pendaftaran yudisium tidak ditemukan");
   }
 
   res.json({
@@ -116,7 +116,7 @@ const getYudisiumRegistrationResponseByYudisiumRegistrationId = asyncHandler(
 
     if (!response) {
       res.status(404);
-      throw new Error("Yudisium registration response not found");
+      throw new Error("Respon pendaftaran yudisium tidak ditemukan");
     }
 
     res.json({
@@ -136,7 +136,7 @@ const createYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (!yudisiumRegistrationExists) {
     res.status(404);
-    throw new Error("Yudisium registration not found");
+    throw new Error("Pendaftaran yudisium tidak ditemukan");
   }
 
   const academicStaffExists = await prisma.academicStaff.findUnique({
@@ -145,7 +145,7 @@ const createYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (!academicStaffExists) {
     res.status(404);
-    throw new Error("Academic staff not found");
+    throw new Error("Staf akademik tidak ditemukan");
   }
 
   const newResponse = await prisma.yudisiumRegistrationResponse.create({
@@ -206,7 +206,7 @@ const updateYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (!responseExists) {
     res.status(404);
-    throw new Error("Yudisium registration response not found");
+    throw new Error("Respon pendaftaran yudisium tidak ditemukan");
   }
 
   if (yudisiumRegistrationId) {
@@ -216,7 +216,7 @@ const updateYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
       });
     if (!yudisiumRegistrationExists) {
       res.status(404);
-      throw new Error("Yudisium registration not found");
+      throw new Error("Pendaftaran yudisium tidak ditemukan");
     }
   }
 
@@ -226,7 +226,7 @@ const updateYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
     });
     if (!academicStaffExists) {
       res.status(404);
-      throw new Error("Academic staff not found");
+      throw new Error("Staf akademik tidak ditemukan");
     }
   }
 
@@ -296,7 +296,7 @@ const deleteYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (!responseExists) {
     res.status(404);
-    throw new Error("Yudisium registration response not found");
+    throw new Error("Respon pendaftaran yudisium tidak ditemukan");
   }
 
   const deletedResponse = await prisma.yudisiumRegistrationResponse.update({

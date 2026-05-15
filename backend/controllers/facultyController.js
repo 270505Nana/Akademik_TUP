@@ -18,7 +18,7 @@ const createFaculty = asyncHandler(async (req, res) => {
 
   if (!name) {
     res.status(400);
-    throw new Error("Faculty name is required");
+    throw new Error("Nama fakultas wajib diisi");
   }
 
   const faculty = await prisma.faculty.create({
@@ -44,7 +44,7 @@ const findFacultyById = asyncHandler(async (req, res) => {
 
   if (!faculty || faculty.deletedAt != null) {
     res.status(404);
-    throw new Error("Faculty not found");
+    throw new Error("Fakultas tidak ditemukan");
   }
 
   res.json({ data: faculty });
@@ -59,7 +59,7 @@ const updateFaculty = asyncHandler(async (req, res) => {
 
   if (!faculty || faculty.deletedAt != null) {
     res.status(404);
-    throw new Error("Faculty not found");
+    throw new Error("Fakultas tidak ditemukan");
   }
 
   const updatedFaculty = await prisma.faculty.update({
@@ -83,7 +83,7 @@ const deleteFaculty = asyncHandler(async (req, res) => {
 
   if (!faculty || faculty.deletedAt != null) {
     res.status(404);
-    throw new Error("Faculty not found");
+    throw new Error("Fakultas tidak ditemukan");
   }
 
   const deletedFaculty = await prisma.faculty.update({
@@ -105,7 +105,7 @@ const toggleFacultyPublish = asyncHandler(async (req, res) => {
 
   if (!faculty || faculty.deletedAt != null) {
     res.status(404);
-    throw new Error("Faculty not found");
+    throw new Error("Fakultas tidak ditemukan");
   }
 
   const updatedFaculty = await prisma.faculty.update({

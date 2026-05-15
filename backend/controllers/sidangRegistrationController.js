@@ -123,7 +123,7 @@ const getSidangRegistrationById = asyncHandler(async (req, res) => {
 
   if (!sidangRegistration) {
     res.status(404);
-    throw new Error("Sidang registration not found");
+    throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
   sidangRegistration.sidangRegistrationUploads =
@@ -176,7 +176,7 @@ const getSidangRegistrationByStudentId = asyncHandler(async (req, res) => {
 
   if (!sidangRegistration) {
     res.status(404);
-    throw new Error("Sidang registration not found");
+    throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
   sidangRegistration.sidangRegistrationUploads =
@@ -215,7 +215,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     });
     if (!studentExists) {
       res.status(404);
-      throw new Error("Student not found");
+      throw new Error("Mahasiswa tidak ditemukan");
     }
   }
 
@@ -225,7 +225,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     });
     if (!dosenExists) {
       res.status(404);
-      throw new Error("Dosen pembimbing 1 not found");
+      throw new Error("Dosen pembimbing 1 tidak ditemukan");
     }
   }
 
@@ -235,7 +235,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     });
     if (!dosenExists) {
       res.status(404);
-      throw new Error("Dosen pembimbing 2 not found");
+      throw new Error("Dosen pembimbing 2 tidak ditemukan");
     }
   }
 
@@ -351,7 +351,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
 
   if (!existingRegistration) {
     res.status(404);
-    throw new Error("Sidang registration not found");
+    throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
   // Update field sebelum validasi (supaya merge)
@@ -399,7 +399,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   if (missingFields.length > 0) {
     res.status(400);
     throw new Error(
-      `Cannot submit. Missing required fields: ${missingFields.join(", ")}`,
+      `Tidak dapat submit. Field wajib belum lengkap: ${missingFields.join(", ")}`,
     );
   }
 
@@ -429,7 +429,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   if (missingFiles.length > 0) {
     res.status(400);
     throw new Error(
-      `Cannot submit. Missing required files: ${missingFiles.join(", ")}`,
+      `Tidak dapat submit. Berkas wajib belum lengkap: ${missingFiles.join(", ")}`,
     );
   }
 
@@ -440,7 +440,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     });
     if (!s) {
       res.status(404);
-      throw new Error("Student not found");
+      throw new Error("Mahasiswa tidak ditemukan");
     }
   }
   if (mergedData.dosenPembimbing1Id) {
@@ -449,7 +449,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     });
     if (!d1) {
       res.status(404);
-      throw new Error("Dosen 1 not found");
+      throw new Error("Dosen pembimbing 1 tidak ditemukan");
     }
   }
   if (mergedData.dosenPembimbing2Id) {
@@ -458,7 +458,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     });
     if (!d2) {
       res.status(404);
-      throw new Error("Dosen 2 not found");
+      throw new Error("Dosen pembimbing 2 tidak ditemukan");
     }
   }
 
@@ -490,7 +490,7 @@ const deleteSidangRegistration = asyncHandler(async (req, res) => {
 
   if (!sidangRegistrationExists) {
     res.status(404);
-    throw new Error("Sidang registration not found");
+    throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
   const deletedSidangRegistration = await prisma.sidangRegistration.update({
@@ -514,13 +514,13 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
 
   if (!file) {
     res.status(400);
-    throw new Error("No file uploaded");
+    throw new Error("Tidak ada file yang diunggah");
   }
 
   if (!slug || !name) {
     if (file.path) fs.unlink(file.path, () => {});
     res.status(400);
-    throw new Error("Slug and name are required");
+    throw new Error("Slug dan nama wajib diisi");
   }
 
   const sidangRegistrationExists = await prisma.sidangRegistration.findUnique({
@@ -530,7 +530,7 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
   if (!sidangRegistrationExists) {
     if (file.path) fs.unlink(file.path, () => {});
     res.status(404);
-    throw new Error("Sidang registration not found");
+    throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
   const existingUpload = await prisma.sidangRegistrationUpload.findFirst({
@@ -607,14 +607,14 @@ const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
 
   if (!upload) {
     res.status(404);
-    throw new Error("Upload not found");
+    throw new Error("Unggahan tidak ditemukan");
   }
 
   const filePath = path.resolve(process.cwd(), upload.path);
 
   if (!fs.existsSync(filePath)) {
     res.status(404);
-    throw new Error("File not found");
+    throw new Error("File tidak ditemukan");
   }
 
   res.download(filePath, upload.filename);

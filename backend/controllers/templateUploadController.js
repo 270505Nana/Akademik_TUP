@@ -70,7 +70,7 @@ const findTemplateUploadBySlug = asyncHandler(async (req, res) => {
   });
   if (!templateUpload) {
     res.status(404);
-    throw new Error("Template upload not found");
+    throw new Error("Unggahan template tidak ditemukan");
   }
 
   const data = withFileUrl(req, templateUpload);
@@ -94,7 +94,7 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
       }
 
       res.status(404);
-      throw new Error("Template upload not found");
+      throw new Error("Unggahan template tidak ditemukan");
     }
 
     const updatedTemplateUpload = await prisma.templateUpload.update({
@@ -137,7 +137,7 @@ const deleteTemplateUpload = asyncHandler(async (req, res) => {
   });
   if (!templateUpload) {
     res.status(404);
-    throw new Error("Template upload not found");
+    throw new Error("Unggahan template tidak ditemukan");
   }
 
   await prisma.templateUpload.update({
@@ -158,7 +158,7 @@ const downloadTemplateUpload = asyncHandler(async (req, res) => {
 
   if (!template) {
     res.status(404);
-    throw new Error("Template not found");
+    throw new Error("Template tidak ditemukan");
   }
 
   const filePath = path.resolve(process.cwd(), template.path);

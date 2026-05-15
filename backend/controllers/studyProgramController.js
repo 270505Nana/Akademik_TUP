@@ -24,7 +24,7 @@ const createStudyProgram = asyncHandler(async (req, res) => {
 
   if (!faculty || faculty.deletedAt != null) {
     res.status(404);
-    throw new Error("Faculty not found");
+    throw new Error("Fakultas tidak ditemukan");
   }
 
   const studyProgram = await prisma.studyProgram.create({
@@ -53,7 +53,7 @@ const findStudyProgramById = asyncHandler(async (req, res) => {
 
   if (!studyProgram || studyProgram.deletedAt != null) {
     res.status(404);
-    throw new Error("Study program not found");
+    throw new Error("Program studi tidak ditemukan");
   }
 
   res.json({ data: studyProgram });
@@ -70,7 +70,7 @@ const updateStudyProgram = asyncHandler(async (req, res) => {
 
   if (!studyProgram || studyProgram.deletedAt != null) {
     res.status(404);
-    throw new Error("Study program not found");
+    throw new Error("Program studi tidak ditemukan");
   }
 
   // If facultyId is provided, check if it exists
@@ -81,7 +81,7 @@ const updateStudyProgram = asyncHandler(async (req, res) => {
 
     if (!faculty || faculty.deletedAt != null) {
       res.status(404);
-      throw new Error("Faculty not found");
+      throw new Error("Fakultas tidak ditemukan");
     }
   }
 
@@ -110,7 +110,7 @@ const deleteStudyProgram = asyncHandler(async (req, res) => {
 
   if (!studyProgram || studyProgram.deletedAt != null) {
     res.status(404);
-    throw new Error("Study program not found");
+    throw new Error("Program studi tidak ditemukan");
   }
 
   const deletedStudyProgram = await prisma.studyProgram.update({
@@ -135,7 +135,7 @@ const toggleStudyProgramPublish = asyncHandler(async (req, res) => {
 
   if (!studyProgram || studyProgram.deletedAt != null) {
     res.status(404);
-    throw new Error("Study program not found");
+    throw new Error("Program studi tidak ditemukan");
   }
 
   const updatedStudyProgram = await prisma.studyProgram.update({

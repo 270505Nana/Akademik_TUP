@@ -19,11 +19,11 @@ const upsertLecturer = asyncHandler(async (req, res) => {
   const user = await prisma.user.findFirst({ where: { id: userId } });
   if (!user) {
     res.status(404);
-    throw new Error("User not found");
+    throw new Error("Pengguna tidak ditemukan");
   }
   if (user.role !== "LECTURER") {
     res.status(400);
-    throw new Error("User is not an lecturer");
+    throw new Error("Pengguna bukan dosen");
   }
 
   const { nip, nidn, lecturerCode, name, researchGroupId } = req.body;
@@ -50,7 +50,7 @@ const findLecturerByUserId = asyncHandler(async (req, res) => {
 
   if (!lecturer) {
     res.status(404);
-    throw new Error("Lecturer data not found");
+    throw new Error("Data dosen tidak ditemukan");
   }
 
   res.json({ data: lecturer });

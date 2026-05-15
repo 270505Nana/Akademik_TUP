@@ -3,98 +3,98 @@ const { body } = require("express-validator");
 const submitYudisiumRegistrationValidator = [
   body("id")
     .notEmpty()
-    .withMessage("ID is required for submission")
+    .withMessage("ID wajib diisi untuk submit")
     .isInt()
-    .withMessage("ID must be an integer")
+    .withMessage("ID harus berupa integer")
     .toInt(),
 
   body("programType")
     .notEmpty()
-    .withMessage("Program type is required")
+    .withMessage("Tipe program wajib diisi")
     .isString()
-    .withMessage("Program type must be a string"),
+    .withMessage("Tipe program harus berupa string"),
 
   body("tak")
     .notEmpty()
-    .withMessage("TAK is required")
+    .withMessage("TAK wajib diisi")
     .bail()
     .isInt()
-    .withMessage("TAK must be an integer")
+    .withMessage("TAK harus berupa integer")
     .toInt(),
 
   body("thesisTitleId")
     .notEmpty()
-    .withMessage("Thesis title ID is required")
+    .withMessage("Judul TA (ID) wajib diisi")
     .isString()
-    .withMessage("Thesis title ID must be a string"),
+    .withMessage("Judul TA (ID) harus berupa string"),
 
   body("thesisTitleEn")
     .notEmpty()
-    .withMessage("Thesis title EN is required")
+    .withMessage("Judul TA (EN) wajib diisi")
     .isString()
-    .withMessage("Thesis title EN must be a string"),
+    .withMessage("Judul TA (EN) harus berupa string"),
 
   body("isConfirmed")
     .notEmpty()
-    .withMessage("Confirmation is required")
+    .withMessage("Konfirmasi wajib diisi")
     .isBoolean()
-    .withMessage("Confirmation must be a boolean")
+    .withMessage("Konfirmasi harus berupa boolean")
     .toBoolean(),
 
   body("studentId")
     .notEmpty()
-    .withMessage("Student ID is required")
+    .withMessage("ID mahasiswa wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Student ID must be an integer")
+    .withMessage("ID mahasiswa harus berupa integer")
     .toInt(),
 
   body("dosenPembimbing1Id")
     .notEmpty()
-    .withMessage("Dosen pembimbing 1 ID is required")
+    .withMessage("ID dosen pembimbing 1 wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Dosen pembimbing 1 ID must be an integer")
+    .withMessage("ID dosen pembimbing 1 harus berupa integer")
     .toInt(),
 
   body("dosenPembimbing2Id")
     .notEmpty()
-    .withMessage("Dosen pembimbing 2 ID is required")
+    .withMessage("ID dosen pembimbing 2 wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Dosen pembimbing 2 ID must be an integer")
+    .withMessage("ID dosen pembimbing 2 harus berupa integer")
     .toInt(),
 
   body("sidangScheme")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Sidang scheme must be a string if provided"),
+    .withMessage("Skema sidang harus berupa string jika diisi"),
 
   body("cumlaudeScheme")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Cumlaude scheme must be a string if provided"),
+    .withMessage("Skema cumlaude harus berupa string jika diisi"),
 
   body("jalurNonYudisium")
     .optional({ nullable: true })
     .isArray()
-    .withMessage("Jalur non yudisium must be an array if provided"),
+    .withMessage("Jalur non yudisium harus berupa array jika diisi"),
 
   body("eviden_cumlaude")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Eviden cumlaude must be a string"),
+    .withMessage("Eviden cumlaude harus berupa string"),
 
   body("yudisiumPeriodId")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Yudisium period ID must be an integer")
+    .withMessage("ID periode yudisium harus berupa integer")
     .toInt(),
 
   body("yudisiumRegistrationPeriodId")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Yudisium registration period ID must be an integer")
+    .withMessage("ID periode pendaftaran yudisium harus berupa integer")
     .toInt(),
 ];
 
@@ -102,84 +102,84 @@ const saveYudisiumRegistrationValidator = [
   body("id")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("ID must be an integer")
+    .withMessage("ID harus berupa integer")
     .toInt(),
 
   body("programType")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Program type must be a string"),
+    .withMessage("Tipe program harus berupa string"),
 
   body("tak")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("TAK must be an integer")
+    .withMessage("TAK harus berupa integer")
     .toInt(),
 
   body("thesisTitleId")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Thesis title ID must be a string"),
+    .withMessage("Judul TA (ID) harus berupa string"),
 
   body("thesisTitleEn")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Thesis title EN must be a string"),
+    .withMessage("Judul TA (EN) harus berupa string"),
 
   body("isConfirmed")
     .optional({ nullable: true })
     .isBoolean()
-    .withMessage("Confirmation must be a boolean")
+    .withMessage("Konfirmasi harus berupa boolean")
     .toBoolean(),
 
   body("sidangScheme")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Sidang scheme must be a string if provided"),
+    .withMessage("Skema sidang harus berupa string jika diisi"),
 
   body("cumlaudeScheme")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Cumlaude scheme must be a string if provided"),
+    .withMessage("Skema cumlaude harus berupa string jika diisi"),
 
   body("jalurNonYudisium")
     .optional({ nullable: true })
     .isArray()
-    .withMessage("Jalur non yudisium must be an array if provided"),
+    .withMessage("Jalur non yudisium harus berupa array jika diisi"),
 
   body("eviden_cumlaude")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Eviden cumlaude must be a string"),
+    .withMessage("Eviden cumlaude harus berupa string"),
 
   body("studentId")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Student ID must be an integer")
+    .withMessage("ID mahasiswa harus berupa integer")
     .toInt(),
 
   body("dosenPembimbing1Id")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Dosen pembimbing 1 ID must be an integer")
+    .withMessage("ID dosen pembimbing 1 harus berupa integer")
     .toInt(),
 
   body("dosenPembimbing2Id")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Dosen pembimbing 2 ID must be an integer")
+    .withMessage("ID dosen pembimbing 2 harus berupa integer")
     .toInt(),
 
   body("yudisiumPeriodId")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Yudisium period ID must be an integer")
+    .withMessage("ID periode yudisium harus berupa integer")
     .toInt(),
 
   body("yudisiumRegistrationPeriodId")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Yudisium registration period ID must be an integer")
+    .withMessage("ID periode pendaftaran yudisium harus berupa integer")
     .toInt(),
 ];
 

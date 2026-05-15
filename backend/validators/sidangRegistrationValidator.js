@@ -3,91 +3,93 @@ const { body } = require("express-validator");
 const submitSidangRegistrationValidator = [
   body("id")
     .notEmpty()
-    .withMessage("ID is required for submission")
+    .withMessage("ID wajib diisi untuk submit")
     .isInt()
-    .withMessage("ID must be an integer")
+    .withMessage("ID harus berupa integer")
     .toInt(),
 
   body("programType")
     .notEmpty()
-    .withMessage("Program type is required")
+    .withMessage("Tipe program wajib diisi")
     .isString()
-    .withMessage("Program type must be a string"),
+    .withMessage("Tipe program harus berupa string"),
 
   body("sidangScheme")
     .optional({ nullable: true })
     .isArray()
-    .withMessage("Sidang scheme must be an array if provided"),
+    .withMessage("Skema sidang harus berupa array jika diisi"),
 
   body("jalurNonSidang")
     .optional({ nullable: true })
     .isArray()
-    .withMessage("Jalur non sidang must be an array if provided"),
+    .withMessage("Jalur non sidang harus berupa array jika diisi"),
 
   body("sks")
     .notEmpty()
-    .withMessage("SKS is required")
+    .withMessage("SKS wajib diisi")
     .bail()
     .isInt()
-    .withMessage("SKS must be an integer")
+    .withMessage("SKS harus berupa integer")
     .toInt(),
 
   body("ipk")
     .notEmpty()
-    .withMessage("IPK is required")
+    .withMessage("IPK wajib diisi")
     .bail()
     .isFloat()
-    .withMessage("IPK must be a float")
+    .withMessage("IPK harus berupa float")
     .toFloat(),
 
   body("tak")
     .notEmpty()
-    .withMessage("TAK is required")
+    .withMessage("TAK wajib diisi")
     .bail()
     .isInt()
-    .withMessage("TAK must be an integer")
+    .withMessage("TAK harus berupa integer")
     .toInt(),
 
   body("sktaExpDate")
     .notEmpty()
-    .withMessage("SKTA exp date is required")
+    .withMessage("Tanggal berlaku SKTA wajib diisi")
     .isISO8601()
-    .withMessage("SKTA exp date must be a valid date (ISO 8601 format)"),
+    .withMessage(
+      "Tanggal berlaku SKTA harus berupa tanggal yang valid (format ISO 8601)",
+    ),
 
   body("thesisTitleId")
     .notEmpty()
-    .withMessage("Thesis title ID is required")
+    .withMessage("Judul TA (ID) wajib diisi")
     .isString()
-    .withMessage("Thesis title ID must be a string"),
+    .withMessage("Judul TA (ID) harus berupa string"),
 
   body("thesisTitleEn")
     .notEmpty()
-    .withMessage("Thesis title EN is required")
+    .withMessage("Judul TA (EN) wajib diisi")
     .isString()
-    .withMessage("Thesis title EN must be a string"),
+    .withMessage("Judul TA (EN) harus berupa string"),
 
   body("studentId")
     .notEmpty()
-    .withMessage("Student ID is required")
+    .withMessage("ID mahasiswa wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Student ID must be an integer")
+    .withMessage("ID mahasiswa harus berupa integer")
     .toInt(),
 
   body("dosenPembimbing1Id")
     .notEmpty()
-    .withMessage("Dosen pembimbing 1 ID is required")
+    .withMessage("ID dosen pembimbing 1 wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Dosen pembimbing 1 ID must be an integer")
+    .withMessage("ID dosen pembimbing 1 harus berupa integer")
     .toInt(),
 
   body("dosenPembimbing2Id")
     .notEmpty()
-    .withMessage("Dosen pembimbing 2 ID is required")
+    .withMessage("ID dosen pembimbing 2 wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Dosen pembimbing 2 ID must be an integer")
+    .withMessage("ID dosen pembimbing 2 harus berupa integer")
     .toInt(),
 ];
 
@@ -95,61 +97,75 @@ const saveSidangRegistrationValidator = [
   body("id")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("ID must be an integer")
+    .withMessage("ID harus berupa integer")
     .toInt(),
 
   body("programType")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Program type must be a string"),
+    .withMessage("Tipe program harus berupa string"),
 
   body("sidangScheme")
     .optional({ nullable: true })
     .isArray()
-    .withMessage("Sidang scheme must be an array if provided"),
+    .withMessage("Skema sidang harus berupa array jika diisi"),
 
   body("jalurNonSidang")
     .optional({ nullable: true })
     .isArray()
-    .withMessage("Jalur non sidang must be an array if provided"),
+    .withMessage("Jalur non sidang harus berupa array jika diisi"),
 
-  body("sks").optional({ nullable: true }).isInt().withMessage("SKS must be an integer").toInt(),
+  body("sks")
+    .optional({ nullable: true })
+    .isInt()
+    .withMessage("SKS harus berupa integer")
+    .toInt(),
 
-  body("ipk").optional({ nullable: true }).isFloat().withMessage("IPK must be a float").toFloat(),
+  body("ipk")
+    .optional({ nullable: true })
+    .isFloat()
+    .withMessage("IPK harus berupa float")
+    .toFloat(),
 
-  body("tak").optional({ nullable: true }).isInt().withMessage("TAK must be an integer").toInt(),
+  body("tak")
+    .optional({ nullable: true })
+    .isInt()
+    .withMessage("TAK harus berupa integer")
+    .toInt(),
 
   body("sktaExpDate")
     .optional({ nullable: true })
     .isISO8601()
-    .withMessage("SKTA exp date must be a valid date (ISO 8601 format)"),
+    .withMessage(
+      "Tanggal berlaku SKTA harus berupa tanggal yang valid (format ISO 8601)",
+    ),
 
   body("thesisTitleId")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Thesis title ID must be a string"),
+    .withMessage("Judul TA (ID) harus berupa string"),
 
   body("thesisTitleEn")
     .optional({ nullable: true })
     .isString()
-    .withMessage("Thesis title EN must be a string"),
+    .withMessage("Judul TA (EN) harus berupa string"),
 
   body("studentId")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Student ID must be an integer")
+    .withMessage("ID mahasiswa harus berupa integer")
     .toInt(),
 
   body("dosenPembimbing1Id")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Dosen pembimbing 1 ID must be an integer")
+    .withMessage("ID dosen pembimbing 1 harus berupa integer")
     .toInt(),
 
   body("dosenPembimbing2Id")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("Dosen pembimbing 2 ID must be an integer")
+    .withMessage("ID dosen pembimbing 2 harus berupa integer")
     .toInt(),
 ];
 

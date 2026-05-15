@@ -86,7 +86,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
     });
     if (!student) {
       res.status(404);
-      throw new Error("Student not found");
+      throw new Error("Mahasiswa tidak ditemukan");
     }
 
     // cek pengajuan MHS sebelumnya, udh ada atau belum
@@ -105,7 +105,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
     });
     if (!dosenPembimbing1) {
       res.status(404);
-      throw new Error("Dosen pembimbing 1 not found");
+      throw new Error("Dosen pembimbing 1 tidak ditemukan");
     }
 
     // Cek apakah ada data dospem 2
@@ -114,7 +114,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
     });
     if (!dosenPembimbing2) {
       res.status(404);
-      throw new Error("Dosen pembimbing 2 not found");
+      throw new Error("Dosen pembimbing 2 tidak ditemukan");
     }
 
     const data = await prisma.sktaRequest.create({
@@ -204,7 +204,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
     });
     if (!student) {
       res.status(404);
-      throw new Error("Student not found");
+      throw new Error("Mahasiswa tidak ditemukan");
     }
 
     // Cek apakah ada data dospem 1
@@ -213,7 +213,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
     });
     if (!dosenPembimbing1) {
       res.status(404);
-      throw new Error("Lecturer 1 not found");
+      throw new Error("Dosen pembimbing 1 tidak ditemukan");
     }
 
     // Cek apakah ada data dospem 2
@@ -222,7 +222,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
     });
     if (!dosenPembimbing2) {
       res.status(404);
-      throw new Error("Lecturer 2 not found");
+      throw new Error("Dosen pembimbing 2 tidak ditemukan");
     }
 
     const data = await prisma.sktaRequest.update({
@@ -272,7 +272,7 @@ const findSktaRequestByStudentId = asyncHandler(async (req, res) => {
 
   if (!sktaRequest) {
     res.status(404);
-    throw new Error("SKTA request data not found");
+    throw new Error("Data pengajuan SKTA tidak ditemukan");
   }
 
   res.json({ data: withSktaRequestDownloadUrls(req, sktaRequest) });
@@ -287,14 +287,14 @@ const downloadSktaRequestUpload = asyncHandler(async (req, res) => {
 
   if (!upload) {
     res.status(404);
-    throw new Error("SKTA request upload not found");
+    throw new Error("Unggahan pengajuan SKTA tidak ditemukan");
   }
 
   const filePath = path.resolve(process.cwd(), upload.path);
 
   if (!fs.existsSync(filePath)) {
     res.status(404);
-    throw new Error("File not found");
+    throw new Error("File tidak ditemukan");
   }
 
   res.download(filePath, upload.filename);

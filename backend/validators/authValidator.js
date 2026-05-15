@@ -9,19 +9,19 @@ const STUDENT_EMAIL_DOMAIN = "student.telkomuniversity.ac.id";
 const TELKOM_EMAIL_DOMAIN = "telkomuniversity.ac.id";
 
 const registerValidator = [
-  body("username").notEmpty().withMessage("Username is required"),
+  body("username").notEmpty().withMessage("Username wajib diisi"),
 
   body("email")
     .notEmpty()
-    .withMessage("Email is required")
+    .withMessage("Email wajib diisi")
     .isEmail()
-    .withMessage("Invalid email")
+    .withMessage("Email tidak valid")
     .custom((value) => {
       const emailDomain = value.toLowerCase().split("@")[1];
 
       if (!ALLOWED_EMAIL_DOMAINS.includes(emailDomain)) {
         throw new Error(
-          "Email domain must be student.telkomuniversity.ac.id or telkomuniversity.ac.id",
+          "Domain email harus student.telkomuniversity.ac.id atau telkomuniversity.ac.id",
         );
       }
 
@@ -31,20 +31,20 @@ const registerValidator = [
   body("phone")
     .optional({ nullable: true })
     .isMobilePhone()
-    .withMessage("Invalid phone number"),
+    .withMessage("Nomor telepon tidak valid"),
 
   body("password")
     .notEmpty()
-    .withMessage("Password is required")
+    .withMessage("Kata sandi wajib diisi")
     .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters"),
+    .withMessage("Kata sandi minimal 8 karakter"),
 
   body("confirmPassword")
     .notEmpty()
-    .withMessage("Confirm password is required")
+    .withMessage("Konfirmasi kata sandi wajib diisi")
     .custom((value, { req }) => {
       if (value !== req.body.password) {
-        throw new Error("Confirm password does not match");
+        throw new Error("Konfirmasi kata sandi tidak cocok");
       }
       return true;
     }),
@@ -63,7 +63,7 @@ const registerValidator = [
       }
 
       if (normalizedRole !== "STUDENT") {
-        throw new Error("Role must be STUDENT for student email domain");
+        throw new Error("Role harus STUDENT untuk domain email mahasiswa");
       }
 
       return true;
@@ -76,13 +76,13 @@ const registerValidator = [
         normalizedRole === ""
       ) {
         throw new Error(
-          "Role is required for telkomuniversity.ac.id email domain",
+          "Role wajib diisi untuk domain email telkomuniversity.ac.id",
         );
       }
 
       if (!["LECTURER", "ACADEMIC_STAFF"].includes(normalizedRole)) {
         throw new Error(
-          "Role must be LECTURER or ACADEMIC_STAFF for telkomuniversity.ac.id email domain",
+          "Role harus LECTURER atau ACADEMIC_STAFF untuk domain email telkomuniversity.ac.id",
         );
       }
 
@@ -90,7 +90,7 @@ const registerValidator = [
     }
 
     throw new Error(
-      "Email domain must be student.telkomuniversity.ac.id or telkomuniversity.ac.id",
+      "Domain email harus student.telkomuniversity.ac.id atau telkomuniversity.ac.id",
     );
   }),
 ];
@@ -98,15 +98,15 @@ const registerValidator = [
 const loginValidator = [
   body("email")
     .notEmpty()
-    .withMessage("Email is required")
+    .withMessage("Email wajib diisi")
     .isEmail()
-    .withMessage("Invalid email"),
+    .withMessage("Email tidak valid"),
 
   body("password")
     .notEmpty()
-    .withMessage("Password is required")
+    .withMessage("Kata sandi wajib diisi")
     .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters"),
+    .withMessage("Kata sandi minimal 8 karakter"),
 ];
 
 module.exports = { registerValidator, loginValidator };

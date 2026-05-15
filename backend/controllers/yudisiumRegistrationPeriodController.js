@@ -30,7 +30,7 @@ const getYudisiumRegistrationPeriodById = asyncHandler(async (req, res) => {
 
   if (!yudisiumRegistrationPeriod) {
     res.status(404);
-    throw new Error("Yudisium registration period not found");
+    throw new Error("Periode pendaftaran yudisium tidak ditemukan");
   }
 
   res.json({
@@ -74,7 +74,7 @@ const updateYudisiumRegistrationPeriod = asyncHandler(async (req, res) => {
 
   if (!yudisiumRegistrationPeriodExists) {
     res.status(404);
-    throw new Error("Yudisium registration period not found");
+    throw new Error("Periode pendaftaran yudisium tidak ditemukan");
   }
 
   const yudisiumRegistrationPeriod =
@@ -110,7 +110,7 @@ const deleteYudisiumRegistrationPeriod = asyncHandler(async (req, res) => {
 
   if (!yudisiumRegistrationPeriodExists) {
     res.status(404);
-    throw new Error("Yudisium registration period not found");
+    throw new Error("Periode pendaftaran yudisium tidak ditemukan");
   }
 
   await prisma.sidangRegistrationPeriod.update({

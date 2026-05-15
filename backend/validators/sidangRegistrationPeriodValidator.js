@@ -3,47 +3,56 @@ const { body } = require("express-validator");
 const createSidangRegistrationPeriodValidator = [
   body("name")
     .notEmpty()
-    .withMessage("Name is required")
+    .withMessage("Nama wajib diisi")
     .isString()
-    .withMessage("Name must be a string"),
+    .withMessage("Nama harus berupa string"),
 
   body("startDate")
     .notEmpty()
-    .withMessage("Start date is required")
+    .withMessage("Tanggal mulai wajib diisi")
     .isISO8601()
-    .withMessage("Start date must be a valid date (ISO 8601 format)")
+    .withMessage(
+      "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)",
+    )
     .custom((value) => {
       if (new Date(value) < new Date()) {
-        throw new Error("Start date cannot be in the past");
+        throw new Error("Tanggal mulai tidak boleh di masa lalu");
       }
       return true;
     }),
 
   body("endDate")
     .notEmpty()
-    .withMessage("End date is required")
+    .withMessage("Tanggal selesai wajib diisi")
     .isISO8601()
-    .withMessage("End date must be a valid date (ISO 8601 format)")
+    .withMessage(
+      "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)",
+    )
     .custom((value, { req }) => {
       if (new Date(value) <= new Date(req.body.startDate)) {
-        throw new Error("End date must be after start date");
+        throw new Error("Tanggal selesai harus setelah tanggal mulai");
       }
       return true;
     }),
 
-  body("isOpen").optional().isBoolean().withMessage("isOpen must be a boolean"),
+  body("isOpen")
+    .optional()
+    .isBoolean()
+    .withMessage("isOpen harus berupa boolean"),
 ];
 
 const updateSidangRegistrationPeriodValidator = [
-  body("name").optional().isString().withMessage("Name must be a string"),
+  body("name").optional().isString().withMessage("Nama harus berupa string"),
 
   body("startDate")
     .optional()
     .isISO8601()
-    .withMessage("Start date must be a valid date (ISO 8601 format)")
+    .withMessage(
+      "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)",
+    )
     .custom((value) => {
       if (new Date(value) < new Date()) {
-        throw new Error("Start date cannot be in the past");
+        throw new Error("Tanggal mulai tidak boleh di masa lalu");
       }
       return true;
     }),
@@ -51,16 +60,21 @@ const updateSidangRegistrationPeriodValidator = [
   body("endDate")
     .optional()
     .isISO8601()
-    .withMessage("End date must be a valid date (ISO 8601 format)")
+    .withMessage(
+      "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)",
+    )
     .custom((value, { req }) => {
       const startDate = req.body.startDate || req.body.existingStartDate;
       if (new Date(value) <= new Date(startDate)) {
-        throw new Error("End date must be after start date");
+        throw new Error("Tanggal selesai harus setelah tanggal mulai");
       }
       return true;
     }),
 
-  body("isOpen").optional().isBoolean().withMessage("isOpen must be a boolean"),
+  body("isOpen")
+    .optional()
+    .isBoolean()
+    .withMessage("isOpen harus berupa boolean"),
 ];
 
 module.exports = {

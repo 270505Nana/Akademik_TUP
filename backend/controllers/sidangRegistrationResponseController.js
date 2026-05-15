@@ -72,7 +72,7 @@ const getSidangRegistrationResponseById = asyncHandler(async (req, res) => {
 
   if (!response) {
     res.status(404);
-    throw new Error("Sidang registration response not found");
+    throw new Error("Respon pendaftaran sidang tidak ditemukan");
   }
 
   res.json({
@@ -116,7 +116,7 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
 
     if (!response) {
       res.status(404);
-      throw new Error("Sidang registration response not found");
+      throw new Error("Respon pendaftaran sidang tidak ditemukan");
     }
 
     res.json({
@@ -136,7 +136,7 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (!sidangRegistrationExists) {
     res.status(404);
-    throw new Error("Sidang registration not found");
+    throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
   // Validate academic staff exists
@@ -146,7 +146,7 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (!academicStaffExists) {
     res.status(404);
-    throw new Error("Academic staff not found");
+    throw new Error("Staf akademik tidak ditemukan");
   }
 
   const newResponse = await prisma.sidangRegistrationResponse.create({
@@ -208,7 +208,7 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (!responseExists) {
     res.status(404);
-    throw new Error("Sidang registration response not found");
+    throw new Error("Respon pendaftaran sidang tidak ditemukan");
   }
 
   // Validate foreign keys if provided
@@ -220,7 +220,7 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
     );
     if (!sidangRegistrationExists) {
       res.status(404);
-      throw new Error("Sidang registration not found");
+      throw new Error("Pendaftaran sidang tidak ditemukan");
     }
   }
 
@@ -230,14 +230,16 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
     });
     if (!academicStaffExists) {
       res.status(404);
-      throw new Error("Academic staff not found");
+      throw new Error("Staf akademik tidak ditemukan");
     }
   }
 
   const updateData = {};
   if (message !== undefined) updateData.message = message;
-  if (isEdit !== undefined) updateData.isEdit = isEdit ? new Date(isEdit) : null;
-  if (academicStaffId !== undefined) updateData.academicStaffId = academicStaffId;
+  if (isEdit !== undefined)
+    updateData.isEdit = isEdit ? new Date(isEdit) : null;
+  if (academicStaffId !== undefined)
+    updateData.academicStaffId = academicStaffId;
   if (sidangRegistrationId !== undefined)
     updateData.sidangRegistrationId = sidangRegistrationId;
 
@@ -270,7 +272,11 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (isEdit) {
     await prisma.sidangRegistration.update({
-      where: { id: updateData.sidangRegistrationId || responseExists.sidangRegistrationId },
+      where: {
+        id:
+          updateData.sidangRegistrationId ||
+          responseExists.sidangRegistrationId,
+      },
       data: { isDraft: true },
     });
   }
@@ -295,7 +301,7 @@ const deleteSidangRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (!responseExists) {
     res.status(404);
-    throw new Error("Sidang registration response not found");
+    throw new Error("Respon pendaftaran sidang tidak ditemukan");
   }
 
   const deletedResponse = await prisma.sidangRegistrationResponse.update({

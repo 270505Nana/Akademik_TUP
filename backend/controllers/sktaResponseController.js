@@ -32,7 +32,7 @@ const createSktaResponse = asyncHandler(async (req, res) => {
     });
     if (!academicStaff) {
       res.status(404);
-      throw new Error("Academic staff not found");
+      throw new Error("Staf akademik tidak ditemukan");
     }
 
     // Cek apakah ada data request
@@ -41,7 +41,7 @@ const createSktaResponse = asyncHandler(async (req, res) => {
     });
     if (!sktaRequest) {
       res.status(404);
-      throw new Error("SKTA request not found");
+      throw new Error("Pengajuan SKTA tidak ditemukan");
     }
 
     const data = await prisma.sktaResponse.create({
@@ -87,7 +87,7 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
     const sktaResponse = await prisma.sktaResponse.findFirst({ where: { id } });
     if (!sktaResponse) {
       res.status(404);
-      throw new Error("SKTA response not found");
+      throw new Error("Respon SKTA tidak ditemukan");
     }
 
     const {
@@ -108,7 +108,7 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
     });
     if (!academicStaff) {
       res.status(404);
-      throw new Error("Academic staff not found");
+      throw new Error("Staf akademik tidak ditemukan");
     }
 
     // Cek apakah ada data request
@@ -117,7 +117,7 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
     });
     if (!sktaRequest) {
       res.status(404);
-      throw new Error("SKTA request not found");
+      throw new Error("Pengajuan SKTA tidak ditemukan");
     }
 
     const data = await prisma.sktaResponse.update({
@@ -163,17 +163,17 @@ const findSktaResponseBySktaRequestId = asyncHandler(async (req, res) => {
   // const sktaResponse = await prisma.sktaResponse.findUnique({
   //   where: { sktaRequestId },
   // });
-    // update karna error, ngga bisa kalau findUniqueId waktu dimplementasi di fe, ada perbedaan sm prisma
-    const sktaResponse = await prisma.sktaResponse.findFirst({
+  // update karna error, ngga bisa kalau findUniqueId waktu dimplementasi di fe, ada perbedaan sm prisma
+  const sktaResponse = await prisma.sktaResponse.findFirst({
     where: {
-      sktaRequestId: sktaRequestId,  
-      deletedAt: null,               
+      sktaRequestId: sktaRequestId,
+      deletedAt: null,
     },
   });
 
   if (!sktaResponse) {
     res.status(404);
-    throw new Error("SKTA response data not found");
+    throw new Error("Data respon SKTA tidak ditemukan");
   }
 
   res.json({ data: sktaResponse });

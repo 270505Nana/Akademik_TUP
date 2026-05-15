@@ -20,14 +20,14 @@ const register = asyncHandler(async (req, res) => {
   ) {
     res.status(400);
     throw new Error(
-      "Email domain must be student.telkomuniversity.ac.id or telkomuniversity.ac.id",
+      "Domain email harus student.telkomuniversity.ac.id atau telkomuniversity.ac.id",
     );
   }
 
   if (emailDomain === STUDENT_EMAIL_DOMAIN) {
     if (normalizedRole && normalizedRole !== "STUDENT") {
       res.status(400);
-      throw new Error("Role must be STUDENT for student email domain");
+      throw new Error("Role harus STUDENT untuk domain email mahasiswa");
     }
   }
 
@@ -35,14 +35,14 @@ const register = asyncHandler(async (req, res) => {
     if (!normalizedRole) {
       res.status(400);
       throw new Error(
-        "Role is required for telkomuniversity.ac.id email domain",
+        "Role wajib diisi untuk domain email telkomuniversity.ac.id",
       );
     }
 
     if (!["LECTURER", "ACADEMIC_STAFF"].includes(normalizedRole)) {
       res.status(400);
       throw new Error(
-        "Role must be LECTURER or ACADEMIC_STAFF for telkomuniversity.ac.id email domain",
+        "Role harus LECTURER atau ACADEMIC_STAFF untuk domain email telkomuniversity.ac.id",
       );
     }
   }
@@ -50,14 +50,14 @@ const register = asyncHandler(async (req, res) => {
   const existingEmail = await prisma.user.findUnique({ where: { email } });
   if (existingEmail) {
     res.status(400);
-    throw new Error("Email already used");
+    throw new Error("Email sudah digunakan");
   }
 
   if (phone) {
     const existingPhone = await prisma.user.findUnique({ where: { phone } });
     if (existingPhone) {
       res.status(400);
-      throw new Error("Phone already used");
+      throw new Error("Nomor telepon sudah digunakan");
     }
   }
 
@@ -97,13 +97,13 @@ const login = asyncHandler(async (req, res) => {
   });
   if (!user) {
     res.status(401);
-    throw new Error("Invalid email or password");
+    throw new Error("Email atau kata sandi salah");
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     res.status(401);
-    throw new Error("Invalid email or password");
+    throw new Error("Email atau kata sandi salah");
   }
 
   const token = jwt.sign(
@@ -130,7 +130,7 @@ const user = asyncHandler(async (req, res) => {
 
   if (!data) {
     res.status(404);
-    throw new Error("User not found");
+    throw new Error("Pengguna tidak ditemukan");
   }
 
   res.json({ data });

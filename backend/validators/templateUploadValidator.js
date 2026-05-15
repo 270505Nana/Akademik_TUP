@@ -7,15 +7,15 @@ const allowedMimeTypes = [
 ];
 
 const createTemplateUploadValidator = [
-  body("name").notEmpty().withMessage("name is required"),
-  body("slug").notEmpty().withMessage("slug is required"),
+  body("name").notEmpty().withMessage("name wajib diisi"),
+  body("slug").notEmpty().withMessage("slug wajib diisi"),
   body("templateFile").custom((value, { req }) => {
     if (!req.file) {
-      throw new Error("templateFile is required");
+      throw new Error("templateFile wajib diunggah");
     }
 
     if (!allowedMimeTypes.includes(req.file.mimetype)) {
-      throw new Error("invalid file type");
+      throw new Error("Tipe file tidak valid");
     }
 
     return true;
@@ -23,15 +23,15 @@ const createTemplateUploadValidator = [
 ];
 
 const updateTemplateUploadValidator = [
-  body("name").notEmpty().withMessage("name is required"),
-  body("slug").notEmpty().withMessage("slug is required"),
+  body("name").notEmpty().withMessage("name wajib diisi"),
+  body("slug").notEmpty().withMessage("slug wajib diisi"),
   body("templateFile").custom((value, { req }) => {
     if (!req.file) {
       return true;
     }
 
     if (!allowedMimeTypes.includes(req.file.mimetype)) {
-      throw new Error("invalid file type");
+      throw new Error("Tipe file tidak valid");
     }
 
     return true;

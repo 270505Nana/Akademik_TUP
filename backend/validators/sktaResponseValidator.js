@@ -1,53 +1,56 @@
 const { body } = require("express-validator");
 
 const sktaResponseBodyValidator = [
-	body("hasUploadedFinalProposal")
-		.notEmpty()
-		.withMessage("hasUploadedFinalProposal is required")
-		.bail()
-		.isBoolean()
-		.withMessage("hasUploadedFinalProposal must be a boolean")
-		.toBoolean(),
-	body("hasTakenLanguageTest")
-		.notEmpty()
-		.withMessage("hasTakenLanguageTest is required")
-		.bail()
-		.isBoolean()
-		.withMessage("hasTakenLanguageTest must be a boolean")
-		.toBoolean(),
-	body("message").optional({ nullable: true }).isString().withMessage("message must be a string"),
-	body("expDate")
-		.optional({ nullable: true })
-		.isISO8601()
-		.withMessage("expDate must be a valid date")
-		.toDate(),
-	body("academicStaffId")
-		.notEmpty()
-		.withMessage("academicStaffId is required")
-		.bail()
-		.isInt()
-		.withMessage("academicStaffId must be an integer")
-		.toInt(),
-	body("sktaRequestId")
-		.notEmpty()
-		.withMessage("sktaRequestId is required")
-		.bail()
-		.isInt()
-		.withMessage("sktaRequestId must be an integer")
-		.toInt(),
-	body("sktaFile").custom((value, { req }) => {
-		if (!req.file) {
-			return true;
-		}
+  body("hasUploadedFinalProposal")
+    .notEmpty()
+    .withMessage("hasUploadedFinalProposal wajib diisi")
+    .bail()
+    .isBoolean()
+    .withMessage("hasUploadedFinalProposal harus berupa boolean")
+    .toBoolean(),
+  body("hasTakenLanguageTest")
+    .notEmpty()
+    .withMessage("hasTakenLanguageTest wajib diisi")
+    .bail()
+    .isBoolean()
+    .withMessage("hasTakenLanguageTest harus berupa boolean")
+    .toBoolean(),
+  body("message")
+    .optional({ nullable: true })
+    .isString()
+    .withMessage("message harus berupa string"),
+  body("expDate")
+    .optional({ nullable: true })
+    .isISO8601()
+    .withMessage("expDate harus berupa tanggal yang valid")
+    .toDate(),
+  body("academicStaffId")
+    .notEmpty()
+    .withMessage("academicStaffId wajib diisi")
+    .bail()
+    .isInt()
+    .withMessage("academicStaffId harus berupa integer")
+    .toInt(),
+  body("sktaRequestId")
+    .notEmpty()
+    .withMessage("sktaRequestId wajib diisi")
+    .bail()
+    .isInt()
+    .withMessage("sktaRequestId harus berupa integer")
+    .toInt(),
+  body("sktaFile").custom((value, { req }) => {
+    if (!req.file) {
+      return true;
+    }
 
-		const allowedMimeTypes = ["application/pdf"];
+    const allowedMimeTypes = ["application/pdf"];
 
-		if (!allowedMimeTypes.includes(req.file.mimetype)) {
-			throw new Error("invalid file type");
-		}
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      throw new Error("Tipe file tidak valid");
+    }
 
-		return true;
-	}),
+    return true;
+  }),
 ];
 
 const createSktaResponsetValidator = [...sktaResponseBodyValidator];

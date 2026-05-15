@@ -30,7 +30,7 @@ const getSidangRegistrationPeriodById = asyncHandler(async (req, res) => {
 
   if (!sidangRegistrationPeriod) {
     res.status(404);
-    throw new Error("Sidang period not found");
+    throw new Error("Periode sidang tidak ditemukan");
   }
 
   res.json({
@@ -42,15 +42,16 @@ const getSidangRegistrationPeriodById = asyncHandler(async (req, res) => {
 const createSidangRegistrationPeriod = asyncHandler(async (req, res) => {
   const { name, startDate, endDate, isOpen } = req.body;
 
-  const sidangRegistrationPeriod =
-    await prisma.sidangRegistrationPeriod.create({
+  const sidangRegistrationPeriod = await prisma.sidangRegistrationPeriod.create(
+    {
       data: {
         name,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         isOpen: isOpen !== undefined ? isOpen : false,
       },
-    });
+    },
+  );
 
   res.status(201).json({
     message: "Sidang period created successfully",
@@ -74,11 +75,11 @@ const updateSidangRegistrationPeriod = asyncHandler(async (req, res) => {
 
   if (!sidangRegistrationPeriodExists) {
     res.status(404);
-    throw new Error("Sidang period not found");
+    throw new Error("Periode sidang tidak ditemukan");
   }
 
-  const sidangRegistrationPeriod =
-    await prisma.sidangRegistrationPeriod.update({
+  const sidangRegistrationPeriod = await prisma.sidangRegistrationPeriod.update(
+    {
       where: {
         id: parseInt(id),
       },
@@ -88,7 +89,8 @@ const updateSidangRegistrationPeriod = asyncHandler(async (req, res) => {
         ...(endDate && { endDate: new Date(endDate) }),
         ...(isOpen !== undefined && { isOpen }),
       },
-    });
+    },
+  );
 
   res.json({
     message: "Sidang period updated successfully",
@@ -110,7 +112,7 @@ const deleteSidangRegistrationPeriod = asyncHandler(async (req, res) => {
 
   if (!sidangRegistrationPeriodExists) {
     res.status(404);
-    throw new Error("Sidang registration period not found");
+    throw new Error("Periode pendaftaran sidang tidak ditemukan");
   }
 
   await prisma.sidangRegistrationPeriod.update({

@@ -1,44 +1,44 @@
 const { body } = require("express-validator");
 
 const upsertStudentValidator = [
-  body("nim").notEmpty().withMessage("NIM is required"),
-  body("name").notEmpty().withMessage("Name is required"),
-  body("className").notEmpty().withMessage("Class name is required"),
+  body("nim").notEmpty().withMessage("NIM wajib diisi"),
+  body("name").notEmpty().withMessage("Nama wajib diisi"),
+  body("className").notEmpty().withMessage("Nama kelas wajib diisi"),
   body("year")
     .notEmpty()
-    .withMessage("Year name is required")
+    .withMessage("Tahun angkatan wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Study program id must be an integer")
+    .withMessage("Tahun angkatan harus berupa integer")
     .toInt(),
   body("studyProgramId")
     .notEmpty()
-    .withMessage("Study program id is required")
+    .withMessage("ID program studi wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Study program id must be an integer")
+    .withMessage("ID program studi harus berupa integer")
     .toInt(),
   body("dosenWaliId")
     .notEmpty()
-    .withMessage("Dosen wali id is required")
+    .withMessage("ID dosen wali wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Dosen wali id must be an integer")
+    .withMessage("ID dosen wali harus berupa integer")
     .toInt(),
   body("sks")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("SKS must be an integer")
+    .withMessage("SKS harus berupa integer")
     .toInt(),
   body("ipk")
     .optional({ nullable: true })
     .isFloat()
-    .withMessage("IPK must be an float")
+    .withMessage("IPK harus berupa float")
     .toFloat(),
   body("tak")
     .optional({ nullable: true })
     .isInt()
-    .withMessage("TAK must be an integer")
+    .withMessage("TAK harus berupa integer")
     .toInt(),
 ];
 

@@ -1,18 +1,16 @@
 const { body } = require("express-validator");
 
 const upsertLecturerValidator = [
-  body("nip").notEmpty().withMessage("NIP is required"),
+  body("nip").notEmpty().withMessage("NIP wajib diisi"),
   body("nidn").optional({ nullable: true, checkFalsy: true }),
-  body("lecturerCode")
-    .notEmpty()
-    .withMessage("Lecturer code (kode dosen) is required"),
-  body("name").notEmpty().withMessage("Name is required"),
+  body("lecturerCode").notEmpty().withMessage("Kode dosen wajib diisi"),
+  body("name").notEmpty().withMessage("Nama wajib diisi"),
   body("researchGroupId")
     .notEmpty()
-    .withMessage("Research group id is required")
+    .withMessage("ID kelompok riset wajib diisi")
     .bail()
     .isInt()
-    .withMessage("Research group id must be an integer")
+    .withMessage("ID kelompok riset harus berupa integer")
     .toInt(),
 ];
 
