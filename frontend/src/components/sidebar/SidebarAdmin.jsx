@@ -1,33 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Home, 
-  Calendar, 
-  ChevronDown, 
-  FileCheck, 
-  Users, 
-  Settings, 
-  LogOut,
-  FileText,
-  Database,
-  Layout
-} from 'lucide-react';
-
+import { Home, Calendar, ChevronDown, FileCheck, Users, Settings, LogOut, FileText, Database, Layout } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import '../../components/sidebar/sidebar.css';
 
-const SidebarAdmin = ({ 
-  isOpen, 
-  onClose, 
-  onShowToast 
-}) => {
+const SidebarAdmin = ({ isOpen, onClose, onShowToast }) => {
   const location = useLocation();
 
   const [expandedMenus, setExpandedMenus] = useState({
     'Manajemen Sidang': false,
     'Verifikasi Berkas': false,
     'Manajemen Data Akademik': false,
-    'Layanan SK TA & SKL': false
+    'Layanan SK TA & SKL': true,
   });
 
   useEffect(() => {
@@ -132,7 +116,6 @@ const SidebarAdmin = ({
                     <div 
                       className={`nav-link-main ${item.subItems.some(sub => location.pathname === sub.path) ? 'active' : ''}`}
                       onClick={() => toggleMenu(item.label)}
-                      aria-expanded={expandedMenus[item.label]}
                     >
                       {item.icon}
                       {item.label}
@@ -156,20 +139,17 @@ const SidebarAdmin = ({
                       className="overflow-hidden"
                     >
                       <ul className="sub-nav">
-                        {item.subItems.map((sub, subIdx) => {
-                          const isActiveSub = location.pathname === sub.path;
-                          return (
-                            <li key={subIdx}>
-                              <Link 
-                                to={sub.path} 
-                                className={isActiveSub ? 'active-sub' : ''}
-                                onClick={onClose}
-                              >
-                                {sub.label}
-                              </Link>
-                            </li>
-                          );
-                        })}
+                        {item.subItems.map((sub, subIdx) => (
+                          <li key={subIdx}>
+                            <Link 
+                              to={sub.path} 
+                              className={location.pathname === sub.path ? 'active-sub' : ''}
+                              onClick={onClose}
+                            >
+                              {sub.label}
+                            </Link>
+                          </li>
+                        ))}
                       </ul>
                     </motion.div>
                   )}
@@ -185,20 +165,13 @@ const SidebarAdmin = ({
             <div className="user-name">Budiono</div>
             <div className="user-role">Administrator</div>
           </div>
-          <button 
-            className="logout-btn" 
-            onClick={() => onShowToast('Anda telah keluar dari sistem.', <LogOut size={18} />, 'warning')}
-            title="Log Out"
-          >
+          <button className="logout-btn" onClick={() => onShowToast('Anda telah keluar dari sistem.', <LogOut size={18} />, 'warning')}>
             <LogOut size={16} />
           </button>
         </div>
       </aside>
-      <div 
-        id="sidebar-overlay" 
-        className={isOpen ? 'show' : ''} 
-        onClick={onClose}
-      />
+
+      <div id="sidebar-overlay" className={isOpen ? 'show' : ''} onClick={onClose} />
     </>
   );
 };

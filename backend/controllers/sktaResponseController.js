@@ -160,8 +160,15 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
 const findSktaResponseBySktaRequestId = asyncHandler(async (req, res) => {
   const sktaRequestId = parseInt(req.params.sktaRequestId);
 
-  const sktaResponse = await prisma.sktaResponse.findUnique({
-    where: { sktaRequestId },
+  // const sktaResponse = await prisma.sktaResponse.findUnique({
+  //   where: { sktaRequestId },
+  // });
+    // update karna error, ngga bisa kalau findUniqueId waktu dimplementasi di fe, ada perbedaan sm prisma
+    const sktaResponse = await prisma.sktaResponse.findFirst({
+    where: {
+      sktaRequestId: sktaRequestId,  
+      deletedAt: null,               
+    },
   });
 
   if (!sktaResponse) {

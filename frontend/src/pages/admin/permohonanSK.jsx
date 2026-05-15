@@ -1,89 +1,352 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, Download, FileText, X, Eye, ChevronLeft, ChevronRight, Menu, Upload, CheckCircle2, Circle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
 import '../../components/admin/css/permohonanSK.css';
 
-// ─── Dummy Data ──────────────────────────────────────────────────────────────
-const DUMMY_DATA = [
-  { id: 1,  nama: 'Andhika Pramata',    nim: '2311104001', prodi: 'S1 RPL',    status: 'sudah-terbit',  tanggal: '12/04/2026' },
-  { id: 2,  nama: 'Jeremy Cristo',      nim: '2311104098', prodi: 'S1 IF',     status: 'belum-terbit', tanggal: '12/04/2026' },
-  { id: 3,  nama: 'Naufal Ari',         nim: '2311104045', prodi: 'S1 DKV',    status: 'dalam-proses', tanggal: '13/04/2026' },
-  { id: 4,  nama: 'Saufiq Iqro',        nim: '2311104088', prodi: 'S1 BiOMED', status: 'sudah-terbit',  tanggal: '13/04/2026' },
-  { id: 5,  nama: 'Rizky Firmansyah',   nim: '2311104022', prodi: 'S1 TEKDUS', status: 'dalam-proses', tanggal: '14/04/2026' },
-  { id: 6,  nama: 'Dita Permatasari',   nim: '2311104033', prodi: 'S1 IF',     status: 'sudah-terbit',  tanggal: '14/04/2026' },
-  { id: 7,  nama: 'Meisari Widayanti',  nim: '2311104055', prodi: 'S1 RPL',    status: 'belum-terbit', tanggal: '15/04/2026' },
-  { id: 8,  nama: 'Prajna Paramitha',   nim: '2311104077', prodi: 'S1 DKV',    status: 'sudah-terbit',  tanggal: '15/04/2026' },
-  { id: 9,  nama: 'Dika Hutagaol',      nim: '2311104011', prodi: 'S1 TEKDUS', status: 'dalam-proses', tanggal: '16/04/2026' },
-  { id: 10, nama: 'Stella Margaretha',  nim: '2311104066', prodi: 'S1 IF',     status: 'sudah-terbit',  tanggal: '16/04/2026' },
-  { id: 11, nama: 'Budi Santoso',       nim: '2311104044', prodi: 'S1 BiOMED', status: 'belum-terbit', tanggal: '17/04/2026' },
-  { id: 12, nama: 'Siti Aminah',        nim: '2311104099', prodi: 'S1 RPL',    status: 'dalam-proses', tanggal: '17/04/2026' },
-];
+import { 
+  getAllSktaRequests, 
+  getSktaResponseByRequestId, 
+  createOrUpdateSktaResponse, 
+  uploadSkFinal 
+} from '../../service/api';
 
-const PRODI_LIST = ['Semua Prodi', 'S1 IF', 'S1 RPL', 'S1 DKV', 'S1 BiOMED', 'S1 TEKDUS'];
-const PAGE_SIZE = 5;
+import { useAuth } from '../../context/AuthContext';
+
+const ALUR_STEPS = [
+  'Data diproses di I-Gracias untuk pengecekan nomor SK',
+  'Unduh SK dari I-Gracias',
+  'Berikan kop surat resmi',
+  'Unggah ulang SK final ke SIMTA',
+];
 
 const StatusBadge = ({ status }) => {
   const config = {
-    'sudah-terbit':  { label: 'Sudah Terbit',  cls: 'sudah-terbit'  },
-    'belum-terbit':  { label: 'Belum Terbit',  cls: 'belum-terbit'  },
-    'dalam-proses':  { label: 'Dalam Proses',  cls: 'dalam-proses'  },
+    'sudah-terbit': { label: 'Sudah Terbit', cls: 'sudah-terbit' },
+    'belum-terbit': { label: 'Belum Terbit', cls: 'belum-terbit' },
+    'dalam-proses': { label: 'Dalam Proses', cls: 'dalam-proses' },
+    'expired':      { label: 'Expired', cls: 'belum-terbit' },
   };
-  const { label, cls } = config[status] || { label: status, cls: '' };
+  const { label, cls } = config[status] || { label: status || 'Pending', cls: '' };
+  return <span className={`sk-badge ${cls}`}>{label}</span>;
+};
+
+const PermohonanSK = () => {
+  const { user, logout } = useAuth();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterProdi, setFilterProdi] = useState('Semua Prodi');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [prodiCache, setProdiCache] = useState({}); // Cache nama prodi
+
+  const [evidenceItem, setEvidenceItem] = useState(null);
+  const [selectedVerifikasi, setSelectedVerifikasi] = useState(null);
+  const [existingResponse, setExistingResponse] = useState(null);
+
+  const [alert, setAlert] = useState({ show: false, type: '', title: '', message: '' });
+
+  const showAlert = (type, title, message) => {
+    setAlert({ show: true, type, title, message });
+    setTimeout(() => setAlert(p => ({ ...p, show: false })), 4000);
+  };
+
+  const determineStatus = (request, response) => {
+    if (!response) return 'dalam-proses';
+    const hasLang = response.hasTakenLanguageTest === true;
+    const hasProposal = response.hasUploadedFinalProposal === true;
+    const hasUpload = response.sktaResponseUploads?.length > 0;
+    const isExpired = response.expDate && new Date(response.expDate) < new Date();
+
+    if (isExpired) return 'expired';
+    if (hasLang && hasProposal && hasUpload) return 'sudah-terbit';
+    if (!hasLang || !hasProposal) return 'belum-terbit';
+    return 'dalam-proses';
+  };
+
+  // Fetch Nama Prodi berdasarkan ID
+  const fetchProdiName = async (studyProgramId) => {
+    if (!studyProgramId) return '-';
+    if (prodiCache[studyProgramId]) return prodiCache[studyProgramId];
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/study-programs/${studyProgramId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('simta_token')}`,
+        }
+      });
+      const data = await res.json();
+      const prodiName = data.data?.name || data.name || `Prodi ${studyProgramId}`;
+      setProdiCache(prev => ({ ...prev, [studyProgramId]: prodiName }));
+      return prodiName;
+    } catch (err) {
+      console.error(`Gagal fetch prodi ${studyProgramId}`, err);
+      return `Prodi ${studyProgramId}`;
+    }
+  };
+
+  const fetchRequests = async () => {
+    setLoading(true);
+    try {
+      const res = await getAllSktaRequests({
+        search: search.trim() || undefined,
+        studyProgram: filterProdi !== 'Semua Prodi' ? filterProdi : undefined,
+      });
+
+      let dataList = res.data || res || [];
+
+      const latestMap = new Map();
+      dataList.forEach(item => {
+        const sid = item.studentId;
+        if (!latestMap.has(sid) || new Date(item.createdAt) > new Date(latestMap.get(sid).createdAt)) {
+          latestMap.set(sid, item);
+        }
+      });
+
+      // Enrich dengan nama prodi
+      const enriched = await Promise.all(
+        Array.from(latestMap.values()).map(async (item) => {
+          const prodiName = await fetchProdiName(item.student?.studyProgramId);
+          return { 
+            ...item, 
+            student: item.student || {},
+            prodiName 
+          };
+        })
+      );
+
+      setRequests(enriched);
+    } catch (err) {
+      console.error(err);
+      if ([401, 403].includes(err.response?.status)) {
+        showAlert('error', 'Sesi Berakhir', 'Maaf sesi anda sudah habis, silahkan login kembali');
+        setTimeout(() => logout(), 1800);
+      } else {
+        showAlert('error', 'Gagal Memuat', 'Tidak dapat mengambil data permohonan SK');
+      }
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.role === 'ACADEMIC_STAFF') fetchRequests();
+  }, [search, filterProdi, user]);
+
+  const PAGE_SIZE = 5;
+  const totalPages = Math.ceil(requests.length / PAGE_SIZE);
+  const paginated = requests.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const handleOpenVerifikasi = async (item) => {
+    setSelectedVerifikasi(item);
+    setExistingResponse(null);
+    try {
+      const resp = await getSktaResponseByRequestId(item.id);
+      setExistingResponse(resp);
+    } catch (_) {}
+  };
+
+  const handleSaveVerifikasi = async ({ selectedPermohonan, checks, catatan, uploadedFile, existingResponse }) => {
+    try {
+      const payload = {
+        sktaRequestId: selectedPermohonan.id,
+        message: catatan,
+        hasTakenLanguageTest: checks.proposal,
+        hasUploadedFinalProposal: checks.toefl,
+      };
+
+      const { data: responseData } = await createOrUpdateSktaResponse({
+        id: existingResponse?.id,
+        ...payload
+      });
+
+      if (uploadedFile) {
+        await uploadSkFinal(responseData.id || existingResponse?.id, uploadedFile);
+      }
+
+      showAlert('success', 'Berhasil', `SK untuk ${selectedPermohonan.student?.name} berhasil diproses.`);
+      setSelectedVerifikasi(null);
+      fetchRequests();
+    } catch (err) {
+      showAlert('error', 'Gagal', err.response?.data?.message || 'Terjadi kesalahan');
+    }
+  };
+
+  const handleExportEvidence = (item) => {
+    showAlert('success', 'Export Evidence', `Mempersiapkan dokumen akreditasi untuk ${item.student?.name}...`);
+  };
+
   return (
-    <span className={`sk-badge ${cls}`}>{label}</span>
+    <div style={{ display: 'flex', minHeight: '100vh', overflow: 'hidden' }}>
+      <SidebarAdmin isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <div style={{ flex: 1, minWidth: 0, overflow: 'auto' }}>
+        <div className="mobile-menu-bar">
+          <button onClick={() => setSidebarOpen(true)} className="mobile-menu-btn"><Menu size={20} /></button>
+          <span className="mobile-menu-title">SIMTA</span>
+        </div>
+
+        <div className="page-wrapper">
+          <div className="top-bar-red"><h1>Layanan SK TA</h1></div>
+
+          <div className="content-container">
+            <div className="breadcrumb">Beranda / Layanan SK TA / Permohonan SK</div>
+            <h2 className="page-title">Permohonan SK TA</h2>
+
+            <section className="card-main">
+              <div className="card-body" style={{ paddingBottom: 0 }}>
+                <div className="sk-filter-bar">
+                  <div className="sk-search-wrap">
+                    <span className="sk-search-icon"><Search size={15} /></span>
+                    <input 
+                      type="text" 
+                      className="sk-search-input" 
+                      placeholder="Cari Nama atau NIM..." 
+                      value={search} 
+                      onChange={(e) => setSearch(e.target.value)} 
+                    />
+                  </div>
+
+                  <select className="sk-filter-select" value={filterProdi} onChange={(e) => setFilterProdi(e.target.value)}>
+                    {['Semua Prodi', 'S1 RPL', 'S1 IF', 'S1 DKV', 'S1 BIOMED', 'S1 TEKDUS'].map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+
+                  <button className="btn-export-sk" onClick={() => showAlert('success', 'Export Berhasil', 'Data evidence akreditasi sedang disiapkan...')}>
+                    <Download size={15} /> Expor Evidence Akreditasi
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid #E2E8F0', margin: '16px 0' }} />
+
+              <div className="sk-table-wrap">
+                <table className="sk-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 48 }}>NO</th>
+                      <th>MAHASISWA</th>
+                      <th>PRODI</th>
+                      <th style={{ textAlign: 'center' }}>EVIDENCE</th>
+                      <th style={{ textAlign: 'center' }}>STATUS BERKAS</th>
+                      <th>TANGGAL</th>
+                      <th style={{ textAlign: 'center' }}>AKSI</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr><td colSpan={7} className="text-center py-12">Memuat data...</td></tr>
+                    ) : requests.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '100px 20px', textAlign: 'center' }}>
+                          <FileText size={48} style={{ color: '#94A3B8', marginBottom: '16px' }} />
+                          <p style={{ fontSize: '1.1rem', color: '#64748B', fontWeight: 500 }}>
+                            Belum ada permohonan SK TA saat ini
+                          </p>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginated.map((item, idx) => {
+                        const student = item.student || {};
+                        const nama = student.name || `Mahasiswa ID ${item.studentId}`;
+                        const nim = student.nim || '-';
+                        const prodi = item.prodiName || '-';
+
+                        const status = determineStatus(item, item.sktaResponse || null);
+
+                        return (
+                          <tr key={item.id}>
+                            <td className="text-center">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
+                            <td>
+                              <div className="sk-mhs-name">{nama}</div>
+                              <div className="sk-mhs-nim">{nim}</div>
+                            </td>
+                            <td><span className="sk-prodi-text">{prodi}</span></td>
+                            <td className="text-center">
+                              <button className="btn-evidence" onClick={() => setEvidenceItem(item)}>
+                                <Eye size={13} /> Lihat Evidence
+                              </button>
+                            </td>
+                            <td style={{ textAlign: 'center' }}><StatusBadge status={status} /></td>
+                            <td className="sk-date-text">
+                              {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID') : '-'}
+                            </td>
+                            <td className="text-center action-buttons">
+                              <button className="btn-verifikasi-sk" onClick={() => handleOpenVerifikasi(item)}>Verifikasi</button>
+                              <button className="btn-export-sk" onClick={() => handleExportEvidence(item)}>Export</button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {requests.length > 0 && (
+                <div className="sk-table-footer">
+                  <span className="sk-page-info">
+                    Menampilkan {(currentPage-1)*PAGE_SIZE + 1} - {Math.min(currentPage*PAGE_SIZE, requests.length)} dari {requests.length} Pendaftar
+                  </span>
+                  <div className="sk-pagination">
+                    <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft size={14} /></button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button key={page} className={`btn-page ${page === currentPage ? 'active' : ''}`} onClick={() => setCurrentPage(page)}>{page}</button>
+                    ))}
+                    <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}><ChevronRight size={14} /></button>
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {evidenceItem && <EvidenceModal item={evidenceItem} onClose={() => setEvidenceItem(null)} />}
+        {selectedVerifikasi && (
+          <VerifikasiModal
+            selectedPermohonan={selectedVerifikasi}
+            existingResponse={existingResponse}
+            onClose={() => { setSelectedVerifikasi(null); setExistingResponse(null); }}
+            onSave={handleSaveVerifikasi}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {alert.show && (
+          <motion.div className="alert-overlay" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }}>
+            <CustomAlert type={alert.type} title={alert.title} message={alert.message} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 
+/*  MODAL EVIDENCE  */
 const EvidenceModal = ({ item, onClose }) => {
   if (!item) return null;
+  const student = item.student || {};
   return (
     <div className="ev-modal-overlay" onClick={onClose}>
-      <motion.div
-        className="ev-modal-box"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        onClick={e => e.stopPropagation()}
-      >
+      <motion.div className="ev-modal-box" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onClick={e => e.stopPropagation()}>
         <div className="ev-modal-header">
           <h3>Evidence Permohonan SK</h3>
-          <button className="ev-modal-close" onClick={onClose} title="Tutup">
-            <X size={18} />
-          </button>
+          <button className="ev-modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="ev-modal-body">
-          <div className="ev-info-row">
-            <span className="ev-info-label">Nama</span>
-            <span className="ev-info-value">{item.nama}</span>
-          </div>
-          <div className="ev-info-row">
-            <span className="ev-info-label">NIM</span>
-            <span className="ev-info-value">{item.nim}</span>
-          </div>
-          <div className="ev-info-row">
-            <span className="ev-info-label">Program Studi</span>
-            <span className="ev-info-value">{item.prodi}</span>
-          </div>
-          <div className="ev-info-row">
-            <span className="ev-info-label">Status Berkas</span>
-            <span className="ev-info-value"><StatusBadge status={item.status} /></span>
-          </div>
-          <div className="ev-info-row">
-            <span className="ev-info-label">Tanggal</span>
-            <span className="ev-info-value">{item.tanggal}</span>
-          </div>
-          <div className="ev-dummy-file">
-            <div className="ev-file-icon">
-              <FileText size={22} />
-            </div>
-            <strong style={{ fontSize: 13, color: '#1E293B' }}>
-              Evidence_{item.nim}.pdf
-            </strong>
-            <p>Pratinjau tidak tersedia. Klik tombol unduh untuk membuka berkas.</p>
-          </div>
+          <div className="ev-info-row"><span className="ev-info-label">Nama</span><span>{student.name}</span></div>
+          <div className="ev-info-row"><span className="ev-info-label">NIM</span><span>{student.nim}</span></div>
+          <div className="ev-info-row"><span className="ev-info-label">Prodi ID</span><span>{student.studyProgramId}</span></div>
         </div>
         <div className="ev-modal-footer">
           <button className="btn-close-modal" onClick={onClose}>Tutup</button>
@@ -93,85 +356,58 @@ const EvidenceModal = ({ item, onClose }) => {
   );
 };
 
-// ─── Verifikasi Modal ───────────────────────────────────────────────────────
-const ALUR_STEPS = [
-  'Data diproses di I-Gracias untuk pengecekan nomor SK',
-  'Unduh SK dari I-Gracias',
-  'Berikan kop surat resmi',
-  'Unggah ulang SK final ke SIMTA',
-];
-
-const VerifikasiModal = ({ selectedPermohonan, onClose, onSave }) => {
-  const [checks, setChecks] = useState({ proposal: false, toefl: false });
-  const [catatan, setCatatan] = useState('');
+/*  MODAL VERIFIKASI  */
+const VerifikasiModal = ({ selectedPermohonan, existingResponse, onClose, onSave }) => {
+  const [checks, setChecks] = useState({ proposal: false, bahasa: false });
+  const [catatan, setCatatan] = useState(existingResponse?.message || '');
+  const [batasPerbaikan, setBatasPerbaikan] = useState('');
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef();
-
-  if (!selectedPermohonan) return null;
 
   const toggleCheck = (key) => setChecks(prev => ({ ...prev, [key]: !prev[key] }));
 
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) setUploadedFile(file);
+    if (e.dataTransfer.files[0]) setUploadedFile(e.dataTransfer.files[0]);
   };
 
   const handleFileChange = (e) => {
     if (e.target.files[0]) setUploadedFile(e.target.files[0]);
   };
 
+  const handleSubmit = () => {
+    onSave({ selectedPermohonan, checks, catatan, uploadedFile, existingResponse });
+  };
+
+  const studentName = selectedPermohonan?.student?.name || selectedPermohonan?.nama || 'Mahasiswa';
+
   return (
     <div className="dm-overlay" onClick={onClose}>
-      <motion.div
-        className="dm-box"
-        initial={{ scale: 0.93, opacity: 0, y: 16 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.93, opacity: 0, y: 16 }}
-        transition={{ duration: 0.22, ease: 'easeOut' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
+      <motion.div className="dm-box" initial={{ scale: 0.93, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.93, opacity: 0, y: 16 }} onClick={e => e.stopPropagation()}>
         <div className="dm-header">
-          <div>
-            <h3 className="dm-header-title">Proses Penerbitan SK — {selectedPermohonan.nama}</h3>
-          </div>
-          <button className="dm-close-btn" onClick={onClose} title="Tutup"><X size={18} /></button>
+          <h3 className="dm-header-title">Proses Penerbitan SK — {studentName}</h3>
+          <button className="dm-close-btn" onClick={onClose}><X size={18} /></button>
         </div>
 
-        {/* Scrollable body */}
         <div className="dm-body">
-
-          {/* Section 1 — Checklist */}
           <div className="dm-section">
             <div className="dm-section-label">Checklist Kelengkapan Dokumen</div>
             <div className="dm-checklist">
-              {[
-                { key: 'proposal', label: 'Upload Proposal TA' },
-                { key: 'toefl',    label: 'Sertifikat TOEFL'  },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  className={`dm-check-item ${checks[key] ? 'checked' : ''}`}
-                  onClick={() => toggleCheck(key)}
-                  type="button"
-                >
-                  <span className="dm-check-icon">
-                    {checks[key]
-                      ? <CheckCircle2 size={17} />
-                      : <Circle size={17} />}
-                  </span>
-                  <span className="dm-check-label">{label}</span>
-                </button>
-              ))}
+              <button className={`dm-check-item ${checks.proposal ? 'checked' : ''}`} onClick={() => toggleCheck('proposal')}>
+                <span className="dm-check-icon">{checks.proposal ? <CheckCircle2 size={17} /> : <Circle size={17} />}</span>
+                <span className="dm-check-label">Sudah upload final proposal</span>
+              </button>
+              <button className={`dm-check-item ${checks.bahasa ? 'checked' : ''}`} onClick={() => toggleCheck('bahasa')}>
+                <span className="dm-check-icon">{checks.bahasa ? <CheckCircle2 size={17} /> : <Circle size={17} />}</span>
+                <span className="dm-check-label">Sudah melakukan test bahasa</span>
+              </button>
             </div>
           </div>
 
-          {/* Section 2 — Alur */}
           <div className="dm-section">
-            <div className="dm-section-label">Alur Penerbitan SK</div>
+            <div className="dm-section-label">Alur Penerbitan</div>
             <ol className="dm-alur-list">
               {ALUR_STEPS.map((step, i) => (
                 <li key={i} className="dm-alur-item">
@@ -182,347 +418,45 @@ const VerifikasiModal = ({ selectedPermohonan, onClose, onSave }) => {
             </ol>
           </div>
 
-          {/* Section 3 — Catatan Admin */}
           <div className="dm-section">
-            <div className="dm-section-label">Catatan Admin</div>
-            <textarea
-              className="dm-textarea"
-              placeholder="Silahkan Tulis Disini"
-              value={catatan}
-              onChange={e => setCatatan(e.target.value)}
-              rows={3}
-            />
+            <div className="dm-section-label">Batas Perbaikan</div>
+            <input type="date" className="dm-textarea" value={batasPerbaikan} onChange={(e) => setBatasPerbaikan(e.target.value)} />
           </div>
 
-          {/* Section 4 — Upload */}
+          <div className="dm-section">
+            <div className="dm-section-label">Tuliskan Catatan Disini</div>
+            <textarea className="dm-textarea" placeholder="Silahkan Tulis Disini" value={catatan} onChange={e => setCatatan(e.target.value)} rows={4} />
+          </div>
+
           <div className="dm-section">
             <div className="dm-section-label">Upload File SK</div>
-            <div
-              className={`dm-upload-area ${isDragging ? 'dragging' : ''} ${uploadedFile ? 'has-file' : ''}`}
+            <div className={`dm-upload-area ${isDragging ? 'dragging' : ''} ${uploadedFile ? 'has-file' : ''}`}
               onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current.click()}
             >
-              <input
-                ref={fileInputRef}
-                type="file"
-                style={{ display: 'none' }}
-                onChange={handleFileChange}
-              />
+              <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".pdf,.doc,.docx" onChange={handleFileChange} />
               {uploadedFile ? (
                 <>
-                  <div className="dm-upload-icon uploaded">
-                    <FileText size={22} />
-                  </div>
+                  <div className="dm-upload-icon uploaded"><FileText size={22} /></div>
                   <p className="dm-upload-filename">{uploadedFile.name}</p>
-                  <p className="dm-upload-sub">{(uploadedFile.size / 1024).toFixed(1)} KB — Klik untuk ganti file</p>
                 </>
               ) : (
                 <>
-                  <div className="dm-upload-icon">
-                    <Upload size={22} />
-                  </div>
-                  <p className="dm-upload-main">Drag and Drop or choose File to upload</p>
-                  <p className="dm-upload-sub">PDF, DOC, DOCX — maks. 10 MB</p>
+                  <div className="dm-upload-icon"><Upload size={22} /></div>
+                  <p className="dm-upload-main">Drag and Drop or Choose File To upload</p>
                 </>
               )}
             </div>
           </div>
-
         </div>
 
         <div className="dm-footer">
           <button className="dm-btn-batal" onClick={onClose}>Batal</button>
-          <button className="dm-btn-simpan" onClick={() => { onSave(selectedPermohonan); onClose(); }}>
-            Simpan &amp; Kirim
-          </button>
+          <button className="dm-btn-simpan" onClick={handleSubmit}>Simpan & Kirim</button>
         </div>
       </motion.div>
-    </div>
-  );
-};
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-const PermohonanSK = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [search, setSearch]           = useState('');
-  const [filterProdi, setFilterProdi] = useState('Semua Prodi');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [evidenceItem, setEvidenceItem] = useState(null);
-  const [selectedVerifikasi, setSelectedVerifikasi] = useState(null);
-  const [alert, setAlert]             = useState({ show: false, type: 'success', title: '', message: '' });
-
-  const showAlert = (type, title, message) => {
-    setAlert({ show: true, type, title, message });
-    setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 4000);
-  };
-
-  // Filter + search
-  const filtered = useMemo(() => {
-    return DUMMY_DATA.filter(item => {
-      const matchSearch = search.trim() === '' ||
-        item.nama.toLowerCase().includes(search.toLowerCase()) ||
-        item.nim.includes(search);
-      const matchProdi = filterProdi === 'Semua Prodi' || item.prodi === filterProdi;
-      return matchSearch && matchProdi;
-    });
-  }, [search, filterProdi]);
-
-  // Reset page on filter change
-  const handleSearch = (val) => { setSearch(val); setCurrentPage(1); };
-  const handleProdi  = (val) => { setFilterProdi(val); setCurrentPage(1); };
-
-  // Pagination
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  const handleExport = () => {
-    showAlert('success', 'Export Berhasil', 'Data evidence akreditasi sedang disiapkan untuk diunduh.');
-  };
-
-  const handleSaveVerifikasi = (item) => {
-    showAlert('success', 'Berhasil Disimpan', `Data penerbitan SK <strong>${item.nama}</strong> telah disimpan dan dikirim.`);
-  };
-
-  return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <SidebarAdmin
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onShowToast={(msg, icon, type) =>
-          showAlert(type === 'warning' ? 'warning' : 'success', 'Info', msg)
-        }
-      />
-
-      {/* Main content area */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Mobile top bar */}
-        <div className="mobile-menu-bar">
-          <button onClick={() => setSidebarOpen(true)} className="mobile-menu-btn">
-            <Menu size={20} />
-          </button>
-          <span className="mobile-menu-title">SIMTA</span>
-        </div>
-
-        <div className="page-wrapper">
-          <div className="top-bar-red">
-            <h1>Layanan SK TA</h1>
-          </div>
-
-          <div className="content-container">
-            <div className="breadcrumb">
-              Beranda / Layanan SK TA / Permohonan SK
-            </div>
-            <h2 className="page-title">Permohonan SK TA</h2>
-
-            {/* Main card */}
-            <section className="card-main">
-              {/* Card header: filter bar */}
-              <div className="card-body" style={{ paddingBottom: 0 }}>
-                <div className="sk-filter-bar">
-                  <div className="sk-search-wrap">
-                    <span className="sk-search-icon">
-                      <Search size={15} />
-                    </span>
-                    <input
-                      id="sk-search-input"
-                      type="text"
-                      className="sk-search-input"
-                      placeholder="Cari Nama atau NIM..."
-                      value={search}
-                      onChange={e => handleSearch(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Prodi filter */}
-                  <select
-                    id="sk-filter-prodi"
-                    className="sk-filter-select"
-                    value={filterProdi}
-                    onChange={e => handleProdi(e.target.value)}
-                  >
-                    {PRODI_LIST.map(p => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-
-                  {/* Export button */}
-                  <button
-                    id="sk-export-btn"
-                    className="btn-export-sk"
-                    onClick={handleExport}
-                  >
-                    <Download size={15} />
-                    Expor Evidence Akreditasi
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ borderTop: '1px solid #E2E8F0', margin: '16px 0 0' }} />
-
-              {/* Table */}
-              <div className="sk-table-wrap">
-                <table className="sk-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 48, textAlign: 'center' }}>No</th>
-                      <th>Mahasiswa</th>
-                      <th>Prodi</th>
-                      <th style={{ textAlign: 'center' }}>Evidence</th>
-                      <th style={{ textAlign: 'center' }}>Status Berkas</th>
-                      <th>Tanggal</th>
-                      <th style={{ textAlign: 'center' }}>Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginated.length === 0 ? (
-                      <tr>
-                        <td colSpan={7}>
-                          <div className="sk-empty-state">
-                            <div className="sk-empty-icon">
-                              <FileText size={24} />
-                            </div>
-                            <p>Tidak ada data yang cocok dengan filter saat ini.</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      paginated.map((item, idx) => (
-                        <tr key={item.id}>
-                          <td className="text-center" style={{ color: '#94A3B8', fontWeight: 600 }}>
-                            {(currentPage - 1) * PAGE_SIZE + idx + 1}
-                          </td>
-
-                          <td>
-                            <div className="sk-mhs-name">{item.nama}</div>
-                            <div className="sk-mhs-nim">{item.nim}</div>
-                          </td>
-
-                          <td>
-                            <span className="sk-prodi-text">{item.prodi}</span>
-                          </td>
-
-                          <td className="text-center">
-                            <button
-                              className="btn-evidence"
-                              onClick={() => setEvidenceItem(item)}
-                            >
-                              <Eye size={13} />
-                              Lihat Evidence
-                            </button>
-                          </td>
-
-                          <td>
-                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                              <StatusBadge status={item.status} />
-                            </div>
-                          </td>
-
-                          <td>
-                            <span className="sk-date-text">{item.tanggal}</span>
-                          </td>
-
-                          <td className="text-center">
-                            <button
-                              className="btn-verifikasi-sk"
-                              onClick={() => setSelectedVerifikasi(item)}
-                            >
-                              Verifikasi
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="sk-table-footer">
-                <span className="sk-page-info">
-                  Menampilkan{' '}
-                  <strong>
-                    {filtered.length === 0
-                      ? 0
-                      : `${(currentPage - 1) * PAGE_SIZE + 1} - ${Math.min(currentPage * PAGE_SIZE, filtered.length)}`}
-                  </strong>{' '}
-                  dari <strong>{filtered.length}</strong> Pendaftar
-                </span>
-
-                <div className="sk-pagination">
-                  <button
-                    className="btn-page"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => p - 1)}
-                    title="Sebelumnya"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      className={`btn-page ${page === currentPage ? 'active' : ''}`}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </button>
-                  ))}
-
-                  <button
-                    className="btn-page"
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    onClick={() => setCurrentPage(p => p + 1)}
-                    title="Selanjutnya"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-      </div>
-
-      {/* Evidence Modal */}
-      <AnimatePresence>
-        {evidenceItem && (
-          <EvidenceModal
-            item={evidenceItem}
-            onClose={() => setEvidenceItem(null)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Verifikasi Modal */}
-      <AnimatePresence>
-        {selectedVerifikasi && (
-          <VerifikasiModal
-            selectedPermohonan={selectedVerifikasi}
-            onClose={() => setSelectedVerifikasi(null)}
-            onSave={handleSaveVerifikasi}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Alert / Toast */}
-      <AnimatePresence>
-        {alert.show && (
-          <motion.div
-            className="alert-overlay"
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 300, opacity: 0 }}
-          >
-            <CustomAlert
-              type={alert.type}
-              title={alert.title}
-              message={alert.message}
-              style={{ margin: 0, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

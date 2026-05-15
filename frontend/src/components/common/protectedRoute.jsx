@@ -4,12 +4,19 @@ import { useAuth } from "../../context/AuthContext";
 import { useStudent } from "../../context/StudentContext";
 
 const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false }) => {
-  const { user, isAuthenticated }                             = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { isComplete, isStudentLoading, fetchAndLoadStudent } = useStudent();
   const location = useLocation();
 
   const [isServerChecking, setIsServerChecking] = useState(false);
-  const [serverCheckDone, setServerCheckDone]   = useState(false);
+  const [serverCheckDone, setServerCheckDone] = useState(false);
+
+  // Auto logout jika token expired / invalid
+  useEffect(() => {
+    if (!isAuthenticated && user) {
+      logout();
+    }
+  }, [isAuthenticated, user, logout]);
 
   useEffect(() => {
     if (
@@ -32,19 +39,24 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
     }
   }, [isStudentLoading, isComplete, isAuthenticated, user?.id, requireCompleteProfile, fetchAndLoadStudent]);
 
+  // Jika belum login
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/forbidden" replace />;
+  }
+
+  if (user.role === "ACADEMIC_STAFF" && !location.pathname.startsWith("/akademik")) {
+    return <Navigate to="/akademik/dashboard" replace />;
   }
 
   if (requireCompleteProfile && (isStudentLoading || isServerChecking || !serverCheckDone)) {
     return <LoadingScreen />;
   }
 
+  // Redirect mahasiswa yang belum lengkapi data
   if (
     user.role === "STUDENT" &&
     requireCompleteProfile &&
@@ -53,36 +65,14 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
   ) {
     return <Navigate to="/lengkapi-data" replace />;
   }
-
   return children;
 };
 
 const LoadingScreen = () => (
-  <div style={{
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    gap: '1rem',
-    background: '#F4F6FB',
-  }}>
-    <style>{`
-      @keyframes simta-spin {
-        to { transform: rotate(360deg); }
-      }
-    `}</style>
-    <div style={{
-      width: 40,
-      height: 40,
-      border: '4px solid #e5e7eb',
-      borderTop: '4px solid #C0182A',
-      borderRadius: '50%',
-      animation: 'simta-spin 0.8s linear infinite',
-    }} />
-    <p style={{ color: '#6B7280', fontSize: '0.875rem', margin: 0 }}>
-      Memuat data...
-    </p>
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '1rem', background: '#F4F6FB' }}>
+    <div style={{ width: 40, height: 40, border: '4px solid #e5e7eb', borderTop: '4px solid #C0182A', borderRadius: '50%', animation: 'simta-spin 0.8s linear infinite' }} />
+    <p style={{ color: '#6B7280', fontSize: '0.875rem' }}>Memuat data...</p>
+    <style>{`@keyframes simta-spin { to { transform: rotate(360deg); } }`}</style>
   </div>
 );
 

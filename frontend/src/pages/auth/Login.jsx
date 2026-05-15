@@ -20,9 +20,7 @@ import { loginUser } from "../../service/api";
 import CustomAlert   from "../../components/common/CustomAlert";
 import "./Auth.css";
 
-// ── Mapping: tab yang boleh untuk role apa ──────────────────────────────────
-// Tab "mahasiswa" → hanya STUDENT
-// Tab "dosen"     → LECTURER dan ACADEMIC_STAFF
+// mapping tab sesuai roles
 const TAB_ALLOWED_ROLES = {
   mahasiswa: ["STUDENT"],
   dosen:     ["LECTURER", "ACADEMIC_STAFF"],
@@ -39,7 +37,6 @@ const LoginPage = () => {
   const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // ── Kalau sudah login, redirect sesuai role ──────────────────────────────
   if (isAuthenticated && user) {
     const roleMap = {
       STUDENT:        "/mahasiswa/dashboard",
@@ -49,7 +46,6 @@ const LoginPage = () => {
     return <Navigate to={roleMap[user.role] || "/login"} replace />;
   }
 
-  // ── Ganti tab: reset form & alert ───────────────────────────────────────
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setAlert(null);
@@ -60,8 +56,6 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAlert(null);
-
-    // ── Validasi input kosong ────────────────────────────────────────────
     if (!ssoUsername.trim()) {
       setAlert({ type: "error", msg: "Email tidak boleh kosong." });
       return;
@@ -75,12 +69,8 @@ const LoginPage = () => {
     try {
       const data = await loginUser({ email: ssoUsername, password });
 
-      // ── Ambil & normalkan role dari response backend ─────────────────
       const role = data.data?.role?.toUpperCase()?.trim();
 
-      // ── VALIDASI TAB vs ROLE ─────────────────────────────────────────
-      // Cek apakah role yang dikembalikan backend sesuai tab yang dipilih
-      // Token TIDAK disimpan jika role tidak sesuai tab
       const allowedRolesForTab = TAB_ALLOWED_ROLES[activeTab];
       if (!allowedRolesForTab.includes(role)) {
         const errMsg =
@@ -88,20 +78,15 @@ const LoginPage = () => {
             ? "Akun ini bukan akun mahasiswa. Silakan login melalui tab Dosen/Pegawai."
             : "Akun ini adalah akun mahasiswa. Silakan login melalui tab Mahasiswa.";
         setAlert({ type: "error", msg: errMsg });
-        return; // ← early return, login() tidak dipanggil, token tidak tersimpan
+        return; 
       }
 
-      // ── Validasi lolos → simpan token ke context & localStorage ─────
-      // AuthContext.login() menyimpan ke:
-      //   localStorage["simta_user"]  = { id, username, email, role, ... }
-      //   localStorage["simta_token"] = JWT token string
       login({
         ...data.data,
-        role,              // pastikan role sudah uppercase
+        role,             
         token: data.token,
       });
 
-      // ── Redirect berdasarkan role ────────────────────────────────────
       const destination = {
         STUDENT:        "/mahasiswa/dashboard",
         LECTURER:       "/dosen/dashboard",
@@ -109,7 +94,7 @@ const LoginPage = () => {
       }[role] || "/login";
 
       setAlert({ type: "success", msg: "Login berhasil! Mengarahkan ke dashboard..." });
-      setTimeout(() => navigate(destination, { replace: true }), 1200);
+      setTimeout(() => navigate(destination, { replace: true }), 2000);
 
     } catch (err) {
       const backendMsg = err.response?.data?.message?.toLowerCase() || "";
@@ -136,7 +121,6 @@ const LoginPage = () => {
   return (
     <div className="login-wrapper">
 
-      {/* ── Left Panel ──────────────────────────────────────────────────── */}
       <div className="left-panel">
         <img src={bgLogin} alt="Background" className="bg-image" />
         <div className="left-overlay" />
@@ -157,7 +141,6 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* ── Right Panel ─────────────────────────────────────────────────── */}
       <div className="right-panel">
         <div className="blob blob-top-right" />
         <div className="blob blob-bottom-left" />
@@ -167,7 +150,6 @@ const LoginPage = () => {
             <img src={logoTelkom} alt="Logo Telkom" className="form-logo-img" />
           </div>
 
-          {/* ── Role Tab ──────────────────────────────────────────────── */}
           <div className="role-toggle">
             <button
               className={`role-btn ${activeTab === "mahasiswa" ? "active" : ""}`}
@@ -187,7 +169,6 @@ const LoginPage = () => {
 
           <p className="sso-label">SSO LOGIN</p>
 
-          {/* ── Alert ─────────────────────────────────────────────────── */}
           {alert && (
             <CustomAlert
               type={alert.type}
@@ -195,7 +176,6 @@ const LoginPage = () => {
             />
           )}
 
-          {/* ── Form ──────────────────────────────────────────────────── */}
           <form onSubmit={handleSubmit} noValidate>
             <div className="form-group">
               <label className="form-label" htmlFor="ssoUsername">
@@ -260,7 +240,6 @@ const LoginPage = () => {
             <a href="#" className="forgot-link">Hub helpdesk</a>
           </p>
 
-          {/* Register link hanya muncul di tab Mahasiswa */}
           {activeTab === "mahasiswa" && (
             <p className="login-redirect">
               Belum punya akun?&nbsp;
