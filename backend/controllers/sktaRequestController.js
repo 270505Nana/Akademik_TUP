@@ -86,6 +86,14 @@ const createSktaRequest = asyncHandler(async (req, res) => {
       throw new Error("Student not found");
     }
 
+    // cek pengajuan MHS sebelumnya, udh ada atau belum
+    const existingRequest = await prisma.sktaRequest.findFirst({
+      where: { studentId: parseInt(studentId) },
+    });
+    if (existingRequest) {
+      res.status(409);
+      throw new Error("Mahasiswa sudah memiliki pengajuan SK. Untuk pembaruan SK yang expired, gunakan fitur perbarui SK.");
+    }
     // Cek apakah ada data dospem 1
     const dosenPembimbing1 = await prisma.lecturer.findFirst({
       where: { id: dosenPembimbing1Id },
@@ -142,21 +150,33 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
     const sktaRequest = await prisma.sktaRequest.findFirst({ where: { id } });
     if (!sktaRequest) {
       res.status(404);
-      throw new Error("SKTA request not found");
+      throw new Error("SKTA request tidak ditemukan");
     }
 
-    const editableResponse = await prisma.sktaResponse.findFirst({
-      where: {
-        sktaRequestId: id,
-        isEdit: {
-          gt: new Date(),
-        },
-      },
+    // const editableResponse = await prisma.sktaResponse.findFirst({
+    //   where: {
+    //     sktaRequestId: id,
+    //     isEdit: {
+    //       gt: new Date(),
+    //     },
+    //   },
+    // });
+
+    // if (!editableResponse) {
+    //   res.status(403);
+    //   throw new Error("You cannot edit this SKTA request because it is already submitted and no edit permission is available.");
+    // }
+
+    const sktaResponse = await prisma.sktaResponse.findFirst({
+      where: { sktaRequestId: id },
     });
 
-    if (!editableResponse) {
+    const isExpired = sktaResponse?.expDate && new Date(sktaResponse.expDate) < new Date();
+    const isEditable = sktaResponse?.isEdit && new Date(sktaResponse.isEdit) > new Date();
+
+    if (!isExpired && !isEditable) {
       res.status(403);
-      throw new Error("You cannot edit this SKTA request because it is already submitted and no edit permission is available.");
+      throw new Error("Tidak dapat mengubah pengajuan SK ini. SK masih aktif atau belum mendapat izin edit.");
     }
 
     const {

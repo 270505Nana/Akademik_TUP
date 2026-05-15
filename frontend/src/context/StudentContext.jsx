@@ -22,10 +22,12 @@ export const StudentProvider = ({ children }) => {
       }
     }
     // cek request yg ada sblmnya
-    const savedSktaRequestId = localStorage.getItem('skta_request_id');
-    if (savedSktaRequestId) {
-      setSktaRequestId(Number(savedSktaRequestId));
-    }
+    // const savedSktaRequestId = localStorage.getItem('skta_request_id');
+    // if (savedSktaRequestId) {
+    //   setSktaRequestId(Number(savedSktaRequestId));
+    // }
+
+
     setIsStudentLoading(false);
   }, []);
 
@@ -39,7 +41,6 @@ export const StudentProvider = ({ children }) => {
   // Dipakai untuk GET /api/skta-responses/{sktaRequestId}
   const updateSktaRequestId = (id) => {
     setSktaRequestId(id);
-    localStorage.setItem('skta_request_id', String(id));
   };
 
   // Fetch data student dari server 
@@ -100,7 +101,6 @@ export const StudentProvider = ({ children }) => {
     setIsStudentLoading(false);
     setSktaRequestId(null);
     localStorage.removeItem('student_data');
-    localStorage.removeItem('skta_request_id');
   };
 
   return (
