@@ -166,6 +166,62 @@ export const getSKTAResponse = async (sktaRequestId) => {
   }
 };
 
+// list semua pengajuan SK MHS
+export const getAllSktaRequests = async (params = {}) => {
+  const response = await api.get('/api/skta-requests', { params });
+  return response.data;
+};
+
+export const getSktaRequestById = async (id) => {
+  const response = await api.get(`/api/skta-requests/${id}`);
+  return response.data;
+};
+
+// status SKTA Response: pending, approved, rejected, expired, revision_needed
+export const getAllSktaResponses = async () => {
+  const response = await api.get('/api/skta-responses');
+  return response.data;
+};
+
+export const getSktaResponseByRequestId = async (sktaRequestId) => {
+  try {
+    const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
+    return response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+};
+
+export const createOrUpdateSktaResponse = async (payload) => {
+  const { id, ...data } = payload;
+  if (id) {
+    return api.patch(`/api/skta-responses/${id}`, data);
+  }
+  return api.post('/api/skta-responses', data);
+};
+
+// Upload File SK Final 
+export const uploadSkFinal = async (sktaResponseId, file) => {
+  const formData = new FormData();
+  formData.append('file', file);        // sesuaikan nama field di backend
+  formData.append('sktaResponseId', sktaResponseId);
+
+  const response = await api.post(`/api/skta-responses/${sktaResponseId}/uploads`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+// Download Evidence Mahasiswa
+export const downloadEvidence = async (uploadId) => {
+  const response = await api.get(`/api/skta-requests/uploads/${uploadId}/download`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+// --------------------------------------------------------------------------------------------------
 // get periode sidang
 export const getSidangPeriods = async () => {
   try {
