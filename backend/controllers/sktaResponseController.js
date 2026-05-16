@@ -1,8 +1,24 @@
 const asyncHandler = require("express-async-handler");
 const prisma = require("../prisma/client");
 const fs = require("fs");
+const path = require("path");
 
-// Membuat Respon Permohonan SKTA
+const buildSktaResponseUploadDownloadUrl = (req, uploadId) => {
+  if (!uploadId) {
+    return null;
+  }
+
+  return `${req.protocol}://${req.get(
+    "host",
+  )}/api/skta-responses/uploads/${uploadId}/download`;
+};
+
+const withSktaResponseUploadDownloadUrl = (req, upload) => ({
+  ...upload,
+  downloadUrl: buildSktaResponseUploadDownloadUrl(req, upload.id),
+});
+
+// [Route] Membuat Respon Permohonan SKTA
 const listSktaResponses = asyncHandler(async (req, res) => {
   const data = await prisma.sktaResponse.findMany();
 
@@ -11,7 +27,7 @@ const listSktaResponses = asyncHandler(async (req, res) => {
   });
 });
 
-// Membuat Respon Permohonan SKTA
+// [Route] Membuat Respon Permohonan SKTA
 const createSktaResponse = asyncHandler(async (req, res) => {
   try {
     const {
@@ -51,6 +67,7 @@ const createSktaResponse = asyncHandler(async (req, res) => {
         message,
         expDate: expDate ? new Date(expDate) : null,
         isEdit: isEdit ? new Date(isEdit) : null,
+        studentId: sktaRequest?.studentId,
         academicStaffId,
         sktaRequestId,
         ...(file
@@ -60,6 +77,7 @@ const createSktaResponse = asyncHandler(async (req, res) => {
                   name: `SKTA_${sktaRequest.id}_${academicStaff.id}`,
                   filename: file.filename,
                   path: file.path,
+                  studentId: sktaRequest?.studentId,
                 },
               },
             }
@@ -79,7 +97,7 @@ const createSktaResponse = asyncHandler(async (req, res) => {
   }
 });
 
-// Update Respon Permohonan SKTA
+// [Route] Update Respon Permohonan SKTA
 const updateSktaResponse = asyncHandler(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -128,6 +146,7 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
         message,
         expDate: expDate ? new Date(expDate) : null,
         isEdit: isEdit ? new Date(isEdit) : null,
+        studentId: sktaRequest?.studentId,
         academicStaffId,
         sktaRequestId,
         ...(file
@@ -137,6 +156,7 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
                   name: `SKTA_${sktaRequest.id}_${academicStaff.id}`,
                   filename: file.filename,
                   path: file.path,
+                  studentId: sktaRequest?.studentId,
                 },
               },
             }
@@ -156,7 +176,7 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
   }
 });
 
-// Find SKTA Response By SKTA Request Id
+// [Route] Find SKTA Response By SKTA Request Id
 const findSktaResponseBySktaRequestId = asyncHandler(async (req, res) => {
   const sktaRequestId = parseInt(req.params.sktaRequestId);
 
@@ -179,9 +199,55 @@ const findSktaResponseBySktaRequestId = asyncHandler(async (req, res) => {
   res.json({ data: sktaResponse });
 });
 
+// [Route] Get SKTA Response Uploads by SKTA Request ID
+const getSktaResponseUploadsByStudentId = asyncHandler(async (req, res) => {
+  const studentId = parseInt(req.params.studentId);
+
+  const uploads = await prisma.sktaResponseUpload.findMany({
+    where: {
+      studentId,
+      deletedAt: null,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  const data = uploads.map((upload) =>
+    withSktaResponseUploadDownloadUrl(req, upload),
+  );
+
+  res.json({ data });
+});
+
+// [Route] Download SKTA Response Upload (SKTA)
+const downloadSktaResponseUpload = asyncHandler(async (req, res) => {
+  const uploadId = parseInt(req.params.uploadId);
+
+  const upload = await prisma.sktaResponseUpload.findFirst({
+    where: { id: uploadId },
+  });
+
+  if (!upload) {
+    res.status(404);
+    throw new Error("Unggahan respon SKTA tidak ditemukan");
+  }
+
+  const filePath = path.resolve(process.cwd(), upload.path);
+
+  if (!fs.existsSync(filePath)) {
+    res.status(404);
+    throw new Error("File tidak ditemukan");
+  }
+
+  res.download(filePath, upload.filename);
+});
+
 module.exports = {
   listSktaResponses,
   createSktaResponse,
   updateSktaResponse,
   findSktaResponseBySktaRequestId,
+  getSktaResponseUploadsByStudentId,
+  downloadSktaResponseUpload,
 };

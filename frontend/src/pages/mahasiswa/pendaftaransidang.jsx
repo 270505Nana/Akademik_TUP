@@ -1,22 +1,26 @@
-
-import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Save, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Save, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import "../../components/mahasiswa/sidang/sidang.css";
-import logoSimta from '../../assets/logo-simta.png'; 
-import logoTelkom from '../../assets/logo-telkom.png';
-import { useSidangContext, SidangFormProvider } from '../../context/SidangFormContext';
-import { useAuth } from '../../context/AuthContext';
-import Step1 from '../../components/mahasiswa/sidang/Step1Sidang';
-import Step2 from '../../components/mahasiswa/sidang/Step2Sidang';
-import api from '../../service/api';
+import logoSimta from "../../assets/logo-simta.png";
+import logoTelkom from "../../assets/logo-telkom.png";
+import {
+  useSidangContext,
+  SidangFormProvider,
+} from "../../context/SidangFormContext";
+import { useAuth } from "../../context/AuthContext";
+import Step1 from "../../components/mahasiswa/sidang/Step1Sidang";
+import Step2 from "../../components/mahasiswa/sidang/Step2Sidang";
+import api, { getSktaResponseUploadByStudentId } from "../../service/api";
 
 function PendaftaranSidangContent() {
   const navigate = useNavigate();
   const { state, dispatch } = useSidangContext();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { step, data, documents } = state;
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [skta, setSkta] = useState(false);
 
   // Auto-fill from Auth state, buat auto generate
   /*
@@ -40,11 +44,11 @@ function PendaftaranSidangContent() {
   */
 
   const setStep = (val) => {
-    dispatch({ type: 'SET_STEP', value: val });
+    dispatch({ type: "SET_STEP", value: val });
   };
 
   const handleSubmit = async () => {
-    // Basic validasi buat yg masih kocong sm yg step 1blm 
+    // Basic validasi buat yg masih kocong sm yg step 1blm
     /*
     const incompleteDocs = documents.filter(d => d.status !== 'completed');
     if (incompleteDocs.length > 0) {
@@ -63,85 +67,156 @@ function PendaftaranSidangContent() {
     try {
       setIsSubmitting(true);
       const payload = {
-        student_id: user?.id, 
-        dosbing_1_id: data.pembimbing1_id || data.pembimbing1, 
+        student_id: user?.id,
+        dosbing_1_id: data.pembimbing1_id || data.pembimbing1,
         dosbing_2_id: data.pembimbing2_id || data.pembimbing2,
         program: data.program,
         sks: parseInt(data.sks) || 0,
-        ipk: parseFloat(typeof data.ipk === 'string' ? data.ipk.replace(',', '.') : (data.ipk || 0)),
+        ipk: parseFloat(
+          typeof data.ipk === "string"
+            ? data.ipk.replace(",", ".")
+            : data.ipk || 0,
+        ),
         tak: parseInt(data.tak) || 0,
         sk_exp_date: data.batasSk,
         judul_ta_id: data.judulId,
         judul_ta_en: data.judulEn,
-        skema_sidang_id: data.skema, 
-        sidang_period_id: data.periodeSidang, 
+        skema_sidang_id: data.skema,
+        sidang_period_id: data.periodeSidang,
         extra_data: {
-          jalur_non_sidang: data.jalurNonSidang
-        }
+          jalur_non_sidang: data.jalurNonSidang,
+        },
       };
 
-      console.log('Sending to BE (Simulation):', payload);
+      console.log("Sending to BE (Simulation):", payload);
       // await api.post('/api/sidang/daftar', payload);
-      
-      localStorage.removeItem('sidang_form_draft');
-      
-      alert('Berhasil Daftar Sidang');
-      navigate('/mahasiswa/dashboard');
+
+      localStorage.removeItem("sidang_form_draft");
+
+      alert("Berhasil Daftar Sidang");
+      navigate("/mahasiswa/dashboard");
     } catch (error) {
-      console.error('Submit failed:', error);
-      
-      alert('Berhasil Daftar Sidang'); 
-      navigate('/mahasiswa/dashboard');
+      console.error("Submit failed:", error);
+
+      alert("Berhasil Daftar Sidang");
+      navigate("/mahasiswa/dashboard");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  async function checkSkta() {
+    try {
+      const skta = await getSktaResponseUploadByStudentId(profile?.id);
+
+      setSkta(skta?.data.length > 0);
+    } catch (e) {
+      if (e.status === 404) {
+        return;
+      }
+      // setErr(true);
+      console.error("Error fetching data:", e);
+    } finally {
+      // setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    checkSkta();
+  }, []);
+
   return (
     <div className="page-wrapper">
       <div className="top-header-nav">
-        <button className="btn-back-square" onClick={() => navigate('/mahasiswa/dashboard')}>
+        <button
+          className="btn-back-square"
+          onClick={() => navigate("/mahasiswa/dashboard")}
+        >
           <ArrowLeft size={18} />
           <span>Kembali</span>
         </button>
         <div className="header-logos">
-          <img src={logoSimta} alt="SIMTA Logo" className="simta-brand-logo" referrerPolicy="no-referrer" />
+          <img
+            src={logoSimta}
+            alt="SIMTA Logo"
+            className="simta-brand-logo"
+            referrerPolicy="no-referrer"
+          />
           <div className="logo-divider"></div>
-          <img src={logoTelkom} alt="Telkom Logo" className="telkom-brand-logo" referrerPolicy="no-referrer" />
+          <img
+            src={logoTelkom}
+            alt="Telkom Logo"
+            className="telkom-brand-logo"
+            referrerPolicy="no-referrer"
+          />
         </div>
       </div>
 
       <div className="simta-container">
-        <main>
-          {step === 1 ? <Step1 /> : <Step2 />}
-        </main>
+        {skta ? (
+          <>
+            <main>{step === 1 ? <Step1 /> : <Step2 />}</main>
 
-        <footer className="footer-nav">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button className="btn-pagination" onClick={() => setStep(1)} disabled={step === 1}>
-            <ChevronLeft size={16} />
-          </button>
-          <div className={`page-num ${step === 1 ? 'active' : ''}`} onClick={() => setStep(1)}>1</div>
-          <div className={`page-num ${step === 2 ? 'active' : ''}`} onClick={() => setStep(2)}>2</div>
-          <button className="btn-pagination" onClick={() => setStep(2)} disabled={step === 2}>
-            <ChevronRight size={16} />
-          </button>
-        </div>
-        
-        {step === 1 ? (
-          <button className="btn-primary" onClick={() => setStep(2)}>Simpan & Lanjutkan</button>
+            <footer className="footer-nav">
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <button
+                  className="btn-pagination"
+                  onClick={() => setStep(1)}
+                  disabled={step === 1}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <div
+                  className={`page-num ${step === 1 ? "active" : ""}`}
+                  onClick={() => setStep(1)}
+                >
+                  1
+                </div>
+                <div
+                  className={`page-num ${step === 2 ? "active" : ""}`}
+                  onClick={() => setStep(2)}
+                >
+                  2
+                </div>
+                <button
+                  className="btn-pagination"
+                  onClick={() => setStep(2)}
+                  disabled={step === 2}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {step === 1 ? (
+                <button className="btn-primary" onClick={() => setStep(2)}>
+                  Simpan & Lanjutkan
+                </button>
+              ) : (
+                <button
+                  className="btn-primary"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Mengirim..." : "Submit Pendaftaran"}
+                </button>
+              )}
+            </footer>
+          </>
         ) : (
-          <button 
-            className="btn-primary" 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Mengirim...' : 'Submit Pendaftaran'}
-          </button>
+          <div className="skta-warning">
+            <h2 className="skta-warning-title">
+              Pendaftaran Sidang Belum Tersedia
+            </h2>
+            <p className="skta-warning-text">
+              SKTA kamu belum diterbitkan. Silakan tunggu hingga SKTA terbit
+              sebelum mendaftar sidang.
+            </p>
+          </div>
         )}
-      </footer>
+      </div>
     </div>
-  </div>
   );
 }
 

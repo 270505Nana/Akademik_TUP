@@ -124,6 +124,9 @@ model Student {
   sidangRegistrations   SidangRegistration[]
   // yudisiumRegistrations YudisiumRegistration[]
   yudisiumRegistrations YudisiumRegistration[]
+  sktaResponses         SktaResponse[]
+  sktaResponseUploads   SktaResponseUpload[]
+  sktaRequestUploads    SktaRequestUpload[]
 }
 
 // Surat Keputusan TA
@@ -155,6 +158,8 @@ model SktaRequestUpload {
   filename      String
   slug          String      @default("evidence")
   path          String
+  student       Student?    @relation(fields: [studentId], references: [id])
+  studentId     Int?
   sktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id])
   sktaRequestId Int
 }
@@ -169,6 +174,8 @@ model SktaResponse {
   expDate                  DateTime?     @db.Date
   message                  String?
   isEdit                   DateTime?
+  student                  Student?      @relation(fields: [studentId], references: [id])
+  studentId                Int?
   academicStaff            AcademicStaff @relation(fields: [academicStaffId], references: [id])
   academicStaffId          Int
   sktaRequest              SktaRequest   @relation(fields: [sktaRequestId], references: [id])
@@ -185,6 +192,8 @@ model SktaResponseUpload {
   filename      String
   slug          String      @default("skta")
   path          String
+  student       Student?    @relation(fields: [studentId], references: [id])
+  studentId     Int?
   sktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id])
   sktaRequestId Int
 }

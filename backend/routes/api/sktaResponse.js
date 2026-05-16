@@ -7,6 +7,8 @@ const {
   createSktaResponse,
   updateSktaResponse,
   findSktaResponseBySktaRequestId,
+  getSktaResponseUploadsByStudentId,
+  downloadSktaResponseUpload,
 } = require("../../controllers/sktaResponseController");
 
 const { verifyToken } = require("../../middlewares/auth");
@@ -189,6 +191,72 @@ router.patch(
   updateSktaResponsetValidator,
   validate,
   updateSktaResponse,
+);
+
+/**
+ * @swagger
+ * /api/skta-responses/requests/{studentId}/uploads:
+ *   get:
+ *     summary: Get SKTA response uploads by Student ID
+ *     tags: [SKTA Response]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Student ID
+ *     responses:
+ *       200:
+ *         description: SKTA response uploads retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
+ *       404:
+ *         description: Student not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+  "/requests/:studentId/uploads",
+  verifyToken,
+  getSktaResponseUploadsByStudentId,
+);
+
+/**
+ * @swagger
+ * /api/skta-responses/uploads/{uploadId}/download:
+ *   get:
+ *     summary: Download SKTA response upload by upload ID
+ *     tags: [SKTA Response]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: uploadId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: SKTA response upload ID
+ *     responses:
+ *       200:
+ *         description: File downloaded successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
+ *       404:
+ *         description: Upload not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+  "/uploads/:uploadId/download",
+  verifyToken,
+  downloadSktaResponseUpload,
 );
 
 /**

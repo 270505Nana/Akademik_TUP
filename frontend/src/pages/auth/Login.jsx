@@ -11,36 +11,41 @@ import {
   BsEyeSlashFill,
 } from "react-icons/bs";
 
-import bgLogin    from "../../assets/bg-login.png";
-import logoSimta  from "../../assets/logo-simta.png";
+import bgLogin from "../../assets/bg-login.png";
+import logoSimta from "../../assets/logo-simta.png";
 import logoTelkom from "../../assets/logo-telkom.png";
 
-import { useAuth }   from "../../context/AuthContext";
-import { loginUser } from "../../service/api";
-import CustomAlert   from "../../components/common/CustomAlert";
+import { useAuth } from "../../context/AuthContext";
+import {
+  getAcademicStaffData,
+  getLecturerData,
+  getStudentData,
+  loginUser,
+} from "../../service/api";
+import CustomAlert from "../../components/common/CustomAlert";
 import "./Auth.css";
 
 // mapping tab sesuai roles
 const TAB_ALLOWED_ROLES = {
   mahasiswa: ["STUDENT"],
-  dosen:     ["LECTURER", "ACADEMIC_STAFF"],
+  dosen: ["LECTURER", "ACADEMIC_STAFF"],
 };
 
 const LoginPage = () => {
-  const [activeTab,    setActiveTab]    = useState("mahasiswa");
-  const [ssoUsername,  setSsoUsername]  = useState("");
-  const [password,     setPassword]     = useState("");
+  const [activeTab, setActiveTab] = useState("mahasiswa");
+  const [ssoUsername, setSsoUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [alert,        setAlert]        = useState(null); // { type, msg }
-  const [isLoading,    setIsLoading]    = useState(false);
+  const [alert, setAlert] = useState(null); // { type, msg }
+  const [isLoading, setIsLoading] = useState(false);
 
   const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   if (isAuthenticated && user) {
     const roleMap = {
-      STUDENT:        "/mahasiswa/dashboard",
-      LECTURER:       "/dosen/dashboard",
+      STUDENT: "/mahasiswa/dashboard",
+      LECTURER: "/dosen/dashboard",
       ACADEMIC_STAFF: "/akademik/dashboard",
     };
     return <Navigate to={roleMap[user.role] || "/login"} replace />;
@@ -78,29 +83,35 @@ const LoginPage = () => {
             ? "Akun ini bukan akun mahasiswa. Silakan login melalui tab Dosen/Pegawai."
             : "Akun ini adalah akun mahasiswa. Silakan login melalui tab Mahasiswa.";
         setAlert({ type: "error", msg: errMsg });
-        return; 
+        return;
       }
 
       login({
         ...data.data,
-        role,             
+        role,
         token: data.token,
       });
 
-      const destination = {
-        STUDENT:        "/mahasiswa/dashboard",
-        LECTURER:       "/dosen/dashboard",
-        ACADEMIC_STAFF: "/akademik/dashboard",
-      }[role] || "/login";
+      const destination =
+        {
+          STUDENT: "/mahasiswa/dashboard",
+          LECTURER: "/dosen/dashboard",
+          ACADEMIC_STAFF: "/akademik/dashboard",
+        }[role] || "/login";
 
-      setAlert({ type: "success", msg: "Login berhasil! Mengarahkan ke dashboard..." });
+      setAlert({
+        type: "success",
+        msg: "Login berhasil! Mengarahkan ke dashboard...",
+      });
       setTimeout(() => navigate(destination, { replace: true }), 2000);
-
     } catch (err) {
       const backendMsg = err.response?.data?.message?.toLowerCase() || "";
 
       let errMsg = "Login gagal. Periksa email dan password kamu.";
-      if (backendMsg.includes("tidak ditemukan") || backendMsg.includes("not found")) {
+      if (
+        backendMsg.includes("tidak ditemukan") ||
+        backendMsg.includes("not found")
+      ) {
         errMsg = "Akun dengan email ini tidak terdaftar.";
       } else if (
         backendMsg.includes("password") ||
@@ -120,7 +131,6 @@ const LoginPage = () => {
 
   return (
     <div className="login-wrapper">
-
       <div className="left-panel">
         <img src={bgLogin} alt="Background" className="bg-image" />
         <div className="left-overlay" />
@@ -169,12 +179,7 @@ const LoginPage = () => {
 
           <p className="sso-label">SSO LOGIN</p>
 
-          {alert && (
-            <CustomAlert
-              type={alert.type}
-              message={alert.msg}
-            />
-          )}
+          {alert && <CustomAlert type={alert.type} message={alert.msg} />}
 
           <form onSubmit={handleSubmit} noValidate>
             <div className="form-group">
@@ -193,7 +198,10 @@ const LoginPage = () => {
                       : "nama@telkomuniversity.ac.id"
                   }
                   value={ssoUsername}
-                  onChange={(e) => { setSsoUsername(e.target.value); setAlert(null); }}
+                  onChange={(e) => {
+                    setSsoUsername(e.target.value);
+                    setAlert(null);
+                  }}
                   autoComplete="email"
                 />
               </div>
@@ -211,7 +219,10 @@ const LoginPage = () => {
                   className="form-input"
                   placeholder="Masukkan password kamu"
                   value={password}
-                  onChange={(e) => { setPassword(e.target.value); setAlert(null); }}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setAlert(null);
+                  }}
                   autoComplete="current-password"
                 />
                 <button
@@ -225,11 +236,7 @@ const LoginPage = () => {
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="btn-login"
-              disabled={isLoading}
-            >
+            <button type="submit" className="btn-login" disabled={isLoading}>
               <span>{isLoading ? "Memproses..." : "Login"}</span>
               {!isLoading && <BsArrowRightCircleFill />}
             </button>
@@ -237,13 +244,17 @@ const LoginPage = () => {
 
           <p className="forgot-text">
             <BsQuestionCircle /> <em>Lupa password?</em>&nbsp;
-            <a href="#" className="forgot-link">Hub helpdesk</a>
+            <a href="#" className="forgot-link">
+              Hub helpdesk
+            </a>
           </p>
 
           {activeTab === "mahasiswa" && (
             <p className="login-redirect">
               Belum punya akun?&nbsp;
-              <Link to="/register" className="forgot-link">Daftar di sini</Link>
+              <Link to="/register" className="forgot-link">
+                Daftar di sini
+              </Link>
             </p>
           )}
         </div>
