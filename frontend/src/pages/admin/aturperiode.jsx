@@ -448,17 +448,6 @@ const AturPeriode = () => {
                         onChange={e => setEditForm({ ...editForm, endDate: e.target.value })}
                       />
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Status Buka</label>
-                      <select
-                        className="form-control"
-                        value={editForm.isOpen ? 'true' : 'false'}
-                        onChange={e => setEditForm({ ...editForm, isOpen: e.target.value === 'true' })}
-                      >
-                        <option value="true">Buka</option>
-                        <option value="false">Tutup</option>
-                      </select>
-                    </div>
                   </div>
                 </form>
               </div>
@@ -569,14 +558,14 @@ const PeriodeTable = ({ periods, type, getStatus, formatDate, onEdit }) => {
                     )}
                     {status === 'Aktif' && (
                       <>
-                        <button className="btn-outline btn-outline-red">Tutup</button>
+                        <button className="btn-outline">Detail Periode</button>
                         <button className="btn-outline" onClick={() => onEdit(period, type)}>
                           <Edit3 size={16} /> Edit
                         </button>
                       </>
                     )}
                     {status === 'Selesai' && (
-                      <button className="btn-outline">Detail</button>
+                      <button className="btn-outline">Detail Periode</button>
                     )}
                   </div>
                 </td>
