@@ -2,9 +2,7 @@ const fs = require("fs");
 const { validationResult } = require("express-validator");
 
 const removeUploadedFiles = (files) => {
-  if (!files) {
-    return;
-  }
+  if (!files) return;
 
   if (Array.isArray(files)) {
     files.forEach((file) => {
@@ -17,7 +15,10 @@ const removeUploadedFiles = (files) => {
   }
 
   Object.values(files).forEach((value) => {
-    removeUploadedFiles(value);
+    // removeUploadedFiles(value);
+    if (Array.isArray(value)) {
+      value.forEach((file) => file?.path && fs.unlink(file.path, () => {}));
+    }
   });
 };
 

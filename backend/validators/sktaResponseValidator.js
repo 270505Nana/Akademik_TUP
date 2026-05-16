@@ -20,7 +20,7 @@ const sktaResponseBodyValidator = [
     .isString()
     .withMessage("message harus berupa string"),
   body("expDate")
-    .optional({ nullable: true })
+    .optional({ nullable: true, checkFalsy: true })
     .isISO8601()
     .withMessage("expDate harus berupa tanggal yang valid")
     .toDate(),

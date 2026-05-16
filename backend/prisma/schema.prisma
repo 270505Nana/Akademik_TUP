@@ -143,9 +143,9 @@ model SktaRequest {
   dosenPembimbing1Id  Int
   dosenPembimbing2    Lecturer             @relation("Pembimbing2SktaRequests", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
   dosenPembimbing2Id  Int
-  sktaRequestUploads  SktaRequestUpload[]
   sktaResponses       SktaResponse[]
   sktaResponseUploads SktaResponseUpload[]
+  sktaRequestUploads  SktaRequestUpload[]
 }
 
 // Upload Evidence
@@ -165,37 +165,40 @@ model SktaRequestUpload {
 }
 
 model SktaResponse {
-  id                       Int           @id @default(autoincrement())
-  createdAt                DateTime      @default(now())
-  updatedAt                DateTime      @updatedAt
+  id                       Int                  @id @default(autoincrement())
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
   deletedAt                DateTime?
   hasUploadedFinalProposal Boolean
   hasTakenLanguageTest     Boolean
-  expDate                  DateTime?     @db.Date
+  expDate                  DateTime?            @db.Date
   message                  String?
   isEdit                   DateTime?
-  student                  Student?      @relation(fields: [studentId], references: [id])
+  student                  Student?             @relation(fields: [studentId], references: [id])
   studentId                Int?
-  academicStaff            AcademicStaff @relation(fields: [academicStaffId], references: [id])
+  academicStaff            AcademicStaff        @relation(fields: [academicStaffId], references: [id])
   academicStaffId          Int
-  sktaRequest              SktaRequest   @relation(fields: [sktaRequestId], references: [id])
+  sktaRequest              SktaRequest          @relation(fields: [sktaRequestId], references: [id])
   sktaRequestId            Int
+  sktaResponseUploads      SktaResponseUpload[]
 }
 
 // Upload SKTA
 model SktaResponseUpload {
-  id            Int         @id @default(autoincrement())
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  deletedAt     DateTime?
-  name          String
-  filename      String
-  slug          String      @default("skta")
-  path          String
-  student       Student?    @relation(fields: [studentId], references: [id])
-  studentId     Int?
-  sktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id])
-  sktaRequestId Int
+  id             Int           @id @default(autoincrement())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  name           String
+  filename       String
+  slug           String        @default("skta")
+  path           String
+  student        Student?      @relation(fields: [studentId], references: [id])
+  studentId      Int?
+  sktaRequest    SktaRequest   @relation(fields: [sktaRequestId], references: [id])
+  sktaRequestId  Int
+  sktaResponse   SktaResponse? @relation(fields: [sktaResponseId], references: [id])
+  sktaResponseId Int?
 }
 
 // Daftar Sidang

@@ -3,6 +3,8 @@ const prisma = require("../prisma/client");
 const fs = require("fs");
 const path = require("path");
 
+const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
+
 const buildSktaResponseUploadDownloadUrl = (req, uploadId) => {
   if (!uploadId) {
     return null;
@@ -17,6 +19,26 @@ const withSktaResponseUploadDownloadUrl = (req, upload) => ({
   ...upload,
   downloadUrl: buildSktaResponseUploadDownloadUrl(req, upload.id),
 });
+
+const removeUploadedFiles = (files) => {
+  if (!files) {
+    return;
+  }
+
+  if (Array.isArray(files)) {
+    files.forEach((file) => {
+      if (file?.path) {
+        fs.unlink(file.path, () => {});
+      }
+    });
+
+    return;
+  }
+
+  Object.values(files).forEach((value) => {
+    removeUploadedFiles(value);
+  });
+};
 
 // [Route] Membuat Respon Permohonan SKTA
 const listSktaResponses = asyncHandler(async (req, res) => {
@@ -40,7 +62,8 @@ const createSktaResponse = asyncHandler(async (req, res) => {
       sktaRequestId,
     } = req.body;
 
-    const file = req.file;
+    // const file = req.file;
+    const sktaFile = getUploadedFile(req.files, "sktaFile");
 
     // Cek apakah ada data admin akademik
     const academicStaff = await prisma.academicStaff.findFirst({
@@ -70,15 +93,19 @@ const createSktaResponse = asyncHandler(async (req, res) => {
         studentId: sktaRequest?.studentId,
         academicStaffId,
         sktaRequestId,
-        ...(file
+        ...(sktaFile
           ? {
               sktaResponseUploads: {
-                create: {
-                  name: `SKTA_${sktaRequest.id}_${academicStaff.id}`,
-                  filename: file.filename,
-                  path: file.path,
-                  studentId: sktaRequest?.studentId,
-                },
+                deleteMany: {},
+                create: [
+                  {
+                    name: `SKTA_${sktaRequest.id}_${academicStaff.id}`,
+                    filename: sktaFile.filename,
+                    path: sktaFile.path,
+                    studentId: sktaRequest?.studentId,
+                    sktaRequestId: sktaRequest.id,
+                  },
+                ],
               },
             }
           : {}),
@@ -90,9 +117,7 @@ const createSktaResponse = asyncHandler(async (req, res) => {
       data,
     });
   } catch (error) {
-    if (req.file?.path) {
-      fs.unlink(req.file.path, () => {});
-    }
+    removeUploadedFiles(req.file || req.files);
     throw error;
   }
 });
@@ -118,7 +143,11 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
       sktaRequestId,
     } = req.body;
 
-    const file = req.file;
+    const sktaFile = getUploadedFile(req.files, "sktaFile");
+
+    console.log("req.file:", req.file);
+    console.log("req.files:", req.files);
+    console.log("sktaFile result:", sktaFile);
 
     // Cek apakah ada data admin akademik
     const academicStaff = await prisma.academicStaff.findFirst({
@@ -146,18 +175,23 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
         message,
         expDate: expDate ? new Date(expDate) : null,
         isEdit: isEdit ? new Date(isEdit) : null,
-        studentId: sktaRequest?.studentId,
-        academicStaffId,
-        sktaRequestId,
-        ...(file
+        student: { connect: { id: sktaRequest.studentId } },
+        academicStaff: { connect: { id: academicStaffId } },
+        sktaRequest: { connect: { id: sktaRequestId } },
+
+        ...(sktaFile
           ? {
               sktaResponseUploads: {
-                create: {
-                  name: `SKTA_${sktaRequest.id}_${academicStaff.id}`,
-                  filename: file.filename,
-                  path: file.path,
-                  studentId: sktaRequest?.studentId,
-                },
+                deleteMany: {},
+                create: [
+                  {
+                    name: `SKTA_${sktaRequest.id}_${academicStaff.id}`,
+                    filename: sktaFile.filename,
+                    path: sktaFile.path,
+                    studentId: sktaRequest?.studentId,
+                    sktaRequestId: sktaRequest.id,
+                  },
+                ],
               },
             }
           : {}),
@@ -169,9 +203,7 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
       data,
     });
   } catch (error) {
-    if (req.file?.path) {
-      fs.unlink(req.file.path, () => {});
-    }
+    removeUploadedFiles(req.file || req.files);
     throw error;
   }
 });
