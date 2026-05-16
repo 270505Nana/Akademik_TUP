@@ -182,6 +182,13 @@ export const getSktaResponseByRequestId = async (sktaRequestId) => {
   }
 };
 
+// export const createOrUpdateSktaResponse = async (payload) => {
+//   const { id, ...data } = payload;
+//   if (id) {
+//     return api.patch(`/api/skta-responses/${id}`, data);
+//   }
+//   return api.post('/api/skta-responses', data);
+// };
 export const getSktaResponseUploadByStudentId = async (studentId) => {
   try {
     const response = await api.get(
@@ -195,6 +202,12 @@ export const getSktaResponseUploadByStudentId = async (studentId) => {
 };
 
 export const createOrUpdateSktaResponse = async (payload) => {
+  if (payload instanceof FormData) {
+    return api.post('/api/skta-responses', payload, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
+
   const { id, ...data } = payload;
   if (id) {
     return api.patch(`/api/skta-responses/${id}`, data);
@@ -277,4 +290,45 @@ export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
   return response.data?.data ?? response.data;
 };
 
+// ------------------------------------------- YUDISIUM PERIODS -------------------------------------------
+export const getYudisiumPeriods = async () => {
+  try {
+    const response = await api.get("/api/yudisium-periods");
+    return response.data?.data ?? response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return [];
+    throw err;
+  }
+};
+ 
+export const createYudisiumPeriod = async ({ name, startDate, endDate }) => {
+  const now   = new Date();
+  const start = new Date(startDate);
+  const end   = new Date(endDate);
+  const isOpen = now >= start && now <= end;
+ 
+  const response = await api.post('/api/yudisium-periods', {
+    name,
+    startDate: start.toISOString(),
+    endDate:   end.toISOString(),
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
+ 
+export const updateYudisiumPeriod = async (id, { name, startDate, endDate }) => {
+  const now   = new Date();
+  const start = new Date(startDate);
+  const end   = new Date(endDate);
+  const isOpen = now >= start && now <= end;
+ 
+  const response = await api.patch(`/api/yudisium-periods/${id}`, {
+    name,
+    startDate: start.toISOString(),
+    endDate:   end.toISOString(),
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
+ 
 export default api;

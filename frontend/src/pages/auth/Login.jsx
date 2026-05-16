@@ -42,6 +42,17 @@ const LoginPage = () => {
   const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
+  //  const [searchParams] = useSearchParams();
+  //   // Tampilkan alert jika sesi expired
+  //   useEffect(() => {
+  //     const expired = searchParams.get("expired");
+  //     if (expired === "true") {
+  //       const msg = searchParams.get("msg") || "Maaf sesi anda sudah habis, silahkan login kembali";
+  //       setAlert({ type: "error", msg });
+  //     }
+  //   }, [searchParams]);
+
+
   if (isAuthenticated && user) {
     const roleMap = {
       STUDENT: "/mahasiswa/dashboard",
