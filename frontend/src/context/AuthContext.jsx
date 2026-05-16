@@ -1,5 +1,9 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+
 const AuthContext = createContext(null);
+const INACTIVITY_ROLES = ["ACADEMIC_STAFF", "LECTURER"];
+// Timeout inactivity: 30 menit tidak ada aktivitas 
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
 export const AuthProvider = ({ children }) => {
 
@@ -17,6 +21,8 @@ export const AuthProvider = ({ children }) => {
     return localStorage.getItem("simta_token") || null;
   });
 
+  const inactivityTimer = useRef(null);
+
   // login
   const login = (userData) => {
     const { token: tkn, ...rest } = userData;
@@ -25,14 +31,60 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("simta_user",  JSON.stringify(rest));
     localStorage.setItem("simta_token", tkn);
   };
-  
-  const logout = () => {
+
+  const logout = useCallback(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     setUser(null);
     setToken(null);
     localStorage.removeItem("simta_user");
     localStorage.removeItem("simta_token");
     localStorage.removeItem("student_data");
-  };
+  }, []);
+
+  // Logout dengan redirect ke login + pesan expired
+  const logoutExpired = useCallback((message) => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("simta_user");
+    localStorage.removeItem("simta_token");
+    localStorage.removeItem("student_data");
+    window.location.href = `/login?expired=true&msg=${encodeURIComponent(message)}`;
+  }, []);
+
+  // Reset inactivity timer 
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    inactivityTimer.current = setTimeout(() => {
+      logoutExpired("Maaf sesi anda sudah habis, silahkan login kembali");
+    }, INACTIVITY_TIMEOUT_MS);
+  }, [logoutExpired]);
+
+  useEffect(() => {
+    if (!user || !token) return;
+    if (!INACTIVITY_ROLES.includes(user.role)) return;
+
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
+    const handleActivity = () => resetInactivityTimer();
+
+    resetInactivityTimer(); 
+
+    events.forEach((e) => window.addEventListener(e, handleActivity, { passive: true }));
+    return () => {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+      events.forEach((e) => window.removeEventListener(e, handleActivity));
+    };
+  }, [user, token, resetInactivityTimer]);
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+      setUser(null);
+      setToken(null);
+    };
+    window.addEventListener("auth-expired", handleAuthExpired);
+    return () => window.removeEventListener("auth-expired", handleAuthExpired);
+  }, []);
 
   const isAuthenticated = !!user && !!token;
 
@@ -55,5 +107,4 @@ export const useAuth = () => {
   return ctx;
 };
 
-// export default AuthContext;
 export default AuthContext;
