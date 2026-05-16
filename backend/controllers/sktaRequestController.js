@@ -47,7 +47,7 @@ const removeUploadedFiles = (files) => {
   });
 };
 
-// Membuat Permohonan SKTA
+// [Route] Membuat Permohonan SKTA
 const listSktaRequests = asyncHandler(async (req, res) => {
   const sktaRequests = await prisma.sktaRequest.findMany({
     include: {
@@ -67,7 +67,7 @@ const listSktaRequests = asyncHandler(async (req, res) => {
   });
 });
 
-// Membuat Permohonan SKTA
+// [Route] Membuat Permohonan SKTA
 const createSktaRequest = asyncHandler(async (req, res) => {
   try {
     const {
@@ -131,6 +131,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
               name: `Evidence_SKTA_${student?.nim}_${student?.name}`,
               filename: evidenceFile.filename,
               path: evidenceFile.path,
+              studentId,
             },
           ],
         },
@@ -147,7 +148,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
   }
 });
 
-// Update Permohonan SKTA
+// [Route] Update Permohonan SKTA
 const updateSktaRequest = asyncHandler(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -240,6 +241,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
               name: `Evidence_SKTA_${student?.nim}_${student?.name}`,
               filename: evidenceFile.filename,
               path: evidenceFile.path,
+              studentId,
             },
           ],
         },
@@ -256,7 +258,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
   }
 });
 
-// Find SKTA Request By Mahasiswa Id
+// [Route] Find SKTA Request By Mahasiswa Id
 const findSktaRequestByStudentId = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.studentId);
 
@@ -278,6 +280,7 @@ const findSktaRequestByStudentId = asyncHandler(async (req, res) => {
   res.json({ data: withSktaRequestDownloadUrls(req, sktaRequest) });
 });
 
+// [Route] Download SKTA Request Upload (Evidence)
 const downloadSktaRequestUpload = asyncHandler(async (req, res) => {
   const uploadId = parseInt(req.params.uploadId);
 

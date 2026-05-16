@@ -18,7 +18,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Response Interceptor - Session Expired Handling
@@ -31,20 +31,34 @@ api.interceptors.response.use(
       localStorage.removeItem("student_data");
       // localStorage.removeItem("skta_request_id");
 
-      const event = new CustomEvent('auth-expired', {
-        detail: { message: "Maaf sesi anda sudah habis, silahkan login kembali" }
+      const event = new CustomEvent("auth-expired", {
+        detail: {
+          message: "Maaf sesi anda sudah habis, silahkan login kembali",
+        },
       });
       window.dispatchEvent(event);
 
       window.location.href = "/login?expired=true";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // ------------------------------------------- AUTH -------------------------------------------
-export const registerUser = async ({ username, email, no_telp, password, confirmPassword }) => {
-  const response = await api.post("/api/auth/register", { username, email, no_telp, password, confirmPassword });
+export const registerUser = async ({
+  username,
+  email,
+  no_telp,
+  password,
+  confirmPassword,
+}) => {
+  const response = await api.post("/api/auth/register", {
+    username,
+    email,
+    no_telp,
+    password,
+    confirmPassword,
+  });
   return response.data;
 };
 
@@ -76,7 +90,14 @@ export const getSKTARequest = async (studentId) => {
 };
 
 // Submit pengajuan SK baru (Mahasiswa)
-export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, studentId, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
+export const submitSKTARequest = async ({
+  proposalTitleId,
+  proposalTitleEn,
+  studentId,
+  dosenPembimbing1Id,
+  dosenPembimbing2Id,
+  evidence,
+}) => {
   const formData = new FormData();
   formData.append("proposalTitleId", proposalTitleId);
   formData.append("proposalTitleEn", proposalTitleEn);
@@ -92,7 +113,14 @@ export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, stud
 };
 
 // Resubmit SK (jika expired)
-export const resubmitSKTARequest = async ({ sktaRequestId, proposalTitleId, proposalTitleEn, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
+export const resubmitSKTARequest = async ({
+  sktaRequestId,
+  proposalTitleId,
+  proposalTitleEn,
+  dosenPembimbing1Id,
+  dosenPembimbing2Id,
+  evidence,
+}) => {
   const formData = new FormData();
   formData.append("proposalTitleId", proposalTitleId);
   formData.append("proposalTitleEn", proposalTitleEn);
@@ -100,9 +128,13 @@ export const resubmitSKTARequest = async ({ sktaRequestId, proposalTitleId, prop
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   if (evidence) formData.append("evidence", evidence);
 
-  const response = await api.patch(`/api/skta-requests/${sktaRequestId}`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const response = await api.patch(
+    `/api/skta-requests/${sktaRequestId}`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
   return response.data;
 };
 
@@ -116,11 +148,22 @@ export const getSKTAResponse = async (sktaRequestId) => {
   }
 };
 
+// ------------------------------------------- DOSEN SIDE () -------------------------------------------
+export const getLecturerData = async (userId) => {
+  const response = await api.get(`/api/lecturer/${userId}`);
+  return response.data?.data ?? response.data;
+};
+
 // ------------------------------------------- ADMIN SIDE (Permohonan SK) -------------------------------------------
+export const getAcademicStaffData = async (userId) => {
+  const response = await api.get(`/api/academic-staff/${userId}`);
+  return response.data?.data ?? response.data;
+};
+
 // List semua pengajuan SK (Admin)
 export const getAllSktaRequests = async (params = {}) => {
-  const response = await api.get('/api/skta-requests', { params });
-  return response.data;   
+  const response = await api.get("/api/skta-requests", { params });
+  return response.data;
 };
 
 export const getSktaRequestById = async (id) => {
@@ -146,6 +189,17 @@ export const getSktaResponseByRequestId = async (sktaRequestId) => {
 //   }
 //   return api.post('/api/skta-responses', data);
 // };
+export const getSktaResponseUploadByStudentId = async (studentId) => {
+  try {
+    const response = await api.get(
+      `/api/skta-responses/requests/${studentId}/uploads`,
+    );
+    return response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+};
 
 export const createOrUpdateSktaResponse = async (payload) => {
   if (payload instanceof FormData) {
@@ -158,34 +212,44 @@ export const createOrUpdateSktaResponse = async (payload) => {
   if (id) {
     return api.patch(`/api/skta-responses/${id}`, data);
   }
-  return api.post('/api/skta-responses', data);
+  return api.post("/api/skta-responses", data);
 };
 
 export const uploadSkFinal = async (sktaResponseId, file) => {
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('sktaResponseId', sktaResponseId);
+  formData.append("file", file);
+  formData.append("sktaResponseId", sktaResponseId);
 
-  const response = await api.post(`/api/skta-responses/${sktaResponseId}/uploads`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const response = await api.post(
+    `/api/skta-responses/${sktaResponseId}/uploads`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
   return response.data;
 };
 
 // Download Evidence Mahasiswa
 export const downloadEvidence = async (uploadId) => {
-  const response = await api.get(`/api/skta-requests/uploads/${uploadId}/download`, {
-    responseType: 'blob',
-  });
+  const response = await api.get(
+    `/api/skta-requests/uploads/${uploadId}/download`,
+    {
+      responseType: "blob",
+    },
+  );
   return response.data;
 };
 
 // ------------------------------------------- LAINNYA (Sidang, dll) -------------------------------------------
-export const getLecturers = async () => api.get("/api/lecturers").then(r => r.data?.data ?? r.data);
-export const getFaculties = async () => api.get("/api/faculties").then(r => r.data?.data ?? r.data);
-export const getStudyPrograms = async () => api.get("/api/study-programs").then(r => r.data?.data ?? r.data);
+export const getLecturers = async () =>
+  api.get("/api/lecturers").then((r) => r.data?.data ?? r.data);
+export const getFaculties = async () =>
+  api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
+export const getStudyPrograms = async () =>
+  api.get("/api/study-programs").then((r) => r.data?.data ?? r.data);
 
-// get periode sidang
+// [periode sidang]
 export const getSidangPeriods = async () => {
   try {
     const response = await api.get("/api/sidang-periods");
@@ -199,13 +263,13 @@ export const getSidangPeriods = async () => {
 export const createSidangPeriod = async ({ name, startDate, endDate }) => {
   const now = new Date();
   const start = new Date(startDate);
-  const end   = new Date(endDate);
+  const end = new Date(endDate);
   const isOpen = now >= start && now <= end;
 
-  const response = await api.post('/api/sidang-periods', {
+  const response = await api.post("/api/sidang-periods", {
     name,
     startDate: start.toISOString(),
-    endDate:   end.toISOString(),
+    endDate: end.toISOString(),
     isOpen,
   });
   return response.data?.data ?? response.data;
@@ -213,14 +277,14 @@ export const createSidangPeriod = async ({ name, startDate, endDate }) => {
 
 export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
   const now = new Date();
-  const start = new Date (startDate);
+  const start = new Date(startDate);
   const end = new Date(endDate);
   const isOpen = now >= start && now <= end;
 
   const response = await api.patch(`/api/sidang-periods/${id}`, {
     name,
     startDate: start.toISOString(),
-    endDate:   end.toISOString(),
+    endDate: end.toISOString(),
     isOpen,
   });
   return response.data?.data ?? response.data;
