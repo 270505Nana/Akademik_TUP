@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Home, Calendar, ChevronDown, FileCheck, Users, Settings, LogOut, FileText, Database, Layout } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
 import '../../components/sidebar/sidebar.css';
 
-const SidebarAdmin = ({ isOpen, onClose, onShowToast }) => {
+const SidebarAdmin = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const [expandedMenus, setExpandedMenus] = useState({
     'Manajemen Sidang': false,
@@ -13,6 +16,8 @@ const SidebarAdmin = ({ isOpen, onClose, onShowToast }) => {
     'Manajemen Data Akademik': false,
     'Layanan SK TA & SKL': true,
   });
+
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     menuSidebar.forEach(section => {
@@ -31,7 +36,21 @@ const SidebarAdmin = ({ isOpen, onClose, onShowToast }) => {
     setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
   };
 
-  const menuSidebar = [
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
+    logout();
+    navigate('/login', { replace: true });
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
+  };
+
+  const menuSidebar = [ 
     {
       label: 'Utama',
       items: [
@@ -100,6 +119,94 @@ const SidebarAdmin = ({ isOpen, onClose, onShowToast }) => {
 
   return (
     <>
+      {/*  MODAL KONFIRMASI LOGOUT  */}
+      {showLogoutConfirm && (
+        <div style={{
+          position: 'fixed', 
+          inset: 0, 
+          zIndex: 9999,
+          background: 'rgba(0,0,0,0.45)',
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+        }}>
+          <div style={{
+            background: '#fff', 
+            borderRadius: 16, 
+            padding: '32px 28px',
+            maxWidth: 360, 
+            width: '90%', 
+            textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }}>
+            <div style={{
+              width: 56, 
+              height: 56, 
+              borderRadius: '50%',
+              background: '#FEF2F2', 
+              display: 'flex',
+              alignItems: 'center', 
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}>
+              <LogOut size={24} color="#C0182A" />
+            </div>
+            
+            <h3 style={{ 
+              fontSize: 16, 
+              fontWeight: 700, 
+              color: '#111827', 
+              marginBottom: 8 
+            }}>
+              Keluar dari SIMTA?
+            </h3>
+            
+            <p style={{ 
+              fontSize: 13, 
+              color: '#6B7280', 
+              marginBottom: 24, 
+              lineHeight: 1.6 
+            }}>
+              Sesi kamu akan diakhiri dan kamu perlu login kembali untuk mengakses sistem.
+            </p>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                onClick={cancelLogout}
+                style={{
+                  padding: '9px 24px', 
+                  borderRadius: 9999, 
+                  fontSize: 13,
+                  fontWeight: 600, 
+                  background: '#F3F4F6',
+                  color: '#374151', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmLogout}
+                style={{
+                  padding: '9px 24px', 
+                  borderRadius: 9999, 
+                  fontSize: 13,
+                  fontWeight: 700, 
+                  background: '#C0182A',
+                  color: '#fff', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                }}
+              >
+                Ya, Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/*  SIDEBAR   */}
       <aside id="sidebar" className={isOpen ? 'open' : ''}>
         <div className="sidebar-logo">
           <div className="logo-icon">S</div>
@@ -162,10 +269,14 @@ const SidebarAdmin = ({ isOpen, onClose, onShowToast }) => {
         <div className="sidebar-user">
           <div className="avatar">B</div>
           <div className="user-info">
-            <div className="user-name">Budiono</div>
-            <div className="user-role">Administrator</div>
+            <div className="user-name">Administrator</div>
+            <div className="user-role">Akademik Staff</div>
           </div>
-          <button className="logout-btn" onClick={() => onShowToast('Anda telah keluar dari sistem.', <LogOut size={18} />, 'warning')}>
+          <button 
+            className="logout-btn" 
+            onClick={handleLogout}
+            title="Keluar dari sistem"
+          >
             <LogOut size={16} />
           </button>
         </div>
