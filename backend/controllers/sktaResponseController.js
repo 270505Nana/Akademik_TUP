@@ -145,10 +145,6 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
 
     const sktaFile = getUploadedFile(req.files, "sktaFile");
 
-    console.log("req.file:", req.file);
-    console.log("req.files:", req.files);
-    console.log("sktaFile result:", sktaFile);
-
     // Cek apakah ada data admin akademik
     const academicStaff = await prisma.academicStaff.findFirst({
       where: { id: academicStaffId },
