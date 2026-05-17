@@ -70,7 +70,7 @@ export const loginUser = async ({ email, password }) => {
 // ------------------------------------------- MAHASISWA SIDE -------------------------------------------
 export const getStudentData = async (userId) => {
   const response = await api.get(`/api/students/${userId}`);
-  return response.data?.data ?? response.data;
+  return response.data;
 };
 
 export const saveStudentData = async (userId, payload) => {
@@ -151,13 +151,13 @@ export const getSKTAResponse = async (sktaRequestId) => {
 // ------------------------------------------- DOSEN SIDE () -------------------------------------------
 export const getLecturerData = async (userId) => {
   const response = await api.get(`/api/lecturer/${userId}`);
-  return response.data?.data ?? response.data;
+  return response.data;
 };
 
 // ------------------------------------------- ADMIN SIDE (Permohonan SK) -------------------------------------------
 export const getAcademicStaffData = async (userId) => {
   const response = await api.get(`/api/academic-staff/${userId}`);
-  return response.data?.data ?? response.data;
+  return response.data;
 };
 
 // List semua pengajuan SK (Admin)
@@ -203,8 +203,8 @@ export const getSktaResponseUploadByStudentId = async (studentId) => {
 
 export const createOrUpdateSktaResponse = async (payload) => {
   if (payload instanceof FormData) {
-    return api.post('/api/skta-responses', payload, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+    return api.post("/api/skta-responses", payload, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
   }
 
@@ -300,35 +300,38 @@ export const getYudisiumPeriods = async () => {
     throw err;
   }
 };
- 
+
 export const createYudisiumPeriod = async ({ name, startDate, endDate }) => {
-  const now   = new Date();
+  const now = new Date();
   const start = new Date(startDate);
-  const end   = new Date(endDate);
+  const end = new Date(endDate);
   const isOpen = now >= start && now <= end;
- 
-  const response = await api.post('/api/yudisium-periods', {
+
+  const response = await api.post("/api/yudisium-periods", {
     name,
     startDate: start.toISOString(),
-    endDate:   end.toISOString(),
+    endDate: end.toISOString(),
     isOpen,
   });
   return response.data?.data ?? response.data;
 };
- 
-export const updateYudisiumPeriod = async (id, { name, startDate, endDate }) => {
-  const now   = new Date();
+
+export const updateYudisiumPeriod = async (
+  id,
+  { name, startDate, endDate },
+) => {
+  const now = new Date();
   const start = new Date(startDate);
-  const end   = new Date(endDate);
+  const end = new Date(endDate);
   const isOpen = now >= start && now <= end;
- 
+
   const response = await api.patch(`/api/yudisium-periods/${id}`, {
     name,
     startDate: start.toISOString(),
-    endDate:   end.toISOString(),
+    endDate: end.toISOString(),
     isOpen,
   });
   return response.data?.data ?? response.data;
 };
- 
+
 export default api;

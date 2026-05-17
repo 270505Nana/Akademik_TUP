@@ -22,6 +22,8 @@ function PendaftaranSidangContent() {
 
   const [skta, setSkta] = useState(false);
 
+  console.log("skta", skta);
+
   // Auto-fill from Auth state, buat auto generate
   /*
   useEffect(() => {
@@ -108,7 +110,8 @@ function PendaftaranSidangContent() {
   async function checkSkta() {
     try {
       const skta = await getSktaResponseUploadByStudentId(profile?.id);
-
+      console.log("profile", profile);
+      console.log("skta", skta);
       setSkta(skta?.data.length > 0);
     } catch (e) {
       if (e.status === 404) {

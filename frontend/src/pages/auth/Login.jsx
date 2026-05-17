@@ -24,6 +24,7 @@ import {
 } from "../../service/api";
 import CustomAlert from "../../components/common/CustomAlert";
 import "./Auth.css";
+import { useStudent } from "../../context/StudentContext";
 
 // mapping tab sesuai roles
 const TAB_ALLOWED_ROLES = {
@@ -40,6 +41,7 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { login, user, isAuthenticated } = useAuth();
+  const { fetchAndLoadStudent } = useStudent();
   const navigate = useNavigate();
 
   //  const [searchParams] = useSearchParams();
@@ -51,7 +53,6 @@ const LoginPage = () => {
   //       setAlert({ type: "error", msg });
   //     }
   //   }, [searchParams]);
-
 
   if (isAuthenticated && user) {
     const roleMap = {
@@ -97,11 +98,15 @@ const LoginPage = () => {
         return;
       }
 
-      login({
+      await login({
         ...data.data,
         role,
         token: data.token,
       });
+
+      if (role === "STUDENT") {
+        await fetchAndLoadStudent(data.data?.id);
+      }
 
       const destination =
         {

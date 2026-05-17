@@ -1,8 +1,20 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
+import {
+  getAcademicStaffData,
+  getLecturerData,
+  getStudentData,
+} from "../service/api";
 
 const AuthContext = createContext(null);
 const INACTIVITY_ROLES = ["ACADEMIC_STAFF", "LECTURER"];
-// Timeout inactivity: 30 menit tidak ada aktivitas 
+// Timeout inactivity: 30 menit tidak ada aktivitas
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
 export const AuthProvider = ({ children }) => {
@@ -35,10 +47,16 @@ export const AuthProvider = ({ children }) => {
   // login
   const login = async (userData) => {
     const { token: tkn, ...rest } = userData;
+    console.log("1. userData masuk:", userData);
+    console.log("2. rest (user):", rest);
+
     setUser(rest);
     setToken(tkn);
     localStorage.setItem("simta_user", JSON.stringify(rest));
     localStorage.setItem("simta_token", tkn);
+
+    console.log("3. role:", rest?.role);
+    console.log("4. id:", rest?.id);
 
     async function fetchProfile(role, id) {
       let profile;
@@ -54,10 +72,19 @@ export const AuthProvider = ({ children }) => {
       return profile;
     }
 
-    const profile = await fetchProfile(role, data?.data?.id);
+    console.log("role", rest?.role);
+    console.log("id", rest?.id);
+
+    const profile = await fetchProfile(rest?.role, rest?.id);
+
+    console.log("5. profile result:", profile);
+
+    console.log("set profile", profile);
 
     setProfile(profile?.data);
     localStorage.setItem("simta_profile", JSON.stringify(profile?.data));
+
+    console.log("6. login selesai");
   };
 
   const logout = useCallback(() => {
@@ -65,6 +92,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("simta_user");
+    localStorage.removeItem("simta_profile");
     localStorage.removeItem("simta_token");
     localStorage.removeItem("student_data");
   }, []);
@@ -75,12 +103,13 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("simta_user");
+    localStorage.removeItem("simta_profile");
     localStorage.removeItem("simta_token");
     localStorage.removeItem("student_data");
     window.location.href = `/login?expired=true&msg=${encodeURIComponent(message)}`;
   }, []);
 
-  // Reset inactivity timer 
+  // Reset inactivity timer
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     inactivityTimer.current = setTimeout(() => {
@@ -92,12 +121,21 @@ export const AuthProvider = ({ children }) => {
     if (!user || !token) return;
     if (!INACTIVITY_ROLES.includes(user.role)) return;
 
-    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
+    const events = [
+      "mousedown",
+      "mousemove",
+      "keydown",
+      "scroll",
+      "touchstart",
+      "click",
+    ];
     const handleActivity = () => resetInactivityTimer();
 
-    resetInactivityTimer(); 
+    resetInactivityTimer();
 
-    events.forEach((e) => window.addEventListener(e, handleActivity, { passive: true }));
+    events.forEach((e) =>
+      window.addEventListener(e, handleActivity, { passive: true }),
+    );
     return () => {
       if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
       events.forEach((e) => window.removeEventListener(e, handleActivity));
@@ -120,6 +158,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        profile,
         token,
         login,
         logout,

@@ -1,24 +1,29 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getStudentData, getLecturers, getFaculties, getStudyPrograms } from '../service/api';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import {
+  getStudentData,
+  getLecturers,
+  getFaculties,
+  getStudyPrograms,
+} from "../service/api";
 
 const StudentContext = createContext(undefined);
 
 export const StudentProvider = ({ children }) => {
-  const [student, setStudent]                   = useState(null);
-  const [isComplete, setIsComplete]             = useState(false);
+  const [student, setStudent] = useState(null);
+  const [isComplete, setIsComplete] = useState(false);
   const [isStudentLoading, setIsStudentLoading] = useState(true);
   const [sktaRequestId, setSktaRequestId] = useState(null); //save sktarequestid
 
   useEffect(() => {
-    const savedData = localStorage.getItem('student_data');
+    const savedData = localStorage.getItem("student_data");
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
         setStudent(parsed);
         setIsComplete(true);
       } catch (e) {
-        console.error('Gagal parse student_data dari localStorage:', e);
-        localStorage.removeItem('student_data');
+        console.error("Gagal parse student_data dari localStorage:", e);
+        localStorage.removeItem("student_data");
       }
     }
     // cek request yg ada sblmnya
@@ -27,14 +32,13 @@ export const StudentProvider = ({ children }) => {
     //   setSktaRequestId(Number(savedSktaRequestId));
     // }
 
-
     setIsStudentLoading(false);
   }, []);
 
   const updateStudent = (data) => {
     setStudent(data);
     setIsComplete(true);
-    localStorage.setItem('student_data', JSON.stringify(data));
+    localStorage.setItem("student_data", JSON.stringify(data));
   };
 
   //  Simpan sktaRequestId setelah POST /api/skta-requests
@@ -43,10 +47,15 @@ export const StudentProvider = ({ children }) => {
     setSktaRequestId(id);
   };
 
-  // Fetch data student dari server 
+  // Fetch data student dari server
   const fetchAndLoadStudent = async (userId) => {
     try {
-      const [studentData, rawLecturers, rawStudyPrograms, rawFaculties] = await Promise.all([
+      const [
+        { data: studentData },
+        rawLecturers,
+        rawStudyPrograms,
+        rawFaculties,
+      ] = await Promise.all([
         getStudentData(userId),
         getLecturers(),
         getStudyPrograms(),
@@ -56,40 +65,43 @@ export const StudentProvider = ({ children }) => {
       if (!studentData?.nim) return false;
 
       const matchedProdi = rawStudyPrograms.find(
-        (p) => p.id === Number(studentData.studyProgramId)
+        (p) => p.id === Number(studentData.studyProgramId),
       );
       const matchedFakultas = rawFaculties.find(
-        (f) => f.id === Number(matchedProdi?.facultyId ?? matchedProdi?.faculty_id)
+        (f) =>
+          f.id === Number(matchedProdi?.facultyId ?? matchedProdi?.faculty_id),
       );
       const matchedDosen = rawLecturers.find(
-        (d) => d.id === Number(studentData.dosenWaliId)
+        (d) => d.id === Number(studentData.dosenWaliId),
       );
 
       const mapped = {
-        studentId:        studentData.id                                  ?? null,
-        namaLengkap:      studentData.name                                ?? '',
-        nim:              studentData.nim                                  ?? '',
-        kelas:            studentData.className                            ?? '',
-        angkatan:         String(studentData.year                         ?? ''),
-        studyProgramId:   String(studentData.studyProgramId               ?? ''),
-        studyProgramNama: matchedProdi?.name                              ?? '',
-        fakultasId:       String(matchedFakultas?.id                      ??
-                                 matchedProdi?.facultyId                  ?? ''),
-        fakultasNama:     matchedFakultas?.name                           ?? '',
-        dosenWaliId:      String(studentData.dosenWaliId                  ?? ''),
-        dosenWaliKode:    matchedDosen?.lecturerCode ?? matchedDosen?.kode ?? '',
-        dosenWaliNama:    matchedDosen?.name         ?? matchedDosen?.nama ?? '',
-        dosenWaliNip:     matchedDosen?.nip                               ?? '',
+        studentId: studentData.id ?? null,
+        namaLengkap: studentData.name ?? "",
+        nim: studentData.nim ?? "",
+        kelas: studentData.className ?? "",
+        angkatan: String(studentData.year ?? ""),
+        studyProgramId: String(studentData.studyProgramId ?? ""),
+        studyProgramNama: matchedProdi?.name ?? "",
+        fakultasId: String(
+          matchedFakultas?.id ?? matchedProdi?.facultyId ?? "",
+        ),
+        fakultasNama: matchedFakultas?.name ?? "",
+        dosenWaliId: String(studentData.dosenWaliId ?? ""),
+        dosenWaliKode: matchedDosen?.lecturerCode ?? matchedDosen?.kode ?? "",
+        dosenWaliNama: matchedDosen?.name ?? matchedDosen?.nama ?? "",
+        dosenWaliNip: matchedDosen?.nip ?? "",
       };
 
       updateStudent(mapped);
       return true;
-
     } catch (err) {
       if (err.response?.status === 404) {
-        console.info('Data student belum ada di server (404), arahkan ke lengkapi-data');
+        console.info(
+          "Data student belum ada di server (404), arahkan ke lengkapi-data",
+        );
       } else {
-        console.error('Gagal fetch data student dari server:', err);
+        console.error("Gagal fetch data student dari server:", err);
       }
       return false;
     }
@@ -100,20 +112,22 @@ export const StudentProvider = ({ children }) => {
     setIsComplete(false);
     setIsStudentLoading(false);
     setSktaRequestId(null);
-    localStorage.removeItem('student_data');
+    localStorage.removeItem("student_data");
   };
 
   return (
-    <StudentContext.Provider value={{
-      student,
-      isComplete,
-      isStudentLoading,
-      sktaRequestId,
-      updateStudent,
-      updateSktaRequestId,
-      fetchAndLoadStudent,
-      logoutStudentData,
-    }}>
+    <StudentContext.Provider
+      value={{
+        student,
+        isComplete,
+        isStudentLoading,
+        sktaRequestId,
+        updateStudent,
+        updateSktaRequestId,
+        fetchAndLoadStudent,
+        logoutStudentData,
+      }}
+    >
       {children}
     </StudentContext.Provider>
   );
@@ -122,7 +136,7 @@ export const StudentProvider = ({ children }) => {
 export const useStudent = () => {
   const context = useContext(StudentContext);
   if (context === undefined) {
-    throw new Error('useStudent must be used within a StudentProvider');
+    throw new Error("useStudent must be used within a StudentProvider");
   }
   return context;
 };
