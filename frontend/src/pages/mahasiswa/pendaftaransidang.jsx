@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Save, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../../components/mahasiswa/sidang/sidang.css";
 import logoSimta from "../../assets/logo-simta.png";
@@ -9,20 +9,48 @@ import {
   SidangFormProvider,
 } from "../../context/SidangFormContext";
 import { useAuth } from "../../context/AuthContext";
+import { useStudent } from "../../context/StudentContext";
 import Step1 from "../../components/mahasiswa/sidang/Step1Sidang";
 import Step2 from "../../components/mahasiswa/sidang/Step2Sidang";
-import api, { getSktaResponseUploadByStudentId } from "../../service/api";
+import {
+  getLecturers,
+  getSidangRegistrationByStudentId,
+  getSktaResponseUploadByStudentId,
+  saveSidangRegistration,
+  submitSidangRegistration,
+} from "../../service/api";
 
 function PendaftaranSidangContent() {
   const navigate = useNavigate();
   const { state, dispatch } = useSidangContext();
   const { user, profile } = useAuth();
-  const { step, data, documents } = state;
+  const { student } = useStudent();
+  const { step, data } = state;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [skta, setSkta] = useState(false);
+  const [isSktaChecking, setIsSktaChecking] = useState(true);
+  const [isRegistrationLoading, setIsRegistrationLoading] = useState(false);
+  const [isSavingStep1, setIsSavingStep1] = useState(false);
+  const [lecturers, setLecturers] = useState([]);
+  const [registrationId, setRegistrationId] = useState(null);
 
-  console.log("skta", skta);
+  const studentId = profile?.id || student?.studentId || user?.id;
+
+  const studentInfo = {
+    nama: student?.namaLengkap || profile?.name || user?.username || "-",
+    nim: student?.nim || profile?.nim || "-",
+    prodi:
+      student?.studyProgramNama ||
+      profile?.studyProgram?.name ||
+      profile?.studyProgramName ||
+      "-",
+    phone: user?.phone || profile?.phone || user?.no_telp || "-",
+    dosenWaliKode:
+      student?.dosenWaliKode || profile?.dosenWali?.lecturerCode || "-",
+    dosenWaliNama: student?.dosenWaliNama || profile?.dosenWali?.name || "-",
+    dosenWaliNip: student?.dosenWaliNip || profile?.dosenWali?.nip || "-",
+  };
 
   // Auto-fill from Auth state, buat auto generate
   /*
@@ -68,30 +96,8 @@ function PendaftaranSidangContent() {
 
     try {
       setIsSubmitting(true);
-      const payload = {
-        student_id: user?.id,
-        dosbing_1_id: data.pembimbing1_id || data.pembimbing1,
-        dosbing_2_id: data.pembimbing2_id || data.pembimbing2,
-        program: data.program,
-        sks: parseInt(data.sks) || 0,
-        ipk: parseFloat(
-          typeof data.ipk === "string"
-            ? data.ipk.replace(",", ".")
-            : data.ipk || 0,
-        ),
-        tak: parseInt(data.tak) || 0,
-        sk_exp_date: data.batasSk,
-        judul_ta_id: data.judulId,
-        judul_ta_en: data.judulEn,
-        skema_sidang_id: data.skema,
-        sidang_period_id: data.periodeSidang,
-        extra_data: {
-          jalur_non_sidang: data.jalurNonSidang,
-        },
-      };
-
-      console.log("Sending to BE (Simulation):", payload);
-      // await api.post('/api/sidang/daftar', payload);
+      const payload = buildSavePayload();
+      await submitSidangRegistration(payload);
 
       localStorage.removeItem("sidang_form_draft");
 
@@ -99,34 +105,151 @@ function PendaftaranSidangContent() {
       navigate("/mahasiswa/dashboard");
     } catch (error) {
       console.error("Submit failed:", error);
-
-      alert("Berhasil Daftar Sidang");
-      navigate("/mahasiswa/dashboard");
+      alert("Gagal submit pendaftaran sidang.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  async function checkSkta() {
+  const normalizeDateInput = (value) => {
+    if (!value) return "";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toISOString().split("T")[0];
+  };
+
+  const applyRegistrationToForm = (registration) => {
+    if (!registration) return;
+    dispatch({
+      type: "SET_INITIAL_DATA",
+      payload: {
+        programType: registration.programType || "",
+        sidangScheme: registration.sidangScheme || "",
+        jalurNonSidang: registration.jalurNonSidang || [],
+        sks: registration.sks ?? "",
+        ipk: registration.ipk ?? "",
+        tak: registration.tak ?? "",
+        sktaExpDate: normalizeDateInput(registration.sktaExpDate),
+        thesisTitleId: registration.thesisTitleId || "",
+        thesisTitleEn: registration.thesisTitleEn || "",
+        dosenPembimbing1Id: registration.dosenPembimbing1Id || "",
+        dosenPembimbing2Id: registration.dosenPembimbing2Id || "",
+      },
+    });
+  };
+
+  const extractRegistrationId = (registration) => {
+    if (!registration) return null;
+    if (registration.id) return registration.id;
+    if (registration.data?.id) return registration.data.id;
+    return null;
+  };
+
+  const initRegistration = async (id) => {
+    setIsRegistrationLoading(true);
     try {
-      const skta = await getSktaResponseUploadByStudentId(profile?.id);
-      console.log("profile", profile);
-      console.log("skta", skta);
-      setSkta(skta?.data.length > 0);
+      const existing = await getSidangRegistrationByStudentId(id);
+      if (!existing) {
+        const created = await saveSidangRegistration({ studentId: id });
+        setRegistrationId(extractRegistrationId(created));
+        applyRegistrationToForm(created);
+        return;
+      }
+      setRegistrationId(extractRegistrationId(existing));
+      applyRegistrationToForm(existing);
     } catch (e) {
-      if (e.status === 404) {
+      console.error("Gagal memuat data pendaftaran sidang:", e);
+    } finally {
+      setIsRegistrationLoading(false);
+    }
+  };
+
+  const extractUploads = (response) => {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response?.data?.data)) return response.data.data;
+    return [];
+  };
+
+  async function checkSkta() {
+    if (!studentId) {
+      setIsSktaChecking(false);
+      return;
+    }
+    try {
+      const response = await getSktaResponseUploadByStudentId(studentId);
+      const uploads = extractUploads(response);
+      const hasSkta = uploads.length > 0;
+      setSkta(hasSkta);
+      if (hasSkta) {
+        await initRegistration(studentId);
+      }
+    } catch (e) {
+      if (e.response?.status === 404) {
         return;
       }
       // setErr(true);
       console.error("Error fetching data:", e);
     } finally {
-      // setLoading(false);
+      setIsSktaChecking(false);
     }
   }
 
   useEffect(() => {
+    setIsSktaChecking(true);
     checkSkta();
+  }, [studentId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    getLecturers()
+      .then((data) => {
+        if (isMounted) setLecturers(data || []);
+      })
+      .catch((e) => console.error("Gagal memuat daftar dosen:", e));
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const buildSavePayload = () => ({
+    programType: data.programType,
+    sidangScheme: data.sidangScheme,
+    jalurNonSidang: Array.isArray(data.jalurNonSidang)
+      ? data.jalurNonSidang
+      : [],
+    sks: data.sks ? Number(data.sks) : 0,
+    ipk: data.ipk ? Number(data.ipk) : 0,
+    tak: data.tak ? Number(data.tak) : 0,
+    sktaExpDate: data.sktaExpDate || null,
+    thesisTitleId: data.thesisTitleId,
+    thesisTitleEn: data.thesisTitleEn,
+    studentId,
+    dosenPembimbing1Id: data.dosenPembimbing1Id
+      ? Number(data.dosenPembimbing1Id)
+      : null,
+    dosenPembimbing2Id: data.dosenPembimbing2Id
+      ? Number(data.dosenPembimbing2Id)
+      : null,
+  });
+
+  const handleSaveStep1 = async () => {
+    try {
+      if (!studentId) {
+        alert("Data mahasiswa belum tersedia. Silakan coba lagi.");
+        return;
+      }
+      setIsSavingStep1(true);
+      await saveSidangRegistration(buildSavePayload());
+      setStep(2);
+    } catch (e) {
+      console.error("Gagal menyimpan pendaftaran sidang:", e);
+      alert("Gagal menyimpan data pendaftaran sidang.");
+    } finally {
+      setIsSavingStep1(false);
+    }
+  };
 
   return (
     <div className="page-wrapper">
@@ -156,9 +279,22 @@ function PendaftaranSidangContent() {
       </div>
 
       <div className="simta-container">
-        {skta ? (
+        {isSktaChecking || isRegistrationLoading ? (
+          <div className="skta-warning">
+            <h2 className="skta-warning-title">Memuat Data Pendaftaran</h2>
+            <p className="skta-warning-text">
+              Sistem sedang memeriksa status SKTA dan data pendaftaran sidang.
+            </p>
+          </div>
+        ) : skta ? (
           <>
-            <main>{step === 1 ? <Step1 /> : <Step2 />}</main>
+            <main>
+              {step === 1 ? (
+                <Step1 studentInfo={studentInfo} lecturers={lecturers} />
+              ) : (
+                <Step2 registrationId={registrationId} />
+              )}
+            </main>
 
             <footer className="footer-nav">
               <div
@@ -193,14 +329,18 @@ function PendaftaranSidangContent() {
               </div>
 
               {step === 1 ? (
-                <button className="btn-primary" onClick={() => setStep(2)}>
-                  Simpan & Lanjutkan
+                <button
+                  className="btn-primary"
+                  onClick={handleSaveStep1}
+                  disabled={isSavingStep1}
+                >
+                  {isSavingStep1 ? "Menyimpan..." : "Simpan & Lanjutkan"}
                 </button>
               ) : (
                 <button
                   className="btn-primary"
                   onClick={handleSubmit}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !registrationId}
                 >
                   {isSubmitting ? "Mengirim..." : "Submit Pendaftaran"}
                 </button>

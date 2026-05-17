@@ -14,10 +14,9 @@ const submitSidangRegistrationValidator = [
     .isString()
     .withMessage("Tipe program harus berupa string"),
 
-  body("sidangScheme")
-    .optional({ nullable: true })
-    .isArray()
-    .withMessage("Skema sidang harus berupa array jika diisi"),
+  body("sidangScheme").optional({ nullable: true }),
+  // .isArray()
+  // .withMessage("Skema sidang harus berupa array jika diisi")
 
   body("jalurNonSidang")
     .optional({ nullable: true })
@@ -105,10 +104,9 @@ const saveSidangRegistrationValidator = [
     .isString()
     .withMessage("Tipe program harus berupa string"),
 
-  body("sidangScheme")
-    .optional({ nullable: true })
-    .isArray()
-    .withMessage("Skema sidang harus berupa array jika diisi"),
+  body("sidangScheme").optional({ nullable: true }),
+  // .isArray()
+  // .withMessage("Skema sidang harus berupa array jika diisi"),
 
   body("jalurNonSidang")
     .optional({ nullable: true })

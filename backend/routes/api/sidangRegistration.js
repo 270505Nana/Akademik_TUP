@@ -12,7 +12,7 @@ const {
   deleteSidangRegistration,
   uploadSidangRegistrationFile,
   getSidangRegistrationFiles,
-  downloadSidangRegistrationFile
+  downloadSidangRegistrationFile,
 } = require("../../controllers/sidangRegistrationController");
 const {
   saveSidangRegistrationValidator,
@@ -117,6 +117,20 @@ router.get(
  *         application/json:
  *           schema:
  *             type: object
+ *             example:
+ *               id: 12
+ *               programType: "Reguler"
+ *               sidangScheme: "Sidang Reguler"
+ *               jalurNonSidang: []
+ *               sks: 144
+ *               ipk: 3.45
+ *               tak: 120
+ *               sktaExpDate: "2026-12-31"
+ *               thesisTitleId: "Analisis Sistem X"
+ *               thesisTitleEn: "Analysis of System X"
+ *               studentId: 20
+ *               dosenPembimbing1Id: 5
+ *               dosenPembimbing2Id: 7
  *     responses:
  *       200:
  *         description: Sidang registration saved as draft successfully
@@ -154,6 +168,20 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             example:
+ *               id: 12
+ *               programType: "Reguler"
+ *               sidangScheme: "Sidang Reguler"
+ *               jalurNonSidang: []
+ *               sks: 144
+ *               ipk: 3.45
+ *               tak: 120
+ *               sktaExpDate: "2026-12-31"
+ *               thesisTitleId: "Analisis Sistem X"
+ *               thesisTitleEn: "Analysis of System X"
+ *               studentId: 20
+ *               dosenPembimbing1Id: 5
+ *               dosenPembimbing2Id: 7
  *     responses:
  *       200:
  *         description: Sidang registration submitted successfully
@@ -242,6 +270,10 @@ router.delete("/:id", verifyToken, isAcademicStaff, deleteSidangRegistration);
  *               name:
  *                 type: string
  *                 description: Human readable name of the file
+ *           example:
+ *             file: "(binary)"
+ *             slug: "berkasScanKhsDenganTtdDoswalKaprodi"
+ *             name: "KHS TTD Doswal dan Kaprodi"
  *     responses:
  *       200:
  *         description: File uploaded/updated successfully
@@ -259,7 +291,7 @@ router.post(
   verifyToken,
   isStudent,
   upload("sidang-requirements").single("file"),
-  uploadSidangRegistrationFile
+  uploadSidangRegistrationFile,
 );
 
 /**
@@ -285,11 +317,7 @@ router.post(
  *       404:
  *         description: Sidang registration not found
  */
-router.get(
-  "/:id/uploads",
-  verifyToken,
-  getSidangRegistrationFiles
-);
+router.get("/:id/uploads", verifyToken, getSidangRegistrationFiles);
 
 /**
  * @swagger
@@ -317,7 +345,7 @@ router.get(
 router.get(
   "/uploads/:uploadId/download",
   verifyToken,
-  downloadSidangRegistrationFile
+  downloadSidangRegistrationFile,
 );
 
 module.exports = router;

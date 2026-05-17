@@ -1,4 +1,3 @@
-
 :root {
   --primary-red: #bb2825;
   --bg-light: #f9f9fb;
@@ -29,7 +28,9 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
   background-color: var(--bg-light);
   color: var(--text-dark);
   line-height: 1.5;
@@ -259,6 +260,16 @@ body {
   font-size: 0.95rem;
 }
 
+.static-field {
+  width: 100%;
+  padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+  border: 1px solid var(--border-grey);
+  border-radius: 8px;
+  background: #f7fafc;
+  color: var(--text-grey);
+  font-size: 0.95rem;
+}
+
 .input-field:focus {
   outline: none;
   border-color: var(--primary-red);
@@ -306,6 +317,13 @@ body {
 .program-card.active .checkbox-visual {
   background: var(--primary-red);
   border-color: var(--primary-red);
+}
+
+.checkbox-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
 }
 
 /* Kelompok Keilmuan Grid */
@@ -675,10 +693,10 @@ body {
     padding: 1rem;
   }
 
-  .form-grid, 
-  .program-selector, 
-  .kelompok-keilmuan-grid, 
-  .step2-top-grid, 
+  .form-grid,
+  .program-selector,
+  .kelompok-keilmuan-grid,
+  .step2-top-grid,
   .doc-management-container {
     grid-template-columns: 1fr;
   }
@@ -757,15 +775,15 @@ body {
   .header-logo {
     justify-content: center;
   }
-  
+
   .section-head {
     font-size: 1.1rem;
   }
-  
+
   .input-field {
     padding: 0.75rem 1rem;
   }
-  
+
   .input-icon {
     display: none;
   }

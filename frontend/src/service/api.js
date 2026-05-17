@@ -149,8 +149,13 @@ export const getSKTAResponse = async (sktaRequestId) => {
 };
 
 // ------------------------------------------- DOSEN SIDE () -------------------------------------------
+export const getLecturersData = async (userId) => {
+  const response = await api.get(`/api/lecturers`);
+  return response.data;
+};
+
 export const getLecturerData = async (userId) => {
-  const response = await api.get(`/api/lecturer/${userId}`);
+  const response = await api.get(`/api/lecturers/${userId}`);
   return response.data;
 };
 
@@ -258,6 +263,44 @@ export const getSidangPeriods = async () => {
     if (err.response?.status === 404) return null;
     throw err;
   }
+};
+
+export const getSidangRegistrationByStudentId = async (studentId) => {
+  try {
+    const response = await api.get(
+      `/api/sidang-registrations/student/${studentId}`,
+    );
+    return response.data?.data ?? response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+};
+
+export const saveSidangRegistration = async (payload) => {
+  const response = await api.post("/api/sidang-registrations/save", payload);
+  return response.data?.data ?? response.data;
+};
+
+export const uploadSidangRegistrationFile = async (registrationId, payload) => {
+  const formData = new FormData();
+  formData.append("file", payload.file);
+  formData.append("slug", payload.slug);
+  formData.append("name", payload.name);
+
+  const response = await api.post(
+    `/api/sidang-registrations/${registrationId}/uploads`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
+  return response.data?.data ?? response.data;
+};
+
+export const submitSidangRegistration = async (payload) => {
+  const response = await api.post("/api/sidang-registrations/submit", payload);
+  return response.data?.data ?? response.data;
 };
 
 export const createSidangPeriod = async ({ name, startDate, endDate }) => {

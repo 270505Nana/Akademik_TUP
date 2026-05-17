@@ -1,36 +1,40 @@
-import { Search, User, GraduationCap, Calendar, Mail, FileText, CheckCircle2, ChevronLeft, ChevronRight, Download, UploadCloud, Info, AlertTriangle, Check } from 'lucide-react';
-import { useSidangContext } from '../../../context/SidangFormContext';
+import { Check, GraduationCap, Info, Mail, Phone, User } from "lucide-react";
+import { useSidangContext } from "../../../context/SidangFormContext";
 
-export default function Step1() {
+export default function Step1({ studentInfo = {}, lecturers = [] }) {
   const { state, dispatch } = useSidangContext();
   const { data } = state;
 
   const updateField = (field, value) => {
-    dispatch({ type: 'UPDATE_FIELD', field, value });
+    dispatch({ type: "UPDATE_FIELD", field, value });
   };
 
-  const programs = ['Reguler', 'Alih Jenjang'];
-  const skemas = ['Sidang Reguler', 'Non Sidang', 'Capstone', 'Sidang Khusus Prodi'];
-  const jalurNonSidangOptions = ['Publikasi Jurnal', 'Proceeding International', 'HKI'];
+  const programs = ["Reguler", "Alih Jenjang"];
+  const skemas = [
+    "Sidang Reguler",
+    "Non Sidang",
+    "Capstone",
+    "Sidang Khusus Prodi",
+  ];
+  const jalurNonSidangOptions = [
+    "Publikasi Jurnal",
+    "Proceeding International",
+    "HKI",
+  ];
 
   const toggleJalurNonSidang = (option) => {
     const current = data.jalurNonSidang || [];
     const next = current.includes(option)
-      ? current.filter(i => i !== option)
+      ? current.filter((i) => i !== option)
       : [...current, option];
-    updateField('jalurNonSidang', next);
+    updateField("jalurNonSidang", next);
   };
-  const keilmuans = [
-    'Electronics and Telecommunications Science',
-    'Industrial Systems Engineering',
-    'Media, Design and Creative Innovation',
-    'Applied Artificial Intelligence',
-    'Information System, Digital Business & Data Driven Solution',
-    'Cyber Security, IOT, and Cloud System',
-    'Data Science and Optimization',
-    'Bioengineering, Food Technology and Advance Material',
-    'Software Engineering and Multimedia'
-  ];
+
+  const pembimbing1 = lecturers.find(
+    (lect) => String(lect.id) === String(data.dosenPembimbing1Id),
+  );
+  const pembimbing1Group =
+    pembimbing1?.researchGroup?.name || pembimbing1?.researchGroupName || "-";
 
   return (
     <div className="step-content">
@@ -40,20 +44,39 @@ export default function Step1() {
         </div>
         <div className="banner-content">
           <h4>Pendaftaran Sidang Telkom University Purwokerto</h4>
-          <p>Sebelum melengkapi data pendaftaran sidang, silahkan pelajari dan pahami informasi terkait pendaftaran sidang pada tautan : <a href="https://tel-u.ac.id/panduansidangtup">https://tel-u.ac.id/panduansidangtup</a></p>
-          <p><strong>Harap Baca Dengan Teliti</strong></p>
+          <p>
+            Sebelum melengkapi data pendaftaran sidang, silahkan pelajari dan
+            pahami informasi terkait pendaftaran sidang pada tautan :{" "}
+            <a href="https://tel-u.ac.id/panduansidangtup">
+              https://tel-u.ac.id/panduansidangtup
+            </a>
+          </p>
+          <p>
+            <strong>Harap Baca Dengan Teliti</strong>
+          </p>
           <p>Contact Person : (kontak pada hari dan jam kerja)</p>
-          <p>Helpdesk Layanan Sidang-Yudisium TUP <a href="#">wa.me/+6285117001281</a> (chat only)</p>
+          <p>
+            Helpdesk Layanan Sidang-Yudisium TUP{" "}
+            <a href="#">wa.me/+6285117001281</a> (chat only)
+          </p>
         </div>
-        <div className="contact-person-badge" onClick={() => window.open('https://wa.me/6285117001281', '_blank')}>
+        <div
+          className="contact-person-badge"
+          onClick={() => window.open("https://wa.me/6285117001281", "_blank")}
+        >
           <Mail size={16} />
-          <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP wa.me/+6285117001281</span>
+          <span>
+            Contact Person : Helpdesk Layanan Sidang-Yudisium TUP
+            wa.me/+6285117001281
+          </span>
         </div>
       </div>
 
       <div className="step-title-container">
         <div className="step-label">Step 1</div>
-        <h2 className="step-main-title">Pendaftaran Sidang Telkom University Purwokerto</h2>
+        <h2 className="step-main-title">
+          Pendaftaran Sidang Telkom University Purwokerto
+        </h2>
       </div>
 
       <section className="form-section">
@@ -63,114 +86,45 @@ export default function Step1() {
             <label>Nama</label>
             <div className="input-with-icon">
               <User className="input-icon" size={18} />
-              <input
-                type="text"
-                className="input-field"
-                placeholder="Masukan Nama Jawaban Anda"
-                value={data.nama}
-                onChange={(e) => updateField('nama', e.target.value)}
-              />
+              <div className="static-field">{studentInfo.nama || "-"}</div>
             </div>
           </div>
           <div className="input-group">
             <label>NIM (NOMOR INDUK MAHASISWA) *</label>
             <div className="input-with-icon">
-              <input
-                type="text"
-                className="input-field"
-                style={{ paddingLeft: '1rem' }}
-                placeholder="Masukan NIM Anda"
-                value={data.nim}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  updateField('nim', val);
-                }}
-              />
+              <div className="static-field">{studentInfo.nim || "-"}</div>
             </div>
-            <span className="helper-text">NIM terverifikasi oleh sistem secara otomatis.</span>
+            <span className="helper-text">
+              NIM terverifikasi oleh sistem secara otomatis.
+            </span>
           </div>
           <div className="input-group">
             <label>Program Studi</label>
             <div className="input-with-icon">
               <GraduationCap className="input-icon" size={18} />
-              <select
-                className="input-field"
-                value={data.prodi}
-                onChange={(e) => updateField('prodi', e.target.value)}
-              >
-                <option value="">Pilih Program Studi Anda</option>
-                <option value="S1 Informatika">S1 Informatika</option>
-                <option value="S1 Sistem Informasi">S1 Sistem Informasi</option>
-              </select>
+              <div className="static-field">{studentInfo.prodi || "-"}</div>
             </div>
           </div>
           <div className="input-group">
-            <label>Jumlah Total SKS Lulus</label>
+            <label>No. HP</label>
             <div className="input-with-icon">
-              <input
-                type="text"
-                className="input-field"
-                style={{ paddingLeft: '1rem' }}
-                placeholder="0"
-                value={data.sks}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  updateField('sks', val);
-                }}
-              />
-            </div>
-          </div>
-          <div className="input-group">
-            <label>TAK</label>
-            <div className="input-with-icon">
-              <input
-                type="text"
-                className="input-field"
-                style={{ paddingLeft: '1rem' }}
-                placeholder="0"
-                value={data.tak}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  updateField('tak', val);
-                }}
-              />
-            </div>
-            <span className="helper-text">Poin minimum untuk TAK Mahasiswa Reguler : 60, Alih Jenjang : 25, Diploma : 45</span>
-          </div>
-          <div className="input-group">
-            <label>Nilai IPK Sebelum Sidang</label>
-            <div className="input-with-icon">
-              <input
-                type="text"
-                className="input-field"
-                style={{ paddingLeft: '1rem' }}
-                placeholder="0.00"
-                value={data.ipk}
-                onChange={(e) => {
-
-                  const val = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
-                  updateField('ipk', val);
-                }}
-                onBlur={(e) => {
-                  const val = e.target.value;
-                  if (val && !isNaN(parseFloat(val))) {
-                    updateField('ipk', parseFloat(val).toFixed(2));
-                  }
-                }}
-              />
+              <Phone className="input-icon" size={18} />
+              <div className="static-field">{studentInfo.phone || "-"}</div>
             </div>
           </div>
           <div className="input-group">
             <label>Program</label>
             <div className="program-selector">
-              {programs.map(p => (
+              {programs.map((p) => (
                 <div
                   key={p}
-                  className={`program-card ${data.program === p ? 'active' : ''}`}
-                  onClick={() => updateField('program', p)}
+                  className={`program-card ${data.programType === p ? "active" : ""}`}
+                  onClick={() => updateField("programType", p)}
                 >
                   <div className="checkbox-visual">
-                    {data.program === p && <Check color="white" size={14} strokeWidth={3} />}
+                    {data.programType === p && (
+                      <span className="checkbox-dot" />
+                    )}
                   </div>
                   <span>{p}</span>
                 </div>
@@ -178,14 +132,54 @@ export default function Step1() {
             </div>
           </div>
           <div className="input-group">
-            <label>Tanggal Batas Akhir SK iGracias</label>
+            <label>Jumlah Total SKS Lulus</label>
+            <div className="input-with-icon">
+              <input
+                type="number"
+                className="input-field"
+                placeholder="0"
+                value={data.sks}
+                onChange={(e) => updateField("sks", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="input-group">
+            <label>Nilai IPK Sebelum Sidang</label>
+            <div className="input-with-icon">
+              <input
+                type="number"
+                step="0.01"
+                className="input-field"
+                placeholder="0.00"
+                value={data.ipk}
+                onChange={(e) => updateField("ipk", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="input-group">
+            <label>TAK</label>
+            <div className="input-with-icon">
+              <input
+                type="number"
+                className="input-field"
+                placeholder="0"
+                value={data.tak}
+                onChange={(e) => updateField("tak", e.target.value)}
+              />
+            </div>
+            <span className="helper-text">
+              Poin minimum untuk TAK Mahasiswa Reguler : 60, Alih Jenjang : 25,
+              Diploma : 45
+            </span>
+          </div>
+          <div className="input-group">
+            <label>Tanggal Batas Akhir SKTA</label>
             <div className="input-with-icon">
               <input
                 type="date"
                 className="input-field"
-                style={{ paddingLeft: '1rem' }}
-                value={data.batasSk}
-                onChange={(e) => updateField('batasSk', e.target.value)}
+                value={data.sktaExpDate}
+                onChange={(e) => updateField("sktaExpDate", e.target.value)}
               />
             </div>
           </div>
@@ -198,134 +192,155 @@ export default function Step1() {
           <div className="input-group">
             <label>Kode Dosen Wali</label>
             <div className="input-with-icon">
-              <input
-                type="text"
-                className="input-field"
-                style={{ paddingLeft: '1rem' }}
-                placeholder="Masukan Kode Dosen Wali"
-                value={data.doswal}
-                onChange={(e) => updateField('doswal', e.target.value)}
-              />
+              <div className="static-field">
+                {studentInfo.dosenWaliKode || "-"}
+              </div>
             </div>
           </div>
           <div className="input-group">
-            <label>Kode Dosen Pembimbing 1</label>
+            <label>Dosen Pembimbing 1</label>
             <div className="input-with-icon">
-              <input
-                type="text"
+              <select
                 className="input-field"
-                style={{ paddingLeft: '1rem' }}
-                placeholder="Masukan Kode Pembimbing 1"
-                value={data.pembimbing1}
-                onChange={(e) => updateField('pembimbing1', e.target.value)}
-              />
+                value={data.dosenPembimbing1Id}
+                onChange={(e) =>
+                  updateField("dosenPembimbing1Id", e.target.value)
+                }
+              >
+                <option value="">Pilih Dosen Pembimbing 1</option>
+                {lecturers.map((lect) => (
+                  <option key={lect.id} value={lect.id}>
+                    {lect.lecturerCode || lect.kode || "-"} -{" "}
+                    {lect.name || lect.nama} ({lect.researchGroup?.name || "-"})
+                  </option>
+                ))}
+              </select>
             </div>
+            <span className="helper-text">
+              Kelompok keilmuan: {pembimbing1Group}
+            </span>
           </div>
           <div className="input-group">
-            <label>NIP Dosen Wali</label>
+            <label>Nama Dosen Wali</label>
             <div className="input-with-icon">
-              <input
-                type="text"
-                className="input-field"
-                style={{ paddingLeft: '1rem' }}
-                placeholder="Masukan NIP Dosen Wali"
-                value={data.nipDoswal}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  updateField('nipDoswal', val);
-                }}
-              />
+              <div className="static-field">
+                {studentInfo.dosenWaliNama || "-"}
+              </div>
             </div>
           </div>
           <div className="input-group">
             <label>Dosen Pembimbing 2</label>
             <div className="input-with-icon">
-              <input
-                type="text"
+              <select
                 className="input-field"
-                style={{ paddingLeft: '1rem' }}
-                placeholder="Masukan Kode Pembimbing 2"
-                value={data.pembimbing2}
-                onChange={(e) => updateField('pembimbing2', e.target.value)}
-              />
+                value={data.dosenPembimbing2Id}
+                onChange={(e) =>
+                  updateField("dosenPembimbing2Id", e.target.value)
+                }
+              >
+                <option value="">Pilih Dosen Pembimbing 2</option>
+                {lecturers.map((lect) => (
+                  <option key={lect.id} value={lect.id}>
+                    {lect.lecturerCode || lect.kode || "-"} -{" "}
+                    {lect.name || lect.nama} ({lect.researchGroup?.name || "-"})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="input-group">
+            <label>NIP Dosen Wali</label>
+            <div className="input-with-icon">
+              <div className="static-field">
+                {studentInfo.dosenWaliNip || "-"}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="input-group" style={{ marginTop: '2rem' }}>
-          <label>Kelompok Keilmuan</label>
-          <span className="helper-text">kk mengikuti Dosen Pembimbing 1</span>
-          <div className="kelompok-keilmuan-grid">
-            {keilmuans.map(k => (
-              <div
-                key={k}
-                className={`radio-item ${data.kelompokKeilmuan === k ? 'active' : ''}`}
-                onClick={() => updateField('kelompokKeilmuan', k)}
-              >
-                <div className="radio-visual"></div>
-                <span>{k}</span>
-              </div>
-            ))}
+        <div className="input-group" style={{ marginTop: "2rem" }}>
+          <label>Skema Sidang</label>
+          <div className="input-with-icon">
+            <select
+              className="input-field"
+              value={data.sidangScheme}
+              onChange={(e) => updateField("sidangScheme", e.target.value)}
+            >
+              <option value="">Pilih Skema Sidang</option>
+              {skemas.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <div className="input-group" style={{ marginTop: '2rem' }}>
-          <label>Skema Sidang *</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-            {skemas.map(s => (
-              <div
-                key={s}
-                className={`radio-item ${data.skema === s ? 'active' : ''}`}
-                onClick={() => updateField('skema', s)}
-              >
-                <div className="radio-visual"></div>
-                <span>{s}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {data.skema === 'Non Sidang' && (
-          <div className="input-group" style={{ marginTop: '2rem', padding: '1.5rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border-grey)' }}>
-            <label style={{ color: 'var(--primary-red)' }}>Jalur Non Sidang *</label>
-            <span className="helper-text">Pilih opsi publikasi yang sesuai</span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-              {jalurNonSidangOptions.map(option => (
+        {data.sidangScheme === "Non Sidang" && (
+          <div
+            className="input-group"
+            style={{
+              marginTop: "2rem",
+              padding: "1.5rem",
+              background: "#f8fafc",
+              borderRadius: "12px",
+              border: "1px solid var(--border-grey)",
+            }}
+          >
+            <label style={{ color: "var(--primary-red)" }}>
+              Jalur Non Sidang *
+            </label>
+            <span className="helper-text">
+              Pilih opsi publikasi yang sesuai
+            </span>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "1rem",
+                marginTop: "1rem",
+              }}
+            >
+              {jalurNonSidangOptions.map((option) => (
                 <div
                   key={option}
-                  className={`program-card ${data.jalurNonSidang?.includes(option) ? 'active' : ''}`}
+                  className={`program-card ${data.jalurNonSidang?.includes(option) ? "active" : ""}`}
                   onClick={() => toggleJalurNonSidang(option)}
-                  style={{ padding: '0.5rem 1rem' }}
+                  style={{ padding: "0.5rem 1rem" }}
                 >
                   <div className="checkbox-visual">
-                    {data.jalurNonSidang?.includes(option) && <Check color="white" size={14} strokeWidth={3} />}
+                    {data.jalurNonSidang?.includes(option) && (
+                      <Check color="white" size={14} strokeWidth={3} />
+                    )}
                   </div>
-                  <span style={{ fontSize: '0.85rem' }}>{option}</span>
+                  <span style={{ fontSize: "0.85rem" }}>{option}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <div className="input-group" style={{ marginTop: '2rem' }}>
+        <div className="input-group" style={{ marginTop: "2rem" }}>
           <label>Judul Tugas Akhir (Bahasa Indonesia) *</label>
           <textarea
             className="textarea-field"
             placeholder="Masukan Judul Tugas Akhir (Bahasa Indonesia)"
-            value={data.judulId}
-            onChange={(e) => updateField('judulId', e.target.value)}
+            value={data.thesisTitleId}
+            onChange={(e) => updateField("thesisTitleId", e.target.value)}
           ></textarea>
         </div>
 
-        <div className="input-group" style={{ marginTop: '2rem' }}>
+        <div className="input-group" style={{ marginTop: "2rem" }}>
           <label>Judul Tugas Akhir (Bahasa Inggris) *</label>
           <textarea
             className="textarea-field"
             placeholder="Masukan Judul Tugas Akhir (Bahasa Inggris)"
-            value={data.judulEn}
-            onChange={(e) => updateField('judulEn', e.target.value)}
+            value={data.thesisTitleEn}
+            onChange={(e) => updateField("thesisTitleEn", e.target.value)}
           ></textarea>
-          <span className="helper-text">Pastikan judul sesuai dengan yang tertera di SK Yudisium terakhir.</span>
+          <span className="helper-text">
+            Pastikan judul sesuai dengan yang tertera di SK Yudisium terakhir.
+          </span>
         </div>
       </section>
     </div>
