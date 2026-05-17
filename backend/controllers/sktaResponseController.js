@@ -90,20 +90,20 @@ const createSktaResponse = asyncHandler(async (req, res) => {
         message,
         expDate: expDate ? new Date(expDate) : null,
         isEdit: isEdit ? new Date(isEdit) : null,
-        studentId: sktaRequest?.studentId,
-        academicStaffId,
-        sktaRequestId,
+        student: { connect: { id: sktaRequest.studentId } },
+        academicStaff: { connect: { id: academicStaffId } },
+        sktaRequest: { connect: { id: sktaRequestId } },
+
         ...(sktaFile
           ? {
               sktaResponseUploads: {
-                deleteMany: {},
                 create: [
                   {
                     name: `SKTA_${sktaRequest.id}_${academicStaff.id}`,
                     filename: sktaFile.filename,
                     path: sktaFile.path,
                     studentId: sktaRequest?.studentId,
-                    sktaRequestId: sktaRequest.id,
+                    sktaRequestId: sktaRequestId,
                   },
                 ],
               },
