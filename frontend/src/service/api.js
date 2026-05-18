@@ -161,9 +161,23 @@ export const getAcademicStaffData = async (userId) => {
 };
 
 // List semua pengajuan SK (Admin)
+// export const getAllSktaRequests = async (params = {}) => {
+//   const response = await api.get("/api/skta-requests", { params });
+//   return response.data;
+// };
+
 export const getAllSktaRequests = async (params = {}) => {
-  const response = await api.get("/api/skta-requests", { params });
-  return response.data;
+  try {
+    const response = await api.get("/api/skta-requests", { params });
+    if (response.data?.data) {
+      return response.data;         
+    }
+    
+    return response.data;            
+  } catch (err) {
+    console.error("Error fetching all SKTA requests:", err);
+    throw err;
+  }
 };
 
 export const getSktaRequestById = async (id) => {
@@ -175,20 +189,13 @@ export const getSktaRequestById = async (id) => {
 export const getSktaResponseByRequestId = async (sktaRequestId) => {
   try {
     const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
-    return response.data;
+    return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
     throw err;
   }
 };
 
-// export const createOrUpdateSktaResponse = async (payload) => {
-//   const { id, ...data } = payload;
-//   if (id) {
-//     return api.patch(`/api/skta-responses/${id}`, data);
-//   }
-//   return api.post('/api/skta-responses', data);
-// };
 export const getSktaResponseUploadByStudentId = async (studentId) => {
   try {
     const response = await api.get(
@@ -203,6 +210,15 @@ export const getSktaResponseUploadByStudentId = async (studentId) => {
 
 export const createOrUpdateSktaResponse = async (payload) => {
   if (payload instanceof FormData) {
+    const existingId = payload.get('id');
+    if (existingId) {
+      // Update: gunakan PATCH dengan id yang sudah ada
+      payload.delete('id'); 
+      return api.patch(`/api/skta-responses/${existingId}`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    }
+    // Create baru
     return api.post("/api/skta-responses", payload, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -214,6 +230,7 @@ export const createOrUpdateSktaResponse = async (payload) => {
   }
   return api.post("/api/skta-responses", data);
 };
+
 
 export const uploadSkFinal = async (sktaResponseId, file) => {
   const formData = new FormData();
@@ -248,6 +265,9 @@ export const getFaculties = async () =>
   api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
 export const getStudyPrograms = async () =>
   api.get("/api/study-programs").then((r) => r.data?.data ?? r.data);
+
+export const getStudyProgramById = async (id) =>
+  api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
 
 // [periode sidang]
 export const getSidangPeriods = async () => {
