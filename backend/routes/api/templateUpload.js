@@ -126,7 +126,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get("/slug/:slug", verifyToken, findTemplateUploadBySlug);
+router.get("/:slug", verifyToken, findTemplateUploadBySlug);
 
 /**
  * @swagger

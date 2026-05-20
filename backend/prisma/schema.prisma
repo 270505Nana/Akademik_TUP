@@ -421,5 +421,5 @@ model TemplateUpload {
   slug      String    @unique // contoh: formulirPenerbitanSkta
   filename  String
   path      String
-  isPublish Boolean
+  isPublish Boolean   @default(true)
 }

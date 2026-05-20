@@ -63,7 +63,7 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
 
 // Get template upload by slug
 const findTemplateUploadBySlug = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
+  const slug = req.params.slog;
 
   const templateUpload = await prisma.templateUpload.findFirst({
     where: { slug, deletedAt: null },
@@ -140,10 +140,13 @@ const deleteTemplateUpload = asyncHandler(async (req, res) => {
     throw new Error("Unggahan template tidak ditemukan");
   }
 
-  await prisma.templateUpload.update({
+  await prisma.templateUpload.delete({
     where: { id },
-    data: { deletedAt: new Date() },
   });
+
+  if (templateUpload.path && fs.existsSync(templateUpload.path)) {
+    fs.unlink(templateUpload.path, () => {});
+  }
 
   res.json({ message: "Template upload deleted successfully" });
 });
