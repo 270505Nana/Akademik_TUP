@@ -1,4 +1,235 @@
 
+.sk-page-root,
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sk-main-content,
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  background: #F4F6FB;
+}
+
+.sk-mobile-topbar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border-bottom: 1px solid #E9EDF5;
+  padding: 13px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.sk-mobile-menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #374151;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.sk-mobile-title {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #C0182A;
+}
+
+.sk-filter-section {
+  padding: 20px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sk-table-divider {
+  height: 1px;
+  background: #E2E8F0;
+  margin: 0;
+}
+
+.sk-status-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 14px 0 16px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #F1F5F9;
+  margin-bottom: 0;
+}
+
+.sk-status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 9999px;
+  background: #F8FAFC;
+  color: #64748B;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.sk-status-tab:hover {
+  border-color: #C0182A;
+  color: #C0182A;
+  background: #FFF1F2;
+}
+
+.sk-status-tab.active {
+  background: #C0182A;
+  border-color: #C0182A;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(192, 24, 42, 0.28);
+}
+
+.sk-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.08);
+  transition: background 0.18s;
+}
+
+.sk-status-tab.active .sk-tab-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sk-empty-cell {
+  padding: 72px 20px !important;
+  text-align: center;
+  color: #94A3B8;
+
+  font-size: 13px;
+}
+
+/*
+   VERIFIKASI BTN */
+.btn-verifikasi-sk.verified {
+  background: #D1FAE5;
+  border: 1.5px solid #10B981;
+  color: #065F46;
+}
+
+.btn-verifikasi-sk.verified:hover {
+  background: #A7F3D0;
+  border-color: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15);
+}
+
+/* 
+   EXPORT SM*/
+.btn-export-sk.sm {
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: 7px;
+  margin-left: 0;
+}
+
+/* 
+   INPUT DATE (batas perbaikan di modal verifikasi)*/
+.dm-input {
+  width: 100%;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: #1E293B;
+  background: #FAFAFA;
+  font-family: inherit;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.dm-input:focus {
+  outline: none;
+  border-color: #C0182A;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(192, 24, 42, 0.07);
+}
+
+/* 
+   ALERT OVERLAY*/
+.alert-overlay {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  min-width: 280px;
+  max-width: 360px;
+}
+@media (max-width: 768px) {
+  .mobile-menu-bar {
+    display: flex;
+  }
+
+  .sk-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sk-search-wrap {
+    min-width: 0;
+  }
+
+  .sk-filter-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .btn-export-sk {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+  }
+
+  .sk-status-tabs {
+    padding: 0 16px 14px;
+    gap: 6px;
+  }
+
+  .sk-status-tab {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .dm-checklist {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .dm-box {
+    border-radius: 14px;
+  }
+
+  .ev-modal-box {
+    border-radius: 14px;
+  }
+
+  .sk-table-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+
 .sk-filter-bar {
   display: flex;
   align-items: center;
@@ -169,7 +400,7 @@
   font-weight: 500;
 }
 
-/* Badge Status )*/
+/* Badge Status */
 .sk-badge {
   display: inline-flex;
   align-items: center;
@@ -559,7 +790,7 @@
   color: #C0182A;
 }
 
-/* Body — scrollable */
+/* Body */
 .dm-body {
   flex: 1;
   overflow-y: auto;
@@ -627,7 +858,7 @@
   border-bottom: 1px solid #F1F5F9;
 }
 
-/* Checklist — 2 column grid */
+/* Checklist  */
 .dm-checklist {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -878,3 +1109,102 @@
 .action-buttons button {
   margin: 2px 0;
 }
+/* 
+   RESPONSIVE */
+@media (max-width: 991.98px) {
+  /* Tampilkan mobile topbar di layar kecil */
+  .sk-mobile-topbar {
+    display: flex;
+  }
+
+  /* Filter bar stack vertikal */
+  .sk-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sk-search-wrap {
+    min-width: 0;
+  }
+
+  .sk-filter-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .btn-export-sk {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+  }
+
+  .sk-filter-section {
+    padding: 16px 16px 0;
+  }
+
+  .sk-status-tabs {
+    gap: 6px;
+  }
+
+  .sk-status-tab {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .dm-checklist {
+    grid-template-columns: 1fr;
+  }
+
+  .sk-table-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .dm-box     { border-radius: 14px; }
+  .ev-modal-box { border-radius: 14px; }
+  .sk-status-tab { font-size: 11.5px; padding: 5px 10px; }
+  .content-container { padding: 14px; }
+}
+/* Batas Perbaikan read-only */
+.dm-readonly-field {
+  padding: 10px 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1E293B;
+}
+
+/* Info file SK sudah ada */
+.dm-file-exists-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #166534;
+}
+
+/* Tombol Download SKTA */
+.dm-btn-download-skta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 0;
+  background: #166534;
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.dm-btn-download-skta:hover { background: #14532D; }
