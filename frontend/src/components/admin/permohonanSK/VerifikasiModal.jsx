@@ -1,18 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, CheckCircle2, Circle, Upload, FileText, Download } from 'lucide-react';
 import { motion } from 'motion/react';
-import { ALUR_STEPS } from './skHelpers';
+import { ALUR_STEPS } from '../../common/skStatusHelper';
 
-/**
- * VerifikasiModal
- *
- * Props:
- * - selectedPermohonan  : item request SK yang sedang diproses
- * - existingResponse    : data sktaResponse dari BE (sudah di-unwrap + skUploads)
- * - isReadOnly          : true jika status 'sudah-terbit' → tampil view-only
- * - onClose             : tutup modal
- * - onSave              : callback submit (mode edit saja)
- */
 const VerifikasiModal = ({
   selectedPermohonan,
   existingResponse,
@@ -31,6 +21,7 @@ const VerifikasiModal = ({
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isDragging,   setIsDragging]   = useState(false);
   const fileInputRef = useRef();
+
   useEffect(() => {
     if (!existingResponse) return;
     setChecks({
@@ -69,7 +60,6 @@ const VerifikasiModal = ({
         exit={{    scale: 0.93, opacity: 0, y: 16 }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="dm-header">
           <h3 className="dm-header-title">Proses Penerbitan SK — {studentName}</h3>
           <button className="dm-close-btn" onClick={onClose}><X size={18} /></button>
@@ -77,7 +67,6 @@ const VerifikasiModal = ({
 
         <div className="dm-body">
 
-          {/* Checklist — read-only saat sudah-terbit */}
           <div className="dm-section">
             <div className="dm-section-label">Checklist Kelengkapan Dokumen</div>
             <div className="dm-checklist">
@@ -101,7 +90,7 @@ const VerifikasiModal = ({
           </div>
 
           <div className="dm-section">
-            <div className="dm-section-label">Exp Date SK TA</div>
+            <div className="dm-section-label">Batas Perbaikan</div>
             {isReadOnly ? (
               <div className="dm-readonly-field">
                 {batasPerbaikan
@@ -119,7 +108,7 @@ const VerifikasiModal = ({
               />
             )}
           </div>
-
+          
           {!isReadOnly && (
             <>
               <div className="dm-section">
@@ -203,6 +192,7 @@ const VerifikasiModal = ({
 
         </div>
 
+        {/* Footer */}
         <div className="dm-footer">
           {isReadOnly ? (
             <button className="dm-btn-simpan" onClick={onClose}>Kembali</button>

@@ -4,10 +4,10 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import SidebarAdmin    from '../../components/sidebar/SidebarAdmin';
 import CustomAlert     from '../../components/common/CustomAlert';
-import EvidenceModal   from '../../components/admin/permohonanSKEvidenceModal';
-import VerifikasiModal from '../../components/admin/permohonanSKVerifikasiModal';
-import FormulirSKModal from '../../components/admin/permohonanSKFormulirSKModal';
-import { determineStatus, unwrapResponse } from '../../components/admin/permohonanSKskHelpers';
+import EvidenceModal   from '../../components/admin/permohonanSK/EvidenceModal';
+import VerifikasiModal from '../../components/admin/permohonanSK/VerifikasiModal';
+import FormulirSKModal from '../../components/admin/permohonanSK/FormulirSKModal';
+import { determineStatus, unwrapResponse } from '../../components/admin/permohonanSK/skHelpers';
 
 import {
   getAllSktaRequests,
@@ -135,7 +135,6 @@ const PermohonanSK = () => {
 
   useEffect(() => setCurrentPage(1), [filterProdi, filterStatus, search]);
 
-  /*  Modal Handlers  */
   const handleOpenVerifikasi = async (item) => {
     setSelectedVerifikasi(item);
     setExistingResponse(null);
@@ -227,7 +226,6 @@ const PermohonanSK = () => {
                   </button>
                 </div>
 
-                {/* Status Tabs */}
                 <div className="sk-status-tabs">
                   {[
                     { key: '',             label: 'Semua'        },
