@@ -6,26 +6,10 @@ import SimtaLogo from "../../assets/logo-simta.png";
 import Telulogo  from "../../assets/logo-telkom.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import {getLecturers,getSKTARequest,getSKTAResponse,submitSKTARequest,resubmitSKTARequest,} from '../../service/api';
+import { getLecturers, getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, submitSKTARequest, resubmitSKTARequest } from '../../service/api';
+import { determineSkStatus, isSkEditable, getSkFileUrl, STATUS_SK, unwrapResponse } from '../../components/common/skStatusHelper';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
 
-// status SK "dalam proses" masih null semua responenya
-// revisi/belum terbit = ada yang belum lengkap dokumennya, dan ada message + udh respon tapi file SK belum ada
-// expired = udah respon, file SK ada, tapi expDate udh lewat
-// sudah terbit = dokumen lengkap, udah respon, file SK ada, dan expDate masih berlaku
-const getSkStatus = (sktaResponse) => {
-  if (!sktaResponse) return 'dalam_proses';
-
-  const { expDate } = sktaResponse;
-  const sktaFile = sktaResponse.sktaFile ?? sktaResponse.file ?? null;
-  if (!sktaFile) return 'revisi';
-
-  if (expDate) {
-    const exp = new Date(expDate);
-    if (exp < new Date()) return 'expired';
-  }
-  return 'sudah_terbit';
-};
 
 const PageLoader = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 12 }}>
@@ -35,30 +19,32 @@ const PageLoader = () => (
   </div>
 );
 
-const SkStatusBanner = ({ status, sktaResponse, requestData }) => {
+const SkStatusBanner = ({ status, sktaResponse, requestData, skUploads = [] }) => {
+
+  const skFileUrl = getSkFileUrl(skUploads);
+
   const configs = {
-    dalam_proses: {
+    [STATUS_SK.DALAM_PROSES]: {
       bg: '#EFF6FF', border: '#BFDBFE', icon: <Clock size={20} color="#2563EB" />,
       title: 'Pengajuan SK Sedang Diproses',
       desc: 'Permohonan penerbitan SK Pembimbing Tugas Akhir kamu sedang dalam antrian verifikasi oleh tim akademik. Proses maksimal 3×24 jam kerja. Mohon ditunggu dan pantau status di dashboard.',
       badgeBg: '#DBEAFE', badgeColor: '#1D4ED8', badgeText: 'Dalam Proses',
     },
-    revisi: {
+    [STATUS_SK.BELUM_TERBIT]: {
       bg: '#FFFBEB', border: '#FDE68A', icon: <AlertCircle size={20} color="#D97706" />,
       title: 'Pengajuan SK Memerlukan Perbaikan Dokumen',
       desc: sktaResponse?.message
         ? `Tim akademik memberikan catatan: "${sktaResponse.message}". Silakan perbaiki pengajuan kamu melalui formulir di bawah ini dan kirim ulang.`
-
         : 'Pengajuan SK kamu perlu diperbaiki. Tim akademik telah meninjau dokumenmu dan meminta perbaikan. Silakan perbarui data pengajuan melalui formulir di bawah ini, lalu kirim ulang.',
       badgeBg: '#FEF3C7', badgeColor: '#92400E', badgeText: 'Perlu Perbaikan',
     },
-    sudah_terbit: {
+    [STATUS_SK.SUDAH_TERBIT]: {
       bg: '#F0FDF4', border: '#BBF7D0', icon: <CheckCircle size={20} color="#16A34A" />,
       title: 'SK Pembimbing TA Sudah Terbit',
       desc: 'Selamat! SK Pembimbing Tugas Akhir kamu sudah diterbitkan. Kamu dapat mengunduh SK melalui tombol di bawah atau melalui menu dashboard.',
       badgeBg: '#DCFCE7', badgeColor: '#15803D', badgeText: 'Sudah Terbit',
     },
-    expired: {
+    [STATUS_SK.EXPIRED]: {
       bg: '#F5F3FF', border: '#DDD6FE', icon: <RefreshCw size={20} color="#7C3AED" />,
       title: 'SK Pembimbing TA Sudah Kadaluarsa',
       desc: 'SK Pembimbing Tugas Akhir kamu telah melewati batas masa berlaku. Kamu perlu mengajukan permohonan pembaruan SK melalui formulir di bawah ini. Data pengajuan sebelumnya sudah terisi otomatis, kamu cukup perbarui jika ada perubahan.',
@@ -101,14 +87,14 @@ const SkStatusBanner = ({ status, sktaResponse, requestData }) => {
               )}
             </div>
           )}
-          {status === 'sudah_terbit' && (
+          {status === STATUS_SK.SUDAH_TERBIT && (
             <button
               style={{
                 marginTop: 14, padding: '8px 20px', borderRadius: 9999,
                 fontSize: 12, fontWeight: 700, background: '#16A34A',
                 color: '#fff', border: 'none', cursor: 'pointer',
               }}
-              onClick={() => window.open(sktaResponse?.sktaFile, '_blank')}
+              onClick={() => skFileUrl && window.open(skFileUrl, '_blank')}
             >
               Unduh SK
             </button>
@@ -119,8 +105,6 @@ const SkStatusBanner = ({ status, sktaResponse, requestData }) => {
   );
 };
 
-// kelompok keilmuan di-mapping dari researchGroupId dosen pembimbing 1
-// researchGroupId sesuai dengan field researchGroupId di tabel Lecturer
 const kelompokKeilmuan = [
   { id: 'kk1', researchGroupId: 1, label: 'ELECTRONICS AND TELECOMMUNICATIONS SCIENCE' },
   { id: 'kk2', researchGroupId: 2, label: 'INDUSTRIAL SYSTEMS ENGINEERING' },
@@ -150,6 +134,7 @@ const PengajuanSK = () => {
   const [pageStatus, setPageStatus] = useState('loading');
   const [requestData,   setRequestData]   = useState(null); 
   const [sktaResponse,  setSktaResponse]  = useState(null); 
+  const [skUploads,     setSkUploads]     = useState([]);   
   const [skStatus,      setSkStatus]      = useState(null); 
   const [isExpired,     setIsExpired]     = useState(false);
   const [lecturerOptions, setLecturerOptions] = useState([]);
@@ -174,7 +159,6 @@ const PengajuanSK = () => {
           value: d.id,
           label: `${d.lecturerCode ?? d.kode} — ${d.name ?? d.nama}`,
           nama:  d.name ?? d.nama,
-          // researchGroupId dipakai untuk auto-set kelompok keilmuan
           researchGroupId: d.researchGroupId ?? null,
         }));
         setLecturerOptions(options);
@@ -206,13 +190,24 @@ const PengajuanSK = () => {
 
         setRequestData(existingRequest);
         const reqId = existingRequest.id;
-        updateSktaRequestId(reqId); 
-        const response = await getSKTAResponse(reqId);
-        setSktaResponse(response);
-        const status = getSkStatus(response);
+        updateSktaRequestId(reqId);
+        // skUploads dibutuhkan oleh determineSkStatus (single source of truth)
+        const [rawResponse, uploadsRaw] = await Promise.all([
+          getSKTAResponse(reqId),
+          getSktaResponseUploadByStudentId(studentId).catch(() => null),
+        ]);
+
+        const unwrapped = unwrapResponse(rawResponse);
+        const uploads   = uploadsRaw?.data ?? uploadsRaw ?? [];
+
+        setSktaResponse(unwrapped);
+        setSkUploads(uploads);
+        const status = determineSkStatus(unwrapped, uploads);
         setSkStatus(status);
-        if (status === 'revisi' || status === 'expired') {
-          setIsExpired(status === 'expired');
+
+        // isSkEditable: true jika BELUM_TERBIT atau EXPIRED → tampilkan form
+        if (isSkEditable(status)) {
+          setIsExpired(status === STATUS_SK.EXPIRED);
           setFormData(prev => ({
             ...prev,
             judulIndo:    existingRequest.proposalTitleId ?? '',
@@ -304,7 +299,7 @@ const PengajuanSK = () => {
 
     setPageStatus('submitting');
     try {
-      if ((isExpired || skStatus === 'revisi') && sktaRequestId) {
+      if (isSkEditable(skStatus) && sktaRequestId) {
         await resubmitSKTARequest({
           sktaRequestId,
           proposalTitleId:    formData.judulIndo.trim(),
@@ -407,6 +402,7 @@ const PengajuanSK = () => {
             status={skStatus}
             sktaResponse={sktaResponse}
             requestData={requestData}
+            skUploads={skUploads}
           />
           <div style={{ textAlign: 'center' }}>
             <button
@@ -433,18 +429,19 @@ const PengajuanSK = () => {
 
         {isExpired && (
           <SkStatusBanner
-            status="expired"
+            status={STATUS_SK.EXPIRED}
             sktaResponse={sktaResponse}
             requestData={requestData}
+            skUploads={skUploads}
           />
         )}
 
-        {/* banner revisi ditampilkan di atas form jika status revisi */}
-        {skStatus === 'revisi' && !isExpired && (
+        {skStatus === STATUS_SK.BELUM_TERBIT && !isExpired && (
           <SkStatusBanner
-            status="revisi"
+            status={STATUS_SK.BELUM_TERBIT}
             sktaResponse={sktaResponse}
             requestData={requestData}
+            skUploads={skUploads}
           />
         )}
 
@@ -487,7 +484,7 @@ const PengajuanSK = () => {
 
         <div className="sk-title-wrapper" style={{ margin: '40px 0 50px 0' }}>
           <h1 className="sk-main-title" style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            {isExpired ? 'Pembaruan SK' : skStatus === 'revisi' ? 'Perbaikan Pengajuan SK' : 'Permohonan'}
+            {isExpired ? 'Pembaruan SK' : skStatus === STATUS_SK.BELUM_TERBIT ? 'Perbaikan Pengajuan SK' : 'Permohonan'}
             <span>Penerbitan SK Pembimbing Tugas Akhir</span>
           </h1>
         </div>
@@ -540,7 +537,6 @@ const PengajuanSK = () => {
           </div>
         </section>
 
-        {/*  SECTION 2: Informasi TA  */}
         <section className="form-section">
           <h2 className="section-title">Informasi Tugas Akhir</h2>
 
@@ -668,7 +664,6 @@ const PengajuanSK = () => {
           </div>
         </section>
 
-        {/*  SECTION 3: Upload Dokumen  */}
         <section className="form-section">
           <h2 className="section-title">
             Dokumen Evidence Sudah Di Approve Pengajuan Pembimbing Oleh Ketua KK Di iGracias
@@ -741,7 +736,7 @@ const PengajuanSK = () => {
           {pageStatus === 'submitting' ? (
             <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Mengirim Pengajuan...</>
           ) : (
-            isExpired ? 'Kirim Pembaruan SK' : skStatus === 'revisi' ? 'Kirim Perbaikan' : 'Simpan Pengajuan'
+            isExpired ? 'Kirim Pembaruan SK' : skStatus === STATUS_SK.BELUM_TERBIT ? 'Kirim Perbaikan' : 'Simpan Pengajuan'
           )}
         </button>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
