@@ -38,4 +38,7 @@ router.use(
   require("./yudisiumRegistrationResponse"),
 );
 
+router.use("/skl", require("./sklUpload"));
+router.use("/transkrip", require("./transkripUpload"));
+
 module.exports = router;
