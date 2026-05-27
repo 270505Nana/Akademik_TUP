@@ -18,6 +18,9 @@ const VerifikasiModal = ({
   const [batasPerbaikan, setBatasPerbaikan] = useState(
     existingResponse?.expDate ? existingResponse.expDate.split('T')[0] : ''
   );
+  const [isEdit,       setIsEdit]       = useState(
+    existingResponse?.isEdit ? existingResponse.isEdit.split('T')[0] : ''
+  );
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isDragging,   setIsDragging]   = useState(false);
   const fileInputRef = useRef();
@@ -31,6 +34,9 @@ const VerifikasiModal = ({
     setCatatan(existingResponse.message || '');
     setBatasPerbaikan(
       existingResponse.expDate ? existingResponse.expDate.split('T')[0] : ''
+    );
+    setIsEdit(
+      existingResponse.isEdit ? existingResponse.isEdit.split('T')[0] : ''
     );
   }, [existingResponse]);
 
@@ -46,9 +52,17 @@ const VerifikasiModal = ({
   };
 
   const handleSubmit = () =>
-    onSave({ selectedPermohonan, checks, catatan, uploadedFile, existingResponse, batasPerbaikan });
+    onSave({
+      selectedPermohonan,
+      checks,
+      catatan,
+      uploadedFile,
+      existingResponse,
+      batasPerbaikan,
+      isEdit,
+    });
 
-  const studentName  = selectedPermohonan?.student?.name || 'Mahasiswa';
+  const studentName    = selectedPermohonan?.student?.name || 'Mahasiswa';
   const existingSkFile = existingResponse?.skUploads?.[0];
 
   return (
@@ -56,7 +70,7 @@ const VerifikasiModal = ({
       <motion.div
         className="dm-box"
         initial={{ scale: 0.93, opacity: 0, y: 16 }}
-        animate={{ scale: 1,   opacity: 1, y: 0  }}
+        animate={{ scale: 1,    opacity: 1, y: 0  }}
         exit={{    scale: 0.93, opacity: 0, y: 16 }}
         onClick={e => e.stopPropagation()}
       >
@@ -66,6 +80,7 @@ const VerifikasiModal = ({
         </div>
 
         <div className="dm-body">
+
 
           <div className="dm-section">
             <div className="dm-section-label">Checklist Kelengkapan Dokumen</div>
@@ -89,8 +104,9 @@ const VerifikasiModal = ({
             </div>
           </div>
 
+
           <div className="dm-section">
-            <div className="dm-section-label">Batas Perbaikan</div>
+            <div className="dm-section-label">Exp Date SKTA</div>
             {isReadOnly ? (
               <div className="dm-readonly-field">
                 {batasPerbaikan
@@ -108,9 +124,37 @@ const VerifikasiModal = ({
               />
             )}
           </div>
-          
+
+
+          <div className="dm-section">
+            <div className="dm-section-label">Batas Perbaikan</div>
+            {isReadOnly ? (
+              <div className="dm-readonly-field">
+                {isEdit
+                  ? new Date(isEdit).toLocaleDateString('id-ID', {
+                      day: '2-digit', month: 'long', year: 'numeric',
+                    })
+                  : '-'}
+              </div>
+            ) : (
+              <>
+                <input
+                  type="date"
+                  className="dm-input"
+                  value={isEdit}
+                  onChange={e => setIsEdit(e.target.value)}
+                />
+                <p style={{ fontSize: 11, color: '#6B7280', marginTop: 6 }}>
+                  Isi jika mahasiswa perlu mengirim ulang dokumen evidence.
+                  Kosongkan jika tidak perlu perbaikan.
+                </p>
+              </>
+            )}
+          </div>
+
           {!isReadOnly && (
             <>
+
               <div className="dm-section">
                 <div className="dm-section-label">Alur Penerbitan</div>
                 <ol className="dm-alur-list">
@@ -123,6 +167,7 @@ const VerifikasiModal = ({
                 </ol>
               </div>
 
+              {/* Catatan */}
               <div className="dm-section">
                 <div className="dm-section-label">Catatan untuk Mahasiswa</div>
                 <textarea
@@ -133,6 +178,7 @@ const VerifikasiModal = ({
                   rows={4}
                 />
               </div>
+
 
               <div className="dm-section">
                 <div className="dm-section-label">Upload File SK Final</div>
@@ -176,6 +222,7 @@ const VerifikasiModal = ({
             </>
           )}
 
+          {/* Download SK jika readOnly */}
           {isReadOnly && existingSkFile && (
             <div className="dm-section">
               <a
@@ -192,7 +239,7 @@ const VerifikasiModal = ({
 
         </div>
 
-        {/* Footer */}
+
         <div className="dm-footer">
           {isReadOnly ? (
             <button className="dm-btn-simpan" onClick={onClose}>Kembali</button>

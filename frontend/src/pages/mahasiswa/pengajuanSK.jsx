@@ -7,9 +7,17 @@ import Telulogo  from "../../assets/logo-telkom.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 import { getLecturers, getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, submitSKTARequest, resubmitSKTARequest } from '../../service/api';
-import { determineSkStatus, isSkEditable, getSkFileUrl, STATUS_SK, unwrapResponse } from '../../components/common/skStatusHelper';
+import {
+  determineSkStatus,
+  isSkEditable,
+  getSkFileUrl,
+  STATUS_SK,
+  unwrapResponse,
+  markRevisedWithTimestamp,
+  isAlreadyRevised,
+} from '../../components/common/skStatusHelper';
+import CustomAlert from '../../components/common/CustomAlert';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
-
 
 const PageLoader = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 12 }}>
@@ -20,7 +28,6 @@ const PageLoader = () => (
 );
 
 const SkStatusBanner = ({ status, sktaResponse, requestData, skUploads = [] }) => {
-
   const skFileUrl = getSkFileUrl(skUploads);
 
   const configs = {
@@ -105,6 +112,7 @@ const SkStatusBanner = ({ status, sktaResponse, requestData, skUploads = [] }) =
   );
 };
 
+// kelompok keilmuan di-mapping dari researchGroupId dosen pembimbing 1
 const kelompokKeilmuan = [
   { id: 'kk1', researchGroupId: 1, label: 'ELECTRONICS AND TELECOMMUNICATIONS SCIENCE' },
   { id: 'kk2', researchGroupId: 2, label: 'INDUSTRIAL SYSTEMS ENGINEERING' },
@@ -116,45 +124,89 @@ const kelompokKeilmuan = [
   { id: 'kk8', researchGroupId: 8, label: 'SOFTWARE ENGINEERING AND MULTIMEDIA' },
 ];
 
-const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, isResubmit }) => {
-  if (!judulIndo.trim())   return 'Judul Tugas Akhir (Bahasa Indonesia) wajib diisi.';
+const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, isExpired, isBelumTerbit }) => {
+  if (!judulIndo.trim())    return 'Judul Tugas Akhir (Bahasa Indonesia) wajib diisi.';
   if (!judulInggris.trim()) return 'Judul Tugas Akhir (Bahasa Inggris) wajib diisi.';
   if (!kode1)               return 'Dosen Pembimbing 1 wajib dipilih.';
   if (!kode2)               return 'Dosen Pembimbing 2 wajib dipilih.';
   if (kode1.value === kode2.value) return 'Dosen Pembimbing 1 dan 2 tidak boleh sama.';
-  if (!isResubmit && !actualFile) return 'Dokumen evidence wajib diunggah.';
+  // Untuk BELUM_TERBIT (revisi) file wajib; untuk EXPIRED boleh kosong
+  if (isBelumTerbit && !actualFile) return 'Dokumen evidence wajib diunggah ulang untuk perbaikan.';
+  if (!isExpired && !isBelumTerbit && !actualFile) return 'Dokumen evidence wajib diunggah.';
   return null;
 };
 
+const friendlyErrorMessage = (field, rawMessage) => {
+  const msg = rawMessage?.toLowerCase() ?? '';
+  if (field === 'evidence' && (msg.includes('tipe') || msg.includes('type') || msg.includes('format'))) {
+    return 'File evidence harus berformat PDF, JPG, atau PNG.';
+  }
+  if (field === 'evidence' && msg.includes('size'))  return 'Ukuran file evidence melebihi batas maksimal 3MB.';
+  if (field === 'evidence' && msg.includes('wajib')) return 'Dokumen evidence wajib diunggah.';
+  if (field === 'studentId') return null;
+  if (field === 'proposalTitleId' || field === 'proposalTitleEn') return 'Judul Tugas Akhir wajib diisi dengan benar.';
+  if (field === 'dosenPembimbing1Id' || field === 'dosenPembimbing2Id') return 'Dosen Pembimbing wajib dipilih.';
+  return rawMessage;
+};
+
+const parseBackendError = (err) => {
+  const data = err.response?.data;
+  if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+    const seen  = new Set();
+    const lines = data.errors
+      .map(e => friendlyErrorMessage(e.field, e.message))
+      .filter(msg => {
+        if (!msg) return false;
+        if (seen.has(msg)) return false;
+        seen.add(msg);
+        return true;
+      })
+      .map(msg => `• ${msg}`);
+
+    if (lines.length === 0) return { title: 'Gagal mengirim pengajuan', message: 'Terjadi kesalahan. Silakan coba lagi.' };
+    return {
+      title: data.message === 'Validation error' ? 'Periksa kembali data pengajuanmu' : (data.message || 'Gagal mengirim pengajuan'),
+      message: lines.join('\n'),
+    };
+  }
+  return {
+    title: 'Gagal mengirim pengajuan',
+    message: data?.message || err.message || 'Terjadi kesalahan. Silakan coba lagi.',
+  };
+};
+
 const PengajuanSK = () => {
-  const navigate = useNavigate();
+  const navigate     = useNavigate();
   const fileInputRef = useRef(null);
+  const errorRef     = useRef(null);
   const { user }    = useAuth();
   const { student, isStudentLoading, sktaRequestId, updateSktaRequestId } = useStudent();
-  const [pageStatus, setPageStatus] = useState('loading');
-  const [requestData,   setRequestData]   = useState(null); 
-  const [sktaResponse,  setSktaResponse]  = useState(null); 
-  const [skUploads,     setSkUploads]     = useState([]);   
-  const [skStatus,      setSkStatus]      = useState(null); 
-  const [isExpired,     setIsExpired]     = useState(false);
+
+  const [pageStatus,      setPageStatus]      = useState('loading');
+  const [requestData,     setRequestData]     = useState(null);
+  const [sktaResponse,    setSktaResponse]    = useState(null);
+  const [skUploads,       setSkUploads]       = useState([]);
+  const [skStatus,        setSkStatus]        = useState(null);
+  const [isExpired,       setIsExpired]       = useState(false);
   const [lecturerOptions, setLecturerOptions] = useState([]);
   const [loadingDosen,    setLoadingDosen]    = useState(true);
   const [formData, setFormData] = useState({
     judulIndo: '', judulInggris: '',
-    kode1: null, dosen1: '',
-    kode2: null, dosen2: '',
+    kode1: null,  dosen1: '',
+    kode2: null,  dosen2: '',
     kelompok: '',
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [actualFile,   setActualFile]   = useState(null);
   const [fileError,    setFileError]    = useState(null);
-  const [submitError, setSubmitError] = useState(null);
+  const [submitError,  setSubmitError]  = useState(null);
+
 
   useEffect(() => {
     const fetchDosen = async () => {
       try {
         setLoadingDosen(true);
-        const data = await getLecturers();
+        const data    = await getLecturers();
         const options = data.map((d) => ({
           value: d.id,
           label: `${d.lecturerCode ?? d.kode} — ${d.name ?? d.nama}`,
@@ -171,27 +223,20 @@ const PengajuanSK = () => {
     fetchDosen();
   }, []);
 
+
   useEffect(() => {
     const checkSKTAStatus = async () => {
       const studentId = student?.studentId;
-     
-      if (!studentId) {
-        navigate('/lengkapi-data', { replace: true });
-        return;
-      }
+      if (!studentId) { navigate('/lengkapi-data', { replace: true }); return; }
 
       try {
         const existingRequest = await getSKTARequest(studentId);
-
-        if (!existingRequest) {
-          setPageStatus('form');
-          return;
-        }
+        if (!existingRequest) { setPageStatus('form'); return; }
 
         setRequestData(existingRequest);
         const reqId = existingRequest.id;
         updateSktaRequestId(reqId);
-        // skUploads dibutuhkan oleh determineSkStatus (single source of truth)
+
         const [rawResponse, uploadsRaw] = await Promise.all([
           getSKTAResponse(reqId),
           getSktaResponseUploadByStudentId(studentId).catch(() => null),
@@ -202,12 +247,20 @@ const PengajuanSK = () => {
 
         setSktaResponse(unwrapped);
         setSkUploads(uploads);
-        const status = determineSkStatus(unwrapped, uploads);
-        setSkStatus(status);
 
-        // isSkEditable: true jika BELUM_TERBIT atau EXPIRED → tampilkan form
-        if (isSkEditable(status)) {
-          setIsExpired(status === STATUS_SK.EXPIRED);
+        const baseStatus = determineSkStatus(unwrapped, uploads);
+        // isAlreadyRevised membandingkan updatedAt server vs yang tersimpan.
+        // Jika mahasiswa sudah submit revisi dan admin belum proses → true.
+        const alreadyRevised  = isAlreadyRevised(reqId, existingRequest.updatedAt);
+        const effectiveStatus = (baseStatus === STATUS_SK.BELUM_TERBIT && alreadyRevised)
+          ? STATUS_SK.DALAM_PROSES
+          : baseStatus;
+
+        setSkStatus(effectiveStatus);
+        // - EXPIRED → selalu bisa edit
+        // - BELUM_TERBIT → hanya jika isEdit ada DAN belum pernah submit revisi
+        if (isSkEditable(effectiveStatus, unwrapped)) {
+          setIsExpired(effectiveStatus === STATUS_SK.EXPIRED);
           setFormData(prev => ({
             ...prev,
             judulIndo:    existingRequest.proposalTitleId ?? '',
@@ -224,32 +277,26 @@ const PengajuanSK = () => {
       }
     };
 
-    if (!loadingDosen && !isStudentLoading) {
-      checkSKTAStatus();
-    }
+    if (!loadingDosen && !isStudentLoading) checkSKTAStatus();
   }, [loadingDosen, isStudentLoading, student, navigate]);
 
-  const namaDisplay  = student?.namaLengkap        || user?.username || '';
-  const nimDisplay   = student?.nim                || '';
-  const noHpDisplay  = user?.phone                 || '';
-  const prodiDisplay = student?.studyProgramNama   || '';
+  const namaDisplay  = student?.namaLengkap      || user?.username || '';
+  const nimDisplay   = student?.nim              || '';
+  const noHpDisplay  = user?.phone               || '';
+  const prodiDisplay = student?.studyProgramNama || '';
 
   const handleDosenChange = useCallback((field, val) => {
     const namaField = field === 'kode1' ? 'dosen1' : 'dosen2';
-
     setFormData(prev => {
       const updated = { ...prev, [field]: val, [namaField]: val?.nama || '' };
       if (field === 'kode1') {
         if (val?.researchGroupId) {
-          const matched = kelompokKeilmuan.find(
-            (kk) => kk.researchGroupId === val.researchGroupId
-          );
+          const matched = kelompokKeilmuan.find(kk => kk.researchGroupId === val.researchGroupId);
           updated.kelompok = matched?.label || '';
         } else {
           updated.kelompok = '';
         }
       }
-
       return updated;
     });
     setSubmitError(null);
@@ -279,6 +326,9 @@ const PengajuanSK = () => {
     }
   };
 
+  // isBelumTerbit: status BELUM_TERBIT dan belum pernah kirim revisi (form sedang terbuka)
+  const isBelumTerbit = skStatus === STATUS_SK.BELUM_TERBIT && !isExpired;
+
   const handleSubmit = async () => {
     setSubmitError(null);
     const validationError = validate({
@@ -287,28 +337,51 @@ const PengajuanSK = () => {
       kode1:        formData.kode1,
       kode2:        formData.kode2,
       actualFile,
-      isResubmit:   isExpired,
+      isExpired,
+      isBelumTerbit,
     });
-    if (validationError) { setSubmitError(validationError); return; }
-
-    const studentId = student?.studentId;
-    if (!studentId) {
-      setSubmitError('Data mahasiswa tidak ditemukan. Silakan lengkapi profil terlebih dahulu.');
+    if (validationError) {
+      setSubmitError({ title: 'Periksa kembali formulirmu', message: validationError });
+      setTimeout(() => errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
       return;
     }
 
+    const studentId = student?.studentId;
+    if (!studentId) {
+      setSubmitError({ title: 'Data tidak ditemukan', message: 'Data mahasiswa tidak ditemukan. Silakan lengkapi profil terlebih dahulu.' });
+      return;
+    }
+
+    const activeRequestId = sktaRequestId ?? requestData?.id;
     setPageStatus('submitting');
+
     try {
-      if (isSkEditable(skStatus) && sktaRequestId) {
-        await resubmitSKTARequest({
-          sktaRequestId,
+      if (isSkEditable(skStatus, sktaResponse) && activeRequestId) {
+        // PATCH: revisi (BELUM_TERBIT) atau pembaruan (EXPIRED)
+        const result = await resubmitSKTARequest({
+          sktaRequestId:      activeRequestId,
+          studentId,
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
           dosenPembimbing1Id: formData.kode1.value,
           dosenPembimbing2Id: formData.kode2.value,
           evidence:           actualFile,
         });
+
+        if (isBelumTerbit) {
+          //  Simpan flag revisi dengan updatedAt dari response BE 
+          const serverUpdatedAt =
+            result?.data?.updatedAt ??
+            result?.updatedAt ??
+            new Date().toISOString();
+          markRevisedWithTimestamp(activeRequestId, serverUpdatedAt);
+          setPageStatus('revision_sent');
+        } else {
+          // EXPIRED → langsung success
+          setPageStatus('success');
+        }
       } else {
+        // POST: pengajuan baru
         const result = await submitSKTARequest({
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
@@ -319,12 +392,12 @@ const PengajuanSK = () => {
         });
         const newSktaRequestId = result?.data?.id;
         if (newSktaRequestId) updateSktaRequestId(newSktaRequestId);
+        setPageStatus('success');
       }
-      setPageStatus('success');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Gagal mengirim pengajuan. Silakan coba lagi.';
-      setSubmitError(msg);
+      setSubmitError(parseBackendError(err));
       setPageStatus('form');
+      setTimeout(() => errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
     }
   };
 
@@ -349,11 +422,64 @@ const PengajuanSK = () => {
     }),
   };
 
+
   if (pageStatus === 'loading') {
     return (
       <div className="sk-page-container">
         <Header onBack={() => navigate('/mahasiswa/dashboard')} />
         <PageLoader />
+      </div>
+    );
+  }
+
+  if (pageStatus === 'revision_sent') {
+    return (
+      <div className="sk-page-container">
+        <Header onBack={() => navigate('/mahasiswa/dashboard')} />
+        <div style={{ padding: '60px 24px', textAlign: 'center', maxWidth: 560, margin: '0 auto' }}>
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%',
+            background: '#DBEAFE', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px',
+          }}>
+            <Clock size={40} color="#2563EB" />
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 12 }}>
+            Revisi Pengajuan SK Berhasil Dikirim!
+          </h2>
+          <div style={{
+            background: '#EFF6FF', border: '1px solid #BFDBFE',
+            borderRadius: 12, padding: '20px 24px', marginBottom: 28, textAlign: 'left',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <CheckCircle size={20} color="#2563EB" style={{ flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', marginBottom: 6 }}>
+                  Revisi dokumen sudah kami terima
+                </p>
+                <p style={{ fontSize: 13, color: '#3B82F6', lineHeight: 1.7, margin: 0 }}>
+                  Tim akademik akan memverifikasi kembali pengajuan SK Pembimbing Tugas Akhir kamu.
+                  Proses verifikasi membutuhkan waktu maksimal <strong>3×24 jam kerja</strong>.
+                  Pantau status terbaru melalui dashboard.
+                </p>
+              </div>
+            </div>
+          </div>
+          <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 32, lineHeight: 1.6 }}>
+            Selama proses verifikasi berlangsung, kamu tidak dapat mengirim revisi ulang.
+            Jika ada pertanyaan, hubungi helpdesk layanan sidang-yudisium.
+          </p>
+          <button
+            onClick={() => navigate('/mahasiswa/dashboard')}
+            style={{
+              padding: '12px 32px', borderRadius: 9999, fontSize: 14,
+              fontWeight: 700, background: '#2563EB', color: '#fff',
+              border: 'none', cursor: 'pointer',
+            }}
+          >
+            Kembali ke Dashboard
+          </button>
+        </div>
       </div>
     );
   }
@@ -421,6 +547,7 @@ const PengajuanSK = () => {
     );
   }
 
+  //  Form Page 
   return (
     <div className="sk-page-container">
       <Header onBack={() => navigate('/mahasiswa/dashboard')} />
@@ -445,12 +572,32 @@ const PengajuanSK = () => {
           />
         )}
 
+        {skStatus === STATUS_SK.BELUM_TERBIT && sktaResponse?.isEdit && (
+          <div style={{
+            background: '#FFF7ED', border: '1px solid #FED7AA',
+            borderRadius: 10, padding: '12px 18px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', gap: 10,
+            fontSize: 13, color: '#92400E',
+          }}>
+            <span style={{ fontWeight: 700 }}>⏰ Batas perbaikan dokumen:</span>
+            <span>
+              {new Date(sktaResponse.isEdit).toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'long', year: 'numeric',
+              })}
+            </span>
+          </div>
+        )}
+
         <div className="info-box-red">
           <div className="info-content" style={{ display: 'flex', gap: '16px' }}>
             <div className="info-icon-circle"><Info size={24} /></div>
             <div className="info-text">
               <h4 style={{ fontSize: '16px', color: '#B91C1C', marginBottom: '12px', fontWeight: 800 }}>
-                {isExpired ? 'Pembaruan SK Pembimbing Tugas Akhir' : 'Permohonan Penerbitan SK Pembimbing Tugas Akhir'}
+                {isExpired
+                  ? 'Pembaruan SK Pembimbing Tugas Akhir'
+                  : isBelumTerbit
+                    ? 'Perbaikan Dokumen SK Pembimbing Tugas Akhir'
+                    : 'Permohonan Penerbitan SK Pembimbing Tugas Akhir'}
               </h4>
               <p><strong>Formulir ini ditujukan bagi mahasiswa yang belum memiliki SK TA pada menu TA/PA iGracias</strong></p>
               <p><strong>Harap Baca Secara Teliti</strong></p>
@@ -484,23 +631,23 @@ const PengajuanSK = () => {
 
         <div className="sk-title-wrapper" style={{ margin: '40px 0 50px 0' }}>
           <h1 className="sk-main-title" style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            {isExpired ? 'Pembaruan SK' : skStatus === STATUS_SK.BELUM_TERBIT ? 'Perbaikan Pengajuan SK' : 'Permohonan'}
+            {isExpired ? 'Pembaruan SK' : isBelumTerbit ? 'Perbaikan Revisi SK' : 'Permohonan'}
             <span>Penerbitan SK Pembimbing Tugas Akhir</span>
           </h1>
         </div>
 
         {submitError && (
-          <div style={{
-            background: '#FEF2F2', border: '1px solid #FECACA',
-            borderRadius: 8, padding: '12px 16px',
-            display: 'flex', alignItems: 'center', gap: 10,
-            marginBottom: 24, fontSize: 13, color: '#B91C1C',
-          }}>
-            <AlertTriangle size={16} />
-            {submitError}
+          <div ref={errorRef}>
+            <CustomAlert
+              type="error"
+              title={submitError.title}
+              message={<span style={{ whiteSpace: 'pre-line' }}>{submitError.message}</span>}
+              style={{ margin: '0 0 24px 0' }}
+            />
           </div>
         )}
 
+        {/* SECTION 1: Identitas */}
         <section className="form-section" style={{ marginBottom: '60px' }}>
           <h2 className="section-title">Identitas & Program Studi</h2>
           <div className="form-grid">
@@ -537,6 +684,7 @@ const PengajuanSK = () => {
           </div>
         </section>
 
+        {/* SECTION 2: Informasi TA */}
         <section className="form-section">
           <h2 className="section-title">Informasi Tugas Akhir</h2>
 
@@ -608,7 +756,7 @@ const PengajuanSK = () => {
             </div>
           </div>
 
-          {/* kelompok keilmuan otomatis dari researchGroupId dosen pembimbing 1 */}
+          {/* Kelompok Keilmuan */}
           <div className="form-group">
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
               <label style={{ margin: 0 }}>Kelompok Keilmuan</label>
@@ -616,34 +764,24 @@ const PengajuanSK = () => {
                 Otomatis diambil dari KK Dosen Pembimbing 1
               </span>
             </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-              gap: '10px',
-            }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
               {kelompokKeilmuan.map((item) => {
                 const isSelected = formData.kelompok === item.label;
                 return (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 14px', borderRadius: 8,
-                      border: `1.5px solid ${isSelected ? '#C0182A' : '#E5E7EB'}`,
-                      background: isSelected ? '#FEF2F2' : '#F9FAFB',
-                      cursor: 'default',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
+                  <div key={item.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 14px', borderRadius: 8,
+                    border: `1.5px solid ${isSelected ? '#C0182A' : '#E5E7EB'}`,
+                    background: isSelected ? '#FEF2F2' : '#F9FAFB',
+                    cursor: 'default', transition: 'all 0.15s ease',
+                  }}>
                     <div style={{
                       width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
                       border: `2px solid ${isSelected ? '#C0182A' : '#D1D5DB'}`,
                       background: isSelected ? '#C0182A' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      {isSelected && (
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
-                      )}
+                      {isSelected && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
                     </div>
                     <span style={{
                       fontSize: 11, fontWeight: isSelected ? 700 : 500,
@@ -664,6 +802,7 @@ const PengajuanSK = () => {
           </div>
         </section>
 
+        {/* SECTION 3: Upload Dokumen */}
         <section className="form-section">
           <h2 className="section-title">
             Dokumen Evidence Sudah Di Approve Pengajuan Pembimbing Oleh Ketua KK Di iGracias
@@ -674,6 +813,11 @@ const PengajuanSK = () => {
               Lihat Contoh Evidence
             </a>
           </p>
+          {isBelumTerbit && (
+            <p style={{ fontSize: 12, color: '#D97706', marginBottom: 16, fontStyle: 'italic', fontWeight: 600 }}>
+              * Karena pengajuan kamu perlu diperbaiki, dokumen evidence baru wajib diunggah ulang.
+            </p>
+          )}
           {isExpired && (
             <p style={{ fontSize: 12, color: '#7C3AED', marginBottom: 16, fontStyle: 'italic' }}>
               * Untuk pembaruan SK, upload dokumen baru jika ada perubahan. Jika tidak ada perubahan dokumen, kosongkan saja.
@@ -681,7 +825,7 @@ const PengajuanSK = () => {
           )}
           <div className="form-grid">
             <div className="form-group">
-              <label>Unggah Dokumen Prasyarat {!isExpired && '*'}</label>
+              <label>Unggah Dokumen Prasyarat {isExpired ? '' : '*'}</label>
               <div className="upload-area" onClick={() => fileInputRef.current.click()}>
                 <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
                 <div className="upload-icon-circle"><UploadCloud size={48} /></div>
@@ -716,7 +860,11 @@ const PengajuanSK = () => {
                 )}
                 {!selectedFile && !fileError && (
                   <div className="empty-file-state" style={{ padding: '20px', border: '1px dashed #E5E7EB', borderRadius: '8px', textAlign: 'center', color: '#9CA3AF', fontSize: '12px' }}>
-                    {isExpired ? 'Kosongkan jika tidak ada perubahan dokumen' : 'Belum ada file yang dipilih'}
+                    {isExpired
+                      ? 'Kosongkan jika tidak ada perubahan dokumen'
+                      : isBelumTerbit
+                        ? 'Wajib upload ulang dokumen evidence yang sudah diperbaiki'
+                        : 'Belum ada file yang dipilih'}
                   </div>
                 )}
               </div>
@@ -735,8 +883,12 @@ const PengajuanSK = () => {
         >
           {pageStatus === 'submitting' ? (
             <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Mengirim Pengajuan...</>
+          ) : isExpired ? (
+            'Kirim Pembaruan SK'
+          ) : isBelumTerbit ? (
+            'Kirim Revisi Dokumen'
           ) : (
-            isExpired ? 'Kirim Pembaruan SK' : skStatus === STATUS_SK.BELUM_TERBIT ? 'Kirim Perbaikan' : 'Simpan Pengajuan'
+            'Simpan Pengajuan'
           )}
         </button>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -757,4 +909,4 @@ const Header = ({ onBack }) => (
   </header>
 );
 
-export default PengajuanSK;
+export default PengajuanSK

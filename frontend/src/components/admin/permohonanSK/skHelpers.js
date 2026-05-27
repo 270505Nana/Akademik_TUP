@@ -1,3 +1,19 @@
+/**
+ * Menentukan status SK untuk sisi ADMIN.
+ *
+ * - "dalam-proses"    : sktaResponse null → admin belum pernah memproses
+ * - "mengirim-revisi" : admin sudah set isEdit (minta revisi) DAN mahasiswa
+ *                       sudah submit ulang (request.updatedAt > isEdit timestamp)
+ * - "belum-terbit"    : admin sudah set isEdit tapi mahasiswa belum kirim revisi,
+ *                       atau salah satu syarat masih false
+ * - "sudah-terbit"    : hasTakenLanguageTest && hasUploadedFinalProposal && ada file SK
+ *
+ * @param {object|null} sktaResponse  — hasil unwrapResponse dari BE
+ * @param {Array}       skUploads     — array upload file SK dari admin
+ * @param {object|null} sktaRequest   — data request mahasiswa (butuh updatedAt)
+ * @returns {string}
+ */
+
 export const ALUR_STEPS = [
   'Data diproses di I-Gracias untuk pengecekan nomor SK',
   'Unduh SK dari I-Gracias',
@@ -14,13 +30,9 @@ export const unwrapResponse = (raw) => {
 };
 
 /**
- * Menentukan status SK.
- *
- * - "dalam-proses" : sktaResponse null → admin belum memproses
- * - "belum-terbit" : salah satu boolean masih false
- * - "sudah-terbit" : hasTakenLanguageTest && hasUploadedFinalProposal && ada file SK
+ * Menentukan status SK untuk sisi ADMIN.
  */
-export const determineStatus = (sktaResponse, skUploads = []) => {
+export const determineStatus = (sktaResponse, skUploads = [], sktaRequest = null) => {
   if (!sktaResponse) return 'dalam-proses';
 
   const hasLang     = sktaResponse.hasTakenLanguageTest     === true;
@@ -28,5 +40,21 @@ export const determineStatus = (sktaResponse, skUploads = []) => {
   const hasFile     = Array.isArray(skUploads) && skUploads.length > 0;
 
   if (hasLang && hasProposal && hasFile) return 'sudah-terbit';
+
+  // Cek apakah mahasiswa sudah kirim revisi setelah admin minta perbaikan
+  if (sktaResponse.isEdit && sktaRequest?.updatedAt) {
+    const isEditTime   = new Date(sktaResponse.isEdit).getTime();
+    const requestUpdAt = new Date(sktaRequest.updatedAt).getTime();
+    if (requestUpdAt > isEditTime) return 'mengirim-revisi';
+  }
+
   return 'belum-terbit';
+};
+
+/**
+ * Ambil ID upload SK terbaru
+ */
+export const getSkUploadId = (skUploads = []) => {
+  if (!Array.isArray(skUploads) || skUploads.length === 0) return null;
+  return skUploads.sort((a, b) => b.id - a.id)[0]?.id || null;
 };

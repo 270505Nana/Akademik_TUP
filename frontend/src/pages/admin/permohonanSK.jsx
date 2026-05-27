@@ -7,7 +7,7 @@ import CustomAlert     from '../../components/common/CustomAlert';
 import EvidenceModal   from '../../components/admin/permohonanSK/EvidenceModal';
 import VerifikasiModal from '../../components/admin/permohonanSK/VerifikasiModal';
 import FormulirSKModal from '../../components/admin/permohonanSK/FormulirSKModal';
-import { determineStatus, unwrapResponse } from '../../components/admin/permohonanSK/skHelpers';
+import { determineStatus, unwrapResponse, getSkUploadId } from '../../components/admin/permohonanSK/skHelpers';
 
 import {
   getAllSktaRequests,
@@ -16,22 +16,26 @@ import {
   createOrUpdateSktaResponse,
   getStudyPrograms,
   getStudyProgramById,
+  downloadSK,         
 } from '../../service/api';
 import { useAuth } from '../../context/AuthContext';
 import '../../components/admin/css/permohonanSK.css';
 
-/*  Status Badge  */
+
 const STATUS_CONFIG = {
-  'sudah-terbit': { label: 'Sudah Terbit', cls: 'sudah-terbit' },
-  'belum-terbit': { label: 'Belum Terbit', cls: 'belum-terbit' },
-  'dalam-proses': { label: 'Dalam Proses', cls: 'dalam-proses' },
+  'sudah-terbit'    : { label: 'Sudah Terbit',    cls: 'sudah-terbit'    },
+  'belum-terbit'    : { label: 'Belum Terbit',    cls: 'belum-terbit'    },
+  'dalam-proses'    : { label: 'Dalam Proses',    cls: 'dalam-proses'    },
+  'mengirim-revisi' : { label: 'Mengirim Revisi', cls: 'mengirim-revisi' },
 };
+
 const StatusBadge = ({ status }) => {
   const { label, cls } = STATUS_CONFIG[status] || STATUS_CONFIG['belum-terbit'];
   return <span className={`sk-badge ${cls}`}>{label}</span>;
 };
 
 const PAGE_SIZE = 5;
+
 const PermohonanSK = () => {
   const { user, logout } = useAuth();
 
@@ -46,7 +50,7 @@ const PermohonanSK = () => {
   const [evidenceItem,       setEvidenceItem]       = useState(null);
   const [selectedVerifikasi, setSelectedVerifikasi] = useState(null);
   const [existingResponse,   setExistingResponse]   = useState(null);
-  const [formulirItem,       setFormulirItem]       = useState(null); // untuk export formulir SK
+  const [formulirItem,       setFormulirItem]       = useState(null);
   const [alert,              setAlert]              = useState({ show: false, type: '', title: '', message: '' });
 
   const showAlert = (type, title, message) => {
@@ -54,14 +58,14 @@ const PermohonanSK = () => {
     setTimeout(() => setAlert(p => ({ ...p, show: false })), 4000);
   };
 
-  /*  Fetch Prodi  */
+
   useEffect(() => {
     getStudyPrograms()
       .then(data => setProdiList(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
 
-  /*  Fetch Requests  */
+
   const fetchRequests = async () => {
     setLoading(true);
     try {
@@ -74,14 +78,13 @@ const PermohonanSK = () => {
         groupByStudent.get(sid).push(item);
       });
 
-      // request yang punya sktaResponse (sudah diproses admin)
-      // request dengan id terbesar (pengajuan terbaru)
       const enriched = await Promise.all(
         Array.from(groupByStudent.entries()).map(async ([, requests]) => {
           const uploadsRaw = await getSktaResponseUploadByStudentId(
             requests[0].studentId
           ).catch(() => null);
           const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
+
           const withResponses = await Promise.all(
             requests.map(async (req) => {
               const raw = await getSktaResponseByRequestId(req.id).catch(() => null);
@@ -119,21 +122,45 @@ const PermohonanSK = () => {
     if (user?.role === 'ACADEMIC_STAFF') fetchRequests();
   }, [search, user]);
 
-  /*  Filter + Sort  */
-  const STATUS_ORDER = { 'dalam-proses': 1, 'belum-terbit': 2, 'sudah-terbit': 3 };
-  const getStatus    = r => determineStatus(r.sktaResponse, r.skUploads);
+  const getStatus = r => determineStatus(r.sktaResponse, r.skUploads, r);
 
   const filteredSorted = useMemo(() => (
     [...requests]
-      .filter(r => !filterProdi  || r.prodiName === filterProdi)
+      .filter(r => !filterProdi || r.prodiName === filterProdi)
       .filter(r => !filterStatus || getStatus(r) === filterStatus)
-      .sort((a, b) => (STATUS_ORDER[getStatus(a)] || 99) - (STATUS_ORDER[getStatus(b)] || 99))
+      .sort((a, b) => {
+        const order = { 'mengirim-revisi': 1, 'dalam-proses': 2, 'belum-terbit': 3, 'sudah-terbit': 4 };
+        return (order[getStatus(a)] || 99) - (order[getStatus(b)] || 99);
+      })
   ), [requests, filterProdi, filterStatus]);
 
   const totalPages = Math.ceil(filteredSorted.length / PAGE_SIZE) || 1;
   const paginated  = filteredSorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   useEffect(() => setCurrentPage(1), [filterProdi, filterStatus, search]);
+
+  //  DOWNLOAD SK HANDLER 
+  const handleDownloadSK = async (uploadId) => {
+    if (!uploadId) {
+      showAlert('error', 'Error', 'ID file SK tidak ditemukan');
+      return;
+    }
+    try {
+      const blob = await downloadSK(uploadId);   // ← Pakai downloadSK
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SK_TA_${new Date().toISOString().slice(0,10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showAlert('success', 'Berhasil', 'File SK berhasil diunduh');
+    } catch (err) {
+      console.error('Download error:', err);
+      showAlert('error', 'Gagal Download', err.response?.data?.message || 'Terjadi kesalahan saat mengunduh SK');
+    }
+  };
 
   const handleOpenVerifikasi = async (item) => {
     setSelectedVerifikasi(item);
@@ -164,6 +191,7 @@ const PermohonanSK = () => {
       if (payload.batasPerbaikan)       fd.append('expDate',  payload.batasPerbaikan);
       if (payload.uploadedFile)         fd.append('sktaFile', payload.uploadedFile);
       if (payload.existingResponse?.id) fd.append('id', String(payload.existingResponse.id));
+      if (payload.isEdit)               fd.append('isEdit', payload.isEdit);
 
       await createOrUpdateSktaResponse(fd);
       showAlert('success', 'Berhasil', `SK untuk ${payload.selectedPermohonan.student?.name} berhasil diperbarui.`);
@@ -195,52 +223,31 @@ const PermohonanSK = () => {
 
             <section className="card-main">
               <div className="card-body" style={{ paddingBottom: 0 }}>
-
-                {/* Filter Bar */}
                 <div className="sk-filter-bar">
                   <div className="sk-search-wrap">
                     <span className="sk-search-icon"><Search size={15} /></span>
-                    <input
-                      type="text"
-                      className="sk-search-input"
-                      placeholder="Cari Nama atau NIM..."
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                    />
+                    <input type="text" className="sk-search-input" placeholder="Cari Nama atau NIM..." value={search} onChange={e => setSearch(e.target.value)} />
                   </div>
-                  <select
-                    className="sk-filter-select"
-                    value={filterProdi}
-                    onChange={e => setFilterProdi(e.target.value)}
-                  >
+                  <select className="sk-filter-select" value={filterProdi} onChange={e => setFilterProdi(e.target.value)}>
                     <option value="">Semua Prodi</option>
-                    {prodiList.map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
+                    {prodiList.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                   </select>
-                  <button
-                    className="btn-export-sk"
-                    onClick={() => showAlert('success', 'Export', 'Data sedang disiapkan...')}
-                  >
+                  <button className="btn-export-sk" onClick={() => showAlert('success', 'Export', 'Data sedang disiapkan...')}>
                     <Download size={15} /> Expor Evidence Akreditasi
                   </button>
                 </div>
 
                 <div className="sk-status-tabs">
                   {[
-                    { key: '',             label: 'Semua'        },
+                    { key: '', label: 'Semua' },
                     { key: 'dalam-proses', label: 'Dalam Proses' },
+                    { key: 'mengirim-revisi', label: 'Mengirim Revisi' },
                     { key: 'belum-terbit', label: 'Belum Terbit' },
                     { key: 'sudah-terbit', label: 'Sudah Terbit' },
                   ].map(({ key, label }) => {
-                    const count = key === '' ? requests.length
-                      : requests.filter(r => getStatus(r) === key).length;
+                    const count = key === '' ? requests.length : requests.filter(r => getStatus(r) === key).length;
                     return (
-                      <button
-                        key={key}
-                        className={`sk-status-tab ${filterStatus === key ? 'active' : ''}`}
-                        onClick={() => setFilterStatus(key)}
-                      >
+                      <button key={key} className={`sk-status-tab ${filterStatus === key ? 'active' : ''}`} onClick={() => setFilterStatus(key)}>
                         {label} <span className="sk-tab-count">({count})</span>
                       </button>
                     );
@@ -250,7 +257,6 @@ const PermohonanSK = () => {
 
               <div className="sk-table-divider" />
 
-              {/* Tabel */}
               <div className="sk-table-wrap">
                 <table className="sk-table">
                   <thead>
@@ -271,9 +277,13 @@ const PermohonanSK = () => {
                       <tr><td colSpan={7} className="text-center py-12">Tidak ada data sesuai filter</td></tr>
                     ) : (
                       paginated.map((item, idx) => {
-                        const student     = item.student || {};
-                        const status      = getStatus(item);
-                        const actionLabel = status === 'sudah-terbit' ? 'Terverifikasi' : 'Verifikasi';
+                        const student = item.student || {};
+                        const status = getStatus(item);
+                        const uploadId = getSkUploadId(item.skUploads);
+
+                        const actionLabel = status === 'sudah-terbit' ? 'Terverifikasi' :
+                                           status === 'mengirim-revisi' ? 'Tinjau Revisi' : 'Verifikasi';
+
                         return (
                           <tr key={item.id}>
                             <td className="text-center">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
@@ -297,11 +307,15 @@ const PermohonanSK = () => {
                               <button className="btn-verifikasi-sk" onClick={() => handleOpenVerifikasi(item)}>
                                 {actionLabel}
                               </button>
+
+                              {status === 'sudah-terbit' && uploadId && (
+                                <button className="btn-download-sk" onClick={() => handleDownloadSK(uploadId)}>
+                                  <Download size={13} /> Unduh SK
+                                </button>
+                              )}
+
                               {status === 'sudah-terbit' && (
-                                <button
-                                  className="btn-export-sk"
-                                  onClick={() => setFormulirItem(item)}
-                                >
+                                <button className="btn-export-sk" onClick={() => setFormulirItem(item)}>
                                   Export
                                 </button>
                               )}
@@ -318,20 +332,18 @@ const PermohonanSK = () => {
               {filteredSorted.length > 0 && (
                 <div className="sk-table-footer">
                   <span className="sk-page-info">
-                    Menampilkan {(currentPage - 1) * PAGE_SIZE + 1}–
-                    {Math.min(currentPage * PAGE_SIZE, filteredSorted.length)} dari {filteredSorted.length} data
+                    Menampilkan {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredSorted.length)} dari {filteredSorted.length} data
                   </span>
                   <div className="sk-pagination">
-                    <button className="btn-page" disabled={currentPage === 1}
-                      onClick={() => setCurrentPage(p => p - 1)}>
+                    <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
                       <ChevronLeft size={14} />
                     </button>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                      <button key={p} className={`btn-page ${p === currentPage ? 'active' : ''}`}
-                        onClick={() => setCurrentPage(p)}>{p}</button>
+                      <button key={p} className={`btn-page ${p === currentPage ? 'active' : ''}`} onClick={() => setCurrentPage(p)}>
+                        {p}
+                      </button>
                     ))}
-                    <button className="btn-page" disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage(p => p + 1)}>
+                    <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
                       <ChevronRight size={14} />
                     </button>
                   </div>
@@ -344,9 +356,7 @@ const PermohonanSK = () => {
 
       {/* Modals */}
       <AnimatePresence>
-        {evidenceItem && (
-          <EvidenceModal item={evidenceItem} onClose={() => setEvidenceItem(null)} />
-        )}
+        {evidenceItem && <EvidenceModal item={evidenceItem} onClose={() => setEvidenceItem(null)} />}
         {selectedVerifikasi && (
           <VerifikasiModal
             selectedPermohonan={selectedVerifikasi}
@@ -365,14 +375,20 @@ const PermohonanSK = () => {
         )}
       </AnimatePresence>
 
-      {/* Alert Toast */}
+      <style>{`
+        .sk-badge.mengirim-revisi { background: #EFF6FF; color: #1D4ED8; border: 1.5px solid #BFDBFE; }
+        .btn-download-sk {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 5px 12px; border-radius: 9999px; font-size: 11px;
+          font-weight: 700; background: #059669; color: #fff; border: none;
+          cursor: pointer;
+        }
+        .btn-download-sk:hover { background: #047857; }
+      `}</style>
+
       <AnimatePresence>
         {alert.show && (
-          <motion.div className="alert-overlay"
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0,   opacity: 1 }}
-            exit={{    x: 300, opacity: 0 }}
-          >
+          <motion.div className="alert-overlay" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }}>
             <CustomAlert type={alert.type} title={alert.title} message={alert.message} />
           </motion.div>
         )}
