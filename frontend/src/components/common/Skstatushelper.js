@@ -31,7 +31,6 @@ export const unwrapResponse = (raw) => {
  * - 'sudah-terbit' : hasTakenLanguageTest === true
  *                    DAN hasUploadedFinalProposal === true
  *                    DAN skUploads.length > 0 (file SK sudah diupload admin)
-
  *
  * @param {object|null} sktaResponse 
  * @param {Array}       skUploads    
@@ -49,15 +48,12 @@ export const determineStatus = (sktaResponse, skUploads = []) => {
 };
 
 /**
- * determineSkStatus —  untuk mahasiswa (pengajuanSK.jsx)
- *  'expired' (perlu resubmit) vs 'sudah-terbit'.
  *
  * @param {object|null} sktaResponse 
  * @param {Array}       skUploads    
  * @returns {string}
  */
 export const determineSkStatus = (sktaResponse, skUploads = []) => {
-
   const baseStatus = determineStatus(sktaResponse, skUploads);
 
   if (baseStatus === STATUS_SK.SUDAH_TERBIT && sktaResponse?.expDate) {
@@ -70,16 +66,55 @@ export const determineSkStatus = (sktaResponse, skUploads = []) => {
 
 /**
  * isSkEditable
- * true jika BELUM_TERBIT atau EXPIRED.
+ * - EXPIRED        → selalu bisa edit (perbarui SK kadaluarsa)
+ * - BELUM_TERBIT   → hanya bisa edit jika admin udh set isEdit (ada deadline)
  */
-export const isSkEditable = (status) =>
-  status === STATUS_SK.BELUM_TERBIT || status === STATUS_SK.EXPIRED;
+export const isSkEditable = (status, sktaResponse = null) => {
+  if (status === STATUS_SK.EXPIRED) return true;
+  if (status === STATUS_SK.BELUM_TERBIT) return !!sktaResponse?.isEdit;
+  return false;
+};
+
+
+export const getSkFileUrl = (skUploads = []) => {
+  if (!Array.isArray(skUploads) || skUploads.length === 0) return null;
+  const upload = skUploads[0];
+  if (upload.downloadUrl) return upload.downloadUrl;
+  if (upload.id) {
+    const base = import.meta.env?.VITE_API_URL || '';
+    return `${base}/api/skta-responses/uploads/${upload.id}/download`;
+  }
+  return null;
+};
+
+const LS_REVISED_UPDATED_AT = (reqId) => `skta_revised_updatedAt_${reqId}`;
 
 /**
- * getSkFileUrl
- * Ambil URL download file SK dari skUploads (SktaResponseUpload).
+ *
+ * @param {string|number} reqId
+ * @param {string}        updatedAt  
  */
-export const getSkFileUrl = (skUploads = []) =>
-  Array.isArray(skUploads) && skUploads.length > 0
-    ? skUploads[0].downloadUrl ?? null
-    : null;
+export const markRevisedWithTimestamp = (reqId, updatedAt) => {
+  localStorage.setItem(LS_REVISED_UPDATED_AT(reqId), updatedAt ?? new Date().toISOString());
+};
+
+export const clearRevisedFlag = (reqId) => {
+  localStorage.removeItem(LS_REVISED_UPDATED_AT(reqId));
+};
+
+// cek apakah dokumen udah di revisi/blm
+export const isAlreadyRevised = (reqId, serverUpdatedAt) => {
+  const storedUpdatedAt = localStorage.getItem(LS_REVISED_UPDATED_AT(reqId));
+  if (!storedUpdatedAt) return false;
+
+  // Cek timestamp: kl server punya updatedAt yang LEBIH BARU dari yang udh disimpan saat mahasiswa submit → berarti admin sudah mengubah data → hapus flag
+  const storedTime = new Date(storedUpdatedAt).getTime();
+  const serverTime = serverUpdatedAt ? new Date(serverUpdatedAt).getTime() : 0;
+
+  if (serverTime > storedTime) {
+    clearRevisedFlag(reqId);
+    return false;
+  }
+
+  return true;
+};

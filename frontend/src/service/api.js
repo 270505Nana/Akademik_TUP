@@ -112,9 +112,10 @@ export const submitSKTARequest = async ({
   return response.data;
 };
 
-// Resubmit SK (jika expired)
+// Resubmit SK (jika BELUM_TERBIT / revisi, atau EXPIRED / pembaruan)
 export const resubmitSKTARequest = async ({
   sktaRequestId,
+  studentId,
   proposalTitleId,
   proposalTitleEn,
   dosenPembimbing1Id,
@@ -122,6 +123,7 @@ export const resubmitSKTARequest = async ({
   evidence,
 }) => {
   const formData = new FormData();
+  if (studentId) formData.append("studentId", String(studentId));
   formData.append("proposalTitleId", proposalTitleId);
   formData.append("proposalTitleEn", proposalTitleEn);
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
@@ -137,7 +139,6 @@ export const resubmitSKTARequest = async ({
   );
   return response.data;
 };
-
 export const getSKTAResponse = async (sktaRequestId) => {
   try {
     const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
@@ -252,10 +253,20 @@ export const uploadSkFinal = async (sktaResponseId, file) => {
   return response.data;
 };
 
-// Download Evidence Mahasiswa
-export const downloadEvidence = async (uploadId) => {
+// akses evidence yg di upload
+export const AccessEvidence = async (uploadId) => {
   const response = await api.get(
     `/api/skta-requests/uploads/${uploadId}/download`,
+    {
+      responseType: "blob",
+    },
+  );
+  return response.data;
+};
+
+export const downloadSK = async (uploadId) => {
+  const response = await api.get(
+    `/api/skta-responses/uploads/${uploadId}/download`,
     {
       responseType: "blob",
     },
