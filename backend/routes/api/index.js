@@ -38,4 +38,8 @@ router.use(
   require("./yudisiumRegistrationResponse"),
 );
 
+router.use("/skl", require("./sklUpload"));
+router.use("/transkrip", require("./transkripUpload"));
+router.use("/dokumen-validasi-skta", require("./dokumenValidasiSktaUpload"));
+
 module.exports = router;
