@@ -41,5 +41,6 @@ router.use(
 router.use("/skl", require("./sklUpload"));
 router.use("/transkrip", require("./transkripUpload"));
 router.use("/dokumen-validasi-skta", require("./dokumenValidasiSktaUpload"));
+router.use("/formulir-penerbitan-skta", require("./formulirPenerbitanSktaUpload"));
 
 module.exports = router;
