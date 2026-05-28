@@ -102,31 +102,32 @@ model StudyProgram {
 }
 
 model Student {
-  id                    Int                    @id @default(autoincrement())
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  deletedAt             DateTime?
-  nim                   String                 @unique
-  name                  String
-  className             String
-  year                  Int
-  sks                   Int?
-  ipk                   Float?
-  tak                   Int?
-  studyProgram          StudyProgram           @relation(fields: [studyProgramId], references: [id])
-  studyProgramId        Int
-  user                  User                   @relation(fields: [userId], references: [id])
-  userId                Int                    @unique
-  dosenWali             Lecturer               @relation(fields: [dosenWaliId], references: [id])
-  dosenWaliId           Int // Dosen Wali
-  sktaRequests          SktaRequest[]
-  sidangRegistrations   SidangRegistration[]
-  yudisiumRegistrations YudisiumRegistration[]
-  sktaResponses         SktaResponse[]
-  sktaResponseUploads   SktaResponseUpload[]
-  sktaRequestUploads    SktaRequestUpload[]
-  sklUploads            SklUpload[]
-  transkripUploads      TranskripUpload[]
+  id                         Int                         @id @default(autoincrement())
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  deletedAt                  DateTime?
+  nim                        String                      @unique
+  name                       String
+  className                  String
+  year                       Int
+  sks                        Int?
+  ipk                        Float?
+  tak                        Int?
+  studyProgram               StudyProgram                @relation(fields: [studyProgramId], references: [id])
+  studyProgramId             Int
+  user                       User                        @relation(fields: [userId], references: [id])
+  userId                     Int                         @unique
+  dosenWali                  Lecturer                    @relation(fields: [dosenWaliId], references: [id])
+  dosenWaliId                Int // Dosen Wali
+  sktaRequests               SktaRequest[]
+  sidangRegistrations        SidangRegistration[]
+  yudisiumRegistrations      YudisiumRegistration[]
+  sktaResponses              SktaResponse[]
+  sktaResponseUploads        SktaResponseUpload[]
+  sktaRequestUploads         SktaRequestUpload[]
+  sklUploads                 SklUpload[]
+  transkripUploads           TranskripUpload[]
+  dokumenValidasiSktaUploads DokumenValidasiSktaUpload[]
 }
 
 // Surat Keputusan TA
@@ -364,6 +365,18 @@ model YudisiumRegistrationResponse {
   academicStaffId        Int
   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
   yudisiumRegistrationId Int
+}
+
+model DokumenValidasiSktaUpload {
+  id        String    @id
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  name      String
+  filename  String
+  path      String
+  student   Student   @relation(fields: [studentId], references: [id])
+  studentId Int
 }
 
 model SklUpload {
