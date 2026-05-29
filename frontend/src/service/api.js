@@ -166,12 +166,6 @@ export const getAcademicStaffData = async (userId) => {
   return response.data;
 };
 
-// List semua pengajuan SK (Admin)
-// export const getAllSktaRequests = async (params = {}) => {
-//   const response = await api.get("/api/skta-requests", { params });
-//   return response.data;
-// };
-
 export const getAllSktaRequests = async (params = {}) => {
   try {
     const response = await api.get("/api/skta-requests", { params });
@@ -253,16 +247,28 @@ export const uploadSkFinal = async (sktaResponseId, file) => {
   return response.data;
 };
 
-// akses evidence yg di upload
-export const AccessEvidence = async (uploadId) => {
+// Download Evidence Mahasiswa — endpoint confirmed 200 OK
+// uploadId = upload.id (integer primary key dari tabel SktaRequestUpload)
+export const downloadEvidence = async (uploadId) => {
   const response = await api.get(
     `/api/skta-requests/uploads/${uploadId}/download`,
-    {
-      responseType: "blob",
-    },
+    { responseType: 'blob' }
   );
   return response.data;
 };
+ 
+// Get Evidence Uploads by Student ID (jika diperlukan list)
+export const getEvidenceUploadsByStudentId = async (studentId) => {
+  try {
+    const response = await api.get(`/api/skta-requests/${studentId}`);
+    const requestData = response.data?.data ?? response.data;
+    return requestData?.sktaRequestUploads || [];
+  } catch (err) {
+    if (err.response?.status === 404) return [];
+    throw err;
+  }
+};
+ 
 
 export const downloadSK = async (uploadId) => {
   const response = await api.get(

@@ -16,12 +16,14 @@ import {
   createOrUpdateSktaResponse,
   getStudyPrograms,
   getStudyProgramById,
-  downloadSK,         
+  downloadSK,
+  getSKTARequest,         
+  getEvidenceUploadsByStudentId,
 } from '../../service/api';
 import { useAuth } from '../../context/AuthContext';
 import '../../components/admin/css/permohonanSK.css';
 
-
+/*  Status Badge  */
 const STATUS_CONFIG = {
   'sudah-terbit'    : { label: 'Sudah Terbit',    cls: 'sudah-terbit'    },
   'belum-terbit'    : { label: 'Belum Terbit',    cls: 'belum-terbit'    },
@@ -58,14 +60,14 @@ const PermohonanSK = () => {
     setTimeout(() => setAlert(p => ({ ...p, show: false })), 4000);
   };
 
-
+  /* Fetch Prodi */
   useEffect(() => {
     getStudyPrograms()
       .then(data => setProdiList(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
 
-
+  /* Fetch Requests */
   const fetchRequests = async () => {
     setLoading(true);
     try {
@@ -139,14 +141,32 @@ const PermohonanSK = () => {
 
   useEffect(() => setCurrentPage(1), [filterProdi, filterStatus, search]);
 
-  //  DOWNLOAD SK HANDLER 
-  const handleDownloadSK = async (uploadId) => {
-    if (!uploadId) {
-      showAlert('error', 'Error', 'ID file SK tidak ditemukan');
-      return;
-    }
+  //  PREVIEW EVIDENCE  
+  const handlePreviewEvidence = async (item) => {
+    const studentId = item.studentId;
+    if (!studentId) return showAlert('error', 'Error', 'Student ID tidak ditemukan');
+
     try {
-      const blob = await downloadSK(uploadId);   // ← Pakai downloadSK
+      const sktaRequest     = await getSKTARequest(studentId);
+      const evidenceUploads = sktaRequest?.sktaRequestUploads ?? [];
+
+      setEvidenceItem({
+        ...item,
+        sktaRequest,
+        evidenceUploads,
+        isPreview: true,
+      });
+    } catch (err) {
+      console.error('[handlePreviewEvidence] error:', err);
+      showAlert('error', 'Gagal Membuka Evidence', 'Tidak dapat memuat data evidence');
+    }
+  };
+
+  //  DOWNLOAD SK  
+  const handleDownloadSK = async (uploadId) => {
+    if (!uploadId) return showAlert('error', 'Error', 'ID file SK tidak ditemukan');
+    try {
+      const blob = await downloadSK(uploadId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -157,8 +177,7 @@ const PermohonanSK = () => {
       document.body.removeChild(a);
       showAlert('success', 'Berhasil', 'File SK berhasil diunduh');
     } catch (err) {
-      console.error('Download error:', err);
-      showAlert('error', 'Gagal Download', err.response?.data?.message || 'Terjadi kesalahan saat mengunduh SK');
+      showAlert('error', 'Gagal Download', err.response?.data?.message || 'Terjadi kesalahan');
     }
   };
 
@@ -218,7 +237,6 @@ const PermohonanSK = () => {
           <div className="top-bar-red"><h1>Layanan SK TA</h1></div>
 
           <div className="content-container">
-            <div className="breadcrumb">Beranda / Layanan SK TA / Permohonan SK</div>
             <h2 className="page-title">Permohonan SK TA</h2>
 
             <section className="card-main">
@@ -233,7 +251,7 @@ const PermohonanSK = () => {
                     {prodiList.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                   </select>
                   <button className="btn-export-sk" onClick={() => showAlert('success', 'Export', 'Data sedang disiapkan...')}>
-                    <Download size={15} /> Expor Evidence Akreditasi
+                    <Download size={15} /> Export SK TA sesuai filter
                   </button>
                 </div>
 
@@ -279,10 +297,10 @@ const PermohonanSK = () => {
                       paginated.map((item, idx) => {
                         const student = item.student || {};
                         const status = getStatus(item);
-                        const uploadId = getSkUploadId(item.skUploads);
+                        const skUploadId = getSkUploadId(item.skUploads);
 
                         const actionLabel = status === 'sudah-terbit' ? 'Terverifikasi' :
-                                           status === 'mengirim-revisi' ? 'Tinjau Revisi' : 'Verifikasi';
+                                          status === 'mengirim-revisi' ? 'Tinjau Revisi' : 'Verifikasi';
 
                         return (
                           <tr key={item.id}>
@@ -293,7 +311,7 @@ const PermohonanSK = () => {
                             </td>
                             <td><span className="sk-prodi-text">{item.prodiName}</span></td>
                             <td className="text-center">
-                              <button className="btn-evidence" onClick={() => setEvidenceItem(item)}>
+                              <button className="btn-evidence" onClick={() => handlePreviewEvidence(item)}>
                                 <Eye size={13} /> Lihat Evidence
                               </button>
                             </td>
@@ -303,13 +321,14 @@ const PermohonanSK = () => {
                             <td className="sk-date-text">
                               {item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID') : '-'}
                             </td>
+                          
                             <td className="text-center action-buttons">
                               <button className="btn-verifikasi-sk" onClick={() => handleOpenVerifikasi(item)}>
                                 {actionLabel}
                               </button>
 
-                              {status === 'sudah-terbit' && uploadId && (
-                                <button className="btn-download-sk" onClick={() => handleDownloadSK(uploadId)}>
+                              {status === 'sudah-terbit' && skUploadId && (
+                                <button className="btn-download-sk" onClick={() => handleDownloadSK(skUploadId)}>
                                   <Download size={13} /> Unduh SK
                                 </button>
                               )}
@@ -328,7 +347,6 @@ const PermohonanSK = () => {
                 </table>
               </div>
 
-              {/* Pagination */}
               {filteredSorted.length > 0 && (
                 <div className="sk-table-footer">
                   <span className="sk-page-info">
@@ -356,7 +374,13 @@ const PermohonanSK = () => {
 
       {/* Modals */}
       <AnimatePresence>
-        {evidenceItem && <EvidenceModal item={evidenceItem} onClose={() => setEvidenceItem(null)} />}
+        {evidenceItem && (
+          <EvidenceModal 
+            item={evidenceItem} 
+            onClose={() => setEvidenceItem(null)} 
+          />
+        )}
+        
         {selectedVerifikasi && (
           <VerifikasiModal
             selectedPermohonan={selectedVerifikasi}
@@ -366,6 +390,8 @@ const PermohonanSK = () => {
             onSave={handleSaveVerifikasi}
           />
         )}
+
+
         {formulirItem && (
           <FormulirSKModal
             item={formulirItem}
@@ -377,13 +403,15 @@ const PermohonanSK = () => {
 
       <style>{`
         .sk-badge.mengirim-revisi { background: #EFF6FF; color: #1D4ED8; border: 1.5px solid #BFDBFE; }
-        .btn-download-sk {
+        .btn-download-sk, .btn-evidence {
           display: inline-flex; align-items: center; gap: 5px;
           padding: 5px 12px; border-radius: 9999px; font-size: 11px;
-          font-weight: 700; background: #059669; color: #fff; border: none;
-          cursor: pointer;
+          font-weight: 700; border: none; cursor: pointer;
         }
+        .btn-download-sk { background: #059669; color: #fff; }
         .btn-download-sk:hover { background: #047857; }
+        .btn-evidence { background: #3B82F6; color: #fff; }
+        .btn-evidence:hover { background: #2563EB; }
       `}</style>
 
       <AnimatePresence>
