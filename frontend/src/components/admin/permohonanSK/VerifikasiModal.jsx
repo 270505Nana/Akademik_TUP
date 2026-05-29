@@ -3,6 +3,7 @@ import { X, CheckCircle2, Circle, Upload, FileText, Download } from 'lucide-reac
 import { motion } from 'motion/react';
 import { ALUR_STEPS } from '../../common/skStatusHelper';
 
+
 const VerifikasiModal = ({
   selectedPermohonan,
   existingResponse,
@@ -80,8 +81,6 @@ const VerifikasiModal = ({
         </div>
 
         <div className="dm-body">
-
-
           <div className="dm-section">
             <div className="dm-section-label">Checklist Kelengkapan Dokumen</div>
             <div className="dm-checklist">
