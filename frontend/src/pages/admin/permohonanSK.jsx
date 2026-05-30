@@ -42,6 +42,7 @@ const PermohonanSK = () => {
 
   const [sidebarOpen,        setSidebarOpen]        = useState(false);
   const [search,             setSearch]             = useState('');
+  const [searchDebounced,    setSearchDebounced]    = useState('');
   const [filterProdi,        setFilterProdi]        = useState('');
   const [filterStatus,       setFilterStatus]       = useState('');
   const [currentPage,        setCurrentPage]        = useState(1);
@@ -53,6 +54,12 @@ const PermohonanSK = () => {
   const [existingResponse,   setExistingResponse]   = useState(null);
   const [formulirItem,       setFormulirItem]       = useState(null);
   const [alert,              setAlert]              = useState({ show: false, type: '', title: '', message: '' });
+
+  // Debounce search 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchDebounced(search.trim().toLowerCase()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const showAlert = (type, title, message) => {
     setAlert({ show: true, type, title, message });
@@ -69,7 +76,7 @@ const PermohonanSK = () => {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const res      = await getAllSktaRequests({ search: search.trim() || undefined });
+      const res      = await getAllSktaRequests();
       const dataList = res?.data ?? res ?? [];
       const groupByStudent = new Map();
       dataList.forEach(item => {
@@ -120,24 +127,30 @@ const PermohonanSK = () => {
 
   useEffect(() => {
     if (user?.role === 'ACADEMIC_STAFF') fetchRequests();
-  }, [search, user]);
+  }, [user]); 
 
   const getStatus = r => determineStatus(r.sktaResponse, r.skUploads, r);
 
   const filteredSorted = useMemo(() => (
     [...requests]
-      .filter(r => !filterProdi || r.prodiName === filterProdi)
+      .filter(r => {
+        if (!searchDebounced) return true;
+        const name = (r.student?.name || '').toLowerCase();
+        const nim  = (r.student?.nim  || '').toLowerCase();
+        return name.includes(searchDebounced) || nim.includes(searchDebounced);
+      })
+      .filter(r => !filterProdi  || r.prodiName === filterProdi)
       .filter(r => !filterStatus || getStatus(r) === filterStatus)
       .sort((a, b) => {
         const order = { 'mengirim-revisi': 1, 'dalam-proses': 2, 'belum-terbit': 3, 'sudah-terbit': 4 };
         return (order[getStatus(a)] || 99) - (order[getStatus(b)] || 99);
       })
-  ), [requests, filterProdi, filterStatus]);
+  ), [requests, searchDebounced, filterProdi, filterStatus]);
 
   const totalPages = Math.ceil(filteredSorted.length / PAGE_SIZE) || 1;
   const paginated  = filteredSorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  useEffect(() => setCurrentPage(1), [filterProdi, filterStatus, search]);
+  useEffect(() => setCurrentPage(1), [searchDebounced, filterProdi, filterStatus]);
 
   //  PREVIEW EVIDENCE LENGKAP 
   const handlePreviewEvidence = async (item) => {
@@ -145,13 +158,14 @@ const PermohonanSK = () => {
     if (!studentId) return showAlert('error', 'Error', 'Student ID tidak ditemukan');
 
     try {
+      // Ambil data lengkap pengajuan SK
       const sktaRequest = await getSKTARequest(studentId);
       const evidenceUploads = await getEvidenceUploadsByStudentId(studentId);
 
       setEvidenceItem({
         ...item,
-        sktaRequest: sktaRequest,          
-        evidenceUploads: evidenceUploads,   
+        sktaRequest: sktaRequest,           
+        evidenceUploads: evidenceUploads,  
         isPreview: true
       });
     } catch (err) {
@@ -160,6 +174,7 @@ const PermohonanSK = () => {
     }
   };
 
+  // handleDownloadSK dipindah ke VerifikasiModal
 
   const handleOpenVerifikasi = async (item) => {
     setSelectedVerifikasi(item);
