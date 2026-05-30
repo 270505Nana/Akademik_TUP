@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, CheckCircle2, Circle, Upload, FileText, Download } from 'lucide-react';
+import { X, CheckCircle2, Circle, Upload, FileText, Download, Loader } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ALUR_STEPS } from '../../common/skStatusHelper';
-
+import { downloadSK } from '../../../service/api';
 
 const VerifikasiModal = ({
   selectedPermohonan,
@@ -22,8 +22,10 @@ const VerifikasiModal = ({
   const [isEdit,       setIsEdit]       = useState(
     existingResponse?.isEdit ? existingResponse.isEdit.split('T')[0] : ''
   );
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [isDragging,   setIsDragging]   = useState(false);
+  const [uploadedFile,   setUploadedFile]   = useState(null);
+  const [isDragging,     setIsDragging]     = useState(false);
+  const [downloadingSK,  setDownloadingSK]  = useState(false);
+  const [downloadError,  setDownloadError]  = useState(null);
   const fileInputRef = useRef();
 
   useEffect(() => {
@@ -52,6 +54,31 @@ const VerifikasiModal = ({
     if (e.dataTransfer.files[0]) setUploadedFile(e.dataTransfer.files[0]);
   };
 
+  const handleDownloadSK = async () => {
+    const uploadId = existingSkFile?.id;
+    if (!uploadId) {
+      setDownloadError('ID file SK tidak ditemukan.');
+      return;
+    }
+    setDownloadingSK(true);
+    setDownloadError(null);
+    try {
+      const blob = await downloadSK(uploadId);
+      const url  = window.URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `SK_TA_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setDownloadError(err.response?.data?.message || 'Gagal mengunduh SK. Coba lagi.');
+    } finally {
+      setDownloadingSK(false);
+    }
+  };
+
   const handleSubmit = () =>
     onSave({
       selectedPermohonan,
@@ -77,10 +104,12 @@ const VerifikasiModal = ({
       >
         <div className="dm-header">
           <h3 className="dm-header-title">Proses Penerbitan SK — {studentName}</h3>
-          <button className="dm-close-btn" onClick={onClose}><X size={18} /></button>
+          {/* <button className="dm-close-btn" onClick={onClose}><X size={18} /></button> */}
         </div>
 
         <div className="dm-body">
+
+
           <div className="dm-section">
             <div className="dm-section-label">Checklist Kelengkapan Dokumen</div>
             <div className="dm-checklist">
@@ -103,7 +132,7 @@ const VerifikasiModal = ({
             </div>
           </div>
 
-
+          {/* Exp Date SKTA */}
           <div className="dm-section">
             <div className="dm-section-label">Exp Date SKTA</div>
             {isReadOnly ? (
@@ -124,7 +153,7 @@ const VerifikasiModal = ({
             )}
           </div>
 
-
+          {/* Batas Perbaikan (isEdit) */}
           <div className="dm-section">
             <div className="dm-section-label">Batas Perbaikan</div>
             {isReadOnly ? (
@@ -153,7 +182,7 @@ const VerifikasiModal = ({
 
           {!isReadOnly && (
             <>
-
+              {/* Alur Penerbitan */}
               <div className="dm-section">
                 <div className="dm-section-label">Alur Penerbitan</div>
                 <ol className="dm-alur-list">
@@ -178,7 +207,7 @@ const VerifikasiModal = ({
                 />
               </div>
 
-
+              {/* Upload SK */}
               <div className="dm-section">
                 <div className="dm-section-label">Upload File SK Final</div>
                 {existingResponse?.skUploads?.length > 0 && !uploadedFile && (
@@ -221,24 +250,33 @@ const VerifikasiModal = ({
             </>
           )}
 
-          {/* Download SK jika readOnly */}
-          {isReadOnly && existingSkFile && (
+          {/* Download SK —  mode readOnly (sudah terbit) & edit */}
+          {existingSkFile && (
             <div className="dm-section">
-              <a
-                href={existingSkFile.downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <div className="dm-section-label">File SK Final</div>
+              {downloadError && (
+                <p style={{ fontSize: 12, color: '#EF4444', marginBottom: 8, marginTop: 0 }}>
+                  ⚠ {downloadError}
+                </p>
+              )}
+              <button
                 className="dm-btn-download-skta"
+                onClick={handleDownloadSK}
+                disabled={downloadingSK}
+                style={downloadingSK ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
               >
-                <Download size={16} />
-                Download SKTA
-              </a>
+                {downloadingSK
+                  ? <><Loader size={15} style={{ animation: 'spin 1s linear infinite' }} /> Mengunduh...</>
+                  : <><Download size={16} /> Unduh SK Final</>
+                }
+              </button>
+              <style>{'.dm-btn-download-skta { display:inline-flex; align-items:center; gap:8px; } @keyframes spin { to { transform: rotate(360deg); } }'}</style>
             </div>
           )}
 
         </div>
 
-
+        {/* Footer */}
         <div className="dm-footer">
           {isReadOnly ? (
             <button className="dm-btn-simpan" onClick={onClose}>Kembali</button>
