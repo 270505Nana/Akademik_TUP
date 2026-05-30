@@ -7,7 +7,7 @@ import CustomAlert     from '../../components/common/CustomAlert';
 import EvidenceModal   from '../../components/admin/permohonanSK/EvidenceModal';
 import VerifikasiModal from '../../components/admin/permohonanSK/VerifikasiModal';
 import FormulirSKModal from '../../components/admin/permohonanSK/FormulirSKModal';
-import { determineStatus, unwrapResponse, getSkUploadId } from '../../components/admin/permohonanSK/skHelpers';
+import { determineStatus, unwrapResponse } from '../../components/admin/permohonanSK/skHelpers';
 
 import {
   getAllSktaRequests,
@@ -16,8 +16,7 @@ import {
   createOrUpdateSktaResponse,
   getStudyPrograms,
   getStudyProgramById,
-  downloadSK,
-  getSKTARequest,         
+  getSKTARequest,
   getEvidenceUploadsByStudentId,
 } from '../../service/api';
 import { useAuth } from '../../context/AuthContext';
@@ -43,6 +42,7 @@ const PermohonanSK = () => {
 
   const [sidebarOpen,        setSidebarOpen]        = useState(false);
   const [search,             setSearch]             = useState('');
+  const [searchDebounced,    setSearchDebounced]    = useState('');
   const [filterProdi,        setFilterProdi]        = useState('');
   const [filterStatus,       setFilterStatus]       = useState('');
   const [currentPage,        setCurrentPage]        = useState(1);
@@ -55,12 +55,17 @@ const PermohonanSK = () => {
   const [formulirItem,       setFormulirItem]       = useState(null);
   const [alert,              setAlert]              = useState({ show: false, type: '', title: '', message: '' });
 
+  // Debounce search 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchDebounced(search.trim().toLowerCase()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const showAlert = (type, title, message) => {
     setAlert({ show: true, type, title, message });
     setTimeout(() => setAlert(p => ({ ...p, show: false })), 4000);
   };
 
-  /* Fetch Prodi */
   useEffect(() => {
     getStudyPrograms()
       .then(data => setProdiList(Array.isArray(data) ? data : []))
@@ -71,7 +76,7 @@ const PermohonanSK = () => {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const res      = await getAllSktaRequests({ search: search.trim() || undefined });
+      const res      = await getAllSktaRequests();
       const dataList = res?.data ?? res ?? [];
       const groupByStudent = new Map();
       dataList.forEach(item => {
@@ -122,64 +127,54 @@ const PermohonanSK = () => {
 
   useEffect(() => {
     if (user?.role === 'ACADEMIC_STAFF') fetchRequests();
-  }, [search, user]);
+  }, [user]); 
 
   const getStatus = r => determineStatus(r.sktaResponse, r.skUploads, r);
 
   const filteredSorted = useMemo(() => (
     [...requests]
-      .filter(r => !filterProdi || r.prodiName === filterProdi)
+      .filter(r => {
+        if (!searchDebounced) return true;
+        const name = (r.student?.name || '').toLowerCase();
+        const nim  = (r.student?.nim  || '').toLowerCase();
+        return name.includes(searchDebounced) || nim.includes(searchDebounced);
+      })
+      .filter(r => !filterProdi  || r.prodiName === filterProdi)
       .filter(r => !filterStatus || getStatus(r) === filterStatus)
       .sort((a, b) => {
         const order = { 'mengirim-revisi': 1, 'dalam-proses': 2, 'belum-terbit': 3, 'sudah-terbit': 4 };
         return (order[getStatus(a)] || 99) - (order[getStatus(b)] || 99);
       })
-  ), [requests, filterProdi, filterStatus]);
+  ), [requests, searchDebounced, filterProdi, filterStatus]);
 
   const totalPages = Math.ceil(filteredSorted.length / PAGE_SIZE) || 1;
   const paginated  = filteredSorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  useEffect(() => setCurrentPage(1), [filterProdi, filterStatus, search]);
+  useEffect(() => setCurrentPage(1), [searchDebounced, filterProdi, filterStatus]);
 
-  //  PREVIEW EVIDENCE  
+  //  PREVIEW EVIDENCE LENGKAP 
   const handlePreviewEvidence = async (item) => {
     const studentId = item.studentId;
     if (!studentId) return showAlert('error', 'Error', 'Student ID tidak ditemukan');
 
     try {
-      const sktaRequest     = await getSKTARequest(studentId);
-      const evidenceUploads = sktaRequest?.sktaRequestUploads ?? [];
+      // Ambil data lengkap pengajuan SK
+      const sktaRequest = await getSKTARequest(studentId);
+      const evidenceUploads = await getEvidenceUploadsByStudentId(studentId);
 
       setEvidenceItem({
         ...item,
-        sktaRequest,
-        evidenceUploads,
-        isPreview: true,
+        sktaRequest: sktaRequest,           
+        evidenceUploads: evidenceUploads,  
+        isPreview: true
       });
     } catch (err) {
-      console.error('[handlePreviewEvidence] error:', err);
+      console.error(err);
       showAlert('error', 'Gagal Membuka Evidence', 'Tidak dapat memuat data evidence');
     }
   };
 
-  //  DOWNLOAD SK  
-  const handleDownloadSK = async (uploadId) => {
-    if (!uploadId) return showAlert('error', 'Error', 'ID file SK tidak ditemukan');
-    try {
-      const blob = await downloadSK(uploadId);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `SK_TA_${new Date().toISOString().slice(0,10)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      showAlert('success', 'Berhasil', 'File SK berhasil diunduh');
-    } catch (err) {
-      showAlert('error', 'Gagal Download', err.response?.data?.message || 'Terjadi kesalahan');
-    }
-  };
+  // handleDownloadSK dipindah ke VerifikasiModal
 
   const handleOpenVerifikasi = async (item) => {
     setSelectedVerifikasi(item);
@@ -233,7 +228,7 @@ const PermohonanSK = () => {
           <span className="mobile-menu-title">SIMTA</span>
         </div>
 
-        <div className="page-wrapper">
+        <div className="page-wrapper" style={{ minWidth: 0, width: '100%', overflowX: 'auto' }}>
           <div className="top-bar-red"><h1>Layanan SK TA</h1></div>
 
           <div className="content-container">
@@ -251,7 +246,7 @@ const PermohonanSK = () => {
                     {prodiList.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                   </select>
                   <button className="btn-export-sk" onClick={() => showAlert('success', 'Export', 'Data sedang disiapkan...')}>
-                    <Download size={15} /> Export SK TA sesuai filter
+                    <Download size={15} /> Expor Evidence Akreditasi
                   </button>
                 </div>
 
@@ -297,8 +292,6 @@ const PermohonanSK = () => {
                       paginated.map((item, idx) => {
                         const student = item.student || {};
                         const status = getStatus(item);
-                        const skUploadId = getSkUploadId(item.skUploads);
-
                         const actionLabel = status === 'sudah-terbit' ? 'Terverifikasi' :
                                           status === 'mengirim-revisi' ? 'Tinjau Revisi' : 'Verifikasi';
 
@@ -321,23 +314,20 @@ const PermohonanSK = () => {
                             <td className="sk-date-text">
                               {item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID') : '-'}
                             </td>
-                          
                             <td className="text-center action-buttons">
-                              <button className="btn-verifikasi-sk" onClick={() => handleOpenVerifikasi(item)}>
-                                {actionLabel}
-                              </button>
-
-                              {status === 'sudah-terbit' && skUploadId && (
-                                <button className="btn-download-sk" onClick={() => handleDownloadSK(skUploadId)}>
-                                  <Download size={13} /> Unduh SK
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, minWidth: 120 }}>
+                                {/* Verifikasi / Terverifikasi / Tinjau Revisi */}
+                                <button className="btn-verifikasi-sk" style={{ width: '100%' }} onClick={() => handleOpenVerifikasi(item)}>
+                                  {actionLabel}
                                 </button>
-                              )}
-
-                              {status === 'sudah-terbit' && (
-                                <button className="btn-export-sk" onClick={() => setFormulirItem(item)}>
+                                <button
+                                  className="btn-export-sk"
+                                  style={{ width: '100%', opacity: status === 'sudah-terbit' ? 1 : 0, pointerEvents: status === 'sudah-terbit' ? 'auto' : 'none' }}
+                                  onClick={() => setFormulirItem(item)}
+                                >
                                   Export
                                 </button>
-                              )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -347,6 +337,7 @@ const PermohonanSK = () => {
                 </table>
               </div>
 
+              {/* Pagination */}
               {filteredSorted.length > 0 && (
                 <div className="sk-table-footer">
                   <span className="sk-page-info">
@@ -402,16 +393,72 @@ const PermohonanSK = () => {
       </AnimatePresence>
 
       <style>{`
-        .sk-badge.mengirim-revisi { background: #EFF6FF; color: #1D4ED8; border: 1.5px solid #BFDBFE; }
-        .btn-download-sk, .btn-evidence {
-          display: inline-flex; align-items: center; gap: 5px;
-          padding: 5px 12px; border-radius: 9999px; font-size: 11px;
-          font-weight: 700; border: none; cursor: pointer;
+        /* ── Layout root: sidebar + konten tidak terpotong meski di-zoom ── */
+        .sk-page-root {
+          display: flex;
+          min-height: 100vh;
+          background: #F8FAFC;
         }
-        .btn-download-sk { background: #059669; color: #fff; }
+        .sk-main-content {
+          flex: 1;
+          min-width: 0;          /* kunci: cegah flex child overflow */
+          overflow-x: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        /* sidebar.css biasanya set #sidebar width 260px — pastikan main-content tidak overlap */
+        #sidebar ~ .sk-main-content,
+        .sk-main-content {
+          margin-left: 260px;
+          transition: margin-left 0.3s ease;
+        }
+        @media (max-width: 991.98px) {
+          .sk-main-content { margin-left: 0 !important; }
+        }
+        /* page-wrapper ikut flex stretch */
+        .sk-main-content .page-wrapper {
+          flex: 1;
+          min-width: 0;
+          width: 100%;
+          margin-left: 0 !important;  /* override aturperiode.css margin-left var */
+        }
+
+        /* ── Tabel: tidak overflow sidebar ── */
+        .sk-table-wrap { overflow-x: auto; }
+        .sk-table { min-width: 700px; }
+
+        /* ── Action buttons: selalu sama lebar ── */
+        .action-buttons { vertical-align: middle; }
+        .btn-verifikasi-sk {
+          display: block; width: 100%;
+          padding: 6px 12px; border-radius: 6px; font-size: 11px;
+          font-weight: 700; border: 1px solid #CBD5E1;
+          background: #fff; color: #374151; cursor: pointer;
+          white-space: nowrap;
+        }
+        .btn-verifikasi-sk:hover { background: #F8FAFC; }
+
+        /* Badge */
+        .sk-badge.mengirim-revisi { background: #EFF6FF; color: #1D4ED8; border: 1.5px solid #BFDBFE; }
+
+        /* Download & Evidence buttons */
+        .btn-download-sk, .btn-evidence {
+          display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+          padding: 6px 12px; border-radius: 6px; font-size: 11px;
+          font-weight: 700; border: none; cursor: pointer; white-space: nowrap;
+        }
+        .btn-download-sk { background: #059669; color: #fff; width: 100%; }
         .btn-download-sk:hover { background: #047857; }
         .btn-evidence { background: #3B82F6; color: #fff; }
         .btn-evidence:hover { background: #2563EB; }
+        .btn-export-sk {
+          display: block; width: 100%;
+          padding: 6px 12px; border-radius: 6px; font-size: 11px;
+          font-weight: 700; border: 1px solid #CBD5E1;
+          background: #fff; color: #374151; cursor: pointer;
+          white-space: nowrap; text-align: center;
+        }
+        .btn-export-sk:hover { background: #F8FAFC; }
       `}</style>
 
       <AnimatePresence>
