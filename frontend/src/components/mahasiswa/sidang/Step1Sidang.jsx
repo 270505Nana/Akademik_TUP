@@ -1,9 +1,18 @@
+import { useState } from "react";
 import { Check, GraduationCap, Info, Mail, Phone, User } from "lucide-react";
 import { useSidangContext } from "../../../context/SidangFormContext";
+import CustomAlert from "../../common/CustomAlert";
+
+const TAK_MINIMUM = {
+  Reguler: 60,
+  "Alih Jenjang": 25,
+  Diploma: 45,
+};
 
 export default function Step1({ studentInfo = {}, lecturers = [] }) {
   const { state, dispatch } = useSidangContext();
   const { data } = state;
+  const [takAlert, setTakAlert] = useState(null);
 
   const updateField = (field, value) => {
     dispatch({ type: "UPDATE_FIELD", field, value });
@@ -36,6 +45,40 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
   const pembimbing1Group =
     pembimbing1?.researchGroup?.name || pembimbing1?.researchGroupName || "-";
 
+  //   TAK dengan validasi minimum 
+  const handleTakChange = (value) => {
+    updateField("tak", value);
+    setTakAlert(null);
+
+    if (value === "" || value === null) return;
+
+    const numVal = Number(value);
+    if (Number.isNaN(numVal)) return;
+
+    const min = TAK_MINIMUM[data.programType] ?? TAK_MINIMUM.Reguler;
+
+    if (numVal < min) {
+      setTakAlert(
+        `Maaf TAK Belum Memenuhi Minimum (${min} poin untuk program ${data.programType || "Reguler"}), silahkan input ulang`,
+      );
+    }
+  };
+
+  const handleProgramTypeChange = (p) => {
+    updateField("programType", p);
+    if (data.tak !== "") {
+      const numVal = Number(data.tak);
+      const min = TAK_MINIMUM[p] ?? TAK_MINIMUM.Reguler;
+      if (!Number.isNaN(numVal) && numVal < min) {
+        setTakAlert(
+          `Maaf TAK Belum Memenuhi Minimum (${min} poin untuk program ${p}), silahkan input ulang`,
+        );
+      } else {
+        setTakAlert(null);
+      }
+    }
+  };
+
   return (
     <div className="step-content">
       <div className="info-banner">
@@ -53,11 +96,6 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
           </p>
           <p>
             <strong>Harap Baca Dengan Teliti</strong>
-          </p>
-          <p>Contact Person : (kontak pada hari dan jam kerja)</p>
-          <p>
-            Helpdesk Layanan Sidang-Yudisium TUP{" "}
-            <a href="#">wa.me/+6285117001281</a> (chat only)
           </p>
         </div>
         <div
@@ -88,7 +126,11 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
               <User className="input-icon" size={18} />
               <div className="static-field">{studentInfo.nama || "-"}</div>
             </div>
+            <span className="helper-text">
+              Nama terverifikasi oleh sistem secara otomatis.
+            </span>
           </div>
+
           <div className="input-group">
             <label>NIM (NOMOR INDUK MAHASISWA) *</label>
             <div className="input-with-icon">
@@ -98,20 +140,29 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
               NIM terverifikasi oleh sistem secara otomatis.
             </span>
           </div>
+
           <div className="input-group">
             <label>Program Studi</label>
             <div className="input-with-icon">
               <GraduationCap className="input-icon" size={18} />
               <div className="static-field">{studentInfo.prodi || "-"}</div>
             </div>
+            <span className="helper-text">
+              Program Studi terverifikasi oleh sistem secara otomatis.
+            </span>
           </div>
+
           <div className="input-group">
             <label>No. HP</label>
             <div className="input-with-icon">
               <Phone className="input-icon" size={18} />
               <div className="static-field">{studentInfo.phone || "-"}</div>
             </div>
+            <span className="helper-text">
+              No. HP terverifikasi oleh sistem secara otomatis.
+            </span>
           </div>
+
           <div className="input-group">
             <label>Program</label>
             <div className="program-selector">
@@ -119,7 +170,7 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
                 <div
                   key={p}
                   className={`program-card ${data.programType === p ? "active" : ""}`}
-                  onClick={() => updateField("programType", p)}
+                  onClick={() => handleProgramTypeChange(p)}
                 >
                   <div className="checkbox-visual">
                     {data.programType === p && (
@@ -131,6 +182,7 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
               ))}
             </div>
           </div>
+
           <div className="input-group">
             <label>Jumlah Total SKS Lulus</label>
             <div className="input-with-icon">
@@ -143,6 +195,7 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
               />
             </div>
           </div>
+
           <div className="input-group">
             <label>Nilai IPK Sebelum Sidang</label>
             <div className="input-with-icon">
@@ -156,6 +209,8 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
               />
             </div>
           </div>
+
+          {/*  TAK  validasi minimum  */}
           <div className="input-group">
             <label>TAK</label>
             <div className="input-with-icon">
@@ -164,14 +219,20 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
                 className="input-field"
                 placeholder="0"
                 value={data.tak}
-                onChange={(e) => updateField("tak", e.target.value)}
+                onChange={(e) => handleTakChange(e.target.value)}
               />
             </div>
             <span className="helper-text">
               Poin minimum untuk TAK Mahasiswa Reguler : 60, Alih Jenjang : 25,
               Diploma : 45
             </span>
+            {takAlert && (
+              <div style={{ marginTop: "8px" }}>
+                <CustomAlert type="warning" message={takAlert} />
+              </div>
+            )}
           </div>
+
           <div className="input-group">
             <label>Tanggal Batas Akhir SKTA</label>
             <div className="input-with-icon">
@@ -339,7 +400,7 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
             onChange={(e) => updateField("thesisTitleEn", e.target.value)}
           ></textarea>
           <span className="helper-text">
-            Pastikan judul sesuai dengan yang tertera di SK Yudisium terakhir.
+            Pastikan judul sesuai dengan yang tertera di SK TA terakhir.
           </span>
         </div>
       </section>

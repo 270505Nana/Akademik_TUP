@@ -111,13 +111,10 @@ const DocUploadPanel = ({
               onClick={() => onUpload(activeDoc.id)}
             >
               <UploadCloud className="upload-icon" />
-              <p className="upload-text-main">
-                Drag and Drop or{" "}
-                <span style={{ color: "#3182ce" }}>Choose File</span> To upload
+              <p className="upload-text-main">                <span style={{ color: "#3182ce" }}>Choose File</span> To upload
               </p>
               <div className="upload-text-formats">
                 <span className="format-badge">PDF</span>
-                <span className="format-badge">JPG/PNG</span>
                 <span className="format-badge">Max 3MB</span>
               </div>
             </div>
@@ -452,21 +449,15 @@ export default function Step2({ registrationId }) {
             }
           >
             <UploadCloud className="upload-icon" />
-            <p className="upload-text-main">Tarik & Lepas file di sini</p>
-            <p
-              style={{
-                fontSize: "0.8rem",
-                color: "var(--text-grey)",
-                marginBottom: "1rem",
-              }}
-            >
-              atau klik untuk memilih dari komputer
+            <p className="upload-text-main">
+              <span style={{ color: "#3182ce" }}>Choose File</span> To upload
             </p>
+           
             <div className="upload-text-formats">
               <span className="format-badge">PDF</span>
-              <span className="format-badge">JPG/PNG</span>
               <span className="format-badge">Max 3MB</span>
             </div>
+
           </div>
         </div>
 
@@ -600,13 +591,12 @@ export default function Step2({ registrationId }) {
           </>
         )}
 
-      {/* layout berkas wajib sidang di bwh */}
       <div
         className="divider"
         style={{ borderTop: "2px solid #2d3748", margin: "4rem 0" }}
       ></div>
 
-      <h2
+      {/* <h2
         style={{
           fontSize: "1.5rem",
           fontWeight: 900,
@@ -615,7 +605,7 @@ export default function Step2({ registrationId }) {
         }}
       >
         SYARAT BERKAS WAJIB SIDANG
-      </h2>
+      </h2> */}
 
       <DocUploadPanel
         sectionTitle="Berkas Wajib Sidang"
