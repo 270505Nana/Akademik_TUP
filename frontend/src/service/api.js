@@ -257,7 +257,7 @@ export const downloadEvidence = async (uploadId) => {
   return response.data;
 };
  
-// Get Evidence Uploads by Student ID (jika diperlukan list)
+// Get Evidence Uploads by Student ID 
 export const getEvidenceUploadsByStudentId = async (studentId) => {
   try {
     const response = await api.get(`/api/skta-requests/${studentId}`);
@@ -278,6 +278,34 @@ export const downloadSK = async (uploadId) => {
     },
   );
   return response.data;
+};
+
+
+//  DOKUMEN VALIDASI SKTA 
+/**
+ * POST /api/dokumen-validasi-skta
+ * Upload PDF dokumen validasi yang di-generate FE
+ * BE simpan file → return downloadUrl untuk dijadikan QR
+ */
+
+export const uploadDokumenValidasi = async (studentId, pdfBlob, namaFile) => {
+// buat debug
+  console.log('pdfBlob type:', pdfBlob?.type);
+  console.log('pdfBlob size:', pdfBlob?.size);
+  console.log('studentId:', studentId);
+
+  const formData = new FormData();
+  formData.append('studentId',   String(studentId));
+  formData.append('name',        namaFile || `Dokumen_Validasi_SKTA_${studentId}`);
+  formData.append('dokumenFile', pdfBlob, `validasi-skta-${studentId}.pdf`);
+
+  const response = await api.post(
+    '/api/dokumen-validasi-skta',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+
+  return response.data?.data ?? response.data;
 };
 
 // ------------------------------------------- LAINNYA (Sidang, dll) -------------------------------------------

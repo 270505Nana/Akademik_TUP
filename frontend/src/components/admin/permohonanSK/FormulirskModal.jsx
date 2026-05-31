@@ -1,459 +1,449 @@
-import React, { useRef } from 'react';
-import { X, Printer } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Download, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
-import logoTelkom from "../../../assets/logo-telkom.png";
+import { QRCodeCanvas as QRCode } from 'qrcode.react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
-const FormulirSKModal = ({ item, existingResponse, onClose }) => {
-  const printRef = useRef();
+import { generateDokumenValidasiBlob, mapSktaDataToPDF } from './DokumenValidasiPDF';
+import { uploadDokumenValidasi } from '../../../service/api';
+import logoTelkom from '../../../assets/logo-telkom.png';
 
-  const student  = item?.student  || {};
-  const prodiName = item?.prodiName || '-';
-  const judulTA   = item?.proposalTitleId || '-';
-  const hasProposal = existingResponse?.hasUploadedFinalProposal === true;
-  const hasLang     = existingResponse?.hasTakenLanguageTest     === true;
-  const today = new Date().toLocaleDateString('id-ID', {
+
+const formatTanggal = (isoStr) => {
+  if (!isoStr) return '-';
+  return new Date(isoStr).toLocaleDateString('id-ID', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
+};
 
-  const handlePrint = () => {
-    const printContent = printRef.current.innerHTML;
-    const printWindow  = window.open('', '_blank', 'width=900,height=700');
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Formulir SK TA — ${student.name || ''}</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-              font-family: 'Times New Roman', Times, serif;
-              font-size: 11pt;
-              color: #000;
-              background: #fff;
-            }
-            .formulir-wrapper {
-              width: 210mm;
-              min-height: 297mm;
-              margin: 0 auto;
-              padding: 20mm 20mm 20mm 25mm;
-            }
-            /* Tabel Kop */
-            .kop-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 20px;
-            }
-            .kop-table td, .kop-table th {
-              border: 1px solid #000;
-              padding: 4px 8px;
-              font-size: 10pt;
-              vertical-align: middle;
-            }
-            .kop-logo-cell {
-              width: 80px;
-              text-align: center;
-              padding: 4px;
-            }
-            .kop-logo {
-              width: 70px;
-              height: auto;
-            }
-            .kop-title {
-              text-align: center;
-              font-weight: bold;
-              font-size: 11pt;
-            }
-            .kop-sub-title {
-              text-align: center;
-              font-weight: bold;
-              font-size: 10pt;
-            }
-            .kop-meta-label { font-size: 9.5pt; }
-            .kop-meta-value { font-size: 9.5pt; }
-            /* Judul Formulir */
-            .form-main-title {
-              text-align: center;
-              font-weight: bold;
-              font-size: 12pt;
-              margin: 18px 0 16px;
-              text-transform: uppercase;
-              text-decoration: underline;
-            }
-            /* Tabel Data Mahasiswa */
-            .data-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 16px;
-            }
-            .data-table td {
-              border: 1px solid #000;
-              padding: 5px 8px;
-              font-size: 10.5pt;
-              vertical-align: top;
-            }
-            .data-label { width: 130px; white-space: nowrap; }
-            .data-colon { width: 10px; }
-            /* Tabel Checklist */
-            .check-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 10px;
-            }
-            .check-table th, .check-table td {
-              border: 1px solid #000;
-              padding: 5px 8px;
-              font-size: 10.5pt;
-              text-align: left;
-              vertical-align: middle;
-            }
-            .check-table th {
-              text-align: center;
-              font-weight: bold;
-            }
-            .col-no     { width: 35px; text-align: center; }
-            .col-status { width: 80px; text-align: center; }
-            .checkmark  { font-size: 13pt; font-weight: bold; }
-            /* Keterangan */
-            .keterangan {
-              font-size: 10pt;
-              margin: 6px 0 24px;
-            }
-            /* TTD Section */
-            .ttd-section {
-              display: flex;
-              justify-content: flex-end;
-              margin-top: 10px;
-            }
-            .ttd-box {
-              text-align: center;
-              width: 200px;
-            }
-            .ttd-kota { font-size: 10.5pt; margin-bottom: 60px; }
-            .ttd-nama { font-size: 10.5pt; font-weight: bold; }
-            .ttd-jabatan { font-size: 10pt; }
-            .ttd-img {
-              width: 90px;
-              height: auto;
-              margin: 0 auto 4px;
-              display: block;
-              opacity: 0.7;
-            }
-            @media print {
-              body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-              .formulir-wrapper { padding: 15mm 15mm 15mm 20mm; }
-            }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
-  };
+
+const FormulirContent = React.forwardRef(({ item, sktaResponse, prodiName, qrUrl }, ref) => {
+  const student     = item?.student || {};
+  const request     = item          || {};
+  const today       = formatTanggal(sktaResponse?.createdAt || new Date().toISOString());
+  const hasProposal = sktaResponse?.hasUploadedFinalProposal === true;
+  const hasBahasa   = sktaResponse?.hasTakenLanguageTest     === true;
 
   return (
-    <div className="formulir-overlay" onClick={onClose}>
-      <style>{`
-        .formulir-overlay {
-          position: fixed; inset: 0;
-          background: rgba(0,0,0,0.6);
-          z-index: 3000;
-          display: flex; align-items: center; justify-content: center;
-          padding: 24px;
-        }
-        .formulir-modal-box {
-          background: #fff;
-          border-radius: 12px;
-          width: 100%;
-          max-width: 820px;
-          max-height: 90vh;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
-        }
-        .formulir-modal-topbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 14px 20px;
-          border-bottom: 1px solid #E2E8F0;
-          background: #F8FAFC;
-          border-radius: 12px 12px 0 0;
-          flex-shrink: 0;
-        }
-        .formulir-modal-topbar h3 {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1E293B;
-        }
-        .formulir-modal-actions { display: flex; gap: 10px; align-items: center; }
-        .btn-print {
-          display: flex; align-items: center; gap: 6px;
-          padding: 8px 18px;
-          background: #C0182A; color: white;
-          border: none; border-radius: 6px;
-          font-size: 13px; font-weight: 700;
-          cursor: pointer; transition: background 0.2s;
-        }
-        .btn-print:hover { background: #A01423; }
-        .btn-close-formulir {
-          width: 32px; height: 32px;
-          display: flex; align-items: center; justify-content: center;
-          border: 1px solid #CBD5E1; border-radius: 6px;
-          background: white; cursor: pointer;
-          color: #64748B;
-        }
-        .btn-close-formulir:hover { background: #FFF1F2; color: #C0182A; border-color: #C0182A; }
-        .formulir-modal-body {
-          overflow-y: auto;
-          padding: 24px;
-          background: #94A3B8;
-          flex: 1;
-        }
-        /* Kertas A4 preview */
-        .formulir-paper {
-          width: 210mm;
-          min-height: 297mm;
-          margin: 0 auto;
-          background: #fff;
-          padding: 20mm 20mm 20mm 25mm;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-          font-family: 'Times New Roman', Times, serif;
-          font-size: 11pt;
-          color: #000;
-        }
-        /* Tabel Kop */
-        .kop-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 20px;
-        }
-        .kop-table td {
-          border: 1px solid #000;
-          padding: 4px 8px;
-          font-size: 10pt;
-          vertical-align: middle;
-        }
-        .kop-logo-cell {
-          width: 82px;
-          text-align: center;
-          padding: 4px;
-        }
-        .kop-logo { width: 72px; height: auto; }
-        .kop-title { text-align: center; font-weight: bold; font-size: 11pt; }
-        .kop-sub-title { text-align: center; font-weight: bold; font-size: 10pt; line-height: 1.5; }
-        .kop-meta-label { white-space: nowrap; font-size: 9.5pt; }
-        .kop-meta-value { font-size: 9.5pt; }
-        /* Judul Formulir */
-        .form-main-title {
-          text-align: center;
-          font-weight: bold;
-          font-size: 12pt;
-          margin: 18px 0 16px;
-          text-transform: uppercase;
-          text-decoration: underline;
-        }
-        /* Tabel Data */
-        .data-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 16px;
-        }
-        .data-table td {
-          border: 1px solid #000;
-          padding: 5px 8px;
-          font-size: 10.5pt;
-          vertical-align: top;
-        }
-        .data-label { width: 130px; white-space: nowrap; }
-        .data-colon { width: 10px; }
-        /* Tabel Checklist */
-        .check-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 8px;
-        }
-        .check-table th, .check-table td {
-          border: 1px solid #000;
-          padding: 5px 8px;
-          font-size: 10.5pt;
-          vertical-align: middle;
-        }
-        .check-table th { text-align: center; font-weight: bold; }
-        .col-no     { width: 35px; text-align: center; }
-        .col-status { width: 90px; text-align: center; }
-        .checkmark  { font-size: 14pt; font-weight: bold; }
-        /* Keterangan */
-        .keterangan { font-size: 10pt; margin: 8px 0 28px; }
-        /* TTD */
-        .ttd-section { display: flex; justify-content: flex-end; margin-top: 8px; }
-        .ttd-box { text-align: center; width: 210px; }
-        .ttd-kota { font-size: 10.5pt; margin-bottom: 4px; }
-        .ttd-img-wrap { height: 80px; display: flex; align-items: center; justify-content: center; }
-        .ttd-img { width: 80px; height: auto; opacity: 0.6; }
-        .ttd-nama { font-size: 10.5pt; font-weight: bold; margin-top: 4px; }
-        .ttd-jabatan { font-size: 10pt; }
-      `}</style>
+    <div
+      ref={ref}
+      style={{
 
-      <motion.div
-        className="formulir-modal-box"
-        initial={{ scale: 0.93, opacity: 0, y: 16 }}
-        animate={{ scale: 1,   opacity: 1, y: 0  }}
-        exit={{    scale: 0.93, opacity: 0, y: 16 }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Topbar */}
-        <div className="formulir-modal-topbar">
-          <h3>Preview Formulir Penerbitan SK TA</h3>
-          <div className="formulir-modal-actions">
-            <button className="btn-print" onClick={handlePrint}>
-              <Printer size={15} /> Export PDF
-            </button>
-            <button className="btn-close-formulir" onClick={onClose}>
-              <X size={16} />
-            </button>
-          </div>
-        </div>
+        width:           '794px',
+        minHeight:       '1123px',
+        padding:         '75px 94px',
+        backgroundColor: '#fff',
+        fontFamily:      '"Arial", "Helvetica Neue", Helvetica, sans-serif',
+        fontSize:        '13px',
+        color:           '#000',
+        boxSizing:       'border-box',
+        letterSpacing:   '0',
+        lineHeight:      '1.4',
+      }}
+    >
+      {/*  KOP SURAT  */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '18px', tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '90px' }} />
+          <col />
+          <col style={{ width: '110px' }} />
+          <col style={{ width: '130px' }} />
+        </colgroup>
+        <tbody>
+          <tr>
+            <td rowSpan={4} style={{ textAlign: 'center', border: '1px solid #000', padding: '8px', verticalAlign: 'middle' }}>
+              <img src={logoTelkom} alt="Telkom" style={{ width: '60px', height: 'auto', display: 'block', margin: '0 auto' }} />
+            </td>
+            <td style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '14px', border: '1px solid #000', padding: '4px 8px' }}>
+              UNIVERSITAS TELKOM
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px' }}>No. Dokumen</td>
+            <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px', fontWeight: 'bold' }}>TUP-SPM-FM-TA-003</td>
+          </tr>
+          <tr>
+            <td style={{ textAlign: 'center', fontSize: '11px', border: '1px solid #000', padding: '4px 8px' }}>
+              Jl. Telekomunikasi No. 1, Dayeuh Kolot, Kab. Bandung 40257
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px' }}>No. Revisi</td>
+            <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px' }}>00</td>
+          </tr>
+          <tr>
+            <td style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '12px', border: '1px solid #000', padding: '4px 8px' }}>
+              FORMULIR KELENGKAPAN
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px' }}>Berlaku Efektif</td>
+            <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px' }}>02 Januari 2025</td>
+          </tr>
+          <tr>
+            <td style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '12px', border: '1px solid #000', padding: '4px 8px' }}>
+              PERSYARATAN PENGAJUAN SK TUGAS AKHIR
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px' }}>Halaman</td>
+            <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px' }}>1 dari 1</td>
+          </tr>
+        </tbody>
+      </table>
 
-        <div className="formulir-modal-body">
-          <div className="formulir-paper" ref={printRef}>
+      {/*  JUDUL  */}
+      <p style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '13px', marginBottom: '18px', textDecoration: 'underline' }}>
+        FORMULIR KELENGKAPAN PERSYARATAN PENERBITAN SK TUGAS AKHIR
+      </p>
 
-            {/*  KOP SURAT  */}
-            <table className="kop-table">
-              <tbody>
-                <tr>
+      {/*  DATA MAHASISWA  */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '18px', tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '150px' }} />
+          <col />
+        </colgroup>
+        <tbody>
+          {[
+            { label: 'NIM',               value: student.nim  || '-' },
+            { label: 'Nama Mahasiswa',    value: student.name || '-' },
+            { label: 'Program Studi',     value: prodiName    || '-' },
+            { label: 'Judul Proposal TA', value: request.proposalTitleId || '-' },
+          ].map(({ label, value }) => (
+            <tr key={label}>
+              <td style={{ border: '1px solid #000', padding: '7px 10px', fontWeight: '600', verticalAlign: 'top' }}>{label}</td>
+              <td style={{ border: '1px solid #000', padding: '7px 10px', wordBreak: 'break-word' }}>{value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
-                  <td className="kop-logo-cell" rowSpan={3}>
-                    <img src={logoTelkom} alt="Logo Telkom" className="kop-logo" />
-                  </td>
-                  {/* Nama universitas */}
-                  <td className="kop-title" style={{ width: '55%' }}>
-                    UNIVERSITAS TELKOM
-                  </td>
-                  {/* Meta kanan */}
-                  <td className="kop-meta-label">No. Dokumen</td>
-                  <td className="kop-meta-value">TUP-SPM-FM-TA-003</td>
-                </tr>
-                <tr>
-                  <td style={{ textAlign: 'center', fontSize: '9.5pt' }}>
-                    Jl. Telekomunikasi No. 1, Dayeuh Kolot, Kab. Bandung 40257
-                  </td>
-                  <td className="kop-meta-label">No. Revisi</td>
-                  <td className="kop-meta-value">00</td>
-                </tr>
-                <tr>
-                  <td className="kop-sub-title" rowSpan={2}>
-                    FORMULIR KELENGKAPAN<br />
-                    PERSYARATAN PENGAJUAN SK TUGAS<br />
-                    AKHIR
-                  </td>
-                  <td className="kop-meta-label">Berlaku Efektif</td>
-                  <td className="kop-meta-value">02 Januari 2025</td>
-                </tr>
-                <tr>
-                  <td className="kop-logo-cell" />
-                  <td className="kop-meta-label">Halaman</td>
-                  <td className="kop-meta-value">1 dari 1</td>
-                </tr>
-              </tbody>
-            </table>
+      {/*  TABEL DOKUMEN PERSYARATAN  */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px', tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '44px' }} />
+          <col />
+          <col style={{ width: '88px' }} />
+        </colgroup>
+        <thead>
+          <tr style={{ backgroundColor: '#f5f5f5' }}>
+            <th style={{ border: '1px solid #000', padding: '7px 6px', textAlign: 'center' }}>No</th>
+            <th style={{ border: '1px solid #000', padding: '7px 10px', textAlign: 'left' }}>Dokumen persyaratan</th>
+            <th style={{ border: '1px solid #000', padding: '7px 6px', textAlign: 'center' }}>Status (OK)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '7px 6px', textAlign: 'center', verticalAlign: 'middle' }}>1</td>
+            <td style={{ border: '1px solid #000', padding: '7px 10px' }}>
+              Telah mengunggah proposal akhir melalui aplikasi i-Gracias
+            </td>
+            <td style={{ border: '1px solid #000', padding: '7px 6px', textAlign: 'center', fontSize: '16px', verticalAlign: 'middle' }}>
+              {hasProposal ? '✓' : ''}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '7px 6px', textAlign: 'center', verticalAlign: 'middle' }}>2</td>
+            <td style={{ border: '1px solid #000', padding: '7px 10px' }}>
+              Sertifikat TOEFL / EprT / Tes lain yang setara (Fotocopy) dengan mengunggah di
+              aplikasi i-Gracias{' '}
+              <span style={{ color: '#CC0000', fontStyle: 'italic' }}>
+                (MINIMAL PERNAH 1X TES BAHASA)
+              </span>
+            </td>
+            <td style={{ border: '1px solid #000', padding: '7px 6px', textAlign: 'center', fontSize: '16px', verticalAlign: 'middle' }}>
+              {hasBahasa ? '✓' : ''}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-            {/*  JUDUL FORMULIR  */}
-            <div className="form-main-title">
-              Formulir Kelengkapan Persyaratan Penerbitan SK Tugas Akhir
-            </div>
+      <p style={{ fontSize: '11px', margin: '0 0 50px 0' }}>
+        * Beri tanda ✓ jika persyaratan sudah OK
+      </p>
 
-            {/*  DATA MAHASISWA  */}
-            <table className="data-table">
-              <tbody>
-                <tr>
-                  <td className="data-label">NIM</td>
-                  <td className="data-colon">:</td>
-                  <td>{student.nim || '-'}</td>
-                </tr>
-                <tr>
-                  <td className="data-label">Nama Mahasiswa</td>
-                  <td className="data-colon">:</td>
-                  <td>{student.name || '-'}</td>
-                </tr>
-                <tr>
-                  <td className="data-label">Program Studi</td>
-                  <td className="data-colon">:</td>
-                  <td>{prodiName}</td>
-                </tr>
-                <tr>
-                  <td className="data-label">Judul Proposal TA</td>
-                  <td className="data-colon">:</td>
-                  <td>{judulTA}</td>
-                </tr>
-              </tbody>
-            </table>
+      {/*  TTD + QR  */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ textAlign: 'center', width: '180px' }}>
 
-            {/*  TABEL CHECKLIST  */}
-            <table className="check-table">
-              <thead>
-                <tr>
-                  <th className="col-no">No</th>
-                  <th>Dokumen persyaratan</th>
-                  <th className="col-status">Status (OK)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="col-no">1</td>
-                  <td>
-                    Telah mengunggah proposal akhir melalui aplikasi i-Gracias
-                  </td>
-                  <td className="col-status">
-                    {hasProposal && <span className="checkmark">✓</span>}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="col-no">2</td>
-                  <td>
-                    Sertifikat TOEFL / EprT / Tes lain yang setara (Fotocopy) dengan mengunggah di
-                    aplikasi i-Gracias <em style={{ color: '#B91C1C', fontWeight: 'bold' }}>
-                      (MINIMAL PERNAH 1X TES BAHASA)
-                    </em>
-                  </td>
-                  <td className="col-status">
-                    {hasLang && <span className="checkmark">✓</span>}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <p style={{ fontSize: '12px', margin: '0 0 3px 0' }}>
+            Purwokerto, {today}
+          </p>
 
-            {/* Keterangan */}
-            <p className="keterangan">
-              * Beri tanda <em>✓</em> jika persyaratan sudah OK
-            </p>
+          <p style={{ fontSize: '12px', margin: '0 0 16px 0' }}>
+            Kepala Urusan Akademik,
+          </p>
 
-            {/*  TTD  */}
-            <div className="ttd-section">
-              <div className="ttd-box">
-                <p className="ttd-kota">Purwokerto, {today}</p>
-                <p style={{ fontSize: '10.5pt', marginBottom: '4px' }}>Admin Akademik,</p>
-                {/* Placeholder TTD — logo Telkom sebagai contoh stempel */}
-                <div className="ttd-img-wrap">
-                  <img src={logoTelkom} alt="Stempel" className="ttd-img" />
-                </div>
-                <p className="ttd-nama">Admin Akademik</p>
-                <p className="ttd-jabatan">REK-403</p>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
+            {qrUrl ? (
+              <QRCode
+                value={qrUrl}
+                size={110}
+                level="M"
+                includeMargin={false}
+              />
+            ) : (
+              <div style={{
+                width: 110, height: 110,
+                border: '1.5px dashed #CBD5E1',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '9px', color: '#9CA3AF',
+              }}>
+                QR Loading...
               </div>
-            </div>
-
+            )}
           </div>
+
+
+          <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '0 0 3px 0' }}>
+            Dr. Ridwan Pandiya, S.Si., M.Sc.
+          </p>
+
+
+          <p style={{ fontSize: '12px', margin: 0 }}>
+            NIP. 15820053
+          </p>
         </div>
-      </motion.div>
+      </div>
+
     </div>
+  );
+});
+
+FormulirContent.displayName = 'FormulirContent';
+
+// ── Modal Utama ───────────────────────────────────────────────────────────────
+const FormulirSKModal = ({ item, existingResponse, onClose }) => {
+  const formulirRef = useRef(null);
+
+  const [qrUrl,       setQrUrl]       = useState(null);
+  const [isLoading,   setIsLoading]   = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [error,       setError]       = useState(null);
+
+  // ── Generate PDF validasi → upload → dapat downloadUrl untuk QR ──────────
+  useEffect(() => {
+    const initQR = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const studentId = item?.studentId;
+        if (!studentId) throw new Error('studentId tidak ditemukan');
+
+        const pdfData = mapSktaDataToPDF(item, existingResponse, logoTelkom);
+        const pdfBlob = await generateDokumenValidasiBlob(pdfData);
+        const namaFile = `Dokumen_Validasi_SKTA_${item?.student?.nim || studentId}`;
+
+        const result      = await uploadDokumenValidasi(studentId, pdfBlob, namaFile);
+        const downloadUrl = result?.downloadUrl;
+        if (!downloadUrl) throw new Error('downloadUrl tidak ditemukan dari response BE');
+
+        setQrUrl(downloadUrl);
+      } catch (err) {
+        console.error('[FormulirSKModal] initQR error:', err);
+        setError(err.message || 'Gagal memproses dokumen validasi. Coba tutup dan buka lagi.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    initQR();
+  }, [item?.studentId]);
+
+  // ── Export PDF — pakai ukuran A4 pixel eksplisit agar tidak berantakan ────
+  const handleExportPDF = async () => {
+    if (!formulirRef.current) return;
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(formulirRef.current, {
+        scale:           2,
+        useCORS:         true,
+        logging:         false,
+        backgroundColor: '#ffffff',
+        allowTaint:      false,
+        // Kunci: paksa lebar sesuai elemen agar tidak ada reflow
+        windowWidth:     794,
+        windowHeight:    1123,
+      });
+
+      const imgData   = canvas.toDataURL('image/png');
+      const pdfDoc    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfWidth  = pdfDoc.internal.pageSize.getWidth();   // 210mm
+      const pdfHeight = pdfDoc.internal.pageSize.getHeight();  // 297mm
+
+      // Paksa fit ke A4 penuh — tidak ada margin
+      pdfDoc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+      const nim  = item?.student?.nim  || 'mahasiswa';
+      const nama = (item?.student?.name || '').replace(/\s+/g, '_');
+      pdfDoc.save(`Formulir_SK_TA_${nim}_${nama}.pdf`);
+
+    } catch (err) {
+      console.error('[FormulirSKModal] handleExportPDF error:', err);
+      setError('Gagal export PDF. Coba lagi.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const canExport = !isLoading && !isExporting && !error && qrUrl;
+
+  return (
+    <>
+      {/* ── Hidden formulir A4 untuk di-screenshot html2canvas ── */}
+      {/* Dirender di luar viewport agar tidak terlihat user tapi bisa di-capture */}
+      <div style={{ position: 'fixed', top: 0, left: '-9999px', zIndex: -1 }}>
+        <FormulirContent
+          ref={formulirRef}
+          item={item}
+          sktaResponse={existingResponse}
+          prodiName={item?.prodiName || '-'}
+          qrUrl={qrUrl}
+        />
+      </div>
+
+      {/* ── Modal Overlay ── */}
+      <div
+        style={{
+          position:       'fixed',
+          inset:          0,
+          background:     'rgba(0,0,0,0.65)',
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'center',
+          zIndex:         9000,
+          padding:        '12px',
+          overflowY:      'auto',
+        }}
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0, y: 12 }}
+          animate={{ scale: 1,    opacity: 1, y: 0  }}
+          exit={{    scale: 0.95, opacity: 0, y: 12 }}
+          onClick={e => e.stopPropagation()}
+          style={{
+            background:    '#fff',
+            borderRadius:  '12px',
+            width:         '100%',
+            maxWidth:      '860px',
+            maxHeight:     '92vh',
+            display:       'flex',
+            flexDirection: 'column',
+            overflow:      'hidden',
+            boxShadow:     '0 20px 60px rgba(0,0,0,0.3)',
+          }}
+        >
+          {/* ── HEADER ── */}
+          <div style={{
+            display:        'flex',
+            alignItems:     'center',
+            justifyContent: 'space-between',
+            padding:        '12px 16px',
+            borderBottom:   '1px solid #E5E7EB',
+            flexShrink:     0,
+            gap:            '8px',
+            flexWrap:       'wrap',  // mobile: wrap jika sempit
+          }}>
+            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#111827', flexShrink: 0 }}>
+              Preview Formulir SK TA
+            </h3>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+              {/* Status indicator */}
+              {isLoading && (
+                <span style={{ fontSize: '11px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                  Memproses QR...
+                </span>
+              )}
+              {!isLoading && qrUrl && !error && (
+                <span style={{ fontSize: '11px', color: '#16A34A', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle size={12} /> QR Siap
+                </span>
+              )}
+              {error && (
+                <span style={{ fontSize: '11px', color: '#DC2626', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <AlertCircle size={12} /> Gagal
+                </span>
+              )}
+
+              {/* Tombol Export PDF */}
+              <button
+                onClick={handleExportPDF}
+                disabled={!canExport}
+                style={{
+                  display:      'flex',
+                  alignItems:   'center',
+                  gap:          '5px',
+                  padding:      '7px 14px',
+                  borderRadius: '6px',
+                  fontSize:     '12px',
+                  fontWeight:   700,
+                  background:   canExport ? '#C0182A' : '#E5E7EB',
+                  color:        canExport ? '#fff'    : '#9CA3AF',
+                  border:       'none',
+                  cursor:       canExport ? 'pointer' : 'not-allowed',
+                  whiteSpace:   'nowrap',
+                }}
+              >
+                {isExporting
+                  ? <><Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Mengekspor...</>
+                  : <><Download size={12} /> Export PDF</>
+                }
+              </button>
+
+              <button
+                onClick={onClose}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, display: 'flex' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* ── BODY: preview visual (bukan yang di-capture) ── */}
+          <div style={{
+            flex:           1,
+            overflow:       'auto',
+            padding:        '20px',
+            background:     '#F1F5F9',
+            display:        'flex',
+            justifyContent: 'center',
+            alignItems:     'flex-start',
+          }}>
+            {error ? (
+              <div style={{
+                padding:      '20px',
+                background:   '#FEF2F2',
+                border:       '1px solid #FECACA',
+                borderRadius: '8px',
+                color:        '#DC2626',
+                fontSize:     '13px',
+                maxWidth:     '380px',
+                textAlign:    'center',
+                lineHeight:   1.6,
+              }}>
+                <AlertCircle size={20} style={{ marginBottom: 8 }} />
+                <br />{error}
+              </div>
+            ) : (
+              /* Preview visual — scale down agar muat di layar */
+              <div style={{ overflowX: 'auto', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <div style={{
+                  transform:       'scale(0.75)',
+                  transformOrigin: 'top center',
+                  marginBottom:    '-210px', // kompensasi scale 0.75 dari 1123px
+                  flexShrink:      0,
+                }}>
+                  {/* Preview ini hanya visual — BUKAN yang di-capture */}
+                  <FormulirContent
+                    item={item}
+                    sktaResponse={existingResponse}
+                    prodiName={item?.prodiName || '-'}
+                    qrUrl={qrUrl}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </>
   );
 };
 
