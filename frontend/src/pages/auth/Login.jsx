@@ -193,14 +193,14 @@ const LoginPage = () => {
             </button>
           </div>
 
-          <p className="sso-label">SSO LOGIN</p>
+          <p className="sso-label">LOGIN</p>
 
           {alert && <CustomAlert type={alert.type} message={alert.msg} />}
 
           <form onSubmit={handleSubmit} noValidate>
             <div className="form-group">
               <label className="form-label" htmlFor="ssoUsername">
-                SSO Username
+                Email SSO
               </label>
               <div className="input-wrapper">
                 <BsPersonFill className="input-icon" />
