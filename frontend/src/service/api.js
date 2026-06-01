@@ -398,6 +398,70 @@ export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
   return response.data?.data ?? response.data;
 };
 
+
+// ------------------------------------------- SIDANG VERIF ADMI---------------------------
+
+// GET /api/sidang-registration-responses/registration/{sidangRegistrationId}
+// Ambil response verifikasi berdasarkan sidangRegistrationId
+export const getSidangRegistrationResponse = async (sidangRegistrationId) => {
+  try {
+    const response = await api.get(
+      `/api/sidang-registration-responses/registration/${sidangRegistrationId}`
+    );
+    return response.data?.data ?? response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+};
+
+// GET /api/sidang-registration-responses : Ambil semua responses (admin)
+export const getAllSidangRegistrationResponses = async () => {
+  const response = await api.get('/api/sidang-registration-responses');
+  return response.data?.data ?? response.data;
+};
+
+// GET /api/sidang-registration-responses/{id}
+export const getSidangRegistrationResponseById = async (id) => {
+  const response = await api.get(`/api/sidang-registration-responses/${id}`);
+  return response.data?.data ?? response.data;
+};
+
+// POST /api/sidang-registration-responses
+// Buat response baru (waktu admin verifikasi pertama kali)
+// payload: {
+//   sidangRegistrationId: number,
+//   isApproved: boolean,
+//   sidangPeriodId: number | null,   
+//   dueDate: string | null,         
+//   message: string | null,         
+//   berkasStatuses: string,})
+// }
+export const createSidangRegistrationResponse = async (payload) => {
+  const response = await api.post('/api/sidang-registration-responses', payload);
+  return response.data?.data ?? response.data;
+};
+
+// PUT /api/sidang-registration-responses/{id} : Update response yang sudah ada
+export const updateSidangRegistrationResponse = async (id, payload) => {
+  const response = await api.put(`/api/sidang-registration-responses/${id}`, payload);
+  return response.data?.data ?? response.data;
+};
+
+// DELETE /api/sidang-registration-responses/{id} : Hapus response
+export const deleteSidangRegistrationResponse = async (id) => {
+  const response = await api.delete(`/api/sidang-registration-responses/${id}`);
+  return response.data;
+};
+
+// Helper: create or update di cek dari ada/tidaknya existing response
+export const upsertSidangRegistrationResponse = async (payload, existingId) => {
+  if (existingId) {
+    return updateSidangRegistrationResponse(existingId, payload);
+  }
+  return createSidangRegistrationResponse(payload);
+};
+
 // ------------------------------------------- YUDISIUM PERIODS -------------------------------------------
 export const getYudisiumPeriods = async () => {
   try {
