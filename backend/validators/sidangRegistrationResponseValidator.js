@@ -26,6 +26,12 @@ const createSidangRegistrationResponseValidator = [
     .optional({ nullable: true })
     .isISO8601()
     .withMessage("isEdit harus berupa tanggal yang valid (format ISO 8601)"),
+
+  body("sidangPeriodId")
+    .optional({ nullable: true })
+    .isInt()
+    .withMessage("ID periode sidang harus berupa integer")
+    .toInt(),
 ];
 
 const updateSidangRegistrationResponseValidator = [

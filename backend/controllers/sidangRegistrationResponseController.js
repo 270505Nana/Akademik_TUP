@@ -24,6 +24,7 @@ const listSidangRegistrationResponses = asyncHandler(async (req, res) => {
               name: true,
             },
           },
+          sidangRegistrationUploads: true,
         },
       },
     },
@@ -32,8 +33,22 @@ const listSidangRegistrationResponses = asyncHandler(async (req, res) => {
     },
   });
 
+  const mappedResponses = responses.map((resItem) => {
+    if (
+      resItem.sidangRegistration &&
+      resItem.sidangRegistration.sidangRegistrationUploads
+    ) {
+      resItem.sidangRegistration.sidangRegistrationUploads =
+        resItem.sidangRegistration.sidangRegistrationUploads.map((upload) => ({
+          ...upload,
+          downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+        }));
+    }
+    return resItem;
+  });
+
   res.json({
-    data: responses,
+    data: mappedResponses,
   });
 });
 
@@ -65,6 +80,7 @@ const getSidangRegistrationResponseById = asyncHandler(async (req, res) => {
               name: true,
             },
           },
+          sidangRegistrationUploads: true,
         },
       },
     },
@@ -73,6 +89,17 @@ const getSidangRegistrationResponseById = asyncHandler(async (req, res) => {
   if (!response) {
     res.status(404);
     throw new Error("Respon pendaftaran sidang tidak ditemukan");
+  }
+
+  if (
+    response.sidangRegistration &&
+    response.sidangRegistration.sidangRegistrationUploads
+  ) {
+    response.sidangRegistration.sidangRegistrationUploads =
+      response.sidangRegistration.sidangRegistrationUploads.map((upload) => ({
+        ...upload,
+        downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+      }));
   }
 
   res.json({
@@ -109,6 +136,7 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
                 name: true,
               },
             },
+            sidangRegistrationUploads: true,
           },
         },
       },
@@ -119,6 +147,17 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
       throw new Error("Respon pendaftaran sidang tidak ditemukan");
     }
 
+    if (
+      response.sidangRegistration &&
+      response.sidangRegistration.sidangRegistrationUploads
+    ) {
+      response.sidangRegistration.sidangRegistrationUploads =
+        response.sidangRegistration.sidangRegistrationUploads.map((upload) => ({
+          ...upload,
+          downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+        }));
+    }
+
     res.json({
       data: response,
     });
@@ -127,7 +166,7 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
 
 // Create Sidang Registration Response
 const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
-  const { sidangRegistrationId, academicStaffId, message, isEdit } = req.body;
+  const { sidangRegistrationId, academicStaffId, message, isEdit, sidangPeriodId } = req.body;
 
   // Validate sidang registration exists
   const sidangRegistrationExists = await prisma.sidangRegistration.findUnique({
@@ -147,6 +186,17 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
   if (!academicStaffExists) {
     res.status(404);
     throw new Error("Staf akademik tidak ditemukan");
+  }
+
+  if (sidangPeriodId) {
+    const sidangPeriodExists = await prisma.sidangPeriod.findUnique({
+      where: { id: sidangPeriodId },
+    });
+
+    if (!sidangPeriodExists) {
+      res.status(404);
+      throw new Error("Periode sidang tidak ditemukan");
+    }
   }
 
   const newResponse = await prisma.sidangRegistrationResponse.create({
@@ -175,16 +225,32 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
               name: true,
             },
           },
+          sidangRegistrationUploads: true,
         },
       },
     },
   });
 
-  if (isEdit) {
+  if (isEdit || sidangPeriodId !== undefined) {
+    const updateData = {};
+    if (isEdit) updateData.isDraft = true;
+    if (sidangPeriodId !== undefined) updateData.sidangPeriodId = sidangPeriodId;
+
     await prisma.sidangRegistration.update({
       where: { id: sidangRegistrationId },
-      data: { isDraft: true },
+      data: updateData,
     });
+  }
+
+  if (
+    newResponse.sidangRegistration &&
+    newResponse.sidangRegistration.sidangRegistrationUploads
+  ) {
+    newResponse.sidangRegistration.sidangRegistrationUploads =
+      newResponse.sidangRegistration.sidangRegistrationUploads.map((upload) => ({
+        ...upload,
+        downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+      }));
   }
 
   res.status(201).json({
@@ -265,6 +331,7 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
               name: true,
             },
           },
+          sidangRegistrationUploads: true,
         },
       },
     },
@@ -279,6 +346,17 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
       },
       data: { isDraft: true },
     });
+  }
+
+  if (
+    updatedResponse.sidangRegistration &&
+    updatedResponse.sidangRegistration.sidangRegistrationUploads
+  ) {
+    updatedResponse.sidangRegistration.sidangRegistrationUploads =
+      updatedResponse.sidangRegistration.sidangRegistrationUploads.map((upload) => ({
+        ...upload,
+        downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+      }));
   }
 
   res.json({
@@ -317,6 +395,34 @@ const deleteSidangRegistrationResponse = asyncHandler(async (req, res) => {
   });
 });
 
+// Toggle isValid status of a Sidang Registration Upload
+const toggleSidangRegistrationUploadIsValid = asyncHandler(async (req, res) => {
+  const uploadId = parseInt(req.params.uploadId);
+
+  const upload = await prisma.sidangRegistrationUpload.findUnique({
+    where: { id: uploadId },
+  });
+
+  if (!upload) {
+    res.status(404);
+    throw new Error("Unggahan pendaftaran sidang tidak ditemukan");
+  }
+
+  const updatedUpload = await prisma.sidangRegistrationUpload.update({
+    where: { id: uploadId },
+    data: {
+      isValid: upload.isValid === true ? false : true,
+    },
+  });
+
+  res.json({
+    message: `Validasi berkas ${updatedUpload.name} berhasil diubah menjadi ${
+      updatedUpload.isValid ? "Valid" : "Tidak Valid"
+    }`,
+    data: updatedUpload,
+  });
+});
+
 module.exports = {
   listSidangRegistrationResponses,
   getSidangRegistrationResponseById,
@@ -324,4 +430,5 @@ module.exports = {
   createSidangRegistrationResponse,
   updateSidangRegistrationResponse,
   deleteSidangRegistrationResponse,
+  toggleSidangRegistrationUploadIsValid,
 };

@@ -267,6 +267,7 @@ model SidangRegistrationUpload {
   filename             String
   slug                 String // misal: formValidasiDosenWali
   path                 String
+  isValid              Boolean?
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
   sidangRegistrationId Int
 }

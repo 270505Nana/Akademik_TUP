@@ -265,7 +265,15 @@ const findSktaRequestByStudentId = asyncHandler(async (req, res) => {
   const sktaRequest = await prisma.sktaRequest.findFirst({
     where: { studentId },
     include: {
-      student: true,
+      student: {
+        include: {
+          studyProgram: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
       dosenPembimbing1: true,
       dosenPembimbing2: true,
       sktaRequestUploads: true,

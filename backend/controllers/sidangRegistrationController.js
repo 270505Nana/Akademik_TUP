@@ -66,7 +66,7 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
           name: true,
         },
       },
-      sidangRegistrationUploads: true,
+      // sidangRegistrationUploads: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -76,10 +76,10 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
   // Append downloadUrls
   const data = sidangRegistrations.map((reg) => ({
     ...reg,
-    sidangRegistrationUploads: reg.sidangRegistrationUploads.map((upload) => ({
-      ...upload,
-      downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
-    })),
+    // sidangRegistrationUploads: reg.sidangRegistrationUploads.map((upload) => ({
+    //   ...upload,
+    //   downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+    // })),
   }));
 
   res.json({
