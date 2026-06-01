@@ -127,7 +127,7 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
 
 // Create Sidang Registration Response
 const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
-  const { sidangRegistrationId, academicStaffId, message, isEdit } = req.body;
+  const { sidangRegistrationId, academicStaffId, message, isEdit, sidangPeriodId } = req.body;
 
   // Validate sidang registration exists
   const sidangRegistrationExists = await prisma.sidangRegistration.findUnique({
@@ -147,6 +147,17 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
   if (!academicStaffExists) {
     res.status(404);
     throw new Error("Staf akademik tidak ditemukan");
+  }
+
+  if (sidangPeriodId) {
+    const sidangPeriodExists = await prisma.sidangPeriod.findUnique({
+      where: { id: sidangPeriodId },
+    });
+
+    if (!sidangPeriodExists) {
+      res.status(404);
+      throw new Error("Periode sidang tidak ditemukan");
+    }
   }
 
   const newResponse = await prisma.sidangRegistrationResponse.create({
@@ -180,10 +191,14 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
     },
   });
 
-  if (isEdit) {
+  if (isEdit || sidangPeriodId !== undefined) {
+    const updateData = {};
+    if (isEdit) updateData.isDraft = true;
+    if (sidangPeriodId !== undefined) updateData.sidangPeriodId = sidangPeriodId;
+
     await prisma.sidangRegistration.update({
       where: { id: sidangRegistrationId },
-      data: { isDraft: true },
+      data: updateData,
     });
   }
 

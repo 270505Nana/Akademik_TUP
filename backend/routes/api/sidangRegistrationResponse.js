@@ -132,6 +132,10 @@ router.get(
  *                 format: date-time
  *                 nullable: true
  *                 example: "2026-06-07T23:59:59Z"
+ *               sidangPeriodId:
+ *                 type: integer
+ *                 nullable: true
+ *                 example: 1
  *     responses:
  *       201:
  *         description: Sidang registration response created successfully
