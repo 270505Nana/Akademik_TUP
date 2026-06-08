@@ -32,6 +32,16 @@ const createSidangRegistrationResponseValidator = [
     .isInt()
     .withMessage("ID periode sidang harus berupa integer")
     .toInt(),
+
+  body("sidangRegistrationUploadIds")
+    .optional({ nullable: true })
+    .isArray()
+    .withMessage("sidangRegistrationUploadIds harus berupa array"),
+
+  body("sidangRegistrationUploadIds.*")
+    .isInt()
+    .withMessage("Setiap element sidangRegistrationUploadIds harus berupa integer")
+    .toInt(),
 ];
 
 const updateSidangRegistrationResponseValidator = [
@@ -55,6 +65,16 @@ const updateSidangRegistrationResponseValidator = [
     .optional()
     .isInt()
     .withMessage("ID pendaftaran sidang harus berupa integer")
+    .toInt(),
+
+  body("sidangRegistrationUploadIds")
+    .optional({ nullable: true })
+    .isArray()
+    .withMessage("sidangRegistrationUploadIds harus berupa array"),
+
+  body("sidangRegistrationUploadIds.*")
+    .isInt()
+    .withMessage("Setiap element sidangRegistrationUploadIds harus berupa integer")
     .toInt(),
 ];
 
