@@ -11,7 +11,8 @@ import DashboardAkademik   from "./pages/admin/dashboard";
 import DashboardDosen      from "./pages/dosen/dashboard";
 import PengajuanSK         from "./pages/mahasiswa/pengajuanSK";
 import PermohonanSK         from "./pages/admin/permohonanSK";
-import AturPeriode         from "./pages/admin/aturperiode";
+import AturPeriodeSidang         from "./pages/admin/aturperiodesidang";
+import AturPeriodeYudisium         from "./pages/admin/aturperiodeyudisium";
 import AturBerkas          from "./pages/admin/requirementdocs";
 import UploadSKL           from "./pages/admin/skltranskrip";
 
@@ -102,13 +103,23 @@ const App = () => {
             }
           />
           <Route
-            path="/akademik/atur-periode"
+            path="/akademik/atur-periode/sidang"
             element={
               <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
-                <AturPeriode />
+                <AturPeriodeSidang />
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/akademik/atur-periode/yudisium"
+            element={
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+                <AturPeriodeYudisium />
+              </ProtectedRoute>
+            }
+          />
+
+          
           <Route
             path="/akademik/permohonan-sk"
             element={

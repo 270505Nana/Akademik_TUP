@@ -105,7 +105,6 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
           <Mail size={16} />
           <span>
             Contact Person : Helpdesk Layanan Sidang-Yudisium TUP
-            wa.me/+6285117001281
           </span>
         </div>
       </div>
