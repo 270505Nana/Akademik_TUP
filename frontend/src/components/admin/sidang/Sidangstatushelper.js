@@ -11,8 +11,6 @@ export const STATUS_SIDANG = {
   PENDAFTARAN_DITERIMA: 'pendaftaran-diterima',
 };
 
-
-
 export const SIDANG_STATUS_CONFIG = {
   [STATUS_SIDANG.BELUM_REGISTRASI]: {
     label      : 'Belum Registrasi',

@@ -10,14 +10,14 @@ import DashboardMahasiswa  from "./pages/mahasiswa/dashboard";
 import DashboardAkademik   from "./pages/admin/dashboard";
 import DashboardDosen      from "./pages/dosen/dashboard";
 import PengajuanSK         from "./pages/mahasiswa/pengajuanSK";
-import PermohonanSK         from "./pages/admin/permohonanSK";
-import AturPeriodeSidang         from "./pages/admin/aturperiodesidang";
-import AturPeriodeYudisium         from "./pages/admin/aturperiodeyudisium";
+import PermohonanSK        from "./pages/admin/permohonanSK";
+import AturPeriodeSidang   from "./pages/admin/aturperiodesidang";
+import AturPeriodeYudisium from "./pages/admin/aturperiodeyudisium";
 import AturBerkas          from "./pages/admin/requirementdocs";
-import UploadSKL           from "./pages/admin/skltranskrip";
-
+import UploadSKL           from "./pages/admin/skltranskrip";             
+import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";             
 import ProtectedRoute      from "./components/common/ProtectedRoute";
-import PendaftaranSidang from "./pages/mahasiswa/pendaftaransidang";
+import PendaftaranSidang   from "./pages/mahasiswa/pendaftaransidang";
 
 const Placeholder = ({ title }) => (
   <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -128,6 +128,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/akademik/atur-berkas"
             element={
@@ -136,6 +137,16 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/akademik/registrasi-sidang-all"
+            element={
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+                <RegistrasiSidang />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/akademik/upload-skl"
             element={

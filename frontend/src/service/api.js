@@ -308,28 +308,8 @@ export const uploadDokumenValidasi = async (studentId, pdfBlob, namaFile) => {
   return response.data?.data ?? response.data;
 };
 
-// ------------------------------------------- LAINNYA (Sidang, dll) -------------------------------------------
-export const getLecturers = async () =>
-  api.get("/api/lecturers").then((r) => r.data?.data ?? r.data);
-export const getFaculties = async () =>
-  api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
-export const getStudyPrograms = async () =>
-  api.get("/api/study-programs").then((r) => r.data?.data ?? r.data);
 
-export const getStudyProgramById = async (id) =>
-  api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
-
-// [periode sidang]
-export const getSidangPeriods = async () => {
-  try {
-    const response = await api.get("/api/sidang-periods");
-    return response.data?.data ?? response.data;
-  } catch (err) {
-    if (err.response?.status === 404) return null;
-    throw err;
-  }
-};
-
+// -------------------------------------------- SIDANG MHS -----------------------------------
 export const getSidangRegistrationByStudentId = async (studentId) => {
   try {
     const response = await api.get(
@@ -368,38 +348,21 @@ export const submitSidangRegistration = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
-export const createSidangPeriod = async ({ name, startDate, endDate }) => {
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const isOpen = now >= start && now <= end;
-
-  const response = await api.post("/api/sidang-periods", {
-    name,
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-    isOpen,
-  });
-  return response.data?.data ?? response.data;
-};
-
-export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const isOpen = now >= start && now <= end;
-
-  const response = await api.patch(`/api/sidang-periods/${id}`, {
-    name,
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-    isOpen,
-  });
-  return response.data?.data ?? response.data;
-};
 
 
 // ------------------------------------------- SIDANG VERIF ADMI---------------------------
+
+
+// GET /api/sidang-registrations
+export const getAllSidangRegistrations = async (params = {}) => {
+  try {
+    const response = await api.get('/api/sidang-registrations', { params });
+    return response.data?.data ? response.data : response.data;
+  } catch (err) {
+    console.error('Error fetching all sidang registrations:', err);
+    throw err;
+  }
+};
 
 // GET /api/sidang-registration-responses/registration/{sidangRegistrationId}
 // Ambil response verifikasi berdasarkan sidangRegistrationId
@@ -414,6 +377,7 @@ export const getSidangRegistrationResponse = async (sidangRegistrationId) => {
     throw err;
   }
 };
+
 
 // GET /api/sidang-registration-responses : Ambil semua responses (admin)
 export const getAllSidangRegistrationResponses = async () => {
@@ -505,5 +469,58 @@ export const updateYudisiumPeriod = async (
   });
   return response.data?.data ?? response.data;
 };
+
+// ------------------------------------------- LAINNYA (Sidang, dll) -------------------------------------------
+export const getLecturers = async () =>
+  api.get("/api/lecturers").then((r) => r.data?.data ?? r.data);
+export const getFaculties = async () =>
+  api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
+export const getStudyPrograms = async () =>
+  api.get("/api/study-programs").then((r) => r.data?.data ?? r.data);
+
+export const getStudyProgramById = async (id) =>
+  api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
+
+// [periode sidang]
+export const getSidangPeriods = async () => {
+  try {
+    const response = await api.get("/api/sidang-periods");
+    return response.data?.data ?? response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
+};
+
+export const createSidangPeriod = async ({ name, startDate, endDate }) => {
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const isOpen = now >= start && now <= end;
+
+  const response = await api.post("/api/sidang-periods", {
+    name,
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
+
+export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const isOpen = now >= start && now <= end;
+
+  const response = await api.patch(`/api/sidang-periods/${id}`, {
+    name,
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
+
 
 export default api;
