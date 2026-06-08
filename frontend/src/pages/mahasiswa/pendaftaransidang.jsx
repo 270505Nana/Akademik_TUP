@@ -11,7 +11,8 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useStudent } from "../../context/StudentContext";
 import Step1 from "../../components/mahasiswa/sidang/Step1Sidang";
-import Step2 from "../../components/mahasiswa/sidang/Step2Sidang";import CustomAlert from "../../components/common/CustomAlert";
+import Step2 from "../../components/mahasiswa/sidang/Step2Sidang";
+import CustomAlert from "../../components/common/CustomAlert";
 import {
   getLecturers,
   getSidangRegistrationByStudentId,
@@ -35,15 +36,18 @@ const STEP1_REQUIRED = [
 
 const TAK_MINIMUM = { Reguler: 60, "Alih Jenjang": 25, Diploma: 45 };
 
+import {
+  REQUIRED_SLUGS,
+  NON_SIDANG_SLUGS,
+} from "../../requirement/sidangDocument";
+
 function validateStep1(data) {
-  // 1. Cek field wajib kosong
   for (const field of STEP1_REQUIRED) {
     const value = data[field.key];
     if (value === "" || value === null || value === undefined) {
       return `Kolom "${field.label}" wajib diisi.`;
     }
   }
-
 
   if (
     data.sidangScheme === "Non Sidang" &&
@@ -52,13 +56,11 @@ function validateStep1(data) {
     return "Jalur Non Sidang wajib dipilih minimal satu opsi.";
   }
 
-  // TAK harus memenuhi minimum
   const takMin = TAK_MINIMUM[data.programType] ?? TAK_MINIMUM.Reguler;
   if (Number(data.tak) < takMin) {
     return `TAK belum memenuhi minimum (${takMin} poin untuk program ${data.programType}).`;
   }
 
-  // Dosen 1 dan 2 tidak boleh sama
   if (
     data.dosenPembimbing1Id &&
     data.dosenPembimbing2Id &&
@@ -67,7 +69,7 @@ function validateStep1(data) {
     return "Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama.";
   }
 
-  return null; 
+  return null;
 }
 
 function validateStep2(data, documents) {
@@ -75,26 +77,43 @@ function validateStep2(data, documents) {
     return "Jawaban persyaratan Test Bahasa wajib dipilih.";
   }
 
-  // Semua dokumen WAJIB harus completed
-  const incompleteDocs = documents.filter(
-    (d) => d.section === "wajib" && d.status !== "completed",
+  // Validasi berdasarkan slug
+  const completedSlugs = documents
+    .filter((d) => d.status === "completed")
+    .map((d) => d.slug);
+
+  // Cek REQUIRED_SLUGS wajib
+  const missingSlugs = REQUIRED_SLUGS.filter(
+    (slug) => !completedSlugs.includes(slug),
   );
-  if (incompleteDocs.length > 0) {
-    const names = incompleteDocs.map((d) => d.name).join(", ");
-    return `Dokumen berikut belum diunggah: ${names}.`;
+
+  if (missingSlugs.length > 0) {
+    const missingNames = documents
+      .filter((d) => missingSlugs.includes(d.slug) && d.status !== "completed")
+      .map((d) => d.name);
+
+    const displayList =
+      missingNames.length > 0
+        ? missingNames.join(", ")
+        : `${missingSlugs.length} dokumen wajib`;
+
+    return `Dokumen berikut belum diunggah dan disimpan: ${displayList}.`;
   }
 
-  // Dokumen Non Sidang jika skema Non Sidang
+  // Cek slug Non Sidang jika skema Non Sidang
   if (data.sidangScheme === "Non Sidang" && data.jalurNonSidang?.length > 0) {
-    const incompleteNonSidang = documents.filter(
-      (d) => d.section !== "wajib" && d.status !== "completed",
-    );
-    if (incompleteNonSidang.length > 0) {
-      return `${incompleteNonSidang.length} dokumen jalur Non Sidang belum diunggah.`;
+    for (const jalur of data.jalurNonSidang) {
+      const jalurSlugs = NON_SIDANG_SLUGS[jalur] ?? [];
+      const missingJalurSlugs = jalurSlugs.filter(
+        (s) => !completedSlugs.includes(s),
+      );
+      if (missingJalurSlugs.length > 0) {
+        return `Dokumen jalur "${jalur}" belum lengkap (${missingJalurSlugs.length} dokumen belum diunggah).`;
+      }
     }
   }
 
-  return null; 
+  return null;
 }
 
 function PendaftaranSidangContent() {
@@ -104,34 +123,49 @@ function PendaftaranSidangContent() {
   const { student } = useStudent();
   const { step, data, documents } = state;
 
-  const [isSubmitting,         setIsSubmitting]         = useState(false);
-  const [skta,                 setSkta]                 = useState(false);
-  const [isSktaChecking,       setIsSktaChecking]       = useState(true);
-  const [isRegistrationLoading,setIsRegistrationLoading]= useState(false);
-  const [isSavingStep1,        setIsSavingStep1]        = useState(false);
-  const [lecturers,            setLecturers]            = useState([]);
-  const [registrationId,       setRegistrationId]       = useState(null);
-
-  const [formAlert, setFormAlert] = useState(null); 
+  const [isSubmitting,          setIsSubmitting]          = useState(false);
+  const [skta,                  setSkta]                  = useState(false);
+  const [isSktaChecking,        setIsSktaChecking]        = useState(true);
+  const [isRegistrationLoading, setIsRegistrationLoading] = useState(false);
+  const [isSavingStep1,         setIsSavingStep1]         = useState(false);
+  const [lecturers,             setLecturers]             = useState([]);
+  const [registrationId,        setRegistrationId]        = useState(null);
+  const [formAlert,             setFormAlert]             = useState(null);
 
   const studentId = profile?.id || student?.studentId || user?.id;
 
   const studentInfo = {
-    nama:         student?.namaLengkap || profile?.name || user?.username || "-",
-    nim:          student?.nim         || profile?.nim  || "-",
-    prodi:        student?.studyProgramNama || profile?.studyProgram?.name || "-",
-    phone:        user?.phone          || profile?.phone || user?.no_telp  || "-",
-    dosenWaliKode:student?.dosenWaliKode || profile?.dosenWali?.lecturerCode || "-",
-    dosenWaliNama:student?.dosenWaliNama || profile?.dosenWali?.name         || "-",
-    dosenWaliNip: student?.dosenWaliNip  || profile?.dosenWali?.nip          || "-",
+    nama:          student?.namaLengkap || profile?.name || user?.username || "-",
+    nim:           student?.nim         || profile?.nim  || "-",
+    prodi:         student?.studyProgramNama || profile?.studyProgram?.name || "-",
+    phone:         user?.phone || profile?.phone || user?.no_telp || "-",
+    dosenWaliKode: student?.dosenWaliKode || profile?.dosenWali?.lecturerCode || "-",
+    dosenWaliNama: student?.dosenWaliNama || profile?.dosenWali?.name || "-",
+    dosenWaliNip:  student?.dosenWaliNip  || profile?.dosenWali?.nip  || "-",
   };
 
   const setStep = (val) => {
-    setFormAlert(null); 
+    setFormAlert(null);
     dispatch({ type: "SET_STEP", value: val });
   };
 
-  //  Validasi & Submit Step 1 
+  const buildSavePayload = () => ({
+    ...(registrationId ? { id: registrationId } : {}), 
+    programType:        data.programType,
+    sidangScheme:       data.sidangScheme,
+    jalurNonSidang:     Array.isArray(data.jalurNonSidang) ? data.jalurNonSidang : [],
+    sks:                data.sks ? Number(data.sks) : 0,
+    ipk:                data.ipk ? Number(data.ipk) : 0,
+    tak:                data.tak ? Number(data.tak) : 0,
+    sktaExpDate:        data.sktaExpDate || null,
+    thesisTitleId:      data.thesisTitleId,
+    thesisTitleEn:      data.thesisTitleEn,
+    studentId,
+    dosenPembimbing1Id: data.dosenPembimbing1Id ? Number(data.dosenPembimbing1Id) : null,
+    dosenPembimbing2Id: data.dosenPembimbing2Id ? Number(data.dosenPembimbing2Id) : null,
+  });
+
+  // Simpan & Lanjutkan 
   const handleSaveStep1 = async () => {
     setFormAlert(null);
 
@@ -153,7 +187,9 @@ function PendaftaranSidangContent() {
     try {
       setIsSavingStep1(true);
       const result = await saveSidangRegistration(buildSavePayload());
-      const savedId = result?.id ?? result?.data?.id ?? null;
+
+      // Response: { message, data: { id, ... } }
+      const savedId = result?.data?.id ?? null;
       if (savedId && !registrationId) {
         setRegistrationId(savedId);
       }
@@ -171,7 +207,7 @@ function PendaftaranSidangContent() {
     }
   };
 
-  //  Validasi & Submit Final 
+  //  Submit Final 
   const handleSubmit = async () => {
     setFormAlert(null);
 
@@ -185,20 +221,24 @@ function PendaftaranSidangContent() {
     if (!registrationId) {
       setFormAlert({
         type: "error",
-        msg: "ID pendaftaran tidak ditemukan. Silakan kembali ke Step 1 dan simpan ulang.",
+        msg: "ID pendaftaran tidak ditemukan. Silakan kembali ke Step 1 dan klik 'Simpan & Lanjutkan' terlebih dahulu.",
       });
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const payload = buildSavePayload();
-      await submitSidangRegistration(payload);
+      await submitSidangRegistration({
+        id: registrationId,       
+        ...buildSavePayload(),    
+      });
 
       localStorage.removeItem("sidang_form_draft");
       navigate("/mahasiswa/dashboard");
     } catch (error) {
       console.error("Submit failed:", error);
+      console.error("Response dari BE:", error.response?.data);
+
       const msg =
         error.response?.data?.message ||
         "Gagal submit pendaftaran sidang. Silakan coba lagi.";
@@ -221,45 +261,50 @@ function PendaftaranSidangContent() {
     dispatch({
       type: "SET_INITIAL_DATA",
       payload: {
-        programType:        registration.programType      || "",
-        sidangScheme:       registration.sidangScheme     || "",
-        jalurNonSidang:     registration.jalurNonSidang   || [],
-        sks:                registration.sks              ?? "",
-        ipk:                registration.ipk              ?? "",
-        tak:                registration.tak              ?? "",
+        programType:        registration.programType        || "",
+        sidangScheme:       registration.sidangScheme       || "",
+        
+        jalurNonSidang:     Array.isArray(registration.jalurNonSidang)
+                              ? registration.jalurNonSidang
+                              : [],
+        sks:                registration.sks               ?? "",
+        ipk:                registration.ipk               ?? "",
+        tak:                registration.tak               ?? "",
         sktaExpDate:        normalizeDateInput(registration.sktaExpDate),
-        thesisTitleId:      registration.thesisTitleId    || "",
-        thesisTitleEn:      registration.thesisTitleEn    || "",
-        dosenPembimbing1Id: registration.dosenPembimbing1Id || "",
-        dosenPembimbing2Id: registration.dosenPembimbing2Id || "",
+        thesisTitleId:      registration.thesisTitleId      || "",
+        thesisTitleEn:      registration.thesisTitleEn      || "",
+        dosenPembimbing1Id: registration.dosenPembimbing1Id
+                              ? String(registration.dosenPembimbing1Id)
+                              : "",
+        dosenPembimbing2Id: registration.dosenPembimbing2Id
+                              ? String(registration.dosenPembimbing2Id)
+                              : "",
       },
     });
-  };
-
-  const extractRegistrationId = (registration) => {
-    if (!registration) return null;
-    if (registration.id) return registration.id;
-    if (registration.data?.id) return registration.data.id;
-    return null;
   };
 
   const initRegistration = async (id) => {
     setIsRegistrationLoading(true);
     try {
-      const existing = await getSidangRegistrationByStudentId(id);
+      // Response: { data: { id, isDraft, programType, ... } }
+      const response = await getSidangRegistrationByStudentId(id);
+      const existing = response?.data ?? response;
+
       if (!existing) {
         const created = await saveSidangRegistration({ studentId: id });
-        setRegistrationId(extractRegistrationId(created));
-        applyRegistrationToForm(created);
+        const newId = created?.data?.id ?? null;
+        setRegistrationId(newId);
+        applyRegistrationToForm(created?.data ?? created);
         return;
       }
-      setRegistrationId(extractRegistrationId(existing));
+
+      setRegistrationId(existing.id);
       applyRegistrationToForm(existing);
     } catch (e) {
       console.error("Gagal memuat data pendaftaran sidang:", e);
       setFormAlert({
         type: "warning",
-        msg: "Gagal memuat data pendaftaran yang tersimpan. Data form akan dimulai dari awal.",
+        msg: "Gagal memuat data pendaftaran tersimpan. Form dimulai dari awal.",
       });
     } finally {
       setIsRegistrationLoading(false);
@@ -275,30 +320,22 @@ function PendaftaranSidangContent() {
   };
 
   async function checkSkta() {
-    if (!studentId) {
-      setIsSktaChecking(false);
-      return;
-    }
+    if (!studentId) { setIsSktaChecking(false); return; }
     try {
       const response = await getSktaResponseUploadByStudentId(studentId);
       const uploads = extractUploads(response);
       const hasSkta = uploads.length > 0;
       setSkta(hasSkta);
-      if (hasSkta) {
-        await initRegistration(studentId);
-      }
+      if (hasSkta) await initRegistration(studentId);
     } catch (e) {
       if (e.response?.status === 404) return;
-      console.error("Error fetching data:", e);
+      console.error("Error fetching SKTA:", e);
     } finally {
       setIsSktaChecking(false);
     }
   }
 
-  useEffect(() => {
-    setIsSktaChecking(true);
-    checkSkta();
-  }, [studentId]);
+  useEffect(() => { setIsSktaChecking(true); checkSkta(); }, [studentId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -307,21 +344,6 @@ function PendaftaranSidangContent() {
       .catch((e) => console.error("Gagal memuat daftar dosen:", e));
     return () => { isMounted = false; };
   }, []);
-
-  const buildSavePayload = () => ({
-    programType:        data.programType,
-    sidangScheme:       data.sidangScheme,
-    jalurNonSidang:     Array.isArray(data.jalurNonSidang) ? data.jalurNonSidang : [],
-    sks:                data.sks  ? Number(data.sks)  : 0,
-    ipk:                data.ipk  ? Number(data.ipk)  : 0,
-    tak:                data.tak  ? Number(data.tak)  : 0,
-    sktaExpDate:        data.sktaExpDate || null,
-    thesisTitleId:      data.thesisTitleId,
-    thesisTitleEn:      data.thesisTitleEn,
-    studentId,
-    dosenPembimbing1Id: data.dosenPembimbing1Id ? Number(data.dosenPembimbing1Id) : null,
-    dosenPembimbing2Id: data.dosenPembimbing2Id ? Number(data.dosenPembimbing2Id) : null,
-  });
 
   return (
     <div className="page-wrapper">
@@ -334,19 +356,9 @@ function PendaftaranSidangContent() {
           <span>Kembali</span>
         </button>
         <div className="header-logos">
-          <img
-            src={logoSimta}
-            alt="SIMTA Logo"
-            className="simta-brand-logo"
-            referrerPolicy="no-referrer"
-          />
+          <img src={logoSimta} alt="SIMTA Logo" className="simta-brand-logo" referrerPolicy="no-referrer" />
           <div className="logo-divider"></div>
-          <img
-            src={logoTelkom}
-            alt="Telkom Logo"
-            className="telkom-brand-logo"
-            referrerPolicy="no-referrer"
-          />
+          <img src={logoTelkom} alt="Telkom Logo" className="telkom-brand-logo" referrerPolicy="no-referrer" />
         </div>
       </div>
 
@@ -376,30 +388,12 @@ function PendaftaranSidangContent() {
 
             <footer className="footer-nav">
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <button
-                  className="btn-pagination"
-                  onClick={() => setStep(1)}
-                  disabled={step === 1}
-                >
+                <button className="btn-pagination" onClick={() => setStep(1)} disabled={step === 1}>
                   <ChevronLeft size={16} />
                 </button>
-                <div
-                  className={`page-num ${step === 1 ? "active" : ""}`}
-                  onClick={() => setStep(1)}
-                >
-                  1
-                </div>
-                <div
-                  className={`page-num ${step === 2 ? "active" : ""}`}
-                  onClick={() => setStep(2)}
-                >
-                  2
-                </div>
-                <button
-                  className="btn-pagination"
-                  onClick={() => setStep(2)}
-                  disabled={step === 2}
-                >
+                <div className={`page-num ${step === 1 ? "active" : ""}`} onClick={() => setStep(1)}>1</div>
+                <div className={`page-num ${step === 2 ? "active" : ""}`} onClick={() => setStep(2)}>2</div>
+                <button className="btn-pagination" onClick={() => setStep(2)} disabled={step === 2}>
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -425,12 +419,9 @@ function PendaftaranSidangContent() {
           </>
         ) : (
           <div className="skta-warning">
-            <h2 className="skta-warning-title">
-              Pendaftaran Sidang Belum Tersedia
-            </h2>
+            <h2 className="skta-warning-title">Pendaftaran Sidang Belum Tersedia</h2>
             <p className="skta-warning-text">
-              SKTA kamu belum diterbitkan. Silakan tunggu hingga SKTA terbit
-              sebelum mendaftar sidang.
+              SKTA kamu belum diterbitkan. Silakan tunggu hingga SKTA terbit sebelum mendaftar sidang.
             </p>
           </div>
         )}
