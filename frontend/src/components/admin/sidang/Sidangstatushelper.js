@@ -102,13 +102,6 @@ const _hasResubmittedFile = (uploads) => {
  *    - period.isOpen = false / period null          : PENDAFTARAN_DITERIMA
  * 6. response ada, isEdit null, sidangPeriodId null
  *    (BE belum assign periode / on process)         : DALAM_PROSES
- *
- * NOTE tentang poin 5 fallback:
- *   Jika sidangPeriodId sudah ada tapi data period belum di-fetch (null),
- *   fallback ke PENDAFTARAN_DITERIMA karena ini lebih aman secara UX
- *   (tidak over-promise ke mahasiswa bahwa sidangnya aktif).
- *   Nanti bisa di-refine ketika BE sudah support sidangPeriodId penuh.
-
  */
 export const determineSidangStatus = (registration, response, period, uploads = []) => {
 
