@@ -9,6 +9,7 @@ const {
   createSidangRegistrationResponse,
   updateSidangRegistrationResponse,
   deleteSidangRegistrationResponse,
+  toggleSidangRegistrationUploadIsValid,
 } = require("../../controllers/sidangRegistrationResponseController");
 const {
   createSidangRegistrationResponseValidator,
@@ -132,6 +133,15 @@ router.get(
  *                 format: date-time
  *                 nullable: true
  *                 example: "2026-06-07T23:59:59Z"
+ *               sidangPeriodId:
+ *                 type: integer
+ *                 nullable: true
+ *                 example: 1
+ *               sidangRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 2, 3]
  *     responses:
  *       201:
  *         description: Sidang registration response created successfully
@@ -188,6 +198,11 @@ router.post(
  *                 type: integer
  *               sidangRegistrationId:
  *                 type: integer
+ *               sidangRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 2, 3]
  *     responses:
  *       200:
  *         description: Sidang registration response updated successfully
@@ -243,6 +258,40 @@ router.delete(
   verifyToken,
   isAcademicStaff,
   deleteSidangRegistrationResponse,
+);
+
+/**
+ * @swagger
+ * /api/sidang-registration-responses/uploads/{uploadId}/toggle-is-valid:
+ *   put:
+ *     summary: Toggle isValid status of a Sidang Registration Upload
+ *     tags: [Sidang Registration Response]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: uploadId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Upload ID to toggle validation status
+ *     responses:
+ *       200:
+ *         description: Sidang registration upload validation status toggled successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token / Access denied
+ *       404:
+ *         description: Sidang registration upload not found
+ *       500:
+ *         description: Internal server error
+ */
+router.put(
+  "/uploads/:uploadId/toggle-is-valid",
+  verifyToken,
+  isAcademicStaff,
+  toggleSidangRegistrationUploadIsValid,
 );
 
 module.exports = router;

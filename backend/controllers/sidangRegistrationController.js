@@ -66,7 +66,7 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
           name: true,
         },
       },
-      sidangRegistrationUploads: true,
+      // sidangRegistrationUploads: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -76,10 +76,10 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
   // Append downloadUrls
   const data = sidangRegistrations.map((reg) => ({
     ...reg,
-    sidangRegistrationUploads: reg.sidangRegistrationUploads.map((upload) => ({
-      ...upload,
-      downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
-    })),
+    // sidangRegistrationUploads: reg.sidangRegistrationUploads.map((upload) => ({
+    //   ...upload,
+    //   downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+    // })),
   }));
 
   res.json({
@@ -553,6 +553,7 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
         name,
         filename: file.filename,
         path: file.path,
+        isValid: false,
       },
     });
   } else {
@@ -563,6 +564,7 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
         filename: file.filename,
         path: file.path,
         sidangRegistrationId: parseInt(id),
+        isValid: false,
       },
     });
   }
