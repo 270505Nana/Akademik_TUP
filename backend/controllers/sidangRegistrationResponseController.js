@@ -166,7 +166,7 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
 
 // Create Sidang Registration Response
 const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
-  const { sidangRegistrationId, academicStaffId, message, isEdit, sidangPeriodId } = req.body;
+  const { sidangRegistrationId, academicStaffId, message, isEdit, sidangPeriodId, sidangRegistrationUploadIds } = req.body;
 
   // Validate sidang registration exists
   const sidangRegistrationExists = await prisma.sidangRegistration.findUnique({
@@ -197,6 +197,24 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
       res.status(404);
       throw new Error("Periode sidang tidak ditemukan");
     }
+  }
+
+  if (Array.isArray(sidangRegistrationUploadIds)) {
+    await prisma.sidangRegistrationUpload.updateMany({
+      where: {
+        sidangRegistrationId,
+        id: { in: sidangRegistrationUploadIds },
+      },
+      data: { isValid: true },
+    });
+
+    await prisma.sidangRegistrationUpload.updateMany({
+      where: {
+        sidangRegistrationId,
+        id: { notIn: sidangRegistrationUploadIds },
+      },
+      data: { isValid: false },
+    });
   }
 
   const newResponse = await prisma.sidangRegistrationResponse.create({
@@ -262,7 +280,7 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
 // Update Sidang Registration Response
 const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { message, isEdit, academicStaffId, sidangRegistrationId } = req.body;
+  const { message, isEdit, academicStaffId, sidangRegistrationId, sidangRegistrationUploadIds } = req.body;
 
   // Check if response exists
   const responseExists = await prisma.sidangRegistrationResponse.findFirst({
@@ -298,6 +316,26 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
       res.status(404);
       throw new Error("Staf akademik tidak ditemukan");
     }
+  }
+
+  const finalSidangRegistrationId = sidangRegistrationId || responseExists.sidangRegistrationId;
+
+  if (Array.isArray(sidangRegistrationUploadIds)) {
+    await prisma.sidangRegistrationUpload.updateMany({
+      where: {
+        sidangRegistrationId: finalSidangRegistrationId,
+        id: { in: sidangRegistrationUploadIds },
+      },
+      data: { isValid: true },
+    });
+
+    await prisma.sidangRegistrationUpload.updateMany({
+      where: {
+        sidangRegistrationId: finalSidangRegistrationId,
+        id: { notIn: sidangRegistrationUploadIds },
+      },
+      data: { isValid: false },
+    });
   }
 
   const updateData = {};

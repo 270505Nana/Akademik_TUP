@@ -553,6 +553,7 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
         name,
         filename: file.filename,
         path: file.path,
+        isValid: false,
       },
     });
   } else {
@@ -563,6 +564,7 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
         filename: file.filename,
         path: file.path,
         sidangRegistrationId: parseInt(id),
+        isValid: false,
       },
     });
   }

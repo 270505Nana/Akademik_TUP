@@ -137,6 +137,11 @@ router.get(
  *                 type: integer
  *                 nullable: true
  *                 example: 1
+ *               sidangRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 2, 3]
  *     responses:
  *       201:
  *         description: Sidang registration response created successfully
@@ -193,6 +198,11 @@ router.post(
  *                 type: integer
  *               sidangRegistrationId:
  *                 type: integer
+ *               sidangRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 2, 3]
  *     responses:
  *       200:
  *         description: Sidang registration response updated successfully
