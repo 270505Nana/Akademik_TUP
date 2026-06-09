@@ -161,21 +161,10 @@ const DashboardAkademik = () => {
             <Menu size={20} />
           </button>
           <div className="topbar-brand">Beranda</div>
-          <div className="topbar-right">
-            <div className="flex items-center gap-2">
-              <div className="text-right hidden sm:block">
-                <div className="text-sm font-bold">Budiono</div>
-                <div className="text-xs text-muted">Administrator</div>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs">
-                AD
-              </div>
-            </div>
-          </div>
         </header>
         <main className="page-body">
           <div className="welcome-card">
-            <h5>Selamat Datang Kembali, Pak Budiono! 👋</h5>
+            <h5>Selamat Datang Kembali 👋</h5>
           </div>
 
           <div className="stat-grid mb-6">

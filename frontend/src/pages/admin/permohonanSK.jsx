@@ -246,7 +246,7 @@ const PermohonanSK = () => {
                     {prodiList.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                   </select>
                   <button className="btn-export-sk" onClick={() => showAlert('success', 'Export', 'Data sedang disiapkan...')}>
-                    <Download size={15} /> Expor Evidence Akreditasi
+                    <Download size={15} /> Expor SK TA MHS
                   </button>
                 </div>
 

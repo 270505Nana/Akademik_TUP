@@ -46,7 +46,7 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
           label: 'Manajemen Sidang',
           icon: <Layout className="nav-icon" />,
           subItems: [
-            { label: 'Penjadwalan Sidang',      path: '/akademik/penjadwalan'  },
+            // { label: 'Penjadwalan Sidang',      path: '/akademik/penjadwalan'  },
             { label: 'Atur Persyaratan Berkas', path: '/akademik/atur-berkas'  }
           ]
         }
