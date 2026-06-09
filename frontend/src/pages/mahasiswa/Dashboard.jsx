@@ -13,6 +13,9 @@ import {
   getSktaResponseUploadByStudentId,
   getSidangPeriods,
   getYudisiumPeriods,
+  getSidangRegistrationByStudentId,
+  getSidangRegistrationResponse,
+  getSidangRegistrationUploads,
 } from '../../service/api';
 
 import {
@@ -22,6 +25,52 @@ import {
   STATUS_SK,
 } from '../../components/common/skStatusHelper';
 
+import {
+  STATUS_SIDANG,
+  SIDANG_STATUS_CONFIG,
+  determineSidangStatus,
+} from '../../components/admin/sidang/sidangStatusHelper';
+
+
+const pickActiveRegistration = (registrations) => {
+  if (!Array.isArray(registrations) || registrations.length === 0) return null;
+  const sorted = [...registrations].sort((a, b) => b.id - a.id);
+  const submitted = sorted.find(r => r.isDraft === false);
+  if (submitted) return submitted;
+  const filledDraft = sorted.find(r => r.isDraft === true && r.programType !== null);
+  if (filledDraft) return filledDraft;
+  return null;
+};
+
+const toRowBadge = (cfg) => ({
+  bg    : cfg.bg,
+  border: cfg.border,
+  color : cfg.color,
+  label : cfg.label,
+});
+
+const SIDANG_KETERANGAN_LABEL = {
+  [STATUS_SIDANG.BELUM_DAFTAR]         : 'Belum Mengisi Formulir',
+  [STATUS_SIDANG.DRAFT]                : 'Form Belum Disubmit',
+  [STATUS_SIDANG.DALAM_PROSES]         : 'Menunggu Verifikasi',
+  [STATUS_SIDANG.PERLU_REVISI]         : 'Berkas Perlu Diperbaiki',
+  [STATUS_SIDANG.REVISI_DIPERBARUI]    : 'Menunggu Reverifikasi',
+  [STATUS_SIDANG.PENDAFTARAN_DITERIMA] : 'Menunggu Jadwal Aktif',
+  [STATUS_SIDANG.SIAP_SIDANG]          : 'Periode Sidang Aktif',
+};
+
+const getSidangKeteranganBadge = (status) => {
+  const cfg = SIDANG_STATUS_CONFIG[status];
+  if (!cfg) return { bg: '#F3F4F6', border: '#9CA3AF', color: '#6B7280', label: '—' };
+  return {
+    bg    : cfg.bg,
+    border: cfg.border,
+    color : cfg.color,
+    label : SIDANG_KETERANGAN_LABEL[status] ?? cfg.label,
+  };
+};
+
+const LOCKED_BADGE  = { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Selesaikan Pengajuan SKTA' };
 
 const formatDateRange = (start, end) => {
   const fmt = (d) =>
@@ -154,16 +203,18 @@ const DashboardMahasiswa = () => {
   const angkatanDisplay  = student?.angkatan         || null;
   const dosenWaliDisplay = student?.dosenWaliNama    || null;
 
-  //  State 
-  const [skStatus,        setSkStatus]        = useState(null);
-  const [skUploads,       setSkUploads]       = useState([]);
-  const [sktaRequest,     setSktaRequest]     = useState(null);
-  const [loadingSk,       setLoadingSk]       = useState(true);
+  const [skStatus,    setSkStatus]    = useState(null);
+  const [skUploads,   setSkUploads]   = useState([]);
+  const [sktaRequest, setSktaRequest] = useState(null);
+  const [loadingSk,   setLoadingSk]   = useState(true);
+
+  const [sidangRegStatus,  setSidangRegStatus]  = useState(null);
+  const [loadingSidangReg, setLoadingSidangReg] = useState(false);
+
   const [sidangPeriode,   setSidangPeriode]   = useState(null);
   const [yudisiumPeriode, setYudisiumPeriode] = useState(null);
   const [loadingPeriode,  setLoadingPeriode]  = useState(true);
 
-  //  Fetch SK 
   const fetchSkStatus = useCallback(async () => {
     const studentId = student?.studentId;
     if (!studentId) { setLoadingSk(false); return; }
@@ -190,7 +241,50 @@ const DashboardMahasiswa = () => {
 
   useEffect(() => { fetchSkStatus(); }, [fetchSkStatus]);
 
-  //  Fetch Periode 
+  useEffect(() => {
+    const fetchSidangRegStatus = async () => {
+      const studentId = student?.studentId;
+
+      if (!studentId || skStatus !== STATUS_SK.SUDAH_TERBIT) {
+        setSidangRegStatus(STATUS_SIDANG.BELUM_DAFTAR);
+        setLoadingSidangReg(false);
+        return;
+      }
+
+      setLoadingSidangReg(true);
+      try {
+        const rawRegistrations = await getSidangRegistrationByStudentId(studentId);
+        const registrationsArray = Array.isArray(rawRegistrations)
+          ? rawRegistrations
+          : (rawRegistrations ? [rawRegistrations] : []);
+
+        const registration = pickActiveRegistration(registrationsArray);
+
+        if (!registration) {
+          setSidangRegStatus(determineSidangStatus(null, null, null, []));
+          return;
+        }
+
+        const [response, uploadsRaw] = await Promise.all([
+          getSidangRegistrationResponse(registration.id).catch(() => null),
+          getSidangRegistrationUploads(registration.id).catch(() => []),
+        ]);
+
+        const uploads = Array.isArray(uploadsRaw) ? uploadsRaw : [];
+        const status  = determineSidangStatus(registration, response, null, uploads);
+        setSidangRegStatus(status);
+
+      } catch (err) {
+        console.error('Gagal fetch sidang registration status:', err);
+        setSidangRegStatus(null);
+      } finally {
+        setLoadingSidangReg(false);
+      }
+    };
+
+    if (!loadingSk) fetchSidangRegStatus();
+  }, [skStatus, loadingSk, student?.studentId]);
+
   useEffect(() => {
     const fetchPeriode = async () => {
       setLoadingPeriode(true);
@@ -210,14 +304,18 @@ const DashboardMahasiswa = () => {
     fetchPeriode();
   }, []);
 
-  //  Derived 
-  const skFileUrl = getSkFileUrl(skUploads);
-  const skTanggal = sktaRequest?.sktaRequestUploads?.[0]?.createdAt
+  const skFileUrl      = getSkFileUrl(skUploads);
+  const skTanggal      = sktaRequest?.sktaRequestUploads?.[0]?.createdAt
     ? formatDateShort(sktaRequest.sktaRequestUploads[0].createdAt)
     : null;
   const deadlineSidang = sidangPeriode
     ? new Date(sidangPeriode.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
+
+  const rowSidangLoading = loadingSk || loadingSidangReg;
+
+  // Helper: apakah SK sudah terbit
+  const skSudahTerbit = skStatus === STATUS_SK.SUDAH_TERBIT;
 
   return (
     <div className="flex bg-[#F4F6FB] min-h-screen">
@@ -234,6 +332,7 @@ const DashboardMahasiswa = () => {
 
         <main className="page-body">
 
+          {/* Welcome Banner */}
           <div className="section-card p-0 shadow-sm border-none overflow-hidden mb-6 bg-white">
             <div className="grid xl:grid-cols-12 gap-0">
               <div
@@ -269,6 +368,7 @@ const DashboardMahasiswa = () => {
             </div>
           </div>
 
+          {/* Halo User */}
           <div className="section-card p-8 bg-white border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center mb-6">
             <div className="flex flex-col gap-2 max-w-2xl text-right ml-auto">
               <h3 className="text-xl font-bold text-gray-900 flex items-center justify-end gap-2">
@@ -321,6 +421,7 @@ const DashboardMahasiswa = () => {
             </div>
           </div>
 
+          {/* Periode Cards */}
           <div className="mb-6">
             <h4 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-6 border-l-4 border-primary pl-3">
               Jadwal Periode Sidang Terkini
@@ -357,11 +458,9 @@ const DashboardMahasiswa = () => {
                         <span style={{ fontSize: 12, color: '#9CA3AF' }}>Memuat...</span>
                       </div>
                     ) : sidangPeriode ? (
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: `Pelaksanaan Sidang<br/><span class='text-sm font-normal text-gray-500'>${formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate)}</span>`,
-                        }}
-                      />
+                      <div dangerouslySetInnerHTML={{
+                        __html: `Pelaksanaan Sidang<br/><span class='text-sm font-normal text-gray-500'>${formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate)}</span>`,
+                      }} />
                     ) : (
                       <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 6 }}>Belum dijadwalkan</div>
                     )}
@@ -375,6 +474,7 @@ const DashboardMahasiswa = () => {
             </div>
           </div>
 
+          {/* Tabel Progres */}
           <div className="mb-6">
             <h4 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-2 border-l-4 border-primary pl-3">
               Progres Registrasi Kamu
@@ -397,10 +497,9 @@ const DashboardMahasiswa = () => {
                   </thead>
                   <tbody>
 
+                    {/* Pengajuan SK  */}
                     <tr style={{ background: '#fff' }}>
-                      <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">
-                        1
-                      </td>
+                      <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">1</td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex flex-col items-center">
                           <span className="text-sm font-black text-gray-900">Pengajuan SK</span>
@@ -415,20 +514,18 @@ const DashboardMahasiswa = () => {
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
-                          {loadingSk ? (
-                            <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
-                          ) : (
-                            <RowBadge style={skBadgeStyle(skStatus)} />
-                          )}
+                          {loadingSk
+                            ? <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                            : <RowBadge style={skBadgeStyle(skStatus)} />
+                          }
                         </div>
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
-                          {loadingSk ? (
-                            <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
-                          ) : (
-                            <RowBadge style={skKeteranganStyle(skStatus)} />
-                          )}
+                          {loadingSk
+                            ? <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
+                            : <RowBadge style={skKeteranganStyle(skStatus)} />
+                          }
                         </div>
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
@@ -436,12 +533,14 @@ const DashboardMahasiswa = () => {
                           {loadingSk ? (
                             <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
                           ) : skStatus === null ? (
-                            /* Belum pernah mengajukan */
                             <BtnRed onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
                               &gt; Ajukan SK TA
                             </BtnRed>
+                          ) : skStatus === STATUS_SK.EXPIRED ? (
+                            <BtnRed onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
+                              &gt; Perbarui SK
+                            </BtnRed>
                           ) : skStatus === STATUS_SK.SUDAH_TERBIT ? (
-                            /* Sudah Terbit: Lihat Respon + Unduh SK */
                             <>
                               <BtnOutline onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
                                 Lihat Respon
@@ -453,7 +552,6 @@ const DashboardMahasiswa = () => {
                               )}
                             </>
                           ) : (
-                            /* Dalam Proses / Belum Terbit / Expired: Lihat Respon */
                             <BtnOutline onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
                               Lihat Respon
                             </BtnOutline>
@@ -462,10 +560,9 @@ const DashboardMahasiswa = () => {
                       </td>
                     </tr>
 
+                    {/* Pendaftaran Sidang  */}
                     <tr style={{ background: '#fff' }}>
-                      <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">
-                        2
-                      </td>
+                      <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">2</td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex flex-col items-center">
                           <span className="text-sm font-black text-gray-900">Pendaftaran Sidang</span>
@@ -478,35 +575,57 @@ const DashboardMahasiswa = () => {
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
-                          <RowBadge style={{ bg: '#F3F4F6', border: '#9CA3AF', color: '#6B7280', label: 'On Progress' }} />
+                          {rowSidangLoading ? (
+                            <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                          ) : !skSudahTerbit ? (
+                            <RowBadge style={LOCKED_BADGE} />
+                          ) : (
+                            <RowBadge style={toRowBadge(
+                              SIDANG_STATUS_CONFIG[sidangRegStatus]
+                              ?? SIDANG_STATUS_CONFIG[STATUS_SIDANG.BELUM_DAFTAR]
+                            )} />
+                          )}
                         </div>
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
-                          <RowBadge style={{ bg: '#F3F4F6', border: '#9CA3AF', color: '#6B7280', label: 'On Progress' }} />
+                          {rowSidangLoading ? (
+                            <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
+                          ) : !skSudahTerbit ? (
+                            <RowBadge style={LOCKED_BADGE} />
+                          ) : (
+                            <RowBadge style={getSidangKeteranganBadge(sidangRegStatus)} />
+                          )}
                         </div>
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
-                          {skStatus === STATUS_SK.SUDAH_TERBIT && sidangPeriode?.isOpen ? (
+                          {rowSidangLoading ? (
+                            <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
+                          ) : !skSudahTerbit ? (
+                            <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
+                              Selesaikan SK terlebih dahulu
+                            </span>
+                          ) : sidangRegStatus === STATUS_SIDANG.BELUM_DAFTAR ? (
                             <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
                               &gt; Daftar Sidang
                             </BtnRed>
+                          ) : sidangRegStatus === STATUS_SIDANG.DRAFT ? (
+                            <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
+                              &gt; Lanjutkan Form
+                            </BtnRed>
                           ) : (
-                            <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
-                              {skStatus !== STATUS_SK.SUDAH_TERBIT
-                                ? 'Selesaikan SK terlebih dahulu'
-                                : 'Belum ada periode aktif'}
-                            </span>
+                            <BtnOutline onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
+                              Lihat Status
+                            </BtnOutline>
                           )}
                         </div>
                       </td>
                     </tr>
 
+                    {/*Pendaftaran Yudisium  */}
                     <tr style={{ background: '#fff' }}>
-                      <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">
-                        3
-                      </td>
+                      <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">3</td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex flex-col items-center">
                           <span className="text-sm font-black text-gray-900">Pendaftaran Yudisium</span>
@@ -519,25 +638,41 @@ const DashboardMahasiswa = () => {
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
-                          <RowBadge style={{ bg: '#F3F4F6', border: '#9CA3AF', color: '#6B7280', label: 'On Progress' }} />
+                          {!skSudahTerbit ? (
+                            <RowBadge style={LOCKED_BADGE} />
+                          ) : ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
+                            <RowBadge style={LOCKED_BADGE} />
+                          ) : (
+                            <RowBadge style={{ bg: '#DBEAFE', border: '#93C5FD', color: '#1E40AF', label: 'Siap Daftar' }} />
+                          )}
                         </div>
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
-                          <RowBadge style={{ bg: '#F3F4F6', border: '#9CA3AF', color: '#6B7280', label: 'On Progress' }} />
+                          {!skSudahTerbit ? (
+                            <RowBadge style={LOCKED_BADGE} />
+                          ) : ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
+                            <RowBadge style={{ bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Selesaikan Sidang dulu' }} />
+                          ) : (
+                            <RowBadge style={{ bg: '#DCFCE7', border: '#86EFAC', color: '#166534', label: 'Siap Mendaftar' }} />
+                          )}
                         </div>
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
-                          {skStatus === STATUS_SK.SUDAH_TERBIT && yudisiumPeriode?.isOpen ? (
+                          {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
+                            <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
+                              {!skSudahTerbit
+                                ? 'Selesaikan SK terlebih dahulu'
+                                : 'Selesaikan Pendaftaran Sidang dahulu'}
+                            </span>
+                          ) : yudisiumPeriode?.isOpen ? (
                             <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-yudisium')}>
                               &gt; Lanjutkan Pendaftaran
                             </BtnRed>
                           ) : (
                             <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
-                              {skStatus !== STATUS_SK.SUDAH_TERBIT
-                                ? 'Selesaikan SK terlebih dahulu'
-                                : 'Belum ada periode aktif'}
+                              Belum ada periode aktif
                             </span>
                           )}
                         </div>
