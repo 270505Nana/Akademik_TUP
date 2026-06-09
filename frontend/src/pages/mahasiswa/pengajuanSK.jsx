@@ -139,7 +139,7 @@ const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, isExpired
 const friendlyErrorMessage = (field, rawMessage) => {
   const msg = rawMessage?.toLowerCase() ?? '';
   if (field === 'evidence' && (msg.includes('tipe') || msg.includes('type') || msg.includes('format'))) {
-    return 'File evidence harus berformat PDF, JPG, atau PNG.';
+    return 'File evidence harus berformat PDF.';
   }
   if (field === 'evidence' && msg.includes('size'))  return 'Ukuran file evidence melebihi batas maksimal 3MB.';
   if (field === 'evidence' && msg.includes('wajib')) return 'Dokumen evidence wajib diunggah.';
@@ -305,9 +305,9 @@ const PengajuanSK = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    const allowedTypes = ['application/pdf'];
     if (!allowedTypes.includes(file.type)) {
-      setFileError('Format file tidak didukung. Gunakan PDF, JPG, atau PNG.');
+      setFileError('Format file tidak didukung. Gunakan PDF');
       setSelectedFile(null); setActualFile(null);
       return;
     }
@@ -827,12 +827,12 @@ const PengajuanSK = () => {
             <div className="form-group">
               <label>Unggah Dokumen Prasyarat {isExpired ? '' : '*'}</label>
               <div className="upload-area" onClick={() => fileInputRef.current.click()}>
-                <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
+                <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf" />
                 <div className="upload-icon-circle"><UploadCloud size={48} /></div>
                 <div className="upload-text">
                   <p><strong>Klik untuk memilih file</strong></p>
                   <div className="file-type-badges">
-                    <span>PDF</span><span>JPG/PNG</span><span>MAX 3MB</span>
+                    <span>PDF</span><span>MAX 3MB</span>
                   </div>
                 </div>
               </div>
