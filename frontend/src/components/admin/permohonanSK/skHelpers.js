@@ -7,11 +7,6 @@
  * - "belum-terbit"    : admin sudah set isEdit tapi mahasiswa belum kirim revisi,
  *                       atau salah satu syarat masih false
  * - "sudah-terbit"    : hasTakenLanguageTest && hasUploadedFinalProposal && ada file SK
- *
- * @param {object|null} sktaResponse  — hasil unwrapResponse dari BE
- * @param {Array}       skUploads     — array upload file SK dari admin
- * @param {object|null} sktaRequest   — data request mahasiswa (butuh updatedAt)
- * @returns {string}
  */
 
 export const ALUR_STEPS = [

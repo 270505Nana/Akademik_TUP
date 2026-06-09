@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link, Navigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, Link, Navigate, useSearchParams } from "react-router-dom";
 import {
   BsMortarboardFill,
   BsPersonBadgeFill,
@@ -16,12 +16,7 @@ import logoSimta from "../../assets/logo-simta.png";
 import logoTelkom from "../../assets/logo-telkom.png";
 
 import { useAuth } from "../../context/AuthContext";
-import {
-  getAcademicStaffData,
-  getLecturerData,
-  getStudentData,
-  loginUser,
-} from "../../service/api";
+import { loginUser } from "../../service/api";
 import CustomAlert from "../../components/common/CustomAlert";
 import "./Auth.css";
 import { useStudent } from "../../context/StudentContext";
@@ -44,15 +39,23 @@ const LoginPage = () => {
   const { fetchAndLoadStudent } = useStudent();
   const navigate = useNavigate();
 
-  //  const [searchParams] = useSearchParams();
-  //   // Tampilkan alert jika sesi expired
-  //   useEffect(() => {
-  //     const expired = searchParams.get("expired");
-  //     if (expired === "true") {
-  //       const msg = searchParams.get("msg") || "Maaf sesi anda sudah habis, silahkan login kembali";
-  //       setAlert({ type: "error", msg });
-  //     }
-  //   }, [searchParams]);
+  // ── Deteksi session expired dari URL (?expired=true) ──────────────────────
+  // Pakai ref agar hanya diproses SEKALI saat mount, tidak terulang saat re-render
+  const expiredHandled = useRef(false);
+
+  useEffect(() => {
+    if (expiredHandled.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("expired") === "true") {
+      expiredHandled.current = true;
+      // Bersihkan URL dulu SEBELUM set state agar tidak terbaca ulang
+      window.history.replaceState({}, "", "/login");
+      setAlert({
+        type: "warning",
+        msg: "Maaf sesi kamu sudah habis, silakan login kembali.",
+      });
+    }
+  }, []);
 
   if (isAuthenticated && user) {
     const roleMap = {
@@ -72,7 +75,10 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Pastikan alert expired tidak ikut muncul saat submit
     setAlert(null);
+
     if (!ssoUsername.trim()) {
       setAlert({ type: "error", msg: "Email tidak boleh kosong." });
       return;
@@ -119,7 +125,7 @@ const LoginPage = () => {
         type: "success",
         msg: "Login berhasil! Mengarahkan ke dashboard...",
       });
-      setTimeout(() => navigate(destination, { replace: true }), 2000);
+      setTimeout(() => navigate(destination, { replace: true }), 2300);
     } catch (err) {
       const backendMsg = err.response?.data?.message?.toLowerCase() || "";
 
@@ -216,7 +222,8 @@ const LoginPage = () => {
                   value={ssoUsername}
                   onChange={(e) => {
                     setSsoUsername(e.target.value);
-                    setAlert(null);
+                    // Alert (termasuk session-expired) hilang saat user mulai ketik email
+                    if (alert) setAlert(null);
                   }}
                   autoComplete="email"
                 />

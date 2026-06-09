@@ -14,11 +14,77 @@ import "./Auth.css";
 // Validasi special karakter
 const SPECIAL_CHAR_REGEX = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
 
+// ── Email domain yang diizinkan ────────────────────────────────────────────────
+const ALLOWED_DOMAINS = [
+  "@student.telkomuniversity.ac.id",
+  "@telkomuniversity.ac.id",
+];
+
+const isEmailDomainValid = (email) =>
+  ALLOWED_DOMAINS.some((domain) => email.trim().toLowerCase().endsWith(domain));
+
+// ── Parse error dari BE ────────────────────────────────────────────────────────
+const parseBEError = (err) => {
+  const data = err.response?.data;
+  const rawMsg = data?.message || "";
+
+  // BE role validation — domain email tidak dikenali
+  if (
+    rawMsg.includes("role wajib diisi") ||
+    rawMsg.includes("role") && rawMsg.includes("domain email")
+  ) {
+    return "Pastikan Email menggunakan @student.telkomuniversity.ac.id";
+  }
+
+  // Prisma unique constraint — username sudah dipakai
+  if (
+    rawMsg.includes("Unique constraint") &&
+    rawMsg.includes("`username`")
+  ) {
+    return "Username sudah digunakan. Silakan pilih username lain.";
+  }
+
+  // Prisma unique constraint — email sudah dipakai
+  if (
+    rawMsg.includes("Unique constraint") &&
+    rawMsg.includes("`email`")
+  ) {
+    return "Email sudah terdaftar. Silakan gunakan email lain atau login.";
+  }
+
+  // Validation error dari BE (array errors)
+  if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+    // Jika ada error pada field 'role' → pesan domain email
+    const hasRoleError = data.errors.some((e) => e.field === "role");
+    if (hasRoleError) {
+      return "Pastikan Email menggunakan @student.telkomuniversity.ac.id";
+    }
+
+    return data.errors.map((e) => `• ${e.message}`).join("\n");
+  }
+
+  // Pesan generik dari BE (tapi bukan stack trace Prisma)
+  if (rawMsg && !rawMsg.includes("prisma") && !rawMsg.includes("invocation")) {
+    return rawMsg;
+  }
+
+  return "Registrasi gagal. Silakan coba lagi.";
+};
+
 function validate(formData) {
   const { username, email, no_telp, password, confirmPassword } = formData;
 
   if (!username.trim())       return { type: "error", msg: "Username tidak boleh kosong." };
   if (!email.trim())          return { type: "error", msg: "Email tidak boleh kosong." };
+
+  // ── Validasi domain email ──────────────────────────────────────────────────
+  if (!isEmailDomainValid(email)) {
+    return {
+      type: "warning",
+      msg: "Pastikan Email menggunakan domain @student.telkomuniversity.ac.id",
+    };
+  }
+
   if (!no_telp.trim())        return { type: "error", msg: "Nomor HP tidak boleh kosong." };
   if (!password)              return { type: "error", msg: "Password tidak boleh kosong." };
   if (!confirmPassword)       return { type: "error", msg: "Konfirmasi password tidak boleh kosong." };
@@ -32,7 +98,7 @@ function validate(formData) {
   if (password !== confirmPassword)
     return { type: "error", msg: "Password dan Konfirmasi Password tidak cocok." };
 
-  return null; 
+  return null;
 }
 
 const RegisterPage = () => {
@@ -46,7 +112,7 @@ const RegisterPage = () => {
 
   const [showPassword,        setShowPassword]        = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [alert,      setAlert]      = useState(null); 
+  const [alert,      setAlert]      = useState(null);
   const [isLoading,  setIsLoading]  = useState(false);
 
   const { user, isAuthenticated } = useAuth();
@@ -84,15 +150,14 @@ const RegisterPage = () => {
       await registerUser({
         username:        formData.username,
         email:           formData.email,
-        no_telp:         formData.no_telp,        
+        no_telp:         formData.no_telp,
         password:        formData.password,
-        confirmPassword: formData.confirmPassword, 
+        confirmPassword: formData.confirmPassword,
       });
 
-      // SUCCESS HANDLING
-      setAlert({ 
-        type: "success", 
-        msg: "Registrasi berhasil! Silahkan Login." 
+      setAlert({
+        type: "success",
+        msg: "Registrasi berhasil! Silahkan Login.",
       });
 
       setTimeout(() => {
@@ -108,8 +173,7 @@ const RegisterPage = () => {
       }, 1400);
 
     } catch (err) {
-      const msg = err.response?.data?.message || "Registrasi gagal, coba lagi.";
-      setAlert({ type: "error", msg });
+      setAlert({ type: "error", msg: parseBEError(err) });
     } finally {
       setIsLoading(false);
     }
@@ -119,20 +183,20 @@ const RegisterPage = () => {
     <div className="login-wrapper register-wrapper">
 
       <div className="left-panel">
-        <img 
-            src={bgLogin} 
-            alt="Background" 
-            className="bg-image" 
-            onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1557683311-eac922347aa1?q=80&w=2029&auto=format&fit=crop"; }}
+        <img
+          src={bgLogin}
+          alt="Background"
+          className="bg-image"
+          onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1557683311-eac922347aa1?q=80&w=2029&auto=format&fit=crop"; }}
         />
         <div className="left-overlay" />
         <div className="left-content">
           <div className="brand-logo">
-            <img 
-                src={logoSimta} 
-                alt="Logo SIMTA" 
-                className="logo-img" 
-                onError={(e) => { e.target.src = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"; }}
+            <img
+              src={logoSimta}
+              alt="Logo SIMTA"
+              className="logo-img"
+              onError={(e) => { e.target.src = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"; }}
             />
           </div>
           <div className="brand-text">
@@ -156,10 +220,10 @@ const RegisterPage = () => {
 
           <div className="register-header">
             <div className="form-logo">
-              <img 
-                src={logoTelkom} 
-                alt="Logo Telkom" 
-                className="form-logo-img" 
+              <img
+                src={logoTelkom}
+                alt="Logo Telkom"
+                className="form-logo-img"
                 onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/id/thumb/0/03/Logo_Telkom_University.png/1200px-Logo_Telkom_University.png"; }}
               />
             </div>
@@ -197,7 +261,7 @@ const RegisterPage = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="reg-email">
-                <i className="bi bi-envelope-fill" />&nbsp; Email
+                <i className="bi bi-envelope-fill" />&nbsp; Email SSO
               </label>
               <div className="input-wrapper">
                 <i className="bi bi-envelope input-icon" />
@@ -206,12 +270,15 @@ const RegisterPage = () => {
                   type="email"
                   name="email"
                   className="form-input"
-                  placeholder="Masukkan email pribadi"
+                  placeholder="contoh@student.telkomuniversity.ac.id"
                   value={formData.email}
                   onChange={handleChange}
                   autoComplete="email"
                 />
               </div>
+              <p style={{ fontSize: "0.72rem", color: "#9e9e9e", marginTop: 4 }}>
+                Gunakan email SSO domain @student.telkomuniversity.ac.id
+              </p>
             </div>
 
             <div className="form-group">
@@ -222,7 +289,7 @@ const RegisterPage = () => {
                 <i className="bi bi-telephone input-icon" />
                 <input
                   id="reg-phone"
-                  type="tel"
+                  type="number"
                   name="no_telp"
                   className="form-input"
                   placeholder="Masukkan nomor HP"

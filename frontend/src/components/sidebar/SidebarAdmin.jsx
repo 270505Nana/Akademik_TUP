@@ -11,7 +11,6 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
   const { logout } = useAuth();
 
   const [expandedMenus, setExpandedMenus] = useState({
-    'Kelola Periode': false,
     'Manajemen Sidang': false,
     'Verifikasi Berkas': false,
     'Manajemen Data Akademik': false,
@@ -24,8 +23,8 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
     {
       label: 'Utama',
       items: [
-        { label: 'Beranda', icon: <Home className="nav-icon" />, path: '/akademik/dashboard' },
-      ],
+        { label: 'Beranda', icon: <Home className="nav-icon" />, path: '/akademik/dashboard' }
+      ]
     },
     {
       label: 'Pengaturan Periode',
@@ -36,9 +35,9 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
           subItems: [
             { label: 'Periode Sidang',   path: '/akademik/atur-periode/sidang'   },
             { label: 'Periode Yudisium', path: '/akademik/atur-periode/yudisium' },
-          ],
-        },
-      ],
+          ]
+        }
+      ]
     },
     {
       label: 'Kegiatan Sidang',
@@ -47,11 +46,11 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
           label: 'Manajemen Sidang',
           icon: <Layout className="nav-icon" />,
           subItems: [
-            { label: 'Penjadwalan Sidang',       path: '/akademik/penjadwalan'  },
-            { label: 'Atur Persyaratan Berkas',  path: '/akademik/atur-berkas'  },
-          ],
-        },
-      ],
+            { label: 'Penjadwalan Sidang',      path: '/akademik/penjadwalan'  },
+            { label: 'Atur Persyaratan Berkas', path: '/akademik/atur-berkas'  }
+          ]
+        }
+      ]
     },
     {
       label: 'Proses Verifikasi',
@@ -60,11 +59,11 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
           label: 'Verifikasi Berkas',
           icon: <FileCheck className="nav-icon" />,
           subItems: [
-            { label: 'Verifikasi Sidang',   path: '/akademik/verifikasi-sidang'   },
-            { label: 'Verifikasi Yudisium', path: '/akademik/verifikasi-yudisium' },
-          ],
-        },
-      ],
+            { label: 'Verifikasi Sidang',   path: '/akademik/registrasi-sidang-all'   },
+            { label: 'Verifikasi Yudisium', path: '/akademik/verifikasi-yudisium' }
+          ]
+        }
+      ]
     },
     {
       label: 'Data Akademik',
@@ -74,10 +73,10 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
           icon: <Database className="nav-icon" />,
           subItems: [
             { label: 'Manajemen Data Dosen', path: '/akademik/data-dosen' },
-            { label: 'Manajemen Data KK',    path: '/akademik/data-kk'    },
-          ],
-        },
-      ],
+            { label: 'Manajemen Data KK',    path: '/akademik/data-kk'    }
+          ]
+        }
+      ]
     },
     {
       label: 'Layanan Mahasiswa',
@@ -87,37 +86,38 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
           icon: <FileText className="nav-icon" />,
           subItems: [
             { label: 'Permohonan SK TA',            path: '/akademik/permohonan-sk' },
-            { label: 'Upload SKL & transkrip nilai', path: '/akademik/upload-skl'   },
-          ],
-        },
-      ],
-    },
+            { label: 'Upload SKL & transkrip nilai', path: '/akademik/upload-skl'   }
+          ]
+        }
+      ]
+    }
   ];
 
-
+  // Auto-expand menu that contains the active route
   useEffect(() => {
-    menuSidebar.forEach((section) => {
-      section.items.forEach((item) => {
+    menuSidebar.forEach(section => {
+      section.items.forEach(item => {
         if (item.subItems) {
-          const hasActiveSub = item.subItems.some((sub) => location.pathname === sub.path);
+          const hasActiveSub = item.subItems.some(sub => location.pathname === sub.path);
           if (hasActiveSub) {
-            setExpandedMenus((prev) => ({ ...prev, [item.label]: true }));
+            setExpandedMenus(prev => ({ ...prev, [item.label]: true }));
           }
         }
       });
     });
   }, [location.pathname]);
 
-  const toggleMenu = (label) =>
-    setExpandedMenus((prev) => ({ ...prev, [label]: !prev[label] }));
+  const toggleMenu = (label) => {
+    setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
+  };
 
-  const handleLogout    = () => setShowLogoutConfirm(true);
-  const confirmLogout   = () => { setShowLogoutConfirm(false); logout(); navigate('/login', { replace: true }); };
-  const cancelLogout    = () => setShowLogoutConfirm(false);
+  const handleLogout    = ()  => setShowLogoutConfirm(true);
+  const confirmLogout   = ()  => { setShowLogoutConfirm(false); logout(); navigate('/login', { replace: true }); };
+  const cancelLogout    = ()  => setShowLogoutConfirm(false);
 
   return (
     <>
-
+      {/* ── LOGOUT CONFIRM MODAL ── */}
       {showLogoutConfirm && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
@@ -132,7 +132,8 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
               background: '#FEF2F2', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+              alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px',
             }}>
               <LogOut size={24} color="#C0182A" />
             </div>
@@ -143,18 +144,24 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
               Sesi kamu akan diakhiri dan kamu perlu login kembali untuk mengakses sistem.
             </p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={cancelLogout} style={{
-                padding: '9px 24px', borderRadius: 9999, fontSize: 13,
-                fontWeight: 600, background: '#F3F4F6', color: '#374151',
-                border: 'none', cursor: 'pointer',
-              }}>
+              <button
+                onClick={cancelLogout}
+                style={{
+                  padding: '9px 24px', borderRadius: 9999, fontSize: 13,
+                  fontWeight: 600, background: '#F3F4F6',
+                  color: '#374151', border: 'none', cursor: 'pointer',
+                }}
+              >
                 Batal
               </button>
-              <button onClick={confirmLogout} style={{
-                padding: '9px 24px', borderRadius: 9999, fontSize: 13,
-                fontWeight: 700, background: '#C0182A', color: '#fff',
-                border: 'none', cursor: 'pointer',
-              }}>
+              <button
+                onClick={confirmLogout}
+                style={{
+                  padding: '9px 24px', borderRadius: 9999, fontSize: 13,
+                  fontWeight: 700, background: '#C0182A',
+                  color: '#fff', border: 'none', cursor: 'pointer',
+                }}
+              >
                 Ya, Keluar
               </button>
             </div>
@@ -162,7 +169,7 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
         </div>
       )}
 
-
+      {/* ── SIDEBAR ── */}
       <aside id="sidebar" className={isOpen ? 'open' : ''}>
         <div className="sidebar-logo">
           <div className="logo-icon">S</div>
@@ -177,14 +184,19 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
                 <div className="nav-item-group" key={iIdx}>
                   {item.subItems ? (
                     <div
-                      className={`nav-link-main ${
-                        item.subItems.some((sub) => location.pathname === sub.path) ? 'active' : ''
-                      }`}
+                      className={`nav-link-main ${item.subItems.some(sub => location.pathname === sub.path) ? 'active' : ''}`}
                       onClick={() => toggleMenu(item.label)}
                     >
                       {item.icon}
                       {item.label}
-                      <ChevronDown className="nav-arrow" size={14} />
+                      <ChevronDown
+                        className="nav-arrow"
+                        size={14}
+                        style={{
+                          transform: expandedMenus[item.label] ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s ease',
+                        }}
+                      />
                     </div>
                   ) : (
                     <Link
