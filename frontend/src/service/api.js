@@ -38,7 +38,8 @@ api.interceptors.response.use(
       });
       window.dispatchEvent(event);
 
-      window.location.href = "/login?expired=true";
+      sessionStorage.setItem("simta_expired_msg", "Maaf sesi kamu sudah habis, silakan login kembali.");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   },
@@ -55,7 +56,7 @@ export const registerUser = async ({
   const response = await api.post("/api/auth/register", {
     username,
     email,
-    no_telp,
+    phone: no_telp,
     password,
     confirmPassword,
   });
@@ -67,7 +68,7 @@ export const loginUser = async ({ email, password }) => {
   return response.data;
 };
 
-// ------------------------------------------- MAHASISWA SIDE -------------------------------------------
+// ------------------------------------------- MAHASISWA SIDE-------------------------------------------
 export const getStudentData = async (userId) => {
   const response = await api.get(`/api/students/${userId}`);
   return response.data;
@@ -78,6 +79,7 @@ export const saveStudentData = async (userId, payload) => {
   return response.data;
 };
 
+// ------------------------------------------- MAHASISWA SIDE SK-------------------------------------------
 // Cek request SK milik mahasiswa sendiri
 export const getSKTARequest = async (studentId) => {
   try {
@@ -149,7 +151,7 @@ export const getSKTAResponse = async (sktaRequestId) => {
   }
 };
 
-// ------------------------------------------- DOSEN SIDE () -------------------------------------------
+// ------------------------------------------- DOSEN -------------------------------------------
 export const getLecturersData = async (userId) => {
   const response = await api.get(`/api/lecturers`);
   return response.data;
@@ -160,7 +162,7 @@ export const getLecturerData = async (userId) => {
   return response.data;
 };
 
-// ------------------------------------------- ADMIN SIDE (Permohonan SK) -------------------------------------------
+// ------------------------------------------- ADMIN (Permohonan SK) -------------------------------------------
 export const getAcademicStaffData = async (userId) => {
   const response = await api.get(`/api/academic-staff/${userId}`);
   return response.data;
@@ -268,7 +270,6 @@ export const getEvidenceUploadsByStudentId = async (studentId) => {
     throw err;
   }
 };
- 
 
 export const downloadSK = async (uploadId) => {
   const response = await api.get(
@@ -308,8 +309,7 @@ export const uploadDokumenValidasi = async (studentId, pdfBlob, namaFile) => {
   return response.data?.data ?? response.data;
 };
 
-
-// -------------------------------------------- SIDANG MHS -----------------------------------
+// ------------------------------------------- SIDANG STUDENT -------------------------------------------
 export const getSidangRegistrationByStudentId = async (studentId) => {
   try {
     const response = await api.get(
@@ -348,18 +348,22 @@ export const submitSidangRegistration = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
+// ------------------------------------------- SIDANG ADMIN -------------------------------------------
+// GET ALL sidang registrasion
+export const getAllSidangRegistrations = async () => {
+  const response = await api.get('/api/sidang-registrations');
+  return response.data?.data ?? response.data;
+};
 
-
-// ------------------------------------------- SIDANG VERIF ADMI---------------------------
-
-
-// GET /api/sidang-registrations
-export const getAllSidangRegistrations = async (params = {}) => {
+// GET /api/sidang-registrations/{id}/uploads
+// Ambil semua berkas yang diupload mahasiswa untuk satu registration
+// Dipakai oleh Dashboard untuk deteksi REVISI_DIPERBARUI via determineSidangStatus
+export const getSidangRegistrationUploads = async (registrationId) => {
   try {
-    const response = await api.get('/api/sidang-registrations', { params });
-    return response.data?.data ? response.data : response.data;
+    const response = await api.get(`/api/sidang-registrations/${registrationId}/uploads`);
+    return response.data?.data ?? response.data ?? [];
   } catch (err) {
-    console.error('Error fetching all sidang registrations:', err);
+    if (err.response?.status === 404) return [];
     throw err;
   }
 };
@@ -377,7 +381,6 @@ export const getSidangRegistrationResponse = async (sidangRegistrationId) => {
     throw err;
   }
 };
-
 
 // GET /api/sidang-registration-responses : Ambil semua responses (admin)
 export const getAllSidangRegistrationResponses = async () => {
@@ -406,7 +409,7 @@ export const createSidangRegistrationResponse = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
-// PUT /api/sidang-registration-responses/{id} : Update response yang sudah ada
+// PUT /api/sidang-registration-responses/{id} : Update response
 export const updateSidangRegistrationResponse = async (id, payload) => {
   const response = await api.put(`/api/sidang-registration-responses/${id}`, payload);
   return response.data?.data ?? response.data;
@@ -426,51 +429,7 @@ export const upsertSidangRegistrationResponse = async (payload, existingId) => {
   return createSidangRegistrationResponse(payload);
 };
 
-// ------------------------------------------- YUDISIUM PERIODS -------------------------------------------
-export const getYudisiumPeriods = async () => {
-  try {
-    const response = await api.get("/api/yudisium-periods");
-    return response.data?.data ?? response.data;
-  } catch (err) {
-    if (err.response?.status === 404) return [];
-    throw err;
-  }
-};
-
-export const createYudisiumPeriod = async ({ name, startDate, endDate }) => {
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const isOpen = now >= start && now <= end;
-
-  const response = await api.post("/api/yudisium-periods", {
-    name,
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-    isOpen,
-  });
-  return response.data?.data ?? response.data;
-};
-
-export const updateYudisiumPeriod = async (
-  id,
-  { name, startDate, endDate },
-) => {
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const isOpen = now >= start && now <= end;
-
-  const response = await api.patch(`/api/yudisium-periods/${id}`, {
-    name,
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-    isOpen,
-  });
-  return response.data?.data ?? response.data;
-};
-
-// ------------------------------------------- LAINNYA (Sidang, dll) -------------------------------------------
+// ------------------------------------------- ETC -------------------------------------------
 export const getLecturers = async () =>
   api.get("/api/lecturers").then((r) => r.data?.data ?? r.data);
 export const getFaculties = async () =>
@@ -522,5 +481,47 @@ export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
   return response.data?.data ?? response.data;
 };
 
+export const getYudisiumPeriods = async () => {
+  try {
+    const response = await api.get("/api/yudisium-periods");
+    return response.data?.data ?? response.data;
+  } catch (err) {
+    if (err.response?.status === 404) return [];
+    throw err;
+  }
+};
+
+export const createYudisiumPeriod = async ({ name, startDate, endDate }) => {
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const isOpen = now >= start && now <= end;
+
+  const response = await api.post("/api/yudisium-periods", {
+    name,
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
+
+export const updateYudisiumPeriod = async (
+  id,
+  { name, startDate, endDate },
+) => {
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const isOpen = now >= start && now <= end;
+
+  const response = await api.patch(`/api/yudisium-periods/${id}`, {
+    name,
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
 
 export default api;
