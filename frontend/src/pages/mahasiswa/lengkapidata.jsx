@@ -269,7 +269,7 @@ const LengkapiData = () => {
             </div>
           </div>
 
-          {/* Program Studi — tampil semua tanpa filter fakultas */}
+          {/* Program Studi */}
           <div className="form-group">
             <label className="form-label"><BookOpen size={16} /> Program Studi</label>
             <div className="input-wrapper">
