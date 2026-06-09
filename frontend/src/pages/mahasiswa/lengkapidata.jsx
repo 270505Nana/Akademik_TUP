@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, IdCard, GraduationCap, Building2, BookOpen, Users, Search, Save } from 'lucide-react';
+import { User, IdCard, GraduationCap, BookOpen, Users, Search, Save } from 'lucide-react';
 import { useStudent } from '../../context/StudentContext';
 import { useAuth } from '../../context/AuthContext';
-import { getLecturers, getFaculties, getStudyPrograms, saveStudentData } from "../../service/api";
+import { getLecturers, getStudyPrograms, saveStudentData } from "../../service/api";
 import "../../components/mahasiswa/lengkapidata.css";
 import logoTelkom from "../../assets/logo-telkom.png";
 
@@ -13,34 +13,29 @@ const LengkapiData = () => {
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
-    namaLengkap:     '',
-    nim:             '',
-    kelas:           '',
-    angkatan:        '',
-    fakultasId:      '',
-    fakultasNama:    '',
-    studyProgramId:  '',
-    studyProgramNama:'',
-    dosenWaliId:     '',
-    dosenWaliKode:   '',
-    dosenWaliNama:   '',
-    dosenWaliNip:    '',
+    namaLengkap:      '',
+    nim:              '',
+    kelas:            '',
+    angkatan:         '',
+    studyProgramId:   '',
+    studyProgramNama: '',
+    dosenWaliId:      '',
+    dosenWaliKode:    '',
+    dosenWaliNama:    '',
+    dosenWaliNip:     '',
   });
 
-  const [searchQuery, setSearchQuery] = useState({ dosenWali: '' });
+  const [searchQuery,  setSearchQuery]  = useState({ dosenWali: '' });
   const [showDropdown, setShowDropdown] = useState({ dosenWali: false });
-  const [errors, setErrors] = useState(null);
+  const [errors,       setErrors]       = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [lecturers,     setLecturers]     = useState([]);
-  const [faculties,     setFaculties]     = useState([]);
   const [studyPrograms, setStudyPrograms] = useState([]);
 
-  const [loadingDosen,    setLoadingDosen]    = useState(true);
-  const [loadingFakultas, setLoadingFakultas] = useState(true);
-  const [loadingProdi,    setLoadingProdi]    = useState(false);
-  const [errorDosen,      setErrorDosen]      = useState(null);
-  const [errorFakultas,   setErrorFakultas]   = useState(null);
+  const [loadingDosen, setLoadingDosen] = useState(true);
+  const [loadingProdi, setLoadingProdi] = useState(true);
+  const [errorDosen,   setErrorDosen]   = useState(null);
 
   useEffect(() => {
     const fetchDosen = async () => {
@@ -65,22 +60,6 @@ const LengkapiData = () => {
   }, []);
 
   useEffect(() => {
-    const fetchFakultas = async () => {
-      try {
-        setLoadingFakultas(true);
-        const data = await getFaculties();
-        setFaculties(data);
-      } catch (err) {
-        console.error("Gagal mengambil data fakultas:", err);
-        setErrorFakultas("Gagal memuat data fakultas.");
-      } finally {
-        setLoadingFakultas(false);
-      }
-    };
-    fetchFakultas();
-  }, []);
-
-  useEffect(() => {
     const fetchProdi = async () => {
       try {
         setLoadingProdi(true);
@@ -95,20 +74,15 @@ const LengkapiData = () => {
     fetchProdi();
   }, []);
 
-  const availableProdis = useMemo(() => {
-    if (!formData.fakultasId) return [];
-    return studyPrograms.filter(p => p.facultyId === Number(formData.fakultasId));
-  }, [formData.fakultasId, studyPrograms]);
-
   // Load draft dari localStorage
   useEffect(() => {
     const draft = localStorage.getItem('student_form_draft');
     if (draft) {
-      const parsedData = JSON.parse(draft);
-      setFormData(parsedData);
+      const parsed = JSON.parse(draft);
+      setFormData(parsed);
       setSearchQuery({
-        dosenWali: parsedData.dosenWaliKode
-          ? `${parsedData.dosenWaliKode} - ${parsedData.dosenWaliNama}`
+        dosenWali: parsed.dosenWaliKode
+          ? `${parsed.dosenWaliKode} - ${parsed.dosenWaliNama}`
           : '',
       });
     }
@@ -129,17 +103,8 @@ const LengkapiData = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'fakultasId') {
-      const selected = faculties.find(f => f.id === Number(value));
-      setFormData(prev => ({
-        ...prev,
-        fakultasId:       value,
-        fakultasNama:     selected?.name ?? '',
-        studyProgramId:   '',
-        studyProgramNama: '',
-      }));
-    } else if (name === 'studyProgramId') {
-      const selected = availableProdis.find(p => p.id === Number(value));
+    if (name === 'studyProgramId') {
+      const selected = studyPrograms.find(p => p.id === Number(value));
       setFormData(prev => ({
         ...prev,
         studyProgramId:   value,
@@ -182,7 +147,7 @@ const LengkapiData = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const requiredFields = ['namaLengkap', 'nim', 'kelas', 'angkatan', 'fakultasId', 'studyProgramId', 'dosenWaliId'];
+    const requiredFields = ['namaLengkap', 'nim', 'kelas', 'angkatan', 'studyProgramId', 'dosenWaliId'];
     const emptyField = requiredFields.find(field => !formData[field]);
     if (emptyField) {
       setErrors('Semua field wajib diisi.');
@@ -205,14 +170,9 @@ const LengkapiData = () => {
     try {
       const result = await saveStudentData(user.id, payload);
       const studentDbId = result?.data?.id ?? result?.id ?? null;
-      updateStudent({
-        ...formData,
-        studentId: studentDbId,
-      });
-
+      updateStudent({ ...formData, studentId: studentDbId });
       localStorage.removeItem('student_form_draft');
       navigate('/mahasiswa/dashboard');
-
     } catch (err) {
       const msg = err.response?.data?.message || "Gagal menyimpan data. Silakan coba lagi.";
       setErrors(msg);
@@ -257,6 +217,7 @@ const LengkapiData = () => {
 
         <form onSubmit={handleSubmit} className="form-grid">
 
+          {/* Nama Lengkap */}
           <div className="form-group">
             <label className="form-label"><User size={16} /> Nama Lengkap</label>
             <div className="input-wrapper">
@@ -269,6 +230,7 @@ const LengkapiData = () => {
             </div>
           </div>
 
+          {/* NIM + Angkatan */}
           <div className="form-row">
             <div className="form-group">
               <label className="form-label"><IdCard size={16} /> NIM</label>
@@ -294,6 +256,7 @@ const LengkapiData = () => {
             </div>
           </div>
 
+          {/* Kelas */}
           <div className="form-group">
             <label className="form-label"><GraduationCap size={16} /> Kelas</label>
             <div className="input-wrapper">
@@ -306,26 +269,7 @@ const LengkapiData = () => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label"><Building2 size={16} /> Fakultas</label>
-            <div className="input-wrapper">
-              <Building2 className="input-icon" size={18} />
-              <select
-                name="fakultasId" className="form-select"
-                value={formData.fakultasId} onChange={handleInputChange}
-                disabled={loadingFakultas}
-              >
-                <option value="">
-                  {loadingFakultas ? "Memuat fakultas..." : "Pilih Fakultas"}
-                </option>
-                {faculties.map(f => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
-                ))}
-              </select>
-            </div>
-            {errorFakultas && <p className="field-error">{errorFakultas}</p>}
-          </div>
-
+          {/* Program Studi — tampil semua tanpa filter fakultas */}
           <div className="form-group">
             <label className="form-label"><BookOpen size={16} /> Program Studi</label>
             <div className="input-wrapper">
@@ -333,18 +277,19 @@ const LengkapiData = () => {
               <select
                 name="studyProgramId" className="form-select"
                 value={formData.studyProgramId} onChange={handleInputChange}
-                disabled={!formData.fakultasId || loadingProdi}
+                disabled={loadingProdi}
               >
                 <option value="">
-                  {loadingProdi ? "Memuat prodi..." : "Pilih Program Studi"}
+                  {loadingProdi ? "Memuat program studi..." : "Pilih Program Studi"}
                 </option>
-                {availableProdis.map(p => (
+                {studyPrograms.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </div>
           </div>
 
+          {/* Dosen Wali */}
           <div className="form-group search-container">
             <label className="form-label"><Users size={16} /> Dosen Wali</label>
             <div className="input-wrapper">
@@ -377,6 +322,7 @@ const LengkapiData = () => {
             </div>
           </div>
 
+          {/* NIP Dosen Wali */}
           <div className="form-group">
             <label className="form-label">NIP Dosen Wali (Otomatis)</label>
             <input
