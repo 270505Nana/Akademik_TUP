@@ -7,30 +7,9 @@ import illustration from "../../assets/karakter-dashboard.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
-import {
-  getSKTARequest,
-  getSKTAResponse,
-  getSktaResponseUploadByStudentId,
-  getSidangPeriods,
-  getYudisiumPeriods,
-  getSidangRegistrationByStudentId,
-  getSidangRegistrationResponse,
-  getSidangRegistrationUploads,
-} from '../../service/api';
-
-import {
-  determineSkStatus,
-  unwrapResponse,
-  getSkFileUrl,
-  STATUS_SK,
-} from '../../components/common/skStatusHelper';
-
-import {
-  STATUS_SIDANG,
-  SIDANG_STATUS_CONFIG,
-  determineSidangStatus,
-} from '../../components/admin/sidang/sidangStatusHelper';
-
+import {getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, getSidangPeriods, getYudisiumPeriods, getSidangRegistrationByStudentId, getSidangRegistrationResponse, getSidangRegistrationUploads, downloadSK } from '../../service/api';
+import {determineSkStatus,unwrapResponse,STATUS_SK,} from '../../components/common/skStatusHelper';
+import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus} from '../../components/admin/sidang/sidangStatusHelper';
 
 const pickActiveRegistration = (registrations) => {
   if (!Array.isArray(registrations) || registrations.length === 0) return null;
@@ -51,7 +30,7 @@ const toRowBadge = (cfg) => ({
 
 const SIDANG_KETERANGAN_LABEL = {
   [STATUS_SIDANG.BELUM_DAFTAR]         : 'Belum Mengisi Formulir',
-  [STATUS_SIDANG.DRAFT]                : 'Form Belum Disubmit',
+  [STATUS_SIDANG.DRAFT]                : 'Proses Registrasi',
   [STATUS_SIDANG.DALAM_PROSES]         : 'Menunggu Verifikasi',
   [STATUS_SIDANG.PERLU_REVISI]         : 'Berkas Perlu Diperbaiki',
   [STATUS_SIDANG.REVISI_DIPERBARUI]    : 'Menunggu Reverifikasi',
@@ -70,7 +49,7 @@ const getSidangKeteranganBadge = (status) => {
   };
 };
 
-const LOCKED_BADGE  = { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Selesaikan Pengajuan SKTA' };
+const LOCKED_BADGE = { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Selesaikan Proses Registrasi Sebelumnya' };
 
 const formatDateRange = (start, end) => {
   const fmt = (d) =>
@@ -179,15 +158,23 @@ const BtnOutline = ({ onClick, children }) => (
   </button>
 );
 
-const BtnRed = ({ onClick, children }) => (
+const BtnRed = ({ onClick, children, disabled }) => (
   <button
     onClick={onClick}
-    style={{ fontSize: '10px', fontWeight: 700, padding: '4px 14px', borderRadius: '9999px', background: '#C0182A', border: '1.5px solid #C0182A', color: '#fff', cursor: 'pointer' }}
+    disabled={disabled}
+    style={{
+      fontSize: '10px', fontWeight: 700, padding: '4px 14px',
+      borderRadius: '9999px',
+      background: disabled ? '#9CA3AF' : '#C0182A',
+      border: `1.5px solid ${disabled ? '#9CA3AF' : '#C0182A'}`,
+      color: '#fff',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.7 : 1,
+    }}
   >
     {children}
   </button>
 );
-
 
 const DashboardMahasiswa = () => {
   const navigate = useNavigate();
@@ -214,6 +201,32 @@ const DashboardMahasiswa = () => {
   const [sidangPeriode,   setSidangPeriode]   = useState(null);
   const [yudisiumPeriode, setYudisiumPeriode] = useState(null);
   const [loadingPeriode,  setLoadingPeriode]  = useState(true);
+
+  // download SK
+  const [downloadingSk, setDownloadingSk] = useState(false);
+
+  // axios download sk
+  const handleUnduhSK = async () => {
+    const uploadId = skUploads?.[0]?.id;
+    if (!uploadId) return;
+    setDownloadingSk(true);
+    try {
+      const blob = await downloadSK(uploadId);
+      const url  = window.URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `SK_TA_${namaDisplay}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Gagal unduh SK:', err);
+      alert('Gagal mengunduh SK. Coba lagi.');
+    } finally {
+      setDownloadingSk(false);
+    }
+  };
 
   const fetchSkStatus = useCallback(async () => {
     const studentId = student?.studentId;
@@ -304,8 +317,7 @@ const DashboardMahasiswa = () => {
     fetchPeriode();
   }, []);
 
-  const skFileUrl      = getSkFileUrl(skUploads);
-  const skTanggal      = sktaRequest?.sktaRequestUploads?.[0]?.createdAt
+  const skTanggal = sktaRequest?.sktaRequestUploads?.[0]?.createdAt
     ? formatDateShort(sktaRequest.sktaRequestUploads[0].createdAt)
     : null;
   const deadlineSidang = sidangPeriode
@@ -313,9 +325,7 @@ const DashboardMahasiswa = () => {
     : null;
 
   const rowSidangLoading = loadingSk || loadingSidangReg;
-
-  // Helper: apakah SK sudah terbit
-  const skSudahTerbit = skStatus === STATUS_SK.SUDAH_TERBIT;
+  const skSudahTerbit    = skStatus === STATUS_SK.SUDAH_TERBIT;
 
   return (
     <div className="flex bg-[#F4F6FB] min-h-screen">
@@ -497,7 +507,7 @@ const DashboardMahasiswa = () => {
                   </thead>
                   <tbody>
 
-                    {/* Pengajuan SK  */}
+                    {/* Pengajuan SK */}
                     <tr style={{ background: '#fff' }}>
                       <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">1</td>
                       <td className="py-5 px-6 border border-gray-200">
@@ -545,9 +555,12 @@ const DashboardMahasiswa = () => {
                               <BtnOutline onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
                                 Lihat Respon
                               </BtnOutline>
-                              {skFileUrl && (
-                                <BtnRed onClick={() => window.open(skFileUrl, '_blank')}>
-                                  Unduh SK
+                              {skUploads?.[0]?.id && (
+                                <BtnRed
+                                  onClick={handleUnduhSK}
+                                  disabled={downloadingSk}
+                                >
+                                  {downloadingSk ? 'Mengunduh...' : 'Unduh SK'}
                                 </BtnRed>
                               )}
                             </>
@@ -560,7 +573,7 @@ const DashboardMahasiswa = () => {
                       </td>
                     </tr>
 
-                    {/* Pendaftaran Sidang  */}
+                    {/* Pendaftaran Sidang */}
                     <tr style={{ background: '#fff' }}>
                       <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">2</td>
                       <td className="py-5 px-6 border border-gray-200">
@@ -623,7 +636,7 @@ const DashboardMahasiswa = () => {
                       </td>
                     </tr>
 
-                    {/*Pendaftaran Yudisium  */}
+                    {/* Pendaftaran Yudisium */}
                     <tr style={{ background: '#fff' }}>
                       <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">3</td>
                       <td className="py-5 px-6 border border-gray-200">
@@ -636,10 +649,12 @@ const DashboardMahasiswa = () => {
                           </span>
                         </div>
                       </td>
+                      
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
                           {!skSudahTerbit ? (
                             <RowBadge style={LOCKED_BADGE} />
+                            
                           ) : ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
                             <RowBadge style={LOCKED_BADGE} />
                           ) : (
@@ -647,10 +662,12 @@ const DashboardMahasiswa = () => {
                           )}
                         </div>
                       </td>
+
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
                           {!skSudahTerbit ? (
                             <RowBadge style={LOCKED_BADGE} />
+                            
                           ) : ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
                             <RowBadge style={{ bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Selesaikan Sidang dulu' }} />
                           ) : (
@@ -658,6 +675,7 @@ const DashboardMahasiswa = () => {
                           )}
                         </div>
                       </td>
+
                       <td className="py-5 px-6 border border-gray-200">
                         <div className="flex justify-center">
                           {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
