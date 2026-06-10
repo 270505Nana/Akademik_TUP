@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
-import {ArrowLeft, Info, MessageCircle, User, Phone,GraduationCap, UploadCloud, FileText, AlertTriangle,FileBadge, CheckCircle, Loader, Clock, RefreshCw, AlertCircle} from 'lucide-react';
+import { ArrowLeft, Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, RefreshCw, AlertCircle, Eye } from 'lucide-react';
 import SimtaLogo from "../../assets/logo-simta.png";
 import Telulogo  from "../../assets/logo-telkom.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import { getLecturers, getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, submitSKTARequest, resubmitSKTARequest } from '../../service/api';
+import { getLecturers, getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, submitSKTARequest, resubmitSKTARequest, downloadTemplate } from '../../service/api';
 import {
   determineSkStatus,
   isSkEditable,
@@ -17,7 +17,50 @@ import {
   isAlreadyRevised,
 } from '../../components/common/skStatusHelper';
 import CustomAlert from '../../components/common/CustomAlert';
+// import TemplateEvidenceModal from '../../components/common/TemplateEvidenceModal';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
+
+const DownloadTemplateButton = ({ slug }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const { blob, name } = await downloadTemplate(slug);
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = name.endsWith('.pdf') ? name : `${name}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('[DownloadTemplateButton] error:', err);
+      alert('Gagal mengunduh template. Silakan coba lagi.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleDownload}
+      disabled={isDownloading}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '5px 14px', borderRadius: 9999,
+        fontSize: 12, fontWeight: 700,
+        background: isDownloading ? '#9CA3AF' : '#C0182A',
+        color: '#fff', border: 'none', cursor: isDownloading ? 'not-allowed' : 'pointer',
+        marginLeft: 6,
+      }}
+    >
+      {isDownloading ? 'Mengunduh...' : '⬇ Download Contoh Evidence'}
+    </button>
+  );
+};
 
 const PageLoader = () => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 12 }}>
@@ -112,7 +155,6 @@ const SkStatusBanner = ({ status, sktaResponse, requestData, skUploads = [] }) =
   );
 };
 
-// kelompok keilmuan di-mapping dari researchGroupId dosen pembimbing 1
 const kelompokKeilmuan = [
   { id: 'kk1', researchGroupId: 1, label: 'ELECTRONICS AND TELECOMMUNICATIONS SCIENCE' },
   { id: 'kk2', researchGroupId: 2, label: 'INDUSTRIAL SYSTEMS ENGINEERING' },
@@ -130,7 +172,6 @@ const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, isExpired
   if (!kode1)               return 'Dosen Pembimbing 1 wajib dipilih.';
   if (!kode2)               return 'Dosen Pembimbing 2 wajib dipilih.';
   if (kode1.value === kode2.value) return 'Dosen Pembimbing 1 dan 2 tidak boleh sama.';
-  // Untuk BELUM_TERBIT (revisi) file wajib; untuk EXPIRED boleh kosong
   if (isBelumTerbit && !actualFile) return 'Dokumen evidence wajib diunggah ulang untuk perbaikan.';
   if (!isExpired && !isBelumTerbit && !actualFile) return 'Dokumen evidence wajib diunggah.';
   return null;
@@ -201,6 +242,8 @@ const PengajuanSK = () => {
   const [fileError,    setFileError]    = useState(null);
   const [submitError,  setSubmitError]  = useState(null);
 
+  // ← STATE untuk modal template evidence
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   useEffect(() => {
     const fetchDosen = async () => {
@@ -222,7 +265,6 @@ const PengajuanSK = () => {
     };
     fetchDosen();
   }, []);
-
 
   useEffect(() => {
     const checkSKTAStatus = async () => {
@@ -248,17 +290,14 @@ const PengajuanSK = () => {
         setSktaResponse(unwrapped);
         setSkUploads(uploads);
 
-        const baseStatus = determineSkStatus(unwrapped, uploads);
-        // isAlreadyRevised membandingkan updatedAt server vs yang tersimpan.
-        // Jika mahasiswa sudah submit revisi dan admin belum proses → true.
-        const alreadyRevised  = isAlreadyRevised(reqId, existingRequest.updatedAt);
+        const baseStatus     = determineSkStatus(unwrapped, uploads);
+        const alreadyRevised = isAlreadyRevised(reqId, existingRequest.updatedAt);
         const effectiveStatus = (baseStatus === STATUS_SK.BELUM_TERBIT && alreadyRevised)
           ? STATUS_SK.DALAM_PROSES
           : baseStatus;
 
         setSkStatus(effectiveStatus);
-        // - EXPIRED → selalu bisa edit
-        // - BELUM_TERBIT → hanya jika isEdit ada DAN belum pernah submit revisi
+
         if (isSkEditable(effectiveStatus, unwrapped)) {
           setIsExpired(effectiveStatus === STATUS_SK.EXPIRED);
           setFormData(prev => ({
@@ -326,7 +365,6 @@ const PengajuanSK = () => {
     }
   };
 
-  // isBelumTerbit: status BELUM_TERBIT dan belum pernah kirim revisi (form sedang terbuka)
   const isBelumTerbit = skStatus === STATUS_SK.BELUM_TERBIT && !isExpired;
 
   const handleSubmit = async () => {
@@ -357,7 +395,6 @@ const PengajuanSK = () => {
 
     try {
       if (isSkEditable(skStatus, sktaResponse) && activeRequestId) {
-        // PATCH: revisi (BELUM_TERBIT) atau pembaruan (EXPIRED)
         const result = await resubmitSKTARequest({
           sktaRequestId:      activeRequestId,
           studentId,
@@ -369,7 +406,6 @@ const PengajuanSK = () => {
         });
 
         if (isBelumTerbit) {
-          //  Simpan flag revisi dengan updatedAt dari response BE 
           const serverUpdatedAt =
             result?.data?.updatedAt ??
             result?.updatedAt ??
@@ -377,11 +413,9 @@ const PengajuanSK = () => {
           markRevisedWithTimestamp(activeRequestId, serverUpdatedAt);
           setPageStatus('revision_sent');
         } else {
-          // EXPIRED → langsung success
           setPageStatus('success');
         }
       } else {
-        // POST: pengajuan baru
         const result = await submitSKTARequest({
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
@@ -421,7 +455,6 @@ const PengajuanSK = () => {
       color: state.isSelected ? '#fff' : '#374151',
     }),
   };
-
 
   if (pageStatus === 'loading') {
     return (
@@ -547,7 +580,7 @@ const PengajuanSK = () => {
     );
   }
 
-  //  Form Page 
+  // Form Page
   return (
     <div className="sk-page-container">
       <Header onBack={() => navigate('/mahasiswa/dashboard')} />
@@ -807,12 +840,30 @@ const PengajuanSK = () => {
           <h2 className="section-title">
             Dokumen Evidence Sudah Di Approve Pengajuan Pembimbing Oleh Ketua KK Di iGracias
           </h2>
-          <p style={{ fontSize: '13px', marginBottom: '16px' }}>
-            1. Berkas Lampiran Bukti Dosbing Sudah Diacc KK :{' '}
-            <a href="https://tel-u.ac.id/bukti-dosbing" target="_blank" rel="noreferrer" style={{ color: '#0070f3', wordBreak: 'break-all' }}>
-              Lihat Contoh Evidence
-            </a>
-          </p>
+
+          {/* ← DIUBAH: dari link menjadi button */}
+          <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13 }}>Berkas Lampiran Bukti Dosbing Sudah Diacc KK :</span>
+            {/* <button
+              onClick={() => setShowTemplateModal(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 14px', borderRadius: 8,
+                fontSize: 12, fontWeight: 700,
+                background: '#FEF2F2', border: '1.5px solid #FECACA',
+                color: '#C0182A', cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#FEE2E2'}
+              onMouseLeave={e => e.currentTarget.style.background = '#FEF2F2'}
+            >
+              <Eye size={13} />
+              Lihat Template Evidence
+            </button> */}
+
+             <DownloadTemplateButton slug="evidence-dosen-pembimbing" />
+          </div>
+
           {isBelumTerbit && (
             <p style={{ fontSize: 12, color: '#D97706', marginBottom: 16, fontStyle: 'italic', fontWeight: 600 }}>
               * Karena pengajuan kamu perlu diperbaiki, dokumen evidence baru wajib diunggah ulang.
@@ -893,6 +944,14 @@ const PengajuanSK = () => {
         </button>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </footer>
+
+      {/* Modal Template Evidence */}
+      {showTemplateModal && (
+        <TemplateEvidenceModal
+          slug="evidence-dosen-pembimbing"
+          onClose={() => setShowTemplateModal(false)}
+        />
+      )}
     </div>
   );
 };
@@ -909,4 +968,4 @@ const Header = ({ onBack }) => (
   </header>
 );
 
-export default PengajuanSK
+export default PengajuanSK;

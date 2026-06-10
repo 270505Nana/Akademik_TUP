@@ -524,4 +524,30 @@ export const updateYudisiumPeriod = async (
   return response.data?.data ?? response.data;
 };
 
+// ------------------------------------------- TEMPLATE -------------------------------------------
+export const getTemplate = async (slug) => {
+  const response = await api.get(`/api/templates/${slug}`);
+  return response.data?.data ?? response.data;
+};
+
+// Buat preview filenya, soalnya yg api swagger itu dia langsung ke download ak maunya ada preview
+// export const getTemplateBlob = async (slug) => {
+//   const response = await api.get(`/api/templates/${slug}`, {
+//     responseType: 'blob',
+//   });
+//   return response.data; 
+// };
+
+export const downloadTemplate = async (slug) => {
+  const meta = await getTemplate(slug);
+  const downloadUrl = meta?.url;
+  if (!downloadUrl) throw new Error('Download URL tidak ditemukan dalam response.');
+
+  // Fetch blob via axios agar Bearer token ikut
+  const response = await api.get(downloadUrl, { responseType: 'blob' });
+  return {
+    blob: response.data,
+    name: meta?.name || meta?.filename || `template-${slug}`,
+  };
+};
 export default api;
