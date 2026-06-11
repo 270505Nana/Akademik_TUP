@@ -9,7 +9,7 @@ const sanitizeFilename = (value) =>
     .replace(/[\\/:*?"<>|]/g, "-")
     .replace(/\s+/g, " ");
 
-const buildFileUrl = (req, slug) => {
+const buildDownloadUrl = (req, slug) => {
   if (!slug) {
     return null;
   }
@@ -17,9 +17,19 @@ const buildFileUrl = (req, slug) => {
   return `${req.protocol}://${req.get("host")}/templates/download/${slug}`;
 };
 
+const buildPreviewUrl = (req, slug) => {
+  if (!slug) {
+    return null;
+  }
+
+  return `${req.protocol}://${req.get("host")}/templates/preview/${slug}`;
+};
+
 const withFileUrl = (req, data) => ({
   ...data,
-  url: buildFileUrl(req, data.slug),
+  url: buildDownloadUrl(req, data.slug),
+  download: buildDownloadUrl(req, data.slug),
+  preview: buildPreviewUrl(req, data.slug),
 });
 
 // Get all template uploads
@@ -171,6 +181,44 @@ const downloadTemplateUpload = asyncHandler(async (req, res) => {
   res.download(filePath, downloadName);
 });
 
+// Preview template (serve inline, e.g. for PDF)
+const previewTemplateUpload = asyncHandler(async (req, res) => {
+  const slug = req.params.slug;
+
+  const template = await prisma.templateUpload.findUnique({
+    where: { slug },
+  });
+
+  if (!template) {
+    res.status(404);
+    throw new Error("Template tidak ditemukan");
+  }
+
+  const filePath = path.resolve(process.cwd(), template.path);
+
+  if (!fs.existsSync(filePath)) {
+    res.status(404);
+    throw new Error("File template tidak ditemukan di server");
+  }
+
+  const ext = path.extname(template.filename || template.path || "").toLowerCase();
+  let contentType = "application/octet-stream";
+  if (ext === ".pdf") {
+    contentType = "application/pdf";
+  } else if (ext === ".doc") {
+    contentType = "application/msword";
+  } else if (ext === ".docx") {
+    contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }
+
+  const displayName = `${sanitizeFilename(template.name)}${ext}`;
+
+  res.setHeader("Content-Type", contentType);
+  res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(displayName)}"`);
+
+  res.sendFile(filePath);
+});
+
 module.exports = {
   listTemplateUploads,
   createTemplateUpload,
@@ -178,4 +226,5 @@ module.exports = {
   updateTemplateUpload,
   deleteTemplateUpload,
   downloadTemplateUpload,
+  previewTemplateUpload,
 };
