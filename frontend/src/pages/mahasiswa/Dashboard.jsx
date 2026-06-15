@@ -8,8 +8,8 @@ import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
 import {getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, getSidangPeriods, getYudisiumPeriods, getSidangRegistrationByStudentId, getSidangRegistrationResponse, getSidangRegistrationUploads, downloadSK } from '../../service/api';
-import {determineSkStatus,unwrapResponse,STATUS_SK,} from '../../components/common/skStatusHelper';
-import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus} from '../../components/admin/sidang/sidangStatusHelper';
+import {determineSkStatus,unwrapResponse,STATUS_SK,} from '../../components/common/Skstatushelper';
+import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus} from '../../components/admin/sidang/Sidangstatushelper';
 
 const pickActiveRegistration = (registrations) => {
   if (!Array.isArray(registrations) || registrations.length === 0) return null;

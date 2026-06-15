@@ -10,7 +10,7 @@ import CustomAlert  from '../../components/common/CustomAlert';
 import { useAuth }  from '../../context/AuthContext';
 import { getAllSidangRegistrations,getSidangRegistrationResponse,getStudyProgramById,getSidangPeriods,} from '../../service/api';
 import { determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,isAdminVerifiable,} from '../../components/admin/sidang/Sidangstatushelper.js';
-import '../../components/admin/sidang/RegistrasiSidang.css';
+import '../../components/admin/sidang/Registrasisidang.css';
 
 const FILTER_TABS = [
   { key: '',                                    label: 'Semua'                },

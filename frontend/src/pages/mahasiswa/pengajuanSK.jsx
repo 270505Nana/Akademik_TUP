@@ -15,7 +15,7 @@ import {
   unwrapResponse,
   markRevisedWithTimestamp,
   isAlreadyRevised,
-} from '../../components/common/skStatusHelper';
+} from '../../components/common/Skstatushelper';
 import CustomAlert from '../../components/common/CustomAlert';
 // import TemplateEvidenceModal from '../../components/common/TemplateEvidenceModal';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
