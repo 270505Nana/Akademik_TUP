@@ -5,8 +5,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import LoginPage           from "./pages/auth/Login";
 import RegisterPage        from "./pages/auth/Register";
-import LengkapiData        from "./pages/mahasiswa/LengkapiData";
-import DashboardMahasiswa  from "./pages/mahasiswa/dashboard";
+import LengkapiData        from "./pages/mahasiswa/lengkapidata";
+import DashboardMahasiswa  from "./pages/mahasiswa/Dashboard";
 import DashboardAkademik   from "./pages/admin/dashboard";
 import DashboardDosen      from "./pages/dosen/dashboard";
 import PengajuanSK         from "./pages/mahasiswa/pengajuanSK";
@@ -16,7 +16,7 @@ import AturPeriodeYudisium from "./pages/admin/aturperiodeyudisium";
 import AturBerkas          from "./pages/admin/requirementdocs";
 import UploadSKL           from "./pages/admin/skltranskrip";             
 import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";             
-import ProtectedRoute      from "./components/common/ProtectedRoute";
+import ProtectedRoute      from "./components/common/protectedRoute";
 import PendaftaranSidang   from "./pages/mahasiswa/pendaftaransidang";
 
 const Placeholder = ({ title }) => (
