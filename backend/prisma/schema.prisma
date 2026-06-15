@@ -232,6 +232,7 @@ model SidangRegistration {
   id                          Int                          @id @default(autoincrement())
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
+  submittedAt                 DateTime?
   deletedAt                   DateTime?
   isDraft                     Boolean                      @default(true)
   programType                 String?
@@ -314,6 +315,7 @@ model YudisiumRegistration {
   id                            Int                            @id @default(autoincrement())
   createdAt                     DateTime                       @default(now())
   updatedAt                     DateTime                       @updatedAt
+  submittedAt                   DateTime?
   deletedAt                     DateTime?
   isDraft                       Boolean                        @default(true)
   // wajib
