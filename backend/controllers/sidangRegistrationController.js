@@ -41,6 +41,43 @@ const NON_SIDANG_SLUGS = {
   ],
 };
 
+const checkSidangEditable = async (registrationId) => {
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id: parseInt(registrationId) },
+  });
+
+  if (!registration) {
+    return { exists: false, editable: false, reason: "Pendaftaran sidang tidak ditemukan." };
+  }
+
+  if (!registration.isDraft) {
+    const latestResponse = await prisma.sidangRegistrationResponse.findFirst({
+      where: { sidangRegistrationId: registration.id, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const hasActiveEditPermission = latestResponse && latestResponse.isEdit && new Date(latestResponse.isEdit) > new Date();
+
+    if (!hasActiveEditPermission) {
+      return { exists: true, editable: false, reason: "Pendaftaran sudah dikirim dan tidak memiliki izin edit yang aktif." };
+    }
+  }
+
+  const latestResponse = await prisma.sidangRegistrationResponse.findFirst({
+    where: { sidangRegistrationId: registration.id, deletedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (latestResponse && latestResponse.isEdit) {
+    const isEditExpired = new Date(latestResponse.isEdit) < new Date();
+    if (isEditExpired) {
+      return { exists: true, editable: false, reason: "Batas waktu izin edit dari admin telah kedaluwarsa." };
+    }
+  }
+
+  return { exists: true, editable: true };
+};
+
 // Sidang Registration List
 const listSidangRegistrations = asyncHandler(async (req, res) => {
   const sidangRegistrations = await prisma.sidangRegistration.findMany({
@@ -239,6 +276,24 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     }
   }
 
+  // Get active registration period
+  const activePeriod = await prisma.sidangRegistrationPeriod.findFirst({
+    where: { isOpen: true, deletedAt: null },
+  });
+
+  // Check edit permission if updating an existing registration by ID
+  if (id) {
+    const editCheck = await checkSidangEditable(id);
+    if (!editCheck.exists) {
+      res.status(404);
+      throw new Error(editCheck.reason);
+    }
+    if (!editCheck.editable) {
+      res.status(403);
+      throw new Error(editCheck.reason);
+    }
+  }
+
   const upsertData = {
     programType: programType !== undefined ? programType : undefined,
     sidangScheme: sidangScheme !== undefined ? sidangScheme : undefined,
@@ -282,6 +337,12 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     });
 
     if (existing && existing.isDraft) {
+      const editCheck = await checkSidangEditable(existing.id);
+      if (!editCheck.editable) {
+        res.status(403);
+        throw new Error(editCheck.reason);
+      }
+
       sidangRegistration = await prisma.sidangRegistration.update({
         where: { id: existing.id },
         data: upsertData,
@@ -292,6 +353,28 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
         },
       });
     } else {
+      // Creating a new registration: Must have an active open period
+      if (!activePeriod) {
+        res.status(400);
+        throw new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+      }
+
+      // Check if student is already registered in this active period
+      const existingInPeriod = await prisma.sidangRegistration.findFirst({
+        where: {
+          studentId: parseInt(studentId),
+          sidangRegistrationPeriodId: activePeriod.id,
+          deletedAt: null,
+        },
+      });
+
+      if (existingInPeriod) {
+        res.status(400);
+        throw new Error("Mahasiswa sudah terdaftar pada periode pendaftaran sidang yang aktif.");
+      }
+
+      upsertData.sidangRegistrationPeriodId = activePeriod.id;
+
       sidangRegistration = await prisma.sidangRegistration.create({
         data: upsertData,
         include: {
@@ -303,6 +386,13 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     }
   } else {
     // Create new
+    if (!activePeriod) {
+      res.status(400);
+      throw new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+    }
+
+    upsertData.sidangRegistrationPeriodId = activePeriod.id;
+
     sidangRegistration = await prisma.sidangRegistration.create({
       data: upsertData,
       include: {
@@ -354,6 +444,12 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
+  const editCheck = await checkSidangEditable(id);
+  if (!editCheck.editable) {
+    res.status(403);
+    throw new Error(editCheck.reason);
+  }
+
   // Update field sebelum validasi (supaya merge)
   const updateData = {
     programType: programType !== undefined ? programType : undefined,
@@ -375,6 +471,26 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
         ? parseInt(dosenPembimbing2Id)
         : undefined,
   };
+
+  const activePeriod = await prisma.sidangRegistrationPeriod.findFirst({
+    where: { isOpen: true, deletedAt: null },
+  });
+
+  if (existingRegistration.sidangRegistrationPeriodId) {
+    const period = await prisma.sidangRegistrationPeriod.findUnique({
+      where: { id: existingRegistration.sidangRegistrationPeriodId },
+    });
+    if (!period || !period.isOpen) {
+      res.status(400);
+      throw new Error("Periode pendaftaran sidang ini sudah ditutup.");
+    }
+  } else {
+    if (!activePeriod) {
+      res.status(400);
+      throw new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+    }
+    updateData.sidangRegistrationPeriodId = activePeriod.id;
+  }
 
   const mergedData = { ...existingRegistration, ...updateData };
 
@@ -463,6 +579,19 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   updateData.isDraft = false; // Finalize submit
+  updateData.submittedAt = new Date(); // Record student submission time
+
+  // Clear isEdit permission on response
+  await prisma.sidangRegistrationResponse.updateMany({
+    where: {
+      sidangRegistrationId: parseInt(id),
+      isEdit: { not: null },
+      deletedAt: null,
+    },
+    data: {
+      isEdit: null,
+    },
+  });
 
   const updatedSidangRegistration = await prisma.sidangRegistration.update({
     where: { id: parseInt(id) },
@@ -523,14 +652,17 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
     throw new Error("Slug dan nama wajib diisi");
   }
 
-  const sidangRegistrationExists = await prisma.sidangRegistration.findUnique({
-    where: { id: parseInt(id) },
-  });
-
-  if (!sidangRegistrationExists) {
+  const editCheck = await checkSidangEditable(id);
+  if (!editCheck.exists) {
     if (file.path) fs.unlink(file.path, () => {});
     res.status(404);
-    throw new Error("Pendaftaran sidang tidak ditemukan");
+    throw new Error(editCheck.reason);
+  }
+
+  if (!editCheck.editable) {
+    if (file.path) fs.unlink(file.path, () => {});
+    res.status(403);
+    throw new Error(editCheck.reason);
   }
 
   const existingUpload = await prisma.sidangRegistrationUpload.findFirst({
