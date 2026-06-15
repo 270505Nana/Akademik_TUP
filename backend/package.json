@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "nodem ./bin/www",
+    "start": "node ./bin/www",
     "dev": "nodemon ./bin/www",
     "db:push": "prisma db push && prisma generate",
     "db:sync": "prisma db push && prisma generate"
