@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ClipboardList, Save, Edit3, LayoutPanelLeft, Menu, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ClipboardList, Save, Edit3, LayoutPanelLeft, Menu, X, RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert  from '../../components/common/CustomAlert';
@@ -10,40 +10,58 @@ import {
   updateSidangPeriod,
 } from '../../service/api';
 
+const toArray = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw.data)) return raw.data;
+  return [];
+};
 
-const normalizeDates = (p) => ({
-  ...p,
-  startDate: p.startDate?.slice(0, 10) ?? p.startDate,
-  endDate:   p.endDate?.slice(0, 10)   ?? p.endDate,
-});
+const normalizeDates = (p) => {
+  if (!p || typeof p !== 'object') return p;
+  return {
+    ...p,
+    startDate: (p.startDate ?? '').slice(0, 10),
+    endDate:   (p.endDate   ?? '').slice(0, 10),
+  };
+};
+
+const unwrapSingle = (raw) => {
+  if (!raw) return null;
+  if (raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) return raw.data;
+  return raw;
+};
 
 const getStatus = (start, end) => {
+  if (!start || !end) return 'Mendatang';
   const now = new Date();
-  const s   = new Date(start);
-  const e   = new Date(end);
+  const s   = new Date(`${start}T12:00:00`);
+  const e   = new Date(`${end}T12:00:00`);
   if (now < s) return 'Mendatang';
   if (now > e) return 'Selesai';
   return 'Aktif';
 };
 
-const formatDate = (dateStr) =>
-  new Date(dateStr).toLocaleDateString('en-GB', {
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-';
+  return new Date(`${dateStr}T12:00:00`).toLocaleDateString('id-ID', {
     day: '2-digit', month: 'short', year: 'numeric',
   });
+};
 
 const formatDateForInput = (dateStr) => {
   if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return '';
   return d.toISOString().slice(0, 10);
 };
 
-//  PeriodeTable
-const PeriodeTable = ({ periods, type, onEdit }) => {
-  if (periods.length === 0) {
+const PeriodeTable = ({ periods, onEdit }) => {
+  if (!periods.length) {
     return (
-      <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '24px', fontSize: 13 }}>
-        Belum ada data periode.
+      <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '32px', fontSize: 13 }}>
+        Belum ada data periode sidang.
       </div>
     );
   }
@@ -74,20 +92,20 @@ const PeriodeTable = ({ periods, type, onEdit }) => {
                 <td>
                   <div className="action-stack">
                     {status === 'Mendatang' && (
-                      <button className="btn-outline" onClick={() => onEdit(period, type)}>
-                        <Edit3 size={16} /> Edit
+                      <button className="btn-outline" onClick={() => onEdit(period)}>
+                        <Edit3 size={14} /> Edit
                       </button>
                     )}
                     {status === 'Aktif' && (
                       <>
-                        <button className="btn-outline">Detail Periode</button>
-                        <button className="btn-outline" onClick={() => onEdit(period, type)}>
-                          <Edit3 size={16} /> Edit
+                        <button className="btn-outline">Detail</button>
+                        <button className="btn-outline" onClick={() => onEdit(period)}>
+                          <Edit3 size={14} /> Edit
                         </button>
                       </>
                     )}
                     {status === 'Selesai' && (
-                      <button className="btn-outline">Detail Periode</button>
+                      <button className="btn-outline">Detail</button>
                     )}
                   </div>
                 </td>
@@ -102,10 +120,10 @@ const PeriodeTable = ({ periods, type, onEdit }) => {
 
 const AturPeriodeSidang = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const [periods,  setPeriods]  = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [form,     setForm]     = useState({ name: '', startDate: '', endDate: '' });
+  const [periods,     setPeriods]     = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [submitting,  setSubmitting]  = useState(false);
+  const [form,        setForm]        = useState({ name: '', startDate: '', endDate: '' });
 
   const [isEditModalOpen,    setIsEditModalOpen]    = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -115,41 +133,53 @@ const AturPeriodeSidang = () => {
 
   const [alert, setAlert] = useState({ show: false, type: 'success', title: '', message: '' });
 
-  const showAlert = (type, title, message) => {
+  const showAlert = useCallback((type, title, message) => {
     setAlert({ show: true, type, title, message });
     setTimeout(() => setAlert((prev) => ({ ...prev, show: false })), 5000);
-  };
-
-  // Fetch
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        setLoading(true);
-        const data = await getSidangPeriods();
-        setPeriods((data ?? []).map(normalizeDates));
-      } catch {
-        showAlert('error', 'Gagal', 'Gagal memuat data periode sidang dari server.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
   }, []);
 
-  // Tambah
+  const fetchPeriods = useCallback(async () => {
+    setLoading(true);
+    try {
+      const raw  = await getSidangPeriods();
+      const list = toArray(raw);
+      setPeriods(list.map(normalizeDates));
+    } catch (err) {
+      console.error('[AturPeriodeSidang] fetch error:', err);
+      showAlert('error', 'Gagal Memuat', 'Gagal memuat data periode sidang dari server.');
+    } finally {
+      setLoading(false);
+    }
+  }, [showAlert]);
+
+  useEffect(() => { fetchPeriods(); }, [fetchPeriods]);
+
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.startDate || !form.endDate) {
-      showAlert('error', 'Gagal', 'Harap lengkapi semua bidang input.');
+    if (!form.name.trim() || !form.startDate || !form.endDate) {
+      showAlert('error', 'Validasi', 'Harap lengkapi semua bidang input.');
       return;
     }
+    if (form.startDate > form.endDate) {
+      showAlert('error', 'Validasi', 'Tanggal mulai tidak boleh lebih dari tanggal selesai.');
+      return;
+    }
+    setSubmitting(true);
     try {
-      const created = await createSidangPeriod(form);
-      setPeriods((prev) => [normalizeDates(created), ...prev]);
+      const raw        = await createSidangPeriod(form);
+      const normalized = normalizeDates(unwrapSingle(raw));
+      // Tambah ke list, lalu re-sort by startDate descending
+      setPeriods((prev) =>
+        [normalized, ...prev].sort((a, b) =>
+          new Date(b.startDate) - new Date(a.startDate)
+        )
+      );
       setForm({ name: '', startDate: '', endDate: '' });
       showAlert('success', 'Berhasil', 'Data periode sidang telah berhasil disimpan.');
     } catch (err) {
       showAlert('error', 'Gagal', err.response?.data?.message || 'Gagal menyimpan periode sidang.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -165,8 +195,12 @@ const AturPeriodeSidang = () => {
 
   const handleUpdate = (e) => {
     e.preventDefault();
-    if (!editForm.name || !editForm.startDate || !editForm.endDate) {
-      showAlert('error', 'Gagal', 'Harap lengkapi semua bidang input.');
+    if (!editForm.name.trim() || !editForm.startDate || !editForm.endDate) {
+      showAlert('error', 'Validasi', 'Harap lengkapi semua bidang input.');
+      return;
+    }
+    if (editForm.startDate > editForm.endDate) {
+      showAlert('error', 'Validasi', 'Tanggal mulai tidak boleh lebih dari tanggal selesai.');
       return;
     }
     setPendingUpdate({ ...editForm });
@@ -177,19 +211,22 @@ const AturPeriodeSidang = () => {
   const handleConfirmUpdate = async () => {
     if (!pendingUpdate || !editingItem) return;
     setIsConfirmModalOpen(false);
+    setSubmitting(true);
     try {
-      const updated = await updateSidangPeriod(editingItem.id, {
+      const raw        = await updateSidangPeriod(editingItem.id, {
         name:      pendingUpdate.name,
         startDate: pendingUpdate.startDate,
         endDate:   pendingUpdate.endDate,
       });
+      const normalized = normalizeDates(unwrapSingle(raw));
       setPeriods((prev) =>
-        prev.map((p) => (p.id === editingItem.id ? normalizeDates(updated) : p))
+        prev.map((p) => (p.id === editingItem.id ? normalized : p))
       );
-      showAlert('success', 'Berhasil', `Periode ${pendingUpdate.name} telah diperbarui.`);
+      showAlert('success', 'Berhasil', `Periode "${pendingUpdate.name}" telah diperbarui.`);
     } catch (err) {
       showAlert('error', 'Gagal', err.response?.data?.message || 'Gagal memperbarui periode.');
     } finally {
+      setSubmitting(false);
       setPendingUpdate(null);
       setEditingItem(null);
     }
@@ -208,16 +245,16 @@ const AturPeriodeSidang = () => {
           .mobile-menu-bar   { display: flex !important; }
         }
         @media (min-width: 992px) { .mobile-menu-bar { display: none !important; } }
-        .page-wrapper    { overflow-x: hidden; width: 100%; }
-        .top-bar-red     { width: 100%; box-sizing: border-box; }
+        .page-wrapper      { overflow-x: hidden; width: 100%; }
+        .top-bar-red       { width: 100%; box-sizing: border-box; }
         .content-container { padding: 32px 32px 48px; width: 100%; box-sizing: border-box; }
         @media (max-width: 600px) { .content-container { padding: 20px 16px 40px; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
       <SidebarAdmin isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="main-content-area">
-        {/* Mobile topbar */}
         <div className="mobile-menu-bar">
           <button onClick={() => setSidebarOpen(true)} className="mobile-menu-btn">
             <Menu size={20} />
@@ -231,9 +268,20 @@ const AturPeriodeSidang = () => {
           </div>
 
           <div className="content-container">
-            <h2 className="page-title">Atur Periode Sidang</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <h2 className="page-title" style={{ margin: 0 }}>Atur Periode Sidang</h2>
+              <button
+                className="btn-outline"
+                onClick={fetchPeriods}
+                disabled={loading}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+              >
+                <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+                Refresh
+              </button>
+            </div>
 
-            {/* Tambah */}
+            {/* Form Tambah */}
             <section className="card-main">
               <div className="card-header">
                 <ClipboardList className="card-icon-red" size={24} />
@@ -243,7 +291,7 @@ const AturPeriodeSidang = () => {
                 <form onSubmit={handleSave}>
                   <div className="form-grid">
                     <div className="form-group">
-                      <label className="form-label">Nama Periode Sidang</label>
+                      <label className="form-label">Nama Periode Sidang *</label>
                       <input
                         type="text" className="form-control"
                         placeholder="Contoh: Periode Sidang Semester Genap 2025/2026"
@@ -253,7 +301,7 @@ const AturPeriodeSidang = () => {
                     </div>
                     <div className="form-grid-inner">
                       <div className="form-group">
-                        <label className="form-label">Tanggal Mulai</label>
+                        <label className="form-label">Tanggal Mulai *</label>
                         <input
                           type="date" className="form-control"
                           value={form.startDate}
@@ -263,10 +311,11 @@ const AturPeriodeSidang = () => {
                       <div style={{ display: 'flex', alignItems: 'center' }}>
                         <span className="date-separator">s/d</span>
                         <div className="form-group" style={{ flex: 1 }}>
-                          <label className="form-label">Tanggal Selesai</label>
+                          <label className="form-label">Tanggal Selesai *</label>
                           <input
                             type="date" className="form-control"
                             value={form.endDate}
+                            min={form.startDate || undefined}
                             onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                           />
                         </div>
@@ -274,8 +323,9 @@ const AturPeriodeSidang = () => {
                     </div>
                   </div>
                   <div className="btn-submit-container">
-                    <button type="submit" className="btn-primary-red">
-                      <Save size={16} /> Simpan Periode Sidang
+                    <button type="submit" className="btn-primary-red" disabled={submitting}>
+                      <Save size={16} />
+                      {submitting ? ' Menyimpan...' : ' Simpan Periode Sidang'}
                     </button>
                   </div>
                 </form>
@@ -287,18 +337,19 @@ const AturPeriodeSidang = () => {
               <div className="card-header">
                 <LayoutPanelLeft className="card-icon-red" size={24} />
                 <h3>Daftar Periode Sidang</h3>
+                {!loading && (
+                  <span style={{ marginLeft: 'auto', fontSize: 12, color: '#6B7280' }}>
+                    {periods.length} periode
+                  </span>
+                )}
               </div>
               <div className="card-body" style={{ padding: 0 }}>
                 {loading ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#6B7280', fontSize: 13 }}>
+                  <div style={{ padding: '32px', textAlign: 'center', color: '#6B7280', fontSize: 13 }}>
                     Memuat data periode sidang...
                   </div>
                 ) : (
-                  <PeriodeTable
-                    periods={periods}
-                    type="sidang"
-                    onEdit={openEditModal}
-                  />
+                  <PeriodeTable periods={periods} onEdit={openEditModal} />
                 )}
               </div>
             </section>
@@ -306,6 +357,7 @@ const AturPeriodeSidang = () => {
         </div>
       </div>
 
+      {/* Modal Edit */}
       <AnimatePresence>
         {isEditModalOpen && (
           <div className="modal-overlay">
@@ -315,25 +367,31 @@ const AturPeriodeSidang = () => {
               exit={{    scale: 0.9, opacity: 0 }}
             >
               <div className="modal-header">
-                <h3>Edit {editingItem?.name}</h3>
-                <button className="btn-close" onClick={() => setIsEditModalOpen(false)}><X size={20} /></button>
+                <h3>Edit Periode Sidang</h3>
+                <button className="btn-close" onClick={() => setIsEditModalOpen(false)}>
+                  <X size={20} />
+                </button>
               </div>
               <div className="modal-body">
                 <form id="editFormSidang" onSubmit={handleUpdate}>
                   <div className="form-grid">
                     <div className="form-group">
-                      <label className="form-label">Nama Periode</label>
-                      <input type="text" className="form-control" value={editForm.name}
+                      <label className="form-label">Nama Periode *</label>
+                      <input type="text" className="form-control"
+                        value={editForm.name}
                         onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Tanggal Mulai</label>
-                      <input type="date" className="form-control" value={editForm.startDate}
+                      <label className="form-label">Tanggal Mulai *</label>
+                      <input type="date" className="form-control"
+                        value={editForm.startDate}
                         onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Tanggal Berakhir</label>
-                      <input type="date" className="form-control" value={editForm.endDate}
+                      <label className="form-label">Tanggal Berakhir *</label>
+                      <input type="date" className="form-control"
+                        value={editForm.endDate}
+                        min={editForm.startDate || undefined}
                         onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} />
                     </div>
                   </div>
@@ -359,21 +417,40 @@ const AturPeriodeSidang = () => {
             >
               <div className="modal-header">
                 <h3>Konfirmasi Perubahan</h3>
-                <button className="btn-close" onClick={() => setIsConfirmModalOpen(false)}><X size={20} /></button>
+                <button className="btn-close" onClick={() => setIsConfirmModalOpen(false)}>
+                  <X size={20} />
+                </button>
               </div>
               <div className="modal-body">
-                <p>Apakah Anda yakin ingin memperbarui periode <strong>{pendingUpdate?.name}</strong>?</p>
+                <p style={{ fontSize: 14, color: '#374151', lineHeight: 1.6 }}>
+                  Apakah Anda yakin ingin memperbarui periode{' '}
+                  <strong>"{pendingUpdate?.name}"</strong>?
+                </p>
+                {pendingUpdate && (
+                  <div style={{
+                    marginTop: 12, padding: '10px 14px',
+                    background: '#F9FAFB', borderRadius: 8,
+                    fontSize: 12, color: '#6B7280',
+                  }}>
+                    <div>{formatDate(pendingUpdate.startDate)} — {formatDate(pendingUpdate.endDate)}</div>
+                    <div style={{ marginTop: 4 }}>
+                      Status baru:{' '}
+                      <strong>{getStatus(pendingUpdate.startDate, pendingUpdate.endDate)}</strong>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button className="btn-cancel" onClick={() => setIsConfirmModalOpen(false)}>Batal</button>
-                <button className="btn-save-modal" onClick={handleConfirmUpdate}>Ya, Perbarui</button>
+                <button className="btn-save-modal" onClick={handleConfirmUpdate} disabled={submitting}>
+                  {submitting ? 'Menyimpan...' : 'Ya, Perbarui'}
+                </button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Alert */}
       <AnimatePresence>
         {alert.show && (
           <motion.div className="alert-overlay"
