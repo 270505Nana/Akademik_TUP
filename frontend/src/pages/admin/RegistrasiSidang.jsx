@@ -136,8 +136,8 @@ const RegistrasiSidang = () => {
     setLoading(true);
     try {
       const list = await getAllSidangRegistrations();
-
-      const submitted = (list ?? []).filter(r => r.isDraft === false);
+      // INI SEMENTARA BUAT TESTING DOANKKKK, NANA JGN LUPA APUS YAHH
+      const submitted = (list ?? []).filter(r => r.isDraft === false || r.isDraft === true);
 
       const respArr = await Promise.all(
         submitted.map(r => getSidangRegistrationResponse(r.id).catch(() => null))
