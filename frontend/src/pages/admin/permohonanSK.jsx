@@ -355,6 +355,7 @@ const PermohonanSK = () => {
                     <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
                       <ChevronRight size={14} />
                     </button>
+
                   </div>
                 </div>
               )}
