@@ -690,7 +690,7 @@ const PengajuanSK = () => {
                 <User className="field-icon" size={18} />
                 <input type="text" value={namaDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed' }} />
               </div>
-              <p className="input-hint">Nama diambil otomatis dari data profil kamu.</p>
+              <p className="input-hint">Nama terverifikasi otomatis dari sistem.</p>
             </div>
             <div className="form-group">
               <label>NIM (Nomor Induk Mahasiswa) *</label>
@@ -705,7 +705,7 @@ const PengajuanSK = () => {
                 <Phone className="field-icon" size={18} />
                 <input type="text" value={noHpDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed' }} placeholder="Nomor HP dari profil akun" />
               </div>
-              <p className="input-hint">Nomor HP terverifikasi otomatis dari akun.</p>
+              <p className="input-hint">Nomor HP terverifikasi otomatis dari sistem.</p>
             </div>
             <div className="form-group">
               <label>Program Studi</label>

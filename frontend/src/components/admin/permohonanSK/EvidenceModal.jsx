@@ -110,6 +110,7 @@ const EvidenceModal = ({ item, onClose }) => {
           <div className="ev-modal-header">
             <h3>Evidence — {student.name || 'Mahasiswa'}</h3>
             {/* <button className="ev-modal-close" onClick={onClose}><X size={20} /></button> */}
+            {/* <button className="ev-modal-close" onClick={onClose}><X size={20} /></button> */}
           </div>
 
           <div className="ev-modal-content scrollable">
