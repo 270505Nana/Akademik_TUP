@@ -258,7 +258,7 @@ const LengkapiData = () => {
 
           {/* Kelas */}
           <div className="form-group">
-            <label className="form-label"><GraduationCap size={16} /> Kelas</label>
+            <label className="form-label"><GraduationCap size={16} /> Kelas Asal</label>
             <div className="input-wrapper">
               <GraduationCap className="input-icon" size={18} />
               <input

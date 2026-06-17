@@ -53,12 +53,23 @@
   left: -50px;
 }
 
-.data-diri-card {
+/* .data-diri-card {
   position: relative;
   z-index: 1;
   background: var(--white);
   width: 100%;
   max-width: 600px;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+} */
+
+.data-diri-card {
+  position: relative;
+  z-index: 1;
+  background: var(--white);
+  width: 100%;
+  max-width: 680px; /* naik dari 600px, kasih ruang ekstra ±80px buat redistribusi NIM:Angkatan */
   padding: 40px;
   border-radius: 20px;
   box-shadow: var(--shadow-card);
@@ -122,9 +133,14 @@
   gap: 8px;
 }
 
-.form-row {
+/* .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 16px;
+} */
+.form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(160px, 1fr); /* NIM dapat porsi ~1.6x, Angkatan dijamin minimal 160px */
   gap: 16px;
 }
 

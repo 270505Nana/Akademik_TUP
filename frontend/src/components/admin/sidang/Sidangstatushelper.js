@@ -1,140 +1,96 @@
-/**
- * Alur status:
- *   BELUM_DAFTAR → DRAFT → DALAM_PROSES → PERLU_REVISI → REVISI_DIPERBARUI
- *                                        ↘ PENDAFTARAN_DITERIMA
- *                                                        → SIAP_SIDANG
- */
-
 export const STATUS_SIDANG = {
   BELUM_DAFTAR         : 'belum-daftar',
-  DRAFT                : 'draft',
+  PROSES_REGISTRASI    : 'proses-registrasi',
   DALAM_PROSES         : 'dalam-proses',
   PERLU_REVISI         : 'perlu-revisi',
   REVISI_DIPERBARUI    : 'revisi-diperbarui',
-  PENDAFTARAN_DITERIMA : 'pendaftaran-diterima', // dijadwalkan, periode BELUM/SUDAH aktif
-  SIAP_SIDANG          : 'siap-sidang',          // dijadwalkan, periode SEDANG aktif
+  SIAP_SIDANG          : 'siap-sidang',
+  PENDAFTARAN_DITERIMA : 'pendaftaran-diterima',
 };
 
 export const SIDANG_STATUS_CONFIG = {
   [STATUS_SIDANG.BELUM_DAFTAR]: {
-    label  : 'Belum Daftar',
-    bg     : '#F1F5F9',
-    color  : '#475569',
-    border : '#CBD5E1',
+    label       : 'Belum Daftar',
+    badgeBg     : '#F1F5F9',
+    badgeColor  : '#475569',
+    borderColor : '#CBD5E1',
   },
-  [STATUS_SIDANG.DRAFT]: {
-    label  : 'Proses Registrasi',
-    bg     : '#EFF6FF',
-    color  : '#1D4ED8',
-    border : '#BFDBFE',
+  [STATUS_SIDANG.PROSES_REGISTRASI]: {
+    label       : 'Proses Registrasi',
+    badgeBg     : '#EFF6FF',
+    badgeColor  : '#1D4ED8',
+    borderColor : '#BFDBFE',
   },
   [STATUS_SIDANG.DALAM_PROSES]: {
-    label  : 'Dalam Proses',
-    bg     : '#FEF3C7',
-    color  : '#92400E',
-    border : '#FDE68A',
+    label       : 'Dalam Proses',
+    badgeBg     : '#FEF3C7',
+    badgeColor  : '#92400E',
+    borderColor : '#FDE68A',
   },
   [STATUS_SIDANG.PERLU_REVISI]: {
-    label  : 'Perlu Revisi',
-    bg     : '#FEF2F2',
-    color  : '#991B1B',
-    border : '#FECACA',
+    label       : 'Perlu Revisi',
+    badgeBg     : '#FEF2F2',
+    badgeColor  : '#991B1B',
+    borderColor : '#FECACA',
   },
   [STATUS_SIDANG.REVISI_DIPERBARUI]: {
-    label  : 'Revisi Diperbarui',
-    bg     : '#F0FDF4',
-    color  : '#166534',
-    border : '#BBF7D0',
-  },
-  [STATUS_SIDANG.PENDAFTARAN_DITERIMA]: {
-    label  : 'Pendaftaran Diterima',
-    bg     : '#EDE9FE',
-    color  : '#5B21B6',
-    border : '#DDD6FE',
+    label       : 'Revisi Diperbarui',
+    badgeBg     : '#F0FDF4',
+    badgeColor  : '#166534',
+    borderColor : '#BBF7D0',
   },
   [STATUS_SIDANG.SIAP_SIDANG]: {
-    label  : 'Siap Sidang',
-    bg     : '#DCFCE7',
-    color  : '#166534',
-    border : '#86EFAC',
+    label       : 'Siap Sidang',
+    badgeBg     : '#DCFCE7',
+    badgeColor  : '#166534',
+    borderColor : '#86EFAC',
+  },
+  [STATUS_SIDANG.PENDAFTARAN_DITERIMA]: {
+    label       : 'Pendaftaran Diterima',
+    badgeBg     : '#EDE9FE',
+    badgeColor  : '#5B21B6',
+    borderColor : '#DDD6FE',
   },
 };
 
-export const getUploadSummary = (uploads = []) => {
-  if (!Array.isArray(uploads)) return { checked: 0, total: 0, valid: 0, invalid: 0 };
-  const total   = uploads.length;
-  const valid   = uploads.filter(u => u.isValid === true).length;
-  const invalid = uploads.filter(u => u.isValid === false).length;
-  const checked = valid + invalid;
-  return { checked, total, valid, invalid };
-};
-
-export const allUploadsChecked = (uploads = []) => {
-  if (!Array.isArray(uploads) || uploads.length === 0) return false;
-  return uploads.every(u => u.isValid !== null);
-};
-
-export const hasInvalidUploads = (uploads = []) => {
-  if (!Array.isArray(uploads)) return false;
-  return uploads.some(u => u.isValid === false);
-};
-
-export const hasResubmittedFiles = (uploads = []) => {
-  if (!Array.isArray(uploads) || uploads.length === 0) return false;
-  return uploads.some(u => new Date(u.updatedAt) > new Date(u.createdAt));
-};
-
-export const isAdminVerifiable = (registration) => {
-  if (!registration) return false;
-  return registration.isDraft === false;
-};
-
-export const isRegistrationEditable = (registration) => {
-  if (!registration) return false;
-  return registration.isDraft === true;
-};
-
+// determineSidangStatu
 /**
- * determineSidangStatus
- *  1. BELUM_DAFTAR         : registration null
- *  2. DRAFT                : isDraft=true, belum ada response
- *  3. PERLU_REVISI         : response ada, isEdit not null, belum reupload
- *  4. REVISI_DIPERBARUI    : response ada, isEdit not null, sudah reupload
- *  5. DALAM_PROSES         : isDraft=false, belum ada response
- *  6. SIAP_SIDANG          : response ada, isEdit null, sidangPeriod ada & isOpen=true
- *  7. PENDAFTARAN_DITERIMA : response ada, isEdit null, sidangPeriod ada & isOpen=false
+ * @param {object|null} registration  - object dari GET /api/sidang-registrations
+ * @param {object|null} response      - object dari GET /api/sidang-registration-responses/registration/{id}
+ * @param {object|null} period        - object dari GET /api/sidang-periods, di-match by sidangPeriodId
+ * klasifikasi statusnya
+ * 1. Belum Daftar         : registration null
+ * 2. Proses Registrasi    : isDraft=true, response null
+ * 3. Dalam Proses         : isDraft=false, response null
+ * 4. Perlu Revisi         : response.isEdit not null, registration.submittedAt null
+ * 5. Revisi Diperbarui    : response.isEdit not null, registration.submittedAt not null
+ * 6. Siap Sidang          : response.isEdit null, period.isOpen === true
+ * 7. Pendaftaran Diterima : response.isEdit null, period.isOpen === false (atau period null)
  */
-export const determineSidangStatus = (
-  registration,
-  response,
-  _period,
-  uploads = [],
-) => {
-  //Belum pernah registrasi
+export const determineSidangStatus = (registration, response, period) => {
+  //Belum daftar
   if (!registration) return STATUS_SIDANG.BELUM_DAFTAR;
 
-  // Draft
-  if (registration.isDraft && !response) return STATUS_SIDANG.DRAFT;
+  //Proses registrasi (draft, belum submit)
+  if (registration.isDraft && !response) return STATUS_SIDANG.PROSES_REGISTRASI;
 
-  //Admin beri catatan revisi
-  if (response?.isEdit) {
-    return hasResubmittedFiles(uploads)
+  //Dalam proses (sudah submit, admin belum respons)
+  if (!registration.isDraft && !response) return STATUS_SIDANG.DALAM_PROSES;
+
+  // Ada response, admin pernah set revisi
+  if (response.isEdit !== null && response.isEdit !== undefined) {
+    return registration.submittedAt
       ? STATUS_SIDANG.REVISI_DIPERBARUI
       : STATUS_SIDANG.PERLU_REVISI;
   }
 
-  // Submit tapi admin belum respons
-  if (!registration.isDraft && !response) return STATUS_SIDANG.DALAM_PROSES;
-
-  // Response ada, isEdit null → berkas valid
-  // Cek admin sudah assign periode sidang?
-  const assignedPeriod = response?.sidangPeriod ?? response?.sidangPeriodData ?? null;
-
-  if (assignedPeriod) {
-    // Periode yang dipilihkan admin sedang aktif → Siap Sidang
-    if (assignedPeriod.isOpen === true) return STATUS_SIDANG.SIAP_SIDANG;
-    // Periode ada tapi belum/sudah aktif → Pendaftaran Diterima
-    return STATUS_SIDANG.PENDAFTARAN_DITERIMA;
+  //isEdit null → admin approve, cek periode
+  if (period) {
+    return period.isOpen === true
+      ? STATUS_SIDANG.SIAP_SIDANG
+      : STATUS_SIDANG.PENDAFTARAN_DITERIMA;
   }
-  return STATUS_SIDANG.PENDAFTARAN_DITERIMA;
+
+  // Response ada tapi belum assign periode (edge case)
+  return STATUS_SIDANG.DALAM_PROSES;
 };

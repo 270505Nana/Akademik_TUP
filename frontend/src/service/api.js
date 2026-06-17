@@ -355,9 +355,14 @@ export const getAllSidangRegistrations = async () => {
   return response.data?.data ?? response.data;
 };
 
+// buat di verifikasi modal, get by ID
+export const getSidangRegistrationById = async (id) => {
+  const response = await api.get(`/api/sidang-registrations/${id}`);
+  return response.data?.data ?? response.data;
+};
+
+
 // GET /api/sidang-registrations/{id}/uploads
-// Ambil semua berkas yang diupload mahasiswa untuk satu registration
-// Dipakai oleh Dashboard untuk deteksi REVISI_DIPERBARUI via determineSidangStatus
 export const getSidangRegistrationUploads = async (registrationId) => {
   try {
     const response = await api.get(`/api/sidang-registrations/${registrationId}/uploads`);
@@ -368,8 +373,16 @@ export const getSidangRegistrationUploads = async (registrationId) => {
   }
 };
 
+export const downloadSidangRegistrationUpload = async (uploadId) => {
+  const response = await api.get(
+    `/api/sidang-registrations/uploads/${uploadId}/download`,
+    { responseType: 'blob' }
+  );
+  return response.data;
+};
+
 // GET /api/sidang-registration-responses/registration/{sidangRegistrationId}
-// Ambil response verifikasi berdasarkan sidangRegistrationId
+
 export const getSidangRegistrationResponse = async (sidangRegistrationId) => {
   try {
     const response = await api.get(
@@ -394,16 +407,6 @@ export const getSidangRegistrationResponseById = async (id) => {
   return response.data?.data ?? response.data;
 };
 
-// POST /api/sidang-registration-responses
-// Buat response baru (waktu admin verifikasi pertama kali)
-// payload: {
-//   sidangRegistrationId: number,
-//   isApproved: boolean,
-//   sidangPeriodId: number | null,   
-//   dueDate: string | null,         
-//   message: string | null,         
-//   berkasStatuses: string,})
-// }
 export const createSidangRegistrationResponse = async (payload) => {
   const response = await api.post('/api/sidang-registration-responses', payload);
   return response.data?.data ?? response.data;
@@ -451,36 +454,6 @@ export const getSidangPeriods = async () => {
   }
 };
 
-export const createSidangPeriod = async ({ name, startDate, endDate }) => {
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const isOpen = now >= start && now <= end;
-
-  const response = await api.post("/api/sidang-periods", {
-    name,
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-    isOpen,
-  });
-  return response.data?.data ?? response.data;
-};
-
-export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const isOpen = now >= start && now <= end;
-
-  const response = await api.patch(`/api/sidang-periods/${id}`, {
-    name,
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-    isOpen,
-  });
-  return response.data?.data ?? response.data;
-};
-
 export const getYudisiumPeriods = async () => {
   try {
     const response = await api.get("/api/yudisium-periods");
@@ -491,34 +464,62 @@ export const getYudisiumPeriods = async () => {
   }
 };
 
-export const createYudisiumPeriod = async ({ name, startDate, endDate }) => {
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+export const createSidangPeriod = async ({ name, startDate, endDate }) => {
+  const now    = new Date();
+  const start  = new Date(`${startDate}T12:00:00`);
+  const end    = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
-
-  const response = await api.post("/api/yudisium-periods", {
+ 
+  const response = await api.post("/api/sidang-periods", {
     name,
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
+    startDate, 
+    endDate,   
     isOpen,
   });
   return response.data?.data ?? response.data;
 };
-
-export const updateYudisiumPeriod = async (
-  id,
-  { name, startDate, endDate },
-) => {
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+ 
+export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
+  const now    = new Date();
+  const start  = new Date(`${startDate}T12:00:00`);
+  const end    = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
+ 
+  const response = await api.patch(`/api/sidang-periods/${id}`, {
+    name,
+    startDate, 
+    endDate,   
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
+ 
 
+export const createYudisiumPeriod = async ({ name, startDate, endDate }) => {
+  const now    = new Date();
+  const start  = new Date(`${startDate}T12:00:00`);
+  const end    = new Date(`${endDate}T12:00:00`);
+  const isOpen = now >= start && now <= end;
+ 
+  const response = await api.post("/api/yudisium-periods", {
+    name,
+    startDate, 
+    endDate,   
+    isOpen,
+  });
+  return response.data?.data ?? response.data;
+};
+ 
+export const updateYudisiumPeriod = async (id, { name, startDate, endDate }) => {
+  const now    = new Date();
+  const start  = new Date(`${startDate}T12:00:00`);
+  const end    = new Date(`${endDate}T12:00:00`);
+  const isOpen = now >= start && now <= end;
+ 
   const response = await api.patch(`/api/yudisium-periods/${id}`, {
     name,
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
+    startDate, 
+    endDate,   
     isOpen,
   });
   return response.data?.data ?? response.data;

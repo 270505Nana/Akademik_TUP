@@ -25,6 +25,7 @@ const listSidangRegistrationResponses = asyncHandler(async (req, res) => {
             },
           },
           sidangRegistrationUploads: true,
+          // nana note : ini buat cek is revisidokumendi FE.
         },
       },
     },
@@ -375,14 +376,26 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
     },
   });
 
-  if (isEdit) {
+  // if (isEdit) {
+  //   await prisma.sidangRegistration.update({
+  //     where: {
+  //       id:
+  //         updateData.sidangRegistrationId ||
+  //         responseExists.sidangRegistrationId,
+  //     },
+  //     data: { isDraft: true },
+  //   });
+  // }
+
+  // admin patch response -> isEdit != null, isDraft = false
+  if (isEdit !== undefined) {
     await prisma.sidangRegistration.update({
       where: {
         id:
           updateData.sidangRegistrationId ||
           responseExists.sidangRegistrationId,
       },
-      data: { isDraft: true },
+      data: { isDraft: isEdit ? true : false },
     });
   }
 
