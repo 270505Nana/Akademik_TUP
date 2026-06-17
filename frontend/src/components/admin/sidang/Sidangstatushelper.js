@@ -1,13 +1,3 @@
-export const STATUS_SIDANG = {
-  BELUM_DAFTAR         : 'belum-daftar',
-  PROSES_REGISTRASI    : 'proses-registrasi',
-  DALAM_PROSES         : 'dalam-proses',
-  PERLU_REVISI         : 'perlu-revisi',
-  REVISI_DIPERBARUI    : 'revisi-diperbarui',
-  SIAP_SIDANG          : 'siap-sidang',
-  PENDAFTARAN_DITERIMA : 'pendaftaran-diterima',
-};
-
 export const SIDANG_STATUS_CONFIG = {
   [STATUS_SIDANG.BELUM_DAFTAR]: {
     label       : 'Belum Daftar',
@@ -53,44 +43,45 @@ export const SIDANG_STATUS_CONFIG = {
   },
 };
 
-// determineSidangStatu
 /**
- * @param {object|null} registration  - object dari GET /api/sidang-registrations
- * @param {object|null} response      - object dari GET /api/sidang-registration-responses/registration/{id}
- * @param {object|null} period        - object dari GET /api/sidang-periods, di-match by sidangPeriodId
- * klasifikasi statusnya
+ * Urutan pengecekan:
  * 1. Belum Daftar         : registration null
  * 2. Proses Registrasi    : isDraft=true, response null
  * 3. Dalam Proses         : isDraft=false, response null
- * 4. Perlu Revisi         : response.isEdit not null, registration.submittedAt null
- * 5. Revisi Diperbarui    : response.isEdit not null, registration.submittedAt not null
- * 6. Siap Sidang          : response.isEdit null, period.isOpen === true
- * 7. Pendaftaran Diterima : response.isEdit null, period.isOpen === false (atau period null)
+ * 4. Perlu Revisi         : response ada, response.isEdit not null, submittedAt null
+ *                           (isDraft=true saat ini  admin sudah set revisi)
+ * 5. Revisi Diperbarui    : registration.submittedAt not null
+ *                           (BE  clear isEdit saat mahasiswa resubmit)
+ * 6. Siap Sidang          : sidangPeriodId ada, period.isOpen === true
+ * 7. Pendaftaran Diterima : sidangPeriodId ada, period.isOpen === false
  */
 export const determineSidangStatus = (registration, response, period) => {
-  //Belum daftar
+  // Belum daftar
   if (!registration) return STATUS_SIDANG.BELUM_DAFTAR;
 
-  //Proses registrasi (draft, belum submit)
+  //Revisi Diperbarui
+  //    Mahasiswa sudah resubmit setelah revisi (BE clear isEdit, set isDraft=false, submittedAt terisi)
+  if (registration.submittedAt && response) return STATUS_SIDANG.REVISI_DIPERBARUI;
+
+  // Proses registrasi (draft, belum pernah submit sama sekali, belum ada response)
   if (registration.isDraft && !response) return STATUS_SIDANG.PROSES_REGISTRASI;
 
-  //Dalam proses (sudah submit, admin belum respons)
+  //Dalam proses (sudah submit pertama kali, admin belum respons)
   if (!registration.isDraft && !response) return STATUS_SIDANG.DALAM_PROSES;
 
-  // Ada response, admin pernah set revisi
-  if (response.isEdit !== null && response.isEdit !== undefined) {
-    return registration.submittedAt
-      ? STATUS_SIDANG.REVISI_DIPERBARUI
-      : STATUS_SIDANG.PERLU_REVISI;
+  // Perlu Revisi — ada response dengan isEdit (admin sudah set deadline revisi)
+  //    isDraft=true karena BE set ulang saat admin beri revisi
+  if (response && response.isEdit !== null && response.isEdit !== undefined) {
+    return STATUS_SIDANG.PERLU_REVISI;
   }
 
-  //isEdit null → admin approve, cek periode
+  // isEdit null dan ada sidangPeriodId → admin approve, cek periode
   if (period) {
     return period.isOpen === true
       ? STATUS_SIDANG.SIAP_SIDANG
       : STATUS_SIDANG.PENDAFTARAN_DITERIMA;
   }
 
-  // Response ada tapi belum assign periode (edge case)
+  // Response ada tapi sidangPeriodId belum di-assign (edge case)
   return STATUS_SIDANG.DALAM_PROSES;
 };

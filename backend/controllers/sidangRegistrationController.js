@@ -87,6 +87,13 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
           id: true,
           nim: true,
           name: true,
+          studyProgramId: true,
+          studyProgram: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       },
       dosenPembimbing1: {
@@ -138,6 +145,13 @@ const getSidangRegistrationById = asyncHandler(async (req, res) => {
           id: true,
           nim: true,
           name: true,
+          studyProgramId: true,
+          studyProgram: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       },
       dosenPembimbing1: {
@@ -188,6 +202,13 @@ const getSidangRegistrationByStudentId = asyncHandler(async (req, res) => {
           id: true,
           nim: true,
           name: true,
+          studyProgramId: true,
+          studyProgram: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       },
       dosenPembimbing1: {
