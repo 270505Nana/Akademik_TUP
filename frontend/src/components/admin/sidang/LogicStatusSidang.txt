@@ -1,0 +1,42 @@
+Skema verifikasi sidang : 
+Pertama menampilkan seluruh registrasi sidang yang sudah selesai menggunakan api 
+Get api/sidang-registration -> Dilakukan filtering status menggunakan file SidangStatusHelper 
+-> Status registrasi muncul 
+-> Lalu admin dapat melakukan verifikasi dengan menekan button verifikasi 
+-> menampilkan modal VerifikasiBerkas dimana dokumen ditentukan isValid boolean dengan checklist 
+-> jika semua dokumen bernilai true maka langsung dipilhkan periode sidang, 
+namun jika ada yang bernilai false maka diwajibkan mengisi field "Due date yg disimpan ke kolom db 
+isEdit" dan field message kemudian save dan SidangStatusHelper melakukan filtering status ulang
+
+File : VerifikasiSidang, VerifikasiBerkasModal, SidangStatusHelper
+
+Klasifikas status registrasi sidang :
+
+1. belum daftar = registration ==null, sidangregistration 404
+2. proses registrasi = registration.isDraft == true, registrastion.response == null
+3. dalam proses = registration.isDraft == false, registration.response ==null
+4. perlu revisi = registration.response == not null, registration.response isEdit not null, registration.submittedAt = null
+5. revisi diperbaharui = registration.response == not null, registration.response isEdit not null, registration.submittedAt not null
+6. siap sidang = semua dokumen isValid = true, registration.sidangPeriod not null dan periode yang match (dari GET /api/sidang-periods) punya isOpen === true.
+7. pendaftaran diterima =  sama seperti poin sebelumnya, tapi periode yang match punya isOpen === false.
+
+
+SidangStatusHelper.js
+
+Alur status (dari sudut pandang admin — hanya registrasi isDraft=false yang tampil):
+
+DALAM_PROSES
+    ↓ (admin beri revisi → isEdit = timestamp, isDraft = true, mahasiswa edit ulang)
+PERLU_REVISI
+    ↓ (mahasiswa resubmit → submittedAt terisi, isDraft = false)
+REVISI_DIPERBARUI
+    ↓ (admin approve → isEdit = null, sidangPeriodId terisi)
+SIAP_SIDANG          (sidangPeriod.isOpen === true)
+PENDAFTARAN_DITERIMA (sidangPeriod.isOpen === false)
+
+Catatan:
+- BELUM_DAFTAR dan PROSES_REGISTRASI tidak muncul di halaman admin
+karena list di-filter isDraft === false.
+- `period` di-pass terpisah dari hasil GET /api/sidang-periods
+karena sidangPeriod tidak nested di response object.
+
