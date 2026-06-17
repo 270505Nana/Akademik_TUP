@@ -1,181 +1,135 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, AlertTriangle, Loader } from 'lucide-react';
-import { getTemplateBlob } from '../../service/api'; 
-// Template evidence buat preview semua template
-const TemplateEvidenceModal = ({ slug, onClose }) => {
-  const [status,   setStatus]   = useState('loading');
-  const [fileUrl,  setFileUrl]  = useState(null);
-  const [fileName, setFileName] = useState('Template');
-  const [errorMsg, setErrorMsg] = useState('');
+import { X, Download, Loader, AlertCircle, FileText } from 'lucide-react';
+import { motion } from 'motion/react';
+import { downloadTemplate } from '../../service/api'; 
 
+const TemplateEvidenceModal = ({ slug, title = 'Preview Template', onClose }) => {
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+  const [preview, setPreview] = useState(null);
   useEffect(() => {
-    if (!slug) {
-      setErrorMsg('Slug template tidak diberikan.');
-      setStatus('error');
-      return;
-    }
-
-    let objectUrl = null; 
+    let objectUrl = null;
+    let isMounted = true;
 
     const load = async () => {
-      setStatus('loading');
+      setLoading(true);
+      setError(null);
       try {
-        //Fetch file sebagai Blob via axios
-        const blob = await getTemplateBlob(slug);
+        const { blob, name } = await downloadTemplate(slug);
+        const lowerName = (name || '').toLowerCase();
+        const isPdf = lowerName.endsWith('.pdf') || blob.type.includes('pdf');
+        const isPng = lowerName.endsWith('.png') || blob.type === 'image/png';
+        const isJpg = lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || blob.type === 'image/jpeg';
 
-        //Buat object URL dari Blob
-        objectUrl = URL.createObjectURL(blob);
+        const resolvedType = isPdf ? 'application/pdf' : isPng ? 'image/png' : isJpg ? 'image/jpeg' : blob.type;
+        const normalizedBlob = new Blob([blob], { type: resolvedType });
+        objectUrl = URL.createObjectURL(normalizedBlob);
 
-        const ext = blob.type?.includes('pdf') ? 'PDF' : 'File';
-        setFileName(`Template ${ext}`);
-        setFileUrl(objectUrl);
-        setStatus('ready');
+        if (isMounted) {
+          setPreview({
+            url:  objectUrl,
+            name: name || `template-${slug}`,
+            type: isPdf ? 'pdf' : (isPng || isJpg) ? 'image' : 'unsupported',
+          });
+        }
       } catch (err) {
-        console.error('[TemplateEvidenceModal] Gagal load template:', err);
-        setErrorMsg(
-          err.response?.data?.message || 
-          `Gagal memuat template (${err.response?.status ?? err.message}). Coba lagi.`
-        );
-        setStatus('error');
+        console.error('[TemplateEvidenceModal] load error:', err);
+        if (isMounted) setError(`Gagal memuat template (${err.response?.status ?? err.message})`);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
 
     load();
-
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
+      isMounted = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [slug]);
 
+  const handleDownload = () => {
+    if (!preview?.url) return;
+    const a = document.createElement('a');
+    a.href = preview.url;
+    a.download = preview.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 9999, padding: '16px',
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: '#fff',
-          borderRadius: 14,
-          width: '100%',
-          maxWidth: 760,
-          height: '88vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
-        }}
+    <div className="ev-modal-overlay" onClick={onClose}>
+      <motion.div
+        className="ev-modal-box"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: 720, width: '95vw' }}
       >
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 20px',
-          borderBottom: '1px solid #E5E7EB',
-          flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: 8,
-              background: '#FEF2F2', border: '1px solid #FECACA',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <FileText size={17} color="#C0182A" />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
-                Template Evidence
-              </div>
-              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>
-                {status === 'ready' ? fileName : '—'}
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 32, height: 32, borderRadius: 8,
-              border: '1px solid #E5E7EB', background: '#F9FAFB',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: '#6B7280',
-            }}
-          >
-            <X size={16} />
-          </button>
+        <div className="ev-modal-header">
+          <h3>{title}</h3>
+          <button className="ev-modal-close" onClick={onClose}><X size={20} /></button>
         </div>
 
-        {/* Body */}
-        <div style={{ flex: 1, overflow: 'hidden', position: 'relative', background: '#F8FAFC' }}>
-          {status === 'loading' && (
-            <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 12,
-            }}>
+        <div className="ev-modal-content scrollable" style={{ minHeight: 360 }}>
+          {loading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '70px 0' }}>
               <Loader size={28} color="#C0182A" style={{ animation: 'spin 1s linear infinite' }} />
-              <p style={{ fontSize: 13, color: '#6B7280', margin: 0 }}>Memuat template...</p>
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <p style={{ fontSize: 12, color: '#6B7280' }}>Memuat template...</p>
             </div>
           )}
 
-          {status === 'error' && (
-            <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32,
-            }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: '50%',
-                background: '#FEF2F2', border: '1px solid #FECACA',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <AlertTriangle size={24} color="#C0182A" />
-              </div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: '#111827', margin: 0 }}>
-                Gagal Memuat Template
-              </p>
-              <p style={{ fontSize: 13, color: '#6B7280', margin: 0, textAlign: 'center' }}>
-                {errorMsg}
-              </p>
+          {!loading && error && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '50px 0', color: '#EF4444', textAlign: 'center' }}>
+              <AlertCircle size={28} />
+              <p style={{ fontSize: 13 }}>{error}</p>
             </div>
           )}
 
-          {status === 'ready' && fileUrl && (
+          {!loading && !error && preview?.type === 'pdf' && (
             <iframe
-              src={fileUrl}
-              title={fileName}
-              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+              src={preview.url}
+              title={preview.name}
+              width="100%"
+              height="500"
+              style={{ border: '1px solid #E5E7EB', borderRadius: 8 }}
             />
           )}
+
+          {!loading && !error && preview?.type === 'image' && (
+            <img
+              src={preview.url}
+              alt={preview.name}
+              style={{ maxWidth: '100%', display: 'block', margin: '0 auto', borderRadius: 8 }}
+            />
+          )}
+
+          {!loading && !error && preview?.type === 'unsupported' && (
+            <div style={{ textAlign: 'center', padding: '50px 0', color: '#6B7280' }}>
+              <FileText size={28} style={{ marginBottom: 10 }} />
+              <p style={{ fontSize: 13 }}>Preview tidak didukung untuk tipe file ini. Silakan unduh untuk melihat isinya.</p>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div style={{
-          padding: '12px 20px',
-          borderTop: '1px solid #E5E7EB',
-          display: 'flex', justifyContent: 'flex-end',
-          flexShrink: 0,
-          background: '#fff',
-        }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '8px 24px', borderRadius: 8,
-              fontSize: 13, fontWeight: 700,
-              background: '#C0182A', color: '#fff',
-              border: 'none', cursor: 'pointer',
-            }}
-          >
-            Tutup
-          </button>
+        <div className="ev-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <button className="btn-close-modal" onClick={onClose}>Tutup</button>
+          {!loading && !error && (
+            <button
+              onClick={handleDownload}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 18px', borderRadius: 9999,
+                fontSize: 13, fontWeight: 700,
+                background: '#C0182A', color: '#fff', border: 'none', cursor: 'pointer',
+              }}
+            >
+              <Download size={14} /> Download
+            </button>
+          )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

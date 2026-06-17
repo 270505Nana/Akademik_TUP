@@ -17,7 +17,7 @@ import {
   isAlreadyRevised,
 } from '../../components/common/Skstatushelper';
 import CustomAlert from '../../components/common/CustomAlert';
-// import TemplateEvidenceModal from '../../components/common/TemplateEvidenceModal';
+import TemplateEvidenceModal from '../../components/common/TemplateEvidenceModal';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
 
 const DownloadTemplateButton = ({ slug }) => {
