@@ -222,8 +222,6 @@ router.delete("/:id", verifyToken, isAcademicStaff, deleteDokumenValidasiSktaUpl
  *   get:
  *     summary: Download a Dokumen Validasi SKTA upload file
  *     tags: [Dokumen Validasi SKTA]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: uploadId
@@ -234,15 +232,11 @@ router.delete("/:id", verifyToken, isAcademicStaff, deleteDokumenValidasiSktaUpl
  *     responses:
  *       200:
  *         description: File downloaded successfully
- *       401:
- *         description: Token not found
- *       403:
- *         description: Access denied or invalid token
  *       404:
  *         description: File not found
  *       500:
  *         description: Internal server error
  */
-router.get("/uploads/:uploadId/download", verifyToken, downloadDokumenValidasiSktaUpload);
+router.get("/uploads/:uploadId/download", downloadDokumenValidasiSktaUpload);
 
 module.exports = router;

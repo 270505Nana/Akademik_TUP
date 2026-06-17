@@ -226,17 +226,6 @@ const downloadDokumenValidasiSktaUpload = asyncHandler(async (req, res) => {
     throw new Error("File dokumen tidak ditemukan");
   }
 
-  // Check ownership if STUDENT
-  if (req.user.role === "STUDENT") {
-    const student = await prisma.student.findUnique({
-      where: { userId: req.user.id },
-    });
-    if (!student || upload.studentId !== student.id) {
-      res.status(403);
-      throw new Error("Akses ditolak");
-    }
-  }
-
   const filePath = path.resolve(process.cwd(), upload.path);
 
   if (!fs.existsSync(filePath)) {
