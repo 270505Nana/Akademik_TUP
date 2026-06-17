@@ -3,7 +3,7 @@ import { X, Download, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Document, Page, Text, View, Image, StyleSheet, pdf } from '@react-pdf/renderer';
-import { generateDokumenValidasiBlob, mapSktaDataToPDF } from './DokumenValidasiPDF';
+import { generateDokumenValidasiBlob, mapSktaDataToPDF } from './Dokumenvalidasipdf';
 import { uploadDokumenValidasi } from '../../../service/api';
 import logoTelkom from '../../../assets/logo-telkom.png';
 

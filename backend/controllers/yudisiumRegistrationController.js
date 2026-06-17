@@ -6,6 +6,43 @@ const path = require("path");
 // Constants for File Validation
 const REQUIRED_SLUGS = [];
 
+const checkYudisiumEditable = async (registrationId) => {
+  const registration = await prisma.yudisiumRegistration.findUnique({
+    where: { id: parseInt(registrationId) },
+  });
+
+  if (!registration) {
+    return { exists: false, editable: false, reason: "Pendaftaran yudisium tidak ditemukan." };
+  }
+
+  if (!registration.isDraft) {
+    const latestResponse = await prisma.yudisiumRegistrationResponse.findFirst({
+      where: { yudisiumRegistrationId: registration.id, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const hasActiveEditPermission = latestResponse && latestResponse.isEdit && new Date(latestResponse.isEdit) > new Date();
+
+    if (!hasActiveEditPermission) {
+      return { exists: true, editable: false, reason: "Pendaftaran sudah dikirim dan tidak memiliki izin edit yang aktif." };
+    }
+  }
+
+  const latestResponse = await prisma.yudisiumRegistrationResponse.findFirst({
+    where: { yudisiumRegistrationId: registration.id, deletedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (latestResponse && latestResponse.isEdit) {
+    const isEditExpired = new Date(latestResponse.isEdit) < new Date();
+    if (isEditExpired) {
+      return { exists: true, editable: false, reason: "Batas waktu izin edit dari admin telah kedaluwarsa." };
+    }
+  }
+
+  return { exists: true, editable: true };
+};
+
 // Yudisium Registration List
 const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   const yudisiumRegistrations = await prisma.yudisiumRegistration.findMany({
@@ -207,6 +244,24 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     }
   }
 
+  // Get active registration period
+  const activePeriod = await prisma.yudisiumRegistrationPeriod.findFirst({
+    where: { isOpen: true, deletedAt: null },
+  });
+
+  // Check edit permission if updating an existing registration by ID
+  if (id) {
+    const editCheck = await checkYudisiumEditable(id);
+    if (!editCheck.exists) {
+      res.status(404);
+      throw new Error(editCheck.reason);
+    }
+    if (!editCheck.editable) {
+      res.status(403);
+      throw new Error(editCheck.reason);
+    }
+  }
+
   const upsertData = {
     programType: programType !== undefined ? programType : undefined,
     tak: tak !== undefined ? tak : undefined,
@@ -233,7 +288,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     yudisiumRegistrationPeriodId:
       yudisiumRegistrationPeriodId !== undefined
         ? parseInt(yudisiumRegistrationPeriodId)
-        : undefined,
+        : (activePeriod ? activePeriod.id : undefined),
     isDraft: true,
   };
 
@@ -256,6 +311,12 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     });
 
     if (existing && existing.isDraft) {
+      const editCheck = await checkYudisiumEditable(existing.id);
+      if (!editCheck.editable) {
+        res.status(403);
+        throw new Error(editCheck.reason);
+      }
+
       yudisiumRegistration = await prisma.yudisiumRegistration.update({
         where: { id: existing.id },
         data: upsertData,
@@ -266,6 +327,27 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
         },
       });
     } else {
+      // Check active period
+      const targetPeriodId = upsertData.yudisiumRegistrationPeriodId;
+      if (!targetPeriodId) {
+        res.status(400);
+        throw new Error("Tidak ada periode pendaftaran yudisium yang aktif saat ini.");
+      }
+
+      // Check if student is already registered in this period
+      const existingInPeriod = await prisma.yudisiumRegistration.findFirst({
+        where: {
+          studentId: parseInt(studentId),
+          yudisiumRegistrationPeriodId: targetPeriodId,
+          deletedAt: null,
+        },
+      });
+
+      if (existingInPeriod) {
+        res.status(400);
+        throw new Error("Mahasiswa sudah terdaftar pada periode pendaftaran yudisium ini.");
+      }
+
       yudisiumRegistration = await prisma.yudisiumRegistration.create({
         data: upsertData,
         include: {
@@ -276,6 +358,13 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
       });
     }
   } else {
+    // Check active period
+    const targetPeriodId = upsertData.yudisiumRegistrationPeriodId;
+    if (!targetPeriodId) {
+      res.status(400);
+      throw new Error("Tidak ada periode pendaftaran yudisium yang aktif saat ini.");
+    }
+
     yudisiumRegistration = await prisma.yudisiumRegistration.create({
       data: upsertData,
       include: {
@@ -329,6 +418,12 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran yudisium tidak ditemukan");
   }
 
+  const editCheck = await checkYudisiumEditable(id);
+  if (!editCheck.editable) {
+    res.status(403);
+    throw new Error(editCheck.reason);
+  }
+
   const updateData = {
     programType: programType !== undefined ? programType : undefined,
     tak: tak !== undefined ? tak : undefined,
@@ -357,6 +452,28 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
         ? parseInt(yudisiumRegistrationPeriodId)
         : undefined,
   };
+
+  const activePeriod = await prisma.yudisiumRegistrationPeriod.findFirst({
+    where: { isOpen: true, deletedAt: null },
+  });
+
+  const periodIdToCheck = yudisiumRegistrationPeriodId
+    ? parseInt(yudisiumRegistrationPeriodId)
+    : (existingRegistration.yudisiumRegistrationPeriodId || (activePeriod ? activePeriod.id : null));
+
+  if (periodIdToCheck) {
+    const period = await prisma.yudisiumRegistrationPeriod.findUnique({
+      where: { id: periodIdToCheck },
+    });
+    if (!period || !period.isOpen) {
+      res.status(400);
+      throw new Error("Periode pendaftaran yudisium ini sudah ditutup.");
+    }
+    updateData.yudisiumRegistrationPeriodId = periodIdToCheck;
+  } else {
+    res.status(400);
+    throw new Error("Tidak ada periode pendaftaran yudisium yang aktif saat ini.");
+  }
 
   const mergedData = { ...existingRegistration, ...updateData };
 
@@ -428,6 +545,19 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   }
 
   updateData.isDraft = false;
+  updateData.submittedAt = new Date(); // Record student submission time
+
+  // Clear isEdit permission on response
+  await prisma.yudisiumRegistrationResponse.updateMany({
+    where: {
+      yudisiumRegistrationId: parseInt(id),
+      isEdit: { not: null },
+      deletedAt: null,
+    },
+    data: {
+      isEdit: null,
+    },
+  });
 
   const updatedYudisiumRegistration = await prisma.yudisiumRegistration.update({
     where: { id: parseInt(id) },
@@ -489,15 +619,17 @@ const uploadYudisiumRegistrationFile = asyncHandler(async (req, res) => {
     throw new Error("Slug dan nama wajib diisi");
   }
 
-  const yudisiumRegistrationExists =
-    await prisma.yudisiumRegistration.findUnique({
-      where: { id: parseInt(id) },
-    });
-
-  if (!yudisiumRegistrationExists) {
+  const editCheck = await checkYudisiumEditable(id);
+  if (!editCheck.exists) {
     if (file.path) fs.unlink(file.path, () => {});
     res.status(404);
-    throw new Error("Pendaftaran yudisium tidak ditemukan");
+    throw new Error(editCheck.reason);
+  }
+
+  if (!editCheck.editable) {
+    if (file.path) fs.unlink(file.path, () => {});
+    res.status(403);
+    throw new Error(editCheck.reason);
   }
 
   const existingUpload = await prisma.yudisiumRegistrationUpload.findFirst({

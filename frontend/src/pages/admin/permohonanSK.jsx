@@ -6,7 +6,7 @@ import SidebarAdmin    from '../../components/sidebar/SidebarAdmin';
 import CustomAlert     from '../../components/common/CustomAlert';
 import EvidenceModal   from '../../components/admin/permohonanSK/EvidenceModal';
 import VerifikasiModal from '../../components/admin/permohonanSK/VerifikasiModal';
-import FormulirSKModal from '../../components/admin/permohonanSK/FormulirSKModal';
+import FormulirSKModal from '../../components/admin/permohonanSK/FormulirskModal';
 import { determineStatus, unwrapResponse } from '../../components/admin/permohonanSK/skHelpers';
 
 import {

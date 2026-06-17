@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, CheckCircle2, Circle, Upload, FileText, Download, Loader } from 'lucide-react';
 import { motion } from 'motion/react';
-import { ALUR_STEPS } from '../../common/skStatusHelper';
+import { ALUR_STEPS } from '../../common/Skstatushelper';
 import { downloadSK } from '../../../service/api';
 
 const VerifikasiModal = ({

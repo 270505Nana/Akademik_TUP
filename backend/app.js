@@ -7,6 +7,7 @@ var logger = require("morgan");
 var cors = require("cors");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./docs/swagger");
+const { basicAuthSwagger } = require("./middlewares/basicAuth");
 
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
@@ -28,7 +29,7 @@ app.use(cors());
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
 app.use("/api", apiRouter);
-app.use("/swagger", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/swagger", basicAuthSwagger, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const { errorHandler, notFoundHandler } = require("./middlewares/errorHandler");
 
