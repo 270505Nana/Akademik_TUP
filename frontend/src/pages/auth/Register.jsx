@@ -129,8 +129,16 @@ const RegisterPage = () => {
     return <Navigate to={destination} replace />;
   }
 
+  // const handleChange = (e) => {
+  //   setFormData({ ...formData, [e.target.name]: e.target.value });
+  //   if (alert) setAlert(null);
+  // };
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    // update nomor telp cuma boleh angka biasa ngga boleh negatif (UAT)
+    const { name, value } = e.target;
+    const sanitizedValue = name === "no_telp" ? value.replace(/[^0-9]/g, "") : value;
+    setFormData({ ...formData, [name]: sanitizedValue });
     if (alert) setAlert(null);
   };
 
@@ -289,7 +297,9 @@ const RegisterPage = () => {
                 <i className="bi bi-telephone input-icon" />
                 <input
                   id="reg-phone"
-                  type="number"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   name="no_telp"
                   className="form-input"
                   placeholder="Masukkan nomor HP"
