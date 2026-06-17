@@ -7,15 +7,16 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert  from '../../components/common/CustomAlert';
+import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth }  from '../../context/AuthContext';
-import { getAllSidangRegistrations,getSidangRegistrationResponse,getStudyProgramById,getSidangPeriods,} from '../../service/api';
+import { getAllSidangRegistrations,getSidangRegistrationResponse,getStudyProgramById,} from '../../service/api';
 import { determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,isAdminVerifiable,} from '../../components/admin/sidang/Sidangstatushelper.js';
 import '../../components/admin/sidang/RegistrasiSidang.css';
 
 const FILTER_TABS = [
   { key: '',                                    label: 'Semua'                },
   { key: STATUS_SIDANG.DALAM_PROSES,            label: 'Dalam Proses'         },
-  { key: STATUS_SIDANG.REVISI,                  label: 'Revisi'               },
+  { key: STATUS_SIDANG.PERLU_REVISI,            label: 'Perlu Revisi'         },
   { key: STATUS_SIDANG.REVISI_DIPERBARUI,       label: 'Revisi Diperbarui'    },
   { key: STATUS_SIDANG.SIAP_SIDANG,             label: 'Siap Sidang'          },
   { key: STATUS_SIDANG.PENDAFTARAN_DITERIMA,    label: 'Pendaftaran Diterima' },
@@ -24,11 +25,11 @@ const FILTER_TABS = [
 const STATUS_SORT_ORDER = {
   [STATUS_SIDANG.DALAM_PROSES]         : 1,
   [STATUS_SIDANG.REVISI_DIPERBARUI]    : 2,
-  [STATUS_SIDANG.REVISI]               : 3,
+  [STATUS_SIDANG.PERLU_REVISI]         : 3,
   [STATUS_SIDANG.SIAP_SIDANG]          : 4,
   [STATUS_SIDANG.PENDAFTARAN_DITERIMA] : 5,
-  [STATUS_SIDANG.PROSES_REGISTRASI]    : 6,
-  [STATUS_SIDANG.BELUM_REGISTRASI]     : 7,
+  [STATUS_SIDANG.DRAFT]                : 6,
+  [STATUS_SIDANG.BELUM_DAFTAR]         : 7,
 };
 
 const StatusBadge = ({ status }) => {
@@ -39,9 +40,9 @@ const StatusBadge = ({ status }) => {
       display: 'inline-flex', alignItems: 'center',
       fontSize: 10, fontWeight: 700, padding: '3px 10px',
       borderRadius: 9999,
-      background: cfg.badgeBg,
-      border: `1.5px solid ${cfg.borderColor}`,
-      color: cfg.badgeColor,
+      background: cfg.bg,
+      border: `1.5px solid ${cfg.border}`,
+      color: cfg.color,
       whiteSpace: 'nowrap',
     }}>
       {cfg.label}
@@ -93,7 +94,6 @@ const RegistrasiSidang = () => {
 
   const [registrations, setRegistrations] = useState([]);
   const [responseMap,   setResponseMap]   = useState({}); 
-  const [periodMap,     setPeriodMap]     = useState({}); 
   const [prodiMap,      setProdiMap]      = useState({}); 
 
   const [loading,         setLoading]         = useState(true);
@@ -102,6 +102,7 @@ const RegistrasiSidang = () => {
   const [filterStatus,    setFilterStatus]    = useState('');
   const [currentPage,     setCurrentPage]     = useState(1);
   const [alert, setAlert] = useState({ show: false, type: '', title: '', message: '' });
+  const [modalReg, setModalReg] = useState(null); // registration yang sedang dibuka di modal
 
   const showAlert = useCallback((type, title, message) => {
     setAlert({ show: true, type, title, message });
@@ -131,11 +132,6 @@ const RegistrasiSidang = () => {
       submitted.forEach((r, i) => { if (respArr[i]) rMap[r.id] = respArr[i]; });
       setResponseMap(rMap);
 
-      const allPeriods = await getSidangPeriods().catch(() => []);
-      const prdMap = {};
-      (allPeriods ?? []).forEach(p => { prdMap[p.id] = p; });
-      setPeriodMap(prdMap);
-
       const prodiIds = [...new Set(
         submitted.map(r => r.student?.studyProgramId).filter(Boolean)
       )];
@@ -161,11 +157,11 @@ const RegistrasiSidang = () => {
 
   const getStatus = useCallback((reg) => {
     const response = responseMap[reg.id] ?? null;
-    const periodId = response?.sidangPeriodId ?? reg.sidangPeriodId ?? null;
-    const period   = periodId ? (periodMap[periodId] ?? null) : null;
+    // Period HANYA diambil dari response, bukan dari registration.sidangPeriodId
+    // Source: response.sidangPeriod (nested) dari GET /api/sidang-registration-responses/registration/{id}
     const uploads  = reg.sidangRegistrationUploads ?? [];
-    return determineSidangStatus(reg, response, period, uploads);
-  }, [responseMap, periodMap]);
+    return determineSidangStatus(reg, response, null, uploads);
+  }, [responseMap]);
 
   const filteredList = useMemo(() => {
     return registrations
@@ -302,9 +298,9 @@ const RegistrasiSidang = () => {
                       </tr>
                     ) : (
                       paginated.map((reg, idx) => {
-                        const status    = getStatus(reg);
-                        const prodiName = prodiMap[reg.student?.studyProgramId] ?? '—';
-                        const verifiable = isAdminVerifiable(status);
+                        const status     = getStatus(reg);
+                        const prodiName  = prodiMap[reg.student?.studyProgramId] ?? '—';
+                        const canVerify  = isAdminVerifiable(status);
                         const isVerified = status === STATUS_SIDANG.SIAP_SIDANG
                                         || status === STATUS_SIDANG.PENDAFTARAN_DITERIMA;
 
@@ -342,14 +338,15 @@ const RegistrasiSidang = () => {
                                   <CheckCircle2 size={12} />
                                   Terverifikasi
                                 </button>
-                              ) : (
+                              ) : canVerify ? (
                                 <button
                                   className="vs-btn-verif"
-                                  onClick={() => {
-                                    // TODO: open VerifikasiModal (will be implemented separately)
-                                    showAlert('info', 'Coming Soon', 'Modal verifikasi sedang dalam pengembangan.');
-                                  }}
+                                  onClick={() => setModalReg(reg)}
                                 >
+                                  Verifikasi
+                                </button>
+                              ) : (
+                                <button className="vs-btn-verif" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
                                   Verifikasi
                                 </button>
                               )}
@@ -403,6 +400,27 @@ const RegistrasiSidang = () => {
           >
             <CustomAlert type={alert.type} title={alert.title} message={alert.message} />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Verifikasi Berkas */}
+      <AnimatePresence>
+        {modalReg && (
+          <VerifikasiBerkasModal
+            registration={modalReg}
+            onClose={() => setModalReg(null)}
+            onSaved={({ hasBermasalah }) => {
+              setModalReg(null);
+              showAlert(
+                'success',
+                hasBermasalah ? 'Revisi Dikirim' : 'Verifikasi Berhasil',
+                hasBermasalah
+                  ? 'Permintaan revisi berhasil dikirim ke mahasiswa.'
+                  : 'Pendaftaran sidang mahasiswa telah diverifikasi.',
+              );
+              fetchAll(); // refresh list supaya status terupdate
+            }}
+          />
         )}
       </AnimatePresence>
 

@@ -25,6 +25,7 @@ const listSidangRegistrationResponses = asyncHandler(async (req, res) => {
             },
           },
           sidangRegistrationUploads: true,
+          // nana note : ini buat cek is revisidokumendi FE.
         },
       },
     },

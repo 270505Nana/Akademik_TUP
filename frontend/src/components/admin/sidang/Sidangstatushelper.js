@@ -5,6 +5,35 @@
  *                                                        → SIAP_SIDANG
  */
 
+/**
+ * determineSidangStatus
+ *  1. BELUM_DAFTAR         : registration null
+ *  2. DRAFT                : isDraft=true, belum ada response
+ *  3. PERLU_REVISI         : response ada, isEdit not null, belum reupload
+ *  4. REVISI_DIPERBARUI    : response ada, isEdit not null, sudah reupload
+ *  5. DALAM_PROSES         : isDraft=false, belum ada response
+ *  6. SIAP_SIDANG          : response ada, isEdit null, sidangPeriod ada & isOpen=true
+ *  7. PENDAFTARAN_DITERIMA : response ada, isEdit null, sidangPeriod ada & isOpen=false
+ */
+/**
+ * Alur status:
+ *   BELUM_DAFTAR → DRAFT → DALAM_PROSES → PERLU_REVISI → REVISI_DIPERBARUI
+ *                                        ↓ (admin approve + assign periode)
+ *                                   PENDAFTARAN_DITERIMA (isOpen=false)
+ *                                        ↓ (periode isOpen=true)
+ *                                     SIAP_SIDANG
+ *
+ * Sumber data per field:
+ *   registration  → GET /api/sidang-registrations
+ *                   field: isDraft
+ *   uploads       → registration.sidangRegistrationUploads[]
+ *                   field: updatedAt, createdAt  (untuk deteksi resubmit)
+ *   response      → GET /api/sidang-registration-responses/registration/{registrationId}
+ *                   field: isEdit, message, sidangPeriod (nested object)
+ *   assignedPeriod→ response.sidangPeriod ?? response.sidangPeriodData
+ *                   field: isOpen
+ */
+
 export const STATUS_SIDANG = {
   BELUM_DAFTAR         : 'belum-daftar',
   DRAFT                : 'draft',
@@ -84,9 +113,18 @@ export const hasResubmittedFiles = (uploads = []) => {
   return uploads.some(u => new Date(u.updatedAt) > new Date(u.createdAt));
 };
 
-export const isAdminVerifiable = (registration) => {
-  if (!registration) return false;
-  return registration.isDraft === false;
+/**
+ * isAdminVerifiable
+ * Menerima status string — tombol "Verifikasi" ditampilkan hanya untuk status
+ * yang masih perlu tindakan admin (bukan yang sudah selesai/terverifikasi).
+ * Sumber: hasil determineSidangStatus()
+ */
+export const isAdminVerifiable = (status) => {
+  return (
+    status === STATUS_SIDANG.DALAM_PROSES    ||
+    status === STATUS_SIDANG.PERLU_REVISI    ||
+    status === STATUS_SIDANG.REVISI_DIPERBARUI
+  );
 };
 
 export const isRegistrationEditable = (registration) => {
@@ -96,13 +134,23 @@ export const isRegistrationEditable = (registration) => {
 
 /**
  * determineSidangStatus
- *  1. BELUM_DAFTAR         : registration null
- *  2. DRAFT                : isDraft=true, belum ada response
- *  3. PERLU_REVISI         : response ada, isEdit not null, belum reupload
- *  4. REVISI_DIPERBARUI    : response ada, isEdit not null, sudah reupload
- *  5. DALAM_PROSES         : isDraft=false, belum ada response
- *  6. SIAP_SIDANG          : response ada, isEdit null, sidangPeriod ada & isOpen=true
- *  7. PENDAFTARAN_DITERIMA : response ada, isEdit null, sidangPeriod ada & isOpen=false
+ *
+ * Tabel kondisi:
+ * | isDraft | response | isEdit   | upload updatedAt>createdAt | assignedPeriod | isOpen | Status               |
+ * |---------|----------|----------|----------------------------|----------------|--------|----------------------|
+ * | —       | —        | —        | —                          | —              | —      | BELUM_DAFTAR (reg=null) |
+ * | true    | null     | —        | —                          | —              | —      | DRAFT                |
+ * | false   | null     | —        | ada/tidak                  | —              | —      | DALAM_PROSES         |
+ * | false   | not null | not null | tidak ada                  | —              | —      | PERLU_REVISI         |
+ * | false   | not null | not null | ada                        | —              | —      | REVISI_DIPERBARUI    |
+ * | false   | not null | null     | —                          | null           | —      | DALAM_PROSES         |
+ * | false   | not null | null     | —                          | ada            | true   | SIAP_SIDANG          |
+ * | false   | not null | null     | —                          | ada            | false  | PENDAFTARAN_DITERIMA |
+ *
+ * @param {object|null} registration - data dari GET /api/sidang-registrations
+ * @param {object|null} response     - data dari GET /api/sidang-registration-responses/registration/{id}
+ * @param {object|null} _period      - unused, kept for signature compat
+ * @param {array}       uploads      - registration.sidangRegistrationUploads[]
  */
 export const determineSidangStatus = (
   registration,
@@ -110,31 +158,33 @@ export const determineSidangStatus = (
   _period,
   uploads = [],
 ) => {
-  //Belum pernah registrasi
+  // 1. Belum pernah registrasi
   if (!registration) return STATUS_SIDANG.BELUM_DAFTAR;
 
-  // Draft
+  // 2. Draft — belum disubmit, belum ada response
   if (registration.isDraft && !response) return STATUS_SIDANG.DRAFT;
 
-  //Admin beri catatan revisi
-  if (response?.isEdit) {
-    return hasResubmittedFiles(uploads)
-      ? STATUS_SIDANG.REVISI_DIPERBARUI
-      : STATUS_SIDANG.PERLU_REVISI;
-  }
-
-  // Submit tapi admin belum respons
+  // 3. Sudah submit tapi admin belum beri response sama sekali
   if (!registration.isDraft && !response) return STATUS_SIDANG.DALAM_PROSES;
 
-  // Response ada, isEdit null → berkas valid
-  // Cek admin sudah assign periode sidang?
+  // 4. Response ada → cek isEdit (admin beri catatan revisi)
+  if (response?.isEdit != null) {
+    // isEdit not null = admin sudah kirim permintaan revisi
+    return hasResubmittedFiles(uploads)
+      ? STATUS_SIDANG.REVISI_DIPERBARUI   // mahasiswa sudah reupload
+      : STATUS_SIDANG.PERLU_REVISI;       // mahasiswa belum reupload
+  }
+
+  // 5. Response ada, isEdit null → admin approve, cek apakah sudah assign periode
   const assignedPeriod = response?.sidangPeriod ?? response?.sidangPeriodData ?? null;
 
-  if (assignedPeriod) {
-    // Periode yang dipilihkan admin sedang aktif → Siap Sidang
-    if (assignedPeriod.isOpen === true) return STATUS_SIDANG.SIAP_SIDANG;
-    // Periode ada tapi belum/sudah aktif → Pendaftaran Diterima
-    return STATUS_SIDANG.PENDAFTARAN_DITERIMA;
+  if (!assignedPeriod) {
+    // Response sudah dibuat tapi periode belum di-assign → masih dalam proses verifikasi admin
+    return STATUS_SIDANG.DALAM_PROSES;
   }
-  return STATUS_SIDANG.PENDAFTARAN_DITERIMA;
+
+  // 6. Periode sudah di-assign → cek isOpen
+  return assignedPeriod.isOpen === true
+    ? STATUS_SIDANG.SIAP_SIDANG
+    : STATUS_SIDANG.PENDAFTARAN_DITERIMA;
 };
