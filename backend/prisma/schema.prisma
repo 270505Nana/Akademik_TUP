@@ -39,7 +39,7 @@ model AcademicStaff {
   updatedAt                     DateTime                       @updatedAt
   deletedAt                     DateTime?
   name                          String
-  user                          User                           @relation(fields: [userId], references: [id])
+  user                          User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId                        Int                            @unique
   sktaResponses                 SktaResponse[]
   sidangRegistrationResponses   SidangRegistrationResponse[]
@@ -67,7 +67,7 @@ model Lecturer {
   name                             String
   researchGroup                    ResearchGroup          @relation(fields: [researchGroupId], references: [id])
   researchGroupId                  Int
-  user                             User                   @relation(fields: [userId], references: [id])
+  user                             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId                           Int                    @unique
   students                         Student[]
   pembimbing1SktaRequests          SktaRequest[]          @relation("Pembimbing1SktaRequests")
@@ -115,7 +115,7 @@ model Student {
   tak                           Int?
   studyProgram                  StudyProgram                   @relation(fields: [studyProgramId], references: [id])
   studyProgramId                Int
-  user                          User                           @relation(fields: [userId], references: [id])
+  user                          User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId                        Int                            @unique
   dosenWali                     Lecturer                       @relation(fields: [dosenWaliId], references: [id])
   dosenWaliId                   Int // Dosen Wali
@@ -139,7 +139,7 @@ model SktaRequest {
   deletedAt           DateTime?
   proposalTitleId     String
   proposalTitleEn     String
-  student             Student              @relation(fields: [studentId], references: [id])
+  student             Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId           Int
   dosenPembimbing1    Lecturer             @relation("Pembimbing1SktaRequests", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
   dosenPembimbing1Id  Int
@@ -160,9 +160,9 @@ model SktaRequestUpload {
   filename      String
   slug          String      @default("evidence")
   path          String
-  student       Student?    @relation(fields: [studentId], references: [id])
+  student       Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId     Int?
-  sktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id])
+  sktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id], onDelete: Cascade)
   sktaRequestId Int
 }
 
@@ -176,11 +176,11 @@ model SktaResponse {
   expDate                  DateTime?            @db.Date
   message                  String?
   isEdit                   DateTime?
-  student                  Student?             @relation(fields: [studentId], references: [id])
+  student                  Student?             @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId                Int?
   academicStaff            AcademicStaff        @relation(fields: [academicStaffId], references: [id])
   academicStaffId          Int
-  sktaRequest              SktaRequest          @relation(fields: [sktaRequestId], references: [id])
+  sktaRequest              SktaRequest          @relation(fields: [sktaRequestId], references: [id], onDelete: Cascade)
   sktaRequestId            Int
   sktaResponseUploads      SktaResponseUpload[]
 }
@@ -195,11 +195,11 @@ model SktaResponseUpload {
   filename       String
   slug           String        @default("skta")
   path           String
-  student        Student?      @relation(fields: [studentId], references: [id])
+  student        Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId      Int?
-  sktaRequest    SktaRequest   @relation(fields: [sktaRequestId], references: [id])
+  sktaRequest    SktaRequest   @relation(fields: [sktaRequestId], references: [id], onDelete: Cascade)
   sktaRequestId  Int
-  sktaResponse   SktaResponse? @relation(fields: [sktaResponseId], references: [id])
+  sktaResponse   SktaResponse? @relation(fields: [sktaResponseId], references: [id], onDelete: Cascade)
   sktaResponseId Int?
 }
 
@@ -244,7 +244,7 @@ model SidangRegistration {
   thesisTitleEn               String?
   sidangScheme                String?
   jalurNonSidang              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
-  student                     Student?                     @relation(fields: [studentId], references: [id])
+  student                     Student?                     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId                   Int?
   dosenPembimbing1            Lecturer?                    @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
   dosenPembimbing1Id          Int?
@@ -269,7 +269,7 @@ model SidangRegistrationUpload {
   slug                 String // misal: formValidasiDosenWali
   path                 String
   isValid              Boolean?
-  sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
+  sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
   sidangRegistrationId Int
 }
 
@@ -282,7 +282,7 @@ model SidangRegistrationResponse {
   isEdit               DateTime?
   academicStaff        AcademicStaff      @relation(fields: [academicStaffId], references: [id])
   academicStaffId      Int
-  sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id])
+  sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
   sidangRegistrationId Int
 }
 
@@ -330,7 +330,7 @@ model YudisiumRegistration {
   jalurNonYudisium              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Pameran", "Lomba", "HKI"]
   eviden_cumlaude               String?                        @db.Text
   // wajib
-  student                       Student?                       @relation(fields: [studentId], references: [id])
+  student                       Student?                       @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId                     Int?
   dosenPembimbing1              Lecturer?                      @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
   dosenPembimbing1Id            Int?
@@ -354,7 +354,7 @@ model YudisiumRegistrationUpload {
   filename               String
   slug                   String // misal: formValidasiDosenWali
   path                   String
-  yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
+  yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id], onDelete: Cascade)
   yudisiumRegistrationId Int
 }
 
@@ -367,7 +367,7 @@ model YudisiumRegistrationResponse {
   isEdit                 DateTime?
   academicStaff          AcademicStaff        @relation(fields: [academicStaffId], references: [id])
   academicStaffId        Int
-  yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id])
+  yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id], onDelete: Cascade)
   yudisiumRegistrationId Int
 }
 
@@ -379,7 +379,7 @@ model FormulirPenerbitanSktaUpload {
   name      String
   filename  String
   path      String
-  student   Student   @relation(fields: [studentId], references: [id])
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId Int
 }
 
@@ -391,7 +391,7 @@ model DokumenValidasiSktaUpload {
   name      String
   filename  String
   path      String
-  student   Student   @relation(fields: [studentId], references: [id])
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId Int
 }
 
@@ -403,7 +403,7 @@ model SklUpload {
   name      String
   filename  String
   path      String
-  student   Student   @relation(fields: [studentId], references: [id])
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId Int
 }
 
@@ -415,7 +415,7 @@ model TranskripUpload {
   name      String
   filename  String
   path      String
-  student   Student   @relation(fields: [studentId], references: [id])
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId Int
 }
 
