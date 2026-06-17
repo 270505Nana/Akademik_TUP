@@ -621,7 +621,7 @@
   gap: 4px;
 }
 
-.btn-page {
+/* .btn-page {
   width: 32px;
   height: 32px;
   display: flex;
@@ -653,7 +653,19 @@
 .btn-page:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+} */
+
+.btn-page {
+  min-width: 32px; height: 32px; display: flex;
+  align-items: center; justify-content: center;
+  border: 1px solid #CBD5E1; border-radius: 6px;
+  background: #fff; color: #374151;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; padding: 0 6px;
 }
+.btn-page:hover:not(:disabled) { background: #F8FAFC; border-color: #94A3B8; }
+.btn-page:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-page.active { background: #C0182A; color: #fff; border-color: #C0182A; }
 
 .ev-modal-overlay {
   position: fixed;

@@ -12,7 +12,6 @@ import { useAuth }           from '../../context/AuthContext';
 import {
   getAllSidangRegistrations,
   getSidangRegistrationResponse,
-  getStudyProgramById,
   getSidangPeriods,
 } from '../../service/api';
 import {
@@ -22,7 +21,6 @@ import {
 } from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../../components/admin/sidang/RegistrasiSidang.css';
 
-// ─── Konstanta ───────────────────────────────────────────────────────────────
 
 const FILTER_TABS = [
   { key: '',                                 label: 'Semua'                },
@@ -43,7 +41,6 @@ const STATUS_SORT_ORDER = {
 
 const PAGE_SIZE = 8;
 
-// ─── Sub-components (desain tidak berubah) ───────────────────────────────────
 
 const StatusBadge = ({ status }) => {
   const cfg = SIDANG_STATUS_CONFIG[status];
@@ -99,8 +96,6 @@ const JalurBadge = ({ jalur }) => {
   );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 const RegistrasiSidang = () => {
   const { user, profile, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -110,14 +105,13 @@ const RegistrasiSidang = () => {
   const [responseMap,   setResponseMap]   = useState({});
   const [periodMap,     setPeriodMap]     = useState({});
   const [prodiMap,      setProdiMap]      = useState({});
-
-  // UI state
   const [loading,         setLoading]         = useState(true);
   const [search,          setSearch]          = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [filterStatus,    setFilterStatus]    = useState('');
   const [currentPage,     setCurrentPage]     = useState(1);
   const [alert,           setAlert]           = useState({ show: false, type: '', title: '', message: '' });
+
   const [selectedReg, setSelectedReg] = useState(null);
 
   const showAlert = useCallback((type, title, message) => {
@@ -125,43 +119,49 @@ const RegistrasiSidang = () => {
     setTimeout(() => setAlert(p => ({ ...p, show: false })), 4000);
   }, []);
 
-
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search.trim().toLowerCase()), 300);
     return () => clearTimeout(t);
   }, [search]);
 
-
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const list = await getAllSidangRegistrations();
-      // INI SEMENTARA BUAT TESTING DOANKKKK, NANA JGN LUPA APUS YAHH
-      const submitted = (list ?? []).filter(r => r.isDraft === false || r.isDraft === true);
 
+      const allList = list ?? [];
+
+      // Fetch response untuk semua registrasi secara paralel
       const respArr = await Promise.all(
-        submitted.map(r => getSidangRegistrationResponse(r.id).catch(() => null))
+        allList.map(r => getSidangRegistrationResponse(r.id).catch(() => null))
       );
+
+      // Build responseMap
       const rMap = {};
-      submitted.forEach((r, i) => { if (respArr[i]) rMap[r.id] = respArr[i]; });
+      allList.forEach((r, i) => { if (respArr[i]) rMap[r.id] = respArr[i]; });
       setResponseMap(rMap);
 
+      // Filter: tampilkan hanya yang sudah pernah disubmit
+      const visible = allList.filter((r, i) => {
+        const hasResponse = !!respArr[i];
+        // Pernah submit = isDraft false, ATAU isDraft true tapi sudah punya response
+        return !r.isDraft || hasResponse;
+      });
+
+      // Fetch semua periode sidang
       const allPeriods = await getSidangPeriods().catch(() => []);
       const prdMap = {};
       (allPeriods ?? []).forEach(p => { prdMap[p.id] = p; });
       setPeriodMap(prdMap);
 
-      const prodiIds = [...new Set(
-        submitted.map(r => r.student?.studyProgramId).filter(Boolean)
-      )];
-      const prodiArr = await Promise.all(
-        prodiIds.map(id => getStudyProgramById(id).catch(() => null))
-      );
       const prMap = {};
-      prodiIds.forEach((id, i) => { if (prodiArr[i]) prMap[id] = prodiArr[i].name ?? '—'; });
+      visible.forEach(r => {
+        const name = r.student?.studyProgram?.name ?? null;
+        if (name) prMap[r.studentId] = name;
+      });
       setProdiMap(prMap);
 
-      setRegistrations(submitted);
+      setRegistrations(visible);
     } catch (err) {
       if ([401, 403].includes(err.response?.status)) logout();
       showAlert('error', 'Gagal Memuat Data', 'Tidak dapat mengambil data registrasi sidang.');
@@ -174,13 +174,18 @@ const RegistrasiSidang = () => {
     if (user?.role === 'ACADEMIC_STAFF') fetchAll();
   }, [user]);
 
-  // determineSidangStatus 3 param: (registration, response, period)
   const getStatus = useCallback((reg) => {
     const response = responseMap[reg.id] ?? null;
-    const periodId = response?.sidangPeriodId ?? reg.sidangPeriodId ?? null;
+    // sidangPeriodId ada di registration (bukan di response)
+    const periodId = reg.sidangPeriodId ?? null;
     const period   = periodId ? (periodMap[periodId] ?? null) : null;
     return determineSidangStatus(reg, response, period);
   }, [responseMap, periodMap]);
+
+  const getProdiName = useCallback((reg) => {
+    if (reg.student?.studyProgram?.name) return reg.student.studyProgram.name;
+    return prodiMap[reg.studentId] ?? '—';
+  }, [prodiMap]);
 
   const filteredList = useMemo(() => {
     return registrations
@@ -217,14 +222,14 @@ const RegistrasiSidang = () => {
   };
 
   const getSubmitDate = (reg) =>
-    reg.sidangRegistrationUploads?.[0]?.createdAt ?? reg.createdAt ?? null;
+    reg.submittedAt ?? reg.sidangRegistrationUploads?.[0]?.createdAt ?? reg.createdAt ?? null;
 
   const handleModalSaved = useCallback(() => {
     setSelectedReg(null);
     fetchAll();
     showAlert('success', 'Berhasil', 'Verifikasi berkas berhasil disimpan.');
   }, [fetchAll, showAlert]);
- 
+
   return (
     <div className="vs-root">
       <SidebarAdmin isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -284,6 +289,7 @@ const RegistrasiSidang = () => {
 
               <div className="vs-table-divider" />
 
+              {/* Table */}
               <div className="vs-table-wrap">
                 <table className="vs-table">
                   <thead>
@@ -294,7 +300,7 @@ const RegistrasiSidang = () => {
                       <th>JALUR SIDANG</th>
                       <th>SKEMA</th>
                       <th style={{ textAlign: 'center' }}>STATUS</th>
-                      <th>TANGGAL</th>
+                      <th>TANGGAL REGIST</th>
                       <th style={{ textAlign: 'center' }}>AKSI</th>
                     </tr>
                   </thead>
@@ -322,7 +328,7 @@ const RegistrasiSidang = () => {
                     ) : (
                       paginated.map((reg, idx) => {
                         const status     = getStatus(reg);
-                        const prodiName  = prodiMap[reg.student?.studyProgramId] ?? '—';
+                        const prodiName  = getProdiName(reg);
                         const isVerified = status === STATUS_SIDANG.SIAP_SIDANG
                                         || status === STATUS_SIDANG.PENDAFTARAN_DITERIMA;
 
@@ -365,7 +371,9 @@ const RegistrasiSidang = () => {
                                   className="vs-btn-verif"
                                   onClick={() => setSelectedReg(reg)}
                                 >
-                                  Verifikasi
+                                  {status === STATUS_SIDANG.REVISI_DIPERBARUI
+                                    ? 'Tinjau Revisi'
+                                    : 'Verifikasi'}
                                 </button>
                               )}
                             </td>
@@ -377,6 +385,7 @@ const RegistrasiSidang = () => {
                 </table>
               </div>
 
+              {/* Pagination */}
               {filteredList.length > 0 && (
                 <div className="vs-footer">
                   <span className="vs-page-info">
@@ -406,6 +415,7 @@ const RegistrasiSidang = () => {
         </div>
       </div>
 
+      {/* Alert toast */}
       <AnimatePresence>
         {alert.show && (
           <motion.div
@@ -419,6 +429,7 @@ const RegistrasiSidang = () => {
         )}
       </AnimatePresence>
 
+      {/* Modal Verifikasi Berkas */}
       <AnimatePresence>
         {selectedReg && (
           <VerifikasiBerkasModal
