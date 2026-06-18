@@ -18,9 +18,8 @@ import {
   determineSidangStatus,
   STATUS_SIDANG,
   SIDANG_STATUS_CONFIG,
-} from '../../components/admin/sidang/SidangStatusHelper.js';
-import '../../components/admin/sidang/RegistrasiSidang.css';
-
+} from '../../components/admin/sidang/Sidangstatushelper.js';
+import '../../components/admin/sidang/Registrasisidang.css';
 
 const FILTER_TABS = [
   { key: '',                                 label: 'Semua'                },
