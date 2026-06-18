@@ -67,29 +67,32 @@ const StepIndicator = ({ current }) => {
 
 //  InfoCard 
 
-const InfoCard = ({ label, value, icon: Icon, highlight }) => (
-  <div style={{
-    background: '#F8FAFC', border: '1px solid #E2E8F0',
-    borderRadius: 10, padding: '14px 16px',
-    display: 'flex', alignItems: 'flex-start', gap: 12,
-  }}>
+const InfoCard = ({ label, value, icon: Icon, highlight }) => {
+  const ActiveIcon = Icon;
+  return (
     <div style={{
-      width: 36, height: 36, borderRadius: 8,
-      background: '#FEF2F2', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      background: '#F8FAFC', border: '1px solid #E2E8F0',
+      borderRadius: 10, padding: '14px 16px',
+      display: 'flex', alignItems: 'flex-start', gap: 12,
     }}>
-      <Icon size={18} color="#C0182A" />
-    </div>
-    <div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 }}>
-        {label}
+      <div style={{
+        width: 36, height: 36, borderRadius: 8,
+        background: '#FEF2F2', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <ActiveIcon size={18} color="#C0182A" />
       </div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: highlight ? '#C0182A' : '#1E293B', lineHeight: 1.4 }}>
-        {value || '-'}
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 }}>
+          {label}
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: highlight ? '#C0182A' : '#1E293B', lineHeight: 1.4 }}>
+          {value || '-'}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 //  Step 1: Data Diri & Akademik 
 
@@ -562,7 +565,7 @@ const VerifikasiBerkasModal = ({
   const [existingResponseId, setExistingResponseId] = useState(null);
   const [uploads,          setUploads]          = useState([]);
   const [loadingUploads,   setLoadingUploads]   = useState(false);
-  const [prodiName,        setProdiName]        = useState('');
+  const prodiName = registration?.student?.studyProgram?.name || '—';
 
   const periods = Object.values(periodMap ?? {});
 

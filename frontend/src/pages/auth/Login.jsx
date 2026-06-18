@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link, Navigate, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import {
   BsMortarboardFill,
   BsPersonBadgeFill,

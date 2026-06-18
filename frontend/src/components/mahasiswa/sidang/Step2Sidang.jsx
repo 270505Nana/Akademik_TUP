@@ -14,7 +14,6 @@ import { uploadSidangRegistrationFile } from "../../../service/api";
 
 const DocUploadPanel = ({
   sectionTitle,
-  sectionId,
   documents,
   activeDocId,
   onSetActive,

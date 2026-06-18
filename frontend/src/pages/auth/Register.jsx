@@ -12,7 +12,7 @@ import CustomAlert from "../../components/common/CustomAlert";
 import "./Auth.css";
 
 // Validasi special karakter
-const SPECIAL_CHAR_REGEX = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+const SPECIAL_CHAR_REGEX = /[^a-zA-Z0-9\s]/;
 
 // ── Email domain yang diizinkan ────────────────────────────────────────────────
 const ALLOWED_DOMAINS = [

@@ -152,7 +152,7 @@ export const getSKTAResponse = async (sktaRequestId) => {
 };
 
 // ------------------------------------------- DOSEN -------------------------------------------
-export const getLecturersData = async (userId) => {
+export const getLecturersData = async () => {
   const response = await api.get(`/api/lecturers`);
   return response.data;
 };

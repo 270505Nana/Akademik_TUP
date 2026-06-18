@@ -1,4 +1,5 @@
 
+/* eslint-disable react-refresh/only-export-components */
 import React, { useReducer, useEffect } from 'react';
 import { initialFormState, formReducer } from '../hooks/useSidangReducer';
 

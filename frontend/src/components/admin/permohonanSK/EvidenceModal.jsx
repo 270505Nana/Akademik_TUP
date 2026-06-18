@@ -4,19 +4,17 @@ import { motion } from 'motion/react';
 import { downloadEvidence, getLecturers } from '../../../service/api';
 
 const EvidenceModal = ({ item, onClose }) => {
-  if (!item) return null;
-
-  const student         = item.student || {};
-  const sktaRequest     = item.sktaRequest || {};
-  const evidenceUploads = item.evidenceUploads?.length
-    ? item.evidenceUploads
-    : (sktaRequest.sktaRequestUploads || []);
-
   const [selectedPreview,  setSelectedPreview]  = useState(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState(null);
   const [errorMsg,         setErrorMsg]         = useState({});
   const [dosen1,           setDosen1]           = useState(null);
   const [dosen2,           setDosen2]           = useState(null);
+
+  const student         = item?.student || {};
+  const sktaRequest     = item?.sktaRequest || {};
+  const evidenceUploads = item?.evidenceUploads?.length
+    ? item.evidenceUploads
+    : (sktaRequest.sktaRequestUploads || []);
 
   // Resolve nama dosen pembimbing dari ID
   useEffect(() => {
@@ -29,6 +27,8 @@ const EvidenceModal = ({ item, onClose }) => {
       if (d2Id) setDosen2(list.find(d => d.id === Number(d2Id)) ?? null);
     }).catch(() => {});
   }, [sktaRequest?.dosenPembimbing1Id, sktaRequest?.dosenPembimbing2Id]);
+
+  if (!item) return null;
 
   const formatDosen = (d) => {
     if (!d) return '-';
@@ -189,8 +189,8 @@ const EvidenceModal = ({ item, onClose }) => {
                         <button
                           className="ev-btn-preview"
                           onClick={() => openPreview(upload)}
-                          disabled={!!loadingPreviewId}
-                          style={!!loadingPreviewId ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                          disabled={Boolean(loadingPreviewId)}
+                          style={loadingPreviewId ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                         >
                           {isLoading
                             ? <><Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> Memuat...</>
@@ -200,8 +200,8 @@ const EvidenceModal = ({ item, onClose }) => {
                         <button
                           className="ev-btn-download"
                           onClick={() => handleDownload(upload)}
-                          disabled={!!loadingPreviewId}
-                          style={!!loadingPreviewId ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                          disabled={Boolean(loadingPreviewId)}
+                          style={loadingPreviewId ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                         >
                           <Download size={14} /> Unduh
                         </button>

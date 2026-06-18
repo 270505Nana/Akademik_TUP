@@ -205,7 +205,7 @@ const SklTranskrip = () => {
               exit={{ scale: 0.9, opacity: 0 }}
             >
               <div className="skl-modal-header">
-                <h3>Unggah {modalType} Mahasiswa</h3>
+                <h3>Unggah {modalType} — {selectedStudent?.name || 'Mahasiswa'}</h3>
                 <button className="btn-close-modal" onClick={() => setIsModalOpen(false)}>
                   <X size={20} />
                 </button>

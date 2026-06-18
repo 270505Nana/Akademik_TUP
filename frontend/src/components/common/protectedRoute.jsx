@@ -28,16 +28,20 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
       !serverCheckDone &&
       !isServerChecking
     ) {
-      setIsServerChecking(true);
-      fetchAndLoadStudent(user.id).finally(() => {
-        setIsServerChecking(false);
+      setTimeout(() => {
+        setIsServerChecking(true);
+        fetchAndLoadStudent(user.id).finally(() => {
+          setIsServerChecking(false);
+          setServerCheckDone(true);
+        });
+      }, 0);
+    }
+    if (!isStudentLoading && isComplete && !serverCheckDone) {
+      setTimeout(() => {
         setServerCheckDone(true);
-      });
+      }, 0);
     }
-    if (!isStudentLoading && isComplete) {
-      setServerCheckDone(true);
-    }
-  }, [isStudentLoading, isComplete, isAuthenticated, user?.id, requireCompleteProfile, fetchAndLoadStudent]);
+  }, [isStudentLoading, isComplete, isAuthenticated, user?.id, requireCompleteProfile, fetchAndLoadStudent, serverCheckDone, isServerChecking]);
 
   // Jika belum login
   if (!isAuthenticated) {
