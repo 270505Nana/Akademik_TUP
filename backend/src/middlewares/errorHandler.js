@@ -1,25 +1,19 @@
-// Global error handling middleware
-export const errorHandler = (err, req, res, next) => {
-  const statusCode = err.status || err.statusCode || 500;
+const errorHandler = (err, req, res, next) => {
+  const statusCode = err.status || res.statusCode === 200 ? 500 : res.statusCode;
   
-  const response = {
-    success: false,
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  };
+  res.status(statusCode);
 
-  // Optional log for debugging
-  console.error(`[Error Handler] ${statusCode} - ${err.message}`);
-  if (process.env.NODE_ENV === 'development' && err.stack) {
-    console.error(err.stack);
-  }
-
-  res.status(statusCode).json(response);
+  res.json({
+    message: err.message,
+    stack: process.env.NODE_ENV === "production" ? null : err.stack,
+  });
 };
 
-// Middleware for handling 404 (Not Found) routes
-export const notFoundHandler = (req, res, next) => {
+const notFoundHandler = (req, res, next) => {
   const error = new Error(`Not Found - ${req.originalUrl}`);
-  error.status = 404;
+  res.status(404);
   next(error);
 };
+
+export { errorHandler,
+  notFoundHandler, };
