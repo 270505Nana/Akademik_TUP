@@ -142,7 +142,7 @@ const Step1 = ({ registration, prodiName }) => {
 
 //  Step 2: Periksa Berkas & Dokumen 
 
-const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDownload, loadingFileId, loadingUploads }) => (
+const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDownload, loadingFileId, loadingUploads, fileError }) => (
   <div style={{ display: 'flex', gap: 0, minHeight: 420 }}>
     {/* Left panel — daftar berkas */}
     <div style={{
@@ -222,7 +222,7 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
     </div>
 
     {/* Right panel — preview */}
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
       {previewFile ? (
         <>
           {/* Preview header */}
@@ -265,9 +265,15 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
             </button>
           </div>
 
-          {/* Frame preview */}
-          <div style={{ flex: 1, background: '#F8FAFC', position: 'relative', overflow: 'hidden' }}>
-            {previewFile.blobUrl ? (
+          {/* Frame preview — paddingBottom beri ruang untuk floating bar */}
+          <div style={{ flex: 1, background: '#F8FAFC', position: 'relative', overflow: 'hidden', paddingBottom: 56 }}>
+            {fileError ? (
+              /* Error: file tidak ditemukan */
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#DC2626' }}>File Tidak Ditemukan.</span>
+                <span style={{ fontSize: 12, color: '#9CA3AF' }}>File mungkin sudah dihapus atau tidak tersedia di server.</span>
+              </div>
+            ) : previewFile.blobUrl ? (
               previewFile.type === 'pdf' ? (
                 <iframe
                   src={previewFile.blobUrl}
@@ -281,44 +287,72 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
                   style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', margin: 'auto', display: 'block', padding: 16 }}
                 />
               )
-            ) : loadingFileId === previewFile.id ? (
+            ) : (
+              /* Loading — auto-load sedang berjalan */
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, color: '#9CA3AF' }}>
                 <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
                 <span style={{ fontSize: 13 }}>Memuat berkas...</span>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: '#9CA3AF' }}>
-                <Eye size={32} strokeWidth={1} />
-                <span style={{ fontSize: 13 }}>Klik tombol di bawah untuk memuat preview berkas</span>
-                <button
-                  onClick={() => onPreview(previewFile, true)}
-                  style={{
-                    padding: '8px 20px', borderRadius: 9999, fontSize: 12, fontWeight: 700,
-                    background: '#C0182A', color: '#fff', border: 'none', cursor: 'pointer',
-                  }}
-                >
-                  <Eye size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                  Lihat Preview
-                </button>
-              </div>
             )}
           </div>
 
-          {/* Verifikasi toggle */}
+          {/* Verifikasi toggle + navigasi — floating di bottom right panel */}
           <div style={{
-            padding: '12px 16px', borderTop: '1px solid #E2E8F0',
-            background: '#fff', flexShrink: 0,
-            display: 'flex', alignItems: 'center', gap: 12,
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            padding: '10px 14px', borderTop: '1px solid #E2E8F0',
+            background: 'rgba(255,255,255,0.97)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap',
+            zIndex: 10,
+            boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
           }}>
+            {/* Navigasi ← → */}
+            <div style={{ display: 'flex', gap: 4, marginRight: 4 }}>
+              <button
+                onClick={() => {
+                  const idx = uploads.findIndex(u => u.id === previewFile.id);
+                  if (idx > 0) onPreview(uploads[idx - 1]);
+                }}
+                disabled={uploads.findIndex(u => u.id === previewFile.id) === 0}
+                title="Berkas sebelumnya"
+                style={{
+                  width: 30, height: 30, borderRadius: 6, border: '1px solid #E2E8F0',
+                  background: '#fff', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  color: uploads.findIndex(u => u.id === previewFile.id) === 0 ? '#D1D5DB' : '#374151',
+                  fontSize: 14, fontWeight: 700,
+                }}
+              >
+                ←
+              </button>
+              <button
+                onClick={() => {
+                  const idx = uploads.findIndex(u => u.id === previewFile.id);
+                  if (idx < uploads.length - 1) onPreview(uploads[idx + 1]);
+                }}
+                disabled={uploads.findIndex(u => u.id === previewFile.id) === uploads.length - 1}
+                title="Berkas selanjutnya"
+                style={{
+                  width: 30, height: 30, borderRadius: 6, border: '1px solid #E2E8F0',
+                  background: '#fff', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  color: uploads.findIndex(u => u.id === previewFile.id) === uploads.length - 1 ? '#D1D5DB' : '#374151',
+                  fontSize: 14, fontWeight: 700,
+                }}
+              >
+                →
+              </button>
+            </div>
+
             <span style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginRight: 4 }}>
-              Verifikasi Berkas Ini:
+              Verifikasi:
             </span>
 
             <button
               onClick={() => onToggle(previewFile.id, BERKAS_STATUS.SESUAI)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700,
                 border: `1.5px solid ${berkasStatuses[previewFile.id] === BERKAS_STATUS.SESUAI ? '#16A34A' : '#D1D5DB'}`,
                 background: berkasStatuses[previewFile.id] === BERKAS_STATUS.SESUAI ? '#DCFCE7' : '#fff',
                 color: berkasStatuses[previewFile.id] === BERKAS_STATUS.SESUAI ? '#16A34A' : '#6B7280',
@@ -333,14 +367,14 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
               }}>
                 {berkasStatuses[previewFile.id] === BERKAS_STATUS.SESUAI && <Check size={10} color="#fff" strokeWidth={3} />}
               </div>
-              Sesuai / Valid (True)
+              Sesuai / Valid
             </button>
 
             <button
               onClick={() => onToggle(previewFile.id, BERKAS_STATUS.BERMASALAH)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700,
                 border: `1.5px solid ${berkasStatuses[previewFile.id] === BERKAS_STATUS.BERMASALAH ? '#DC2626' : '#D1D5DB'}`,
                 background: berkasStatuses[previewFile.id] === BERKAS_STATUS.BERMASALAH ? '#FEE2E2' : '#fff',
                 color: berkasStatuses[previewFile.id] === BERKAS_STATUS.BERMASALAH ? '#DC2626' : '#6B7280',
@@ -355,8 +389,13 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
               }}>
                 {berkasStatuses[previewFile.id] === BERKAS_STATUS.BERMASALAH && <Check size={10} color="#fff" strokeWidth={3} />}
               </div>
-              Bermasalah (False)
+              Bermasalah
             </button>
+
+            {/* Counter posisi */}
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9CA3AF', whiteSpace: 'nowrap' }}>
+              {uploads.findIndex(u => u.id === previewFile.id) + 1} / {uploads.length}
+            </span>
           </div>
         </>
       ) : (
@@ -562,7 +601,10 @@ const VerifikasiBerkasModal = ({
   const [existingResponseId, setExistingResponseId] = useState(null);
   const [uploads,          setUploads]          = useState([]);
   const [loadingUploads,   setLoadingUploads]   = useState(false);
-  const [prodiName,        setProdiName]        = useState('');
+  const [fileError,        setFileError]        = useState(null); // null | string
+
+  // prodiName diambil langsung dari registration prop
+  const prodiName = registration?.student?.studyProgram?.name ?? '-';
 
   const periods = Object.values(periodMap ?? {});
 
@@ -616,9 +658,10 @@ const VerifikasiBerkasModal = ({
       .catch(() => {});
   }, [registration?.id]);
 
+  // Auto-load file pertama saat uploads tersedia
   useEffect(() => {
     if (uploads.length > 0 && !previewFile) {
-      setPreviewFile(uploads[0]);
+      handlePreview(uploads[0]);
     }
   }, [uploads]);
 
@@ -637,11 +680,15 @@ const VerifikasiBerkasModal = ({
     }));
   };
 
-  const handlePreview = useCallback(async (upload, forceLoad = false) => {
+  const handlePreview = useCallback(async (upload) => {
+    // Set file aktif & reset error
     setPreviewFile(prev => prev?.id === upload.id ? prev : upload);
+    setFileError(null);
 
-    if (upload.blobUrl && !forceLoad) return;
+    // Sudah punya blobUrl → tidak perlu fetch ulang
+    if (upload.blobUrl) return;
 
+    // Auto-load: langsung fetch tanpa perlu klik tombol
     setLoadingFileId(upload.id);
     try {
       const blob    = await downloadSidangRegistrationUpload(upload.id);
@@ -653,6 +700,7 @@ const VerifikasiBerkasModal = ({
       setUploads(prev => prev.map(u => u.id === upload.id ? enriched : u));
     } catch (err) {
       console.error('Preview error:', err);
+      setFileError('File Tidak Ditemukan.');
     } finally {
       setLoadingFileId(null);
     }
@@ -814,6 +862,7 @@ const VerifikasiBerkasModal = ({
                   onPreview={handlePreview}
                   onDownload={handleDownload}
                   loadingFileId={loadingFileId}
+                  fileError={fileError}
                 />
               </motion.div>
             )}
