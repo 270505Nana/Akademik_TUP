@@ -2,7 +2,6 @@ import React from 'react';
 import { AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 
 export default function CustomAlert({ type = 'error', title, message, style }) {
-  const isError = type === 'error';
   const isSuccess = type === 'success';
   const isWarning = type === 'warning';
 

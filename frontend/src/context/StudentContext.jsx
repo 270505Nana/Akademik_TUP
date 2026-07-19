@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useContext, useState } from "react";
 import {
   getStudentData,
   getLecturers,
@@ -9,31 +10,32 @@ import {
 const StudentContext = createContext(undefined);
 
 export const StudentProvider = ({ children }) => {
-  const [student, setStudent] = useState(null);
-  const [isComplete, setIsComplete] = useState(false);
-  const [isStudentLoading, setIsStudentLoading] = useState(true);
-  const [sktaRequestId, setSktaRequestId] = useState(null); //save sktarequestid
-
-  useEffect(() => {
+  const [student, setStudent] = useState(() => {
     const savedData = localStorage.getItem("student_data");
     if (savedData) {
       try {
-        const parsed = JSON.parse(savedData);
-        setStudent(parsed);
-        setIsComplete(true);
+        return JSON.parse(savedData);
       } catch (e) {
         console.error("Gagal parse student_data dari localStorage:", e);
         localStorage.removeItem("student_data");
       }
     }
-    // cek request yg ada sblmnya
-    // const savedSktaRequestId = localStorage.getItem('skta_request_id');
-    // if (savedSktaRequestId) {
-    //   setSktaRequestId(Number(savedSktaRequestId));
-    // }
-
-    setIsStudentLoading(false);
-  }, []);
+    return null;
+  });
+  const [isComplete, setIsComplete] = useState(() => {
+    const savedData = localStorage.getItem("student_data");
+    if (savedData) {
+      try {
+        JSON.parse(savedData);
+        return true;
+      } catch {
+        // Handled in student initialization
+      }
+    }
+    return false;
+  });
+  const [isStudentLoading, setIsStudentLoading] = useState(false);
+  const [sktaRequestId, setSktaRequestId] = useState(null); //save sktarequestid
 
   const updateStudent = (data) => {
     setStudent(data);

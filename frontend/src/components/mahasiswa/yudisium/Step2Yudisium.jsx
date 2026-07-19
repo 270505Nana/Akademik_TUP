@@ -48,7 +48,7 @@ const SKEMA_CONFIG = {
   }
 };
 
-const UploadSection = ({ title, docs, berkasData, onFileChange, sectionId, fileError }) => {
+const UploadSection = ({ title, docs, berkasData, onFileChange, fileError }) => {
   const [activeDocId, setActiveDocId] = useState(docs[0].id);
   const currentDoc = docs.find(d => idToString(d.id) === idToString(activeDocId)) || docs[0];
   const isCompleted = (name) => !!berkasData?.[name];

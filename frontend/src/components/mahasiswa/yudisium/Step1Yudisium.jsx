@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { useYudisiumForm } from '../../../context/YudisiumFormContext';
 import { BsPerson, BsHash, BsMortarboard, BsAward, BsBuildings, BsChevronLeft, BsChevronRight, BsCheck, BsInfoCircleFill } from 'react-icons/bs';
-import { useNavigate } from 'react-router-dom';
 import CustomAlert from '../../common/CustomAlert';
-
 const Step1Yudisium = () => {
   const { state, dispatch } = useYudisiumForm();
-  const navigate = useNavigate();
   const { data } = state;
   const [error, setError] = useState(false);
 

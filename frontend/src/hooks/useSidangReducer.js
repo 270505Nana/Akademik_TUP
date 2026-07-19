@@ -75,7 +75,7 @@ export function formReducer(state, action) {
           [action.section]: action.value,
         },
       };
-    case "UPLOAD_DOCUMENT":
+    case "UPLOAD_DOCUMENT": {
       // Find the document being uploaded
       const targetDoc = state.documents.find((d) => d.id === action.docId);
 
@@ -125,14 +125,16 @@ export function formReducer(state, action) {
         return doc;
       });
       return { ...state, documents: uploadedDocs };
-    case "SET_DOCUMENT_ERROR":
+    }
+    case "SET_DOCUMENT_ERROR": {
       const errorDocs = state.documents.map((doc) =>
         doc.id === action.docId
           ? { ...doc, error: action.error, fileUrl: null, status: "pending" }
           : doc,
       );
       return { ...state, documents: errorDocs };
-    case "CLEAR_DOCUMENT_STATUS":
+    }
+    case "CLEAR_DOCUMENT_STATUS": {
       const clearedDocs = state.documents.map((doc) =>
         doc.id === action.docId
           ? {
@@ -146,11 +148,13 @@ export function formReducer(state, action) {
           : doc,
       );
       return { ...state, documents: clearedDocs };
-    case "COMPLETE_DOCUMENT":
+    }
+    case "COMPLETE_DOCUMENT": {
       const completedDocs = state.documents.map((doc) =>
         doc.id === action.docId ? { ...doc, status: "completed" } : doc,
       );
       return { ...state, documents: completedDocs };
+    }
     case "RESTORE_DRAFT":
       return action.payload;
     default:
