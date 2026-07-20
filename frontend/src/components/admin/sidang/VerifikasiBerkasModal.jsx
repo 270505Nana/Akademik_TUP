@@ -13,10 +13,20 @@ import {
   createSidangRegistrationResponse,
   updateSidangRegistrationResponse,
 } from '../../../service/api';
+import { DOCUMENT_CONFIG, SECTIONS } from '../../../requirement/sidangDocument';
 
 
 
 const BERKAS_STATUS = { SESUAI: 'sesuai', BERMASALAH: 'bermasalah', UNCHECKED: 'unchecked' };
+
+// Flatten  dokumen dari DOCUMENT_CONFIG → Map<slug, namaResmi>
+const SLUG_TO_NAME = Object.values(DOCUMENT_CONFIG)
+  .flat()
+  .reduce((acc, doc) => { acc[doc.slug] = doc.name; return acc; }, {});
+
+// Helper:  nama resmi berkas dari slug, fallback ke upload.name
+const getBerkasName = (upload) =>
+  SLUG_TO_NAME[upload.slug] || upload.name || upload.filename || 'Berkas';
 
 const CLR = {
   red    : '#C0182A',
@@ -74,6 +84,7 @@ const StepIndicator = ({ current }) => (
   </div>
 );
 
+//  InfoCard 
 
 const InfoCard = ({ label, value, icon: Icon, highlight }) => (
   <div style={{
@@ -99,7 +110,7 @@ const InfoCard = ({ label, value, icon: Icon, highlight }) => (
   </div>
 );
 
-// Step 1: Data Diri & Akademik 
+//  Step 1: Data Diri & Akademik 
 
 const Step1 = ({ registration, prodiName }) => {
   const s = registration?.student || {};
@@ -185,13 +196,14 @@ const NavBtn = ({ onClick, disabled, children, title }) => (
 //  Step 2: Periksa Berkas & Dokumen 
 
 const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDownload, loadingFileId, loadingUploads, fileError }) => {
-
+  // currentIdx dihitung sekali, dipakai di navigasi & counter
   const currentIdx = uploads.findIndex(u => u.id === previewFile?.id);
   const currentStatus = berkasStatuses[previewFile?.id];
 
   return (
     <div style={{ display: 'flex', gap: 0, flex: 1, minHeight: 0, height: '100%' }}>
 
+      {/* Left panel — daftar berkas, scroll sendiri */}
       <div style={{
         width: 220, flexShrink: 0,
         borderRight: `1px solid ${CLR.border}`,
@@ -225,7 +237,7 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
         {uploads.map((upload, idx) => {
           const status   = berkasStatuses[upload.id] || BERKAS_STATUS.UNCHECKED;
           const isActive = previewFile?.id === upload.id;
-          const name     = upload.name || upload.filename || `Berkas ${idx + 1}`;
+          const berkasName = getBerkasName(upload);
           return (
             <div
               key={upload.id}
@@ -240,7 +252,7 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#374151', lineHeight: 1.3, marginBottom: 2 }}>
-                    {idx + 1}. {name.toUpperCase()}
+                    {idx + 1}. {berkasName}
                   </div>
                   {status !== BERKAS_STATUS.UNCHECKED && (
                     <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: status === BERKAS_STATUS.SESUAI ? CLR.green : '#DC2626' }}>
@@ -275,7 +287,7 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                 <FileText size={13} color={CLR.red} flexShrink={0} />
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {(previewFile.name || previewFile.filename || 'Berkas').toUpperCase()}
+                  {getBerkasName(previewFile)}
                 </span>
                 {currentStatus !== BERKAS_STATUS.UNCHECKED && (
                   <span style={{
@@ -407,7 +419,7 @@ const Step3Revisi = ({ berkasStatuses, uploads, dueDate, setDueDate, message, se
             }}>
               <XCircle size={16} color="#DC2626" />
               <span style={{ fontSize: 13, fontWeight: 600, color: '#991B1B' }}>
-                {i + 1}. {(u.name || u.filename || 'Berkas').toUpperCase()}
+                {i + 1}. {getBerkasName(u)}
               </span>
             </div>
           ))}
@@ -542,7 +554,7 @@ const VerifikasiBerkasModal = ({
   const [loadingUploads,    setLoadingUploads]    = useState(false);
   const [fileError,         setFileError]         = useState(null);
 
-  // prodiName diambil langsung dari registration prop (BE sudah include student.studyProgram.name)
+  // prodiName diambil langsung dari registration prop 
   const prodiName = registration?.student?.studyProgram?.name ?? '-';
   const periods   = Object.values(periodMap ?? {});
 
@@ -594,12 +606,14 @@ const VerifikasiBerkasModal = ({
       .catch(() => {});
   }, [registration?.id]);
 
+  //  Auto-load file  saat uploads tersedia 
   useEffect(() => {
     if (uploads.length > 0 && !previewFile) {
       handlePreview(uploads[0]);
     }
   }, [uploads]);
 
+  //    
   const hasBermasalah  = Object.values(berkasStatuses).some(v => v === BERKAS_STATUS.BERMASALAH);
   const allChecked     = uploads.length > 0 && uploads.every(u =>
     berkasStatuses[u.id] === BERKAS_STATUS.SESUAI || berkasStatuses[u.id] === BERKAS_STATUS.BERMASALAH
