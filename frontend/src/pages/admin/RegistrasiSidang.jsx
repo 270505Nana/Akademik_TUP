@@ -300,7 +300,7 @@ const RegistrasiSidang = () => {
                       <th>JALUR SIDANG</th>
                       <th>SKEMA</th>
                       <th style={{ textAlign: 'center' }}>STATUS</th>
-                      <th>TANGGAL</th>
+                      <th>TANGGAL REGIST</th>
                       <th style={{ textAlign: 'center' }}>AKSI</th>
                     </tr>
                   </thead>
