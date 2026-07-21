@@ -281,7 +281,7 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
 // Update Sidang Registration Response
 const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { message, isEdit, academicStaffId, sidangRegistrationId, sidangRegistrationUploadIds } = req.body;
+  const { message, isEdit, academicStaffId, sidangRegistrationId, sidangRegistrationUploadIds, sidangPeriodId } = req.body;
 
   // Check if response exists
   const responseExists = await prisma.sidangRegistrationResponse.findFirst({
@@ -388,14 +388,17 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
   // }
 
   // admin patch response -> isEdit != null, isDraft = false
-  if (isEdit !== undefined) {
+  // juga update sidangPeriodId ke SidangRegistration jika dikirim
+  const regUpdateData = {};
+  if (isEdit !== undefined) regUpdateData.isDraft = isEdit ? true : false;
+  if (sidangPeriodId !== undefined) regUpdateData.sidangPeriodId = sidangPeriodId;
+
+  if (Object.keys(regUpdateData).length > 0) {
     await prisma.sidangRegistration.update({
       where: {
-        id:
-          updateData.sidangRegistrationId ||
-          responseExists.sidangRegistrationId,
+        id: updateData.sidangRegistrationId || responseExists.sidangRegistrationId,
       },
-      data: { isDraft: isEdit ? true : false },
+      data: regUpdateData,
     });
   }
 
