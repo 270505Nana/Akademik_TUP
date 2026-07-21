@@ -15,16 +15,14 @@ import {
 } from '../../../service/api';
 import { DOCUMENT_CONFIG, SECTIONS } from '../../../requirement/sidangDocument';
 
-
-
 const BERKAS_STATUS = { SESUAI: 'sesuai', BERMASALAH: 'bermasalah', UNCHECKED: 'unchecked' };
 
-// Flatten  dokumen dari DOCUMENT_CONFIG → Map<slug, namaResmi>
+// Flatten semua dokumen dari DOCUMENT_CONFIG → Map<slug, namaResmi>
 const SLUG_TO_NAME = Object.values(DOCUMENT_CONFIG)
   .flat()
   .reduce((acc, doc) => { acc[doc.slug] = doc.name; return acc; }, {});
 
-// Helper:  nama resmi berkas dari slug, fallback ke upload.name
+// Helper: ambil nama resmi berkas dari slug, fallback ke upload.name
 const getBerkasName = (upload) =>
   SLUG_TO_NAME[upload.slug] || upload.name || upload.filename || 'Berkas';
 
@@ -38,6 +36,7 @@ const CLR = {
   sub    : '#64748B',
 };
 
+//  StepIndicator 
 
 const STEPS = [
   { n: 1, label: 'Data Diri & Akademik'    },
@@ -336,6 +335,7 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
               )}
             </div>
 
+            {/*  Verifikasi bar — flexShrink:0, compact  */}
             <div style={{
               flexShrink: 0, padding: '6px 12px',
               borderTop: `1px solid ${CLR.border}`, background: '#fff',
@@ -484,9 +484,17 @@ const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) =>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {periods.map(p => {
-            const now    = new Date();
-            const status = now >= new Date(p.startDate) && now <= new Date(p.endDate) ? 'Aktif' : now < new Date(p.startDate) ? 'Mendatang' : 'Selesai';
+          {periods
+            // Hanya tampilkan periode yang belum selesai (endDate >= hari ini)
+            .filter(p => new Date(p.endDate) >= new Date())
+            .map(p => {
+            const now       = new Date();
+            const start     = new Date(p.startDate);
+            const end       = new Date(p.endDate);
+            // Status murni dari rentang tanggal (isOpen di DB tidak auto-update)
+            const status    = now >= start && now <= end ? 'Aktif'
+                            : now < start ? 'Mendatang'
+                            : 'Selesai';
             const statusColor = status === 'Aktif' ? CLR.green : status === 'Mendatang' ? '#1D4ED8' : CLR.sub;
             const statusBg    = status === 'Aktif' ? '#DCFCE7' : status === 'Mendatang' ? '#DBEAFE' : '#F1F5F9';
             const isSelected  = selectedPeriodId === p.id;
@@ -554,7 +562,7 @@ const VerifikasiBerkasModal = ({
   const [loadingUploads,    setLoadingUploads]    = useState(false);
   const [fileError,         setFileError]         = useState(null);
 
-  // prodiName diambil langsung dari registration prop 
+  // prodiName diambil langsung dari registration prop (BE sudah include student.studyProgram.name)
   const prodiName = registration?.student?.studyProgram?.name ?? '-';
   const periods   = Object.values(periodMap ?? {});
 
@@ -606,14 +614,14 @@ const VerifikasiBerkasModal = ({
       .catch(() => {});
   }, [registration?.id]);
 
-  //  Auto-load file  saat uploads tersedia 
+  //  Auto-load file pertama saat uploads tersedia 
   useEffect(() => {
     if (uploads.length > 0 && !previewFile) {
       handlePreview(uploads[0]);
     }
   }, [uploads]);
 
-  //    
+  //  Derived values 
   const hasBermasalah  = Object.values(berkasStatuses).some(v => v === BERKAS_STATUS.BERMASALAH);
   const allChecked     = uploads.length > 0 && uploads.every(u =>
     berkasStatuses[u.id] === BERKAS_STATUS.SESUAI || berkasStatuses[u.id] === BERKAS_STATUS.BERMASALAH
@@ -719,9 +727,12 @@ const VerifikasiBerkasModal = ({
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
+        position: 'fixed', top: 0, right: 0, bottom: 0,
+        left: 'var(--sidebar-width, 260px)',
+        zIndex: 1000,
         background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(3px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16,
       }}
       onClick={onClose}
     >
@@ -733,7 +744,7 @@ const VerifikasiBerkasModal = ({
         onClick={e => e.stopPropagation()}
         style={{
           background: '#fff', borderRadius: 16, width: '100%',
-          maxWidth: step === 2 ? 900 : 680,
+          maxWidth: step === 2 ? 1100 : 720,
           height: '92vh', maxHeight: '92vh',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',

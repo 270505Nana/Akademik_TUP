@@ -1,7 +1,7 @@
 /**
  * SidangStatusHelper.js
  *
- * Alur status (dari pov admin):
+ * Alur status (dari sudut pandang admin):
  *
  *   DALAM_PROSES
  *     ↓ (admin set revisi → response.isEdit = timestamp, registration.isDraft = true)
@@ -78,6 +78,7 @@ export const SIDANG_STATUS_CONFIG = {
   },
 };
 
+//  determineSidangStatus 
 /**
  * @param {object|null} registration  - object dari GET /api/sidang-registrations
  * @param {object|null} response      - object dari GET /api/sidang-registration-responses/registration/{id}
@@ -116,7 +117,12 @@ export const determineSidangStatus = (registration, response, period) => {
 
   // 6 & 7. isEdit null → admin approve, cek periode sidang
   if (period) {
-    return period.isOpen === true
+    const now       = new Date();
+    const startDate = new Date(period.startDate);
+    const endDate   = new Date(period.endDate);
+    // isOpen di DB tidak auto-update, gunakan rentang tanggal sebagai sumber kebenaran
+    const isActive  = now >= startDate && now <= endDate;
+    return isActive
       ? STATUS_SIDANG.SIAP_SIDANG
       : STATUS_SIDANG.PENDAFTARAN_DITERIMA;
   }
