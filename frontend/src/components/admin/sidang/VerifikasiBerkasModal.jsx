@@ -15,8 +15,6 @@ import {
 } from '../../../service/api';
 import { DOCUMENT_CONFIG, SECTIONS } from '../../../requirement/sidangDocument';
 
-//  Konstanta 
-
 const BERKAS_STATUS = { SESUAI: 'sesuai', BERMASALAH: 'bermasalah', UNCHECKED: 'unchecked' };
 
 // Flatten semua dokumen dari DOCUMENT_CONFIG → Map<slug, namaResmi>
@@ -490,9 +488,13 @@ const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) =>
             // Hanya tampilkan periode yang belum selesai (endDate >= hari ini)
             .filter(p => new Date(p.endDate) >= new Date())
             .map(p => {
-            const now    = new Date();
-            // Gunakan isOpen dari DB sebagai sumber kebenaran status
-            const status = p.isOpen ? 'Aktif' : new Date(p.startDate) > now ? 'Mendatang' : 'Selesai';
+            const now       = new Date();
+            const start     = new Date(p.startDate);
+            const end       = new Date(p.endDate);
+            // Status murni dari rentang tanggal (isOpen di DB tidak auto-update)
+            const status    = now >= start && now <= end ? 'Aktif'
+                            : now < start ? 'Mendatang'
+                            : 'Selesai';
             const statusColor = status === 'Aktif' ? CLR.green : status === 'Mendatang' ? '#1D4ED8' : CLR.sub;
             const statusBg    = status === 'Aktif' ? '#DCFCE7' : status === 'Mendatang' ? '#DBEAFE' : '#F1F5F9';
             const isSelected  = selectedPeriodId === p.id;
