@@ -97,27 +97,29 @@
         /* Table */
         .vs-table-wrap { overflow-x: auto; min-height: 200px; }
         .vs-table {
-          width: 100%; border-collapse: separate; border-spacing: 0; min-width: 900px;
+          width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1050px;
         }
         .vs-table thead tr { background: #F8FAFC; }
         .vs-table th {
-          padding: 13px 16px; font-size: 11px; font-weight: 700;
+          padding: 10px 10px; font-size: 10px; font-weight: 700;
           color: #475569; text-transform: uppercase; letter-spacing: 0.5px;
           border-bottom: 1px solid #E2E8F0; text-align: left; white-space: nowrap;
         }
         .vs-table td {
-          padding: 14px 16px; font-size: 13px; color: #1E293B;
+          padding: 10px 10px; font-size: 12px; color: #1E293B;
           border-bottom: 1px solid #F1F5F9; vertical-align: middle;
         }
         .vs-table tbody tr:last-child td { border-bottom: none; }
         .vs-table tbody tr:hover td { background: #FAFAFA; }
 
         .vs-td-center { text-align: center; }
-        .vs-td-num  { font-weight: 700; color: #6B7280; font-size: 13px; }
-        .vs-td-date { font-size: 12px; color: #6B7280; white-space: nowrap; }
-        .vs-mhs-name { font-weight: 700; color: #111827; font-size: 13px; }
-        .vs-mhs-nim  { font-size: 11px; color: #6B7280; margin-top: 2px; }
-        .vs-prodi-text { font-size: 12px; color: #374151; line-height: 1.4; }
+        .vs-td-num  { font-weight: 700; color: #6B7280; font-size: 12px; }
+        .vs-td-date { font-size: 11px; color: #6B7280; white-space: nowrap; }
+        .vs-mhs-name { font-weight: 700; color: #111827; font-size: 12px; }
+        .vs-mhs-nim  { font-size: 10px; color: #6B7280; margin-top: 2px; }
+        .vs-prodi-text { font-size: 11px; color: #374151; line-height: 1.4; }
+        .vs-period-text { font-size: 11px; color: #374151; font-weight: 500; line-height: 1.4; }
+        .vs-period-empty { font-size: 11px; color: #9CA3AF; }
 
         /* Action buttons */
         .vs-btn-verif {

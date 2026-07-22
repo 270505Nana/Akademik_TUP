@@ -1,13 +1,27 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, ChevronLeft, ChevronRight, Menu, GraduationCap, CheckCircle2, RefreshCw, Loader,} from 'lucide-react';
+import {
+  Search, ChevronLeft, ChevronRight, Menu,
+  GraduationCap, CheckCircle2, RefreshCw, Loader,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
 import SidebarAdmin          from '../../components/sidebar/SidebarAdmin';
 import CustomAlert           from '../../components/common/CustomAlert';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth }           from '../../context/AuthContext';
-import {getAllSidangRegistrations, getSidangRegistrationResponse, getSidangPeriods,} from '../../service/api';
-import { determineSidangStatus, STATUS_SIDANG, SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/Sidangstatushelper.js';
+import {
+  getAllSidangRegistrations,
+  getSidangRegistrationResponse,
+  getSidangPeriods,
+} from '../../service/api';
+import {
+  determineSidangStatus,
+  STATUS_SIDANG,
+  SIDANG_STATUS_CONFIG,
+} from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../../components/admin/sidang/RegistrasiSidang.css';
+
+//  Konstanta 
 
 const FILTER_TABS = [
   { key: '',                                 label: 'Semua'                },
@@ -84,6 +98,8 @@ const JalurBadge = ({ jalur }) => {
   );
 };
 
+//  Main Component 
+
 const RegistrasiSidang = () => {
   const { user, profile, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -124,8 +140,8 @@ const RegistrasiSidang = () => {
       const list    = await getAllSidangRegistrations();
       const allList = list ?? [];
 
-      // Fetch response untuk SEMUA registrasi 
-      // (perlu dilakukan sebelum filter agar  tahu mana yg punya response)
+      // Fetch response untuk SEMUA registrasi secara paralel dulu
+      // (perlu dilakukan sebelum filter agar bisa tahu mana yg punya response)
       const respArr = await Promise.all(
         allList.map(r => getSidangRegistrationResponse(r.id).catch(() => null))
       );
@@ -135,11 +151,12 @@ const RegistrasiSidang = () => {
       allList.forEach((r, i) => { if (respArr[i]) rMap[r.id] = respArr[i]; });
       setResponseMap(rMap);
 
-      // Tampilkan registrasi yang PERNAH disubmit:
+      //  FIX: Filter yang benar 
+      // Tampilkan registrasi yang PERNAH disubmit, yaitu:
       //   a) isDraft=false  → submit normal / sudah resubmit setelah revisi
       //   b) isDraft=true DAN punya response → admin sudah set revisi
       //      (BE set isDraft=true kembali saat admin beri revisi = status PERLU_REVISI)
-      // Yang tidak tampil: isDraft=true tanpa response = draf belum pernah submit
+      // Yang tidak tampil: isDraft=true tanpa response = draft murni belum pernah submit
       const visible = allList.filter((r, i) => {
         const hasResponse = !!respArr[i];
         return !r.isDraft || hasResponse;
@@ -151,6 +168,7 @@ const RegistrasiSidang = () => {
       (allPeriods ?? []).forEach(p => { prdMap[p.id] = p; });
       setPeriodMap(prdMap);
 
+      //  FIX: Prodi dari student.studyProgram.name 
       // BE (setelah fix sidangRegistrationController) sudah include
       // student.studyProgram.name langsung di response list.
       // Build map: { [studentId]: namaProdi } untuk lookup cepat di tabel.
@@ -174,6 +192,7 @@ const RegistrasiSidang = () => {
     if (user?.role === 'ACADEMIC_STAFF') fetchAll();
   }, [user]);
 
+  //  Helper: resolve status per registrasi 
   const getStatus = useCallback((reg) => {
     const response = responseMap[reg.id] ?? null;
     // sidangPeriodId ada di registration (bukan di response)
@@ -182,11 +201,15 @@ const RegistrasiSidang = () => {
     return determineSidangStatus(reg, response, period);
   }, [responseMap, periodMap]);
 
+  //  Helper: resolve nama prodi per registrasi 
   const getProdiName = useCallback((reg) => {
+    // Prioritas 1: langsung dari student.studyProgram.name (BE sudah include)
     if (reg.student?.studyProgram?.name) return reg.student.studyProgram.name;
+    // Prioritas 2: lookup dari map yang dibangun saat fetch
     return prodiMap[reg.studentId] ?? '—';
   }, [prodiMap]);
 
+  //  Filter + sort + paginate 
   const filteredList = useMemo(() => {
     return registrations
       .filter(r => {
@@ -211,9 +234,11 @@ const RegistrasiSidang = () => {
 
   useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus]);
 
+  //  Counter untuk tab 
   const countAll    = registrations.length;
   const countStatus = (s) => registrations.filter(r => getStatus(r) === s).length;
 
+  //  Format tanggal 
   const fmtDate = (iso) => {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('id-ID', {
@@ -224,12 +249,14 @@ const RegistrasiSidang = () => {
   const getSubmitDate = (reg) =>
     reg.submittedAt ?? reg.sidangRegistrationUploads?.[0]?.createdAt ?? reg.createdAt ?? null;
 
+  //  Setelah modal berhasil simpan → refresh data 
   const handleModalSaved = useCallback(() => {
     setSelectedReg(null);
     fetchAll();
     showAlert('success', 'Berhasil', 'Verifikasi berkas berhasil disimpan.');
   }, [fetchAll, showAlert]);
 
+  // 
   return (
     <div className="vs-root">
       <SidebarAdmin isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -300,14 +327,15 @@ const RegistrasiSidang = () => {
                       <th>JALUR SIDANG</th>
                       <th>SKEMA</th>
                       <th style={{ textAlign: 'center' }}>STATUS</th>
-                      <th>TANGGAL REGIST</th>
+                      <th>PERIODE SIDANG</th>
+                      <th>TANGGAL</th>
                       <th style={{ textAlign: 'center' }}>AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={8} style={{ padding: '52px 0', textAlign: 'center' }}>
+                        <td colSpan={9} style={{ padding: '52px 0', textAlign: 'center' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                             <Loader size={24} color="#C0182A" style={{ animation: 'vs-spin 1s linear infinite' }} />
                             <span style={{ fontSize: 13, color: '#6B7280' }}>Memuat data registrasi...</span>
@@ -316,7 +344,7 @@ const RegistrasiSidang = () => {
                       </tr>
                     ) : paginated.length === 0 ? (
                       <tr>
-                        <td colSpan={8} style={{ padding: '52px 0', textAlign: 'center' }}>
+                        <td colSpan={9} style={{ padding: '52px 0', textAlign: 'center' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                             <GraduationCap size={36} color="#D1D5DB" />
                             <span style={{ fontSize: 13, color: '#9CA3AF' }}>
@@ -358,6 +386,12 @@ const RegistrasiSidang = () => {
                             </td>
                             <td className="vs-td-center">
                               <StatusBadge status={status} />
+                            </td>
+                            <td>
+                              {reg.sidangPeriodId && periodMap[reg.sidangPeriodId]
+                                ? <span className="vs-period-text">{periodMap[reg.sidangPeriodId].name}</span>
+                                : <span className="vs-period-empty">—</span>
+                              }
                             </td>
                             <td className="vs-td-date">{fmtDate(getSubmitDate(reg))}</td>
                             <td className="vs-td-center">
