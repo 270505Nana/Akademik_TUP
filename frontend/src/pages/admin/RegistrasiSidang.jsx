@@ -44,7 +44,7 @@ const STATUS_SORT_ORDER = {
 
 const PAGE_SIZE = 8;
 
-// Master list Program Studi (fixed, sesuai data akademik — bukan hasil derive dari registrasi)
+// Master list Program Studi (fixed, sesuai data akademik - bukan hasil derive dari registrasi)
 const PRODI_LIST = [
   'S1 Informatika',
   'S1 Rekayasa Perangkat Lunak (Software Engineering)',
@@ -83,7 +83,7 @@ const StatusBadge = ({ status }) => {
 };
 
 const SchemaBadge = ({ scheme }) => {
-  if (!scheme) return <span style={{ color: '#9CA3AF', fontSize: 12 }}>—</span>;
+  if (!scheme) return <span style={{ color: '#9CA3AF', fontSize: 12 }}>-</span>;
   const isNonSidang = scheme.toLowerCase().includes('non');
   return (
     <span style={{
@@ -184,16 +184,18 @@ const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
           {options.length === 0 ? (
             <div className="vs-prodi-empty">Belum ada data prodi.</div>
           ) : (
-            options.map((prodi) => (
-              <label key={prodi} className="vs-prodi-option">
-                <input
-                  type="checkbox"
-                  checked={selected.includes(prodi)}
-                  onChange={() => onToggle(prodi)}
-                />
-                <span>{prodi}</span>
-              </label>
-            ))
+            <div className="vs-prodi-options-grid">
+              {options.map((prodi) => (
+                <label key={prodi} className="vs-prodi-option">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(prodi)}
+                    onChange={() => onToggle(prodi)}
+                  />
+                  <span>{prodi}</span>
+                </label>
+              ))}
+            </div>
           )}
           {isActive && (
             <div className="vs-prodi-clear" onClick={onClear}>
@@ -337,7 +339,7 @@ const RegistrasiSidang = () => {
     // Prioritas 1: langsung dari student.studyProgram.name (BE sudah include)
     if (reg.student?.studyProgram?.name) return reg.student.studyProgram.name;
     // Prioritas 2: lookup dari map yang dibangun saat fetch
-    return prodiMap[reg.studentId] ?? '—';
+    return prodiMap[reg.studentId] ?? '-';
   }, [prodiMap]);
 
   //  Daftar prodi (fixed master list, bukan derive dari data registrasi) 
@@ -413,7 +415,7 @@ const RegistrasiSidang = () => {
 
   //  Format tanggal 
   const fmtDate = (iso) => {
-    if (!iso) return '—';
+    if (!iso) return '-';
     return new Date(iso).toLocaleDateString('id-ID', {
       day: 'numeric', month: 'short', year: 'numeric',
     });
@@ -550,7 +552,7 @@ const RegistrasiSidang = () => {
                             </td>
                             <td>
                               <div className="vs-mhs-name">{reg.student?.name || `Mahasiswa #${reg.studentId}`}</div>
-                              <div className="vs-mhs-nim">{reg.student?.nim  || '—'}</div>
+                              <div className="vs-mhs-nim">{reg.student?.nim  || '-'}</div>
                             </td>
                             <td>
                               <span className="vs-prodi-text">{prodiName}</span>
@@ -567,7 +569,7 @@ const RegistrasiSidang = () => {
                             <td>
                               {reg.sidangPeriodId && periodMap[reg.sidangPeriodId]
                                 ? <span className="vs-period-text">{periodMap[reg.sidangPeriodId].name}</span>
-                                : <span className="vs-period-empty">—</span>
+                                : <span className="vs-period-empty">-</span>
                               }
                             </td>
                             <td className="vs-td-date">{fmtDate(getSubmitDate(reg))}</td>
