@@ -252,7 +252,10 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
 
   if (isEdit || sidangPeriodId !== undefined) {
     const updateData = {};
-    if (isEdit) updateData.isDraft = true;
+    if (isEdit) {
+      updateData.isDraft = true;
+      updateData.submittedAt = null;
+    }
     if (sidangPeriodId !== undefined) updateData.sidangPeriodId = sidangPeriodId;
 
     await prisma.sidangRegistration.update({
@@ -390,7 +393,12 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
   // admin patch response -> isEdit != null, isDraft = false
   // juga update sidangPeriodId ke SidangRegistration jika dikirim
   const regUpdateData = {};
-  if (isEdit !== undefined) regUpdateData.isDraft = isEdit ? true : false;
+  if (isEdit !== undefined) {
+    regUpdateData.isDraft = isEdit ? true : false;
+    if (isEdit) {
+      regUpdateData.submittedAt = null;
+    }
+  }
   if (sidangPeriodId !== undefined) regUpdateData.sidangPeriodId = sidangPeriodId;
 
   if (Object.keys(regUpdateData).length > 0) {
