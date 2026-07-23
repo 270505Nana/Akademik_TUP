@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Search, ChevronLeft, ChevronRight, Menu,
-  GraduationCap, CheckCircle2, RefreshCw, Loader,
+  GraduationCap, CheckCircle2, RefreshCw, Loader, ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -41,6 +41,24 @@ const STATUS_SORT_ORDER = {
 };
 
 const PAGE_SIZE = 8;
+
+// Master list Program Studi (fixed, sesuai data akademik — bukan hasil derive dari registrasi)
+const PRODI_LIST = [
+  'S1 Informatika',
+  'S1 Rekayasa Perangkat Lunak (Software Engineering)',
+  'S1 Sains Data (Data Science)',
+  'S1 Teknik Telekomunikasi',
+  'S1 Teknik Elektro',
+  'S1 Teknik Biomedis',
+  'S1 Teknik Industri',
+  'S1 Sistem Informasi',
+  'S1 Teknik Logistik',
+  'S1 Teknologi Pangan',
+  'S1 Desain Komunikasi Visual (DKV)',
+  'S1 Desain Produk',
+  'S1 Bisnis Digital',
+  'D3 Teknologi Telekomunikasi',
+];
 
 //  Sub-components 
 
@@ -98,6 +116,60 @@ const JalurBadge = ({ jalur }) => {
   );
 };
 
+const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  // Tutup dropdown kalau klik di luar area
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const isActive = selected.length > 0;
+
+  return (
+    <div className="vs-prodi-filter" ref={wrapRef}>
+      <button
+        type="button"
+        className={`vs-tab ${isActive ? 'active' : ''}`}
+        onClick={() => setOpen(o => !o)}
+      >
+        Prodi
+        {isActive && <span className="vs-tab-count">({selected.length})</span>}
+        <ChevronDown size={12} style={{ marginLeft: 2 }} />
+      </button>
+
+      {open && (
+        <div className="vs-prodi-panel">
+          {options.length === 0 ? (
+            <div className="vs-prodi-empty">Belum ada data prodi.</div>
+          ) : (
+            options.map((prodi) => (
+              <label key={prodi} className="vs-prodi-option">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(prodi)}
+                  onChange={() => onToggle(prodi)}
+                />
+                {prodi}
+              </label>
+            ))
+          )}
+          {isActive && (
+            <div className="vs-prodi-clear" onClick={onClear}>
+              Hapus filter prodi
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 //  Main Component 
 
 const RegistrasiSidang = () => {
@@ -115,6 +187,7 @@ const RegistrasiSidang = () => {
   const [search,          setSearch]          = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [filterStatus,    setFilterStatus]    = useState('');
+  const [selectedProdis,  setSelectedProdis]  = useState([]);
   const [currentPage,     setCurrentPage]     = useState(1);
   const [alert,           setAlert]           = useState({ show: false, type: '', title: '', message: '' });
 
@@ -209,6 +282,17 @@ const RegistrasiSidang = () => {
     return prodiMap[reg.studentId] ?? '—';
   }, [prodiMap]);
 
+  //  Daftar prodi (fixed master list, bukan derive dari data registrasi) 
+  const prodiOptions = PRODI_LIST;
+
+  const toggleProdiFilter = useCallback((prodi) => {
+    setSelectedProdis(prev =>
+      prev.includes(prodi) ? prev.filter(p => p !== prodi) : [...prev, prodi]
+    );
+  }, []);
+
+  const clearProdiFilter = useCallback(() => setSelectedProdis([]), []);
+
   //  Filter + sort + paginate 
   const filteredList = useMemo(() => {
     return registrations
@@ -222,17 +306,21 @@ const RegistrasiSidang = () => {
         if (!filterStatus) return true;
         return getStatus(r) === filterStatus;
       })
+      .filter(r => {
+        if (selectedProdis.length === 0) return true;
+        return selectedProdis.includes(getProdiName(r));
+      })
       .sort((a, b) => {
         const sa = getStatus(a);
         const sb = getStatus(b);
         return (STATUS_SORT_ORDER[sa] ?? 99) - (STATUS_SORT_ORDER[sb] ?? 99);
       });
-  }, [registrations, searchDebounced, filterStatus, getStatus]);
+  }, [registrations, searchDebounced, filterStatus, selectedProdis, getStatus, getProdiName]);
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
   const paginated  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus]);
+  useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus, selectedProdis]);
 
   //  Counter untuk tab 
   const countAll    = registrations.length;
@@ -312,6 +400,13 @@ const RegistrasiSidang = () => {
                     </button>
                   );
                 })}
+
+                <ProdiFilterDropdown
+                  options={prodiOptions}
+                  selected={selectedProdis}
+                  onToggle={toggleProdiFilter}
+                  onClear={clearProdiFilter}
+                />
               </div>
 
               <div className="vs-table-divider" />
