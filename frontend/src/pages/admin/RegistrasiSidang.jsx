@@ -346,9 +346,6 @@ const RegistrasiSidang = () => {
         return selectedProdis.includes(getProdiName(r));
       })
       .sort((a, b) => {
-        // Kalau admin lagi aktifin sort kolom (Nama/Tanggal), itu prioritas utama.
-        // Filter status & prodi di atas tetap jalan duluan (data udah ke-filter),
-        // sort ini cuma nentuin URUTAN tampilnya.
         if (sort.field === 'name') {
           const na = (a.student?.name || '').toLowerCase();
           const nb = (b.student?.name || '').toLowerCase();
@@ -403,7 +400,7 @@ const RegistrasiSidang = () => {
 
         <div className="vs-page-wrapper">
           {/* Red header */}
-          <div classNae="vs-topbar"><h1>Verifikasi Sidang</h1></div>
+          <div className="vs-topbar"><h1>Verifikasi Sidang</h1></div>
 
           <div className="vs-content">
             <h2 className="vs-page-title">Daftar Registrasi Sidang Mahasiswa</h2>

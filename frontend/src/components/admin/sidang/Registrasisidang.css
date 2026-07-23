@@ -1,63 +1,9 @@
-/* ==========================================================================
-   REGISTRASI SIDANG — Halaman admin verifikasi sidang mahasiswa
-   Struktur file (urut sesuai render di RegistrasiSidang.jsx):
-   1. Variables
-   2. Root & Page Layout
-   3. Mobile Bar
-   4. Top Bar (header merah)
-   5. Content Wrapper
-   6. Card (container utama)
-   7. Filter Bar (search + refresh)
-   8. Status Tabs
-   9. Table
-   10. Action Buttons (Verifikasi / Terverifikasi)
-   11. Prodi Filter Dropdown (di-portal ke document.body via JS)
-   12. Pagination Footer
-   13. Alert Toast
-   14. Keyframes
-   ========================================================================== */
-
-/* --------------------------------------------------------------------------
-   1. VARIABLES
-   -------------------------------------------------------------------------- */
-:root {
-  --vs-brand: #C0182A;
-  --vs-brand-hover: #A01423;
-
-  --vs-bg-page: #F8FAFC;
-  --vs-bg-white: #fff;
-
-  --vs-border: #E2E8F0;
-  --vs-border-light: #F1F5F9;
-  --vs-border-input: #CBD5E1;
-
-  --vs-text-dark: #111827;
-  --vs-text-body: #1E293B;
-  --vs-text-muted: #6B7280;
-  --vs-text-label: #475569;
-  --vs-text-tab: #64748B;
-  --vs-text-placeholder: #9CA3AF;
-
-  --vs-success-bg: #F0FDF4;
-  --vs-success-border: #BBF7D0;
-  --vs-success-text: #166534;
-
-  --vs-sidebar-width: 240px;
-  --vs-radius-lg: 12px;
-  --vs-radius-md: 8px;
-  --vs-radius-sm: 6px;
-  --vs-transition-fast: 0.15s;
-}
-
-/* --------------------------------------------------------------------------
-   2. ROOT & PAGE LAYOUT
-   -------------------------------------------------------------------------- */
 .vs-root {
   display: flex;
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
-  background: var(--vs-bg-page);
+  background: #F8FAFC;
 }
 
 .vs-main {
@@ -66,7 +12,7 @@
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  margin-left: var(--vs-sidebar-width);
+  margin-left: 240px;
   transition: margin-left 0.25s ease;
 }
 
@@ -82,16 +28,13 @@
   .vs-mobile-bar { display: flex !important; }
 }
 
-/* --------------------------------------------------------------------------
-   3. MOBILE BAR
-   -------------------------------------------------------------------------- */
 .vs-mobile-bar {
   display: none;
   height: 60px;
   align-items: center;
   gap: 14px;
   padding: 0 16px;
-  background: var(--vs-brand);
+  background: #C0182A;
   position: sticky;
   top: 0;
   z-index: 1001;
@@ -104,7 +47,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: var(--vs-radius-sm);
+  border-radius: 6px;
   background: transparent;
   color: #fff;
   cursor: pointer;
@@ -117,15 +60,12 @@
   color: #fff;
 }
 
-/* --------------------------------------------------------------------------
-   4. TOP BAR (header merah)
-   -------------------------------------------------------------------------- */
 .vs-topbar {
   height: 80px;
   display: flex;
   align-items: center;
   padding: 0 32px;
-  background: var(--vs-brand);
+  background: #C0182A;
   color: #fff;
 }
 
@@ -135,21 +75,18 @@
   font-weight: 700;
 }
 
-/* --------------------------------------------------------------------------
-   5. CONTENT WRAPPER
-   -------------------------------------------------------------------------- */
 .vs-content {
   width: 100%;
   margin: 0 auto;
   padding: 24px 20px 40px;
-  max-width: min(1300px, calc(100vw - var(--vs-sidebar-width)));
+  max-width: min(1300px, calc(100vw - 240px));
   box-sizing: border-box;
 }
 
 .vs-page-title {
   font-size: 26px;
   font-weight: 800;
-  color: var(--vs-text-dark);
+  color: #111827;
   margin-bottom: 24px;
 }
 
@@ -161,20 +98,14 @@
   .vs-content { padding: 16px 14px 32px; }
 }
 
-/* --------------------------------------------------------------------------
-   6. CARD (container utama tabel)
-   -------------------------------------------------------------------------- */
 .vs-card {
-  background: var(--vs-bg-white);
-  border: 1px solid var(--vs-border);
-  border-radius: var(--vs-radius-lg);
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
-/* --------------------------------------------------------------------------
-   7. FILTER BAR (search + refresh)
-   -------------------------------------------------------------------------- */
 .vs-filter-bar {
   display: flex;
   align-items: center;
@@ -194,22 +125,22 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--vs-text-placeholder);
+  color: #9CA3AF;
 }
 
 .vs-search-input {
   width: 100%;
   padding: 8px 10px 8px 34px;
-  border: 1px solid var(--vs-border-input);
-  border-radius: var(--vs-radius-md);
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
   font-size: 12px;
-  color: var(--vs-text-body);
+  color: #1E293B;
   outline: none;
-  transition: border var(--vs-transition-fast);
+  transition: border 0.15s;
 }
 
 .vs-search-input:focus {
-  border-color: var(--vs-brand);
+  border-color: #C0182A;
   box-shadow: 0 0 0 3px rgba(192, 24, 42, 0.1);
 }
 
@@ -218,25 +149,22 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border: 1px solid var(--vs-border-input);
-  border-radius: var(--vs-radius-md);
-  background: var(--vs-bg-white);
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  background: #fff;
   font-size: 11px;
   font-weight: 600;
   color: #374151;
   white-space: nowrap;
   cursor: pointer;
-  transition: all var(--vs-transition-fast);
+  transition: all 0.15s;
 }
 
 .vs-btn-refresh:hover {
-  background: var(--vs-bg-page);
+  background: #F8FAFC;
   border-color: #94A3B8;
 }
 
-/* --------------------------------------------------------------------------
-   8. STATUS TABS (termasuk tombol trigger "Prodi")
-   -------------------------------------------------------------------------- */
 .vs-status-tabs {
   display: flex;
   gap: 4px;
@@ -250,23 +178,23 @@
   gap: 5px;
   padding: 6px 11px;
   border: 1.5px solid transparent;
-  border-radius: var(--vs-radius-md);
+  border-radius: 8px;
   background: #F1F5F9;
-  color: var(--vs-text-tab);
+  color: #64748B;
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: all var(--vs-transition-fast);
+  transition: all 0.15s;
 }
 
 .vs-tab:hover {
-  background: var(--vs-border);
+  background: #E2E8F0;
 }
 
 .vs-tab.active {
-  background: var(--vs-brand);
-  border-color: var(--vs-brand);
+  background: #C0182A;
+  border-color: #C0182A;
   color: #fff;
   box-shadow: 0 2px 8px rgba(192, 24, 42, 0.25);
 }
@@ -279,12 +207,9 @@
 .vs-table-divider {
   height: 1px;
   margin-top: 16px;
-  background: var(--vs-border);
+  background: #E2E8F0;
 }
 
-/* --------------------------------------------------------------------------
-   9. TABLE
-   -------------------------------------------------------------------------- */
 .vs-table-wrap {
   overflow-x: auto;
   min-height: 200px;
@@ -299,27 +224,27 @@
 }
 
 .vs-table thead tr {
-  background: var(--vs-bg-page);
+  background: #F8FAFC;
 }
 
 .vs-table th {
   padding: 7px 5px;
   font-size: 9px;
   font-weight: 700;
-  color: var(--vs-text-label);
+  color: #475569;
   text-transform: uppercase;
   letter-spacing: 0.3px;
   text-align: left;
   white-space: nowrap;
-  border-bottom: 1px solid var(--vs-border);
+  border-bottom: 1px solid #E2E8F0;
 }
 
 .vs-table td {
   padding: 7px 5px;
   font-size: 10.5px;
-  color: var(--vs-text-body);
+  color: #1E293B;
   vertical-align: middle;
-  border-bottom: 1px solid var(--vs-border-light);
+  border-bottom: 1px solid #F1F5F9;
 }
 
 .vs-table tbody tr:last-child td {
@@ -330,34 +255,30 @@
   background: #FAFAFA;
 }
 
-/* Cell modifiers */
 .vs-td-center   { text-align: center; }
-.vs-td-num      { font-size: 10.5px; font-weight: 700; color: var(--vs-text-muted); }
-.vs-td-date     { font-size: 9.5px; color: var(--vs-text-muted); white-space: nowrap; }
-.vs-mhs-name    { font-size: 10.5px; font-weight: 700; color: var(--vs-text-dark); }
-.vs-mhs-nim     { font-size: 9px; color: var(--vs-text-muted); margin-top: 2px; }
+.vs-td-num      { font-size: 10.5px; font-weight: 700; color: #6B7280; }
+.vs-td-date     { font-size: 9.5px; color: #6B7280; white-space: nowrap; }
+.vs-mhs-name    { font-size: 10.5px; font-weight: 700; color: #111827; }
+.vs-mhs-nim     { font-size: 9px; color: #6B7280; margin-top: 2px; }
 .vs-prodi-text  { font-size: 9.5px; color: #374151; line-height: 1.35; }
 .vs-period-text { font-size: 9.5px; font-weight: 500; color: #374151; line-height: 1.35; }
-.vs-period-empty{ font-size: 9.5px; color: var(--vs-text-placeholder); }
+.vs-period-empty{ font-size: 9.5px; color: #9CA3AF; }
 
-/* --------------------------------------------------------------------------
-   10. ACTION BUTTONS (Verifikasi / Terverifikasi)
-   -------------------------------------------------------------------------- */
 .vs-btn-verif {
   padding: 5px 12px;
   border: none;
-  border-radius: var(--vs-radius-sm);
-  background: var(--vs-brand);
+  border-radius: 6px;
+  background: #C0182A;
   color: #fff;
   font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--vs-transition-fast);
+  transition: background 0.15s;
 }
 
 .vs-btn-verif:hover {
-  background: var(--vs-brand-hover);
+  background: #A01423;
 }
 
 .vs-btn-verified {
@@ -365,10 +286,10 @@
   align-items: center;
   gap: 5px;
   padding: 5px 12px;
-  border: 1.5px solid var(--vs-success-border);
-  border-radius: var(--vs-radius-sm);
-  background: var(--vs-success-bg);
-  color: var(--vs-success-text);
+  border: 1.5px solid #BBF7D0;
+  border-radius: 6px;
+  background: #F0FDF4;
+  color: #166534;
   font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
@@ -387,8 +308,8 @@
   overflow-x: hidden !important;
   padding: 10px !important;
   z-index: 9999;
-  background: var(--vs-bg-white);
-  border: 1px solid var(--vs-border);
+  background: #fff;
+  border: 1px solid #E2E8F0;
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
 }
@@ -404,7 +325,7 @@
   align-items: flex-start;
   gap: 6px;
   padding: 5px 6px;
-  border-radius: var(--vs-radius-sm);
+  border-radius: 6px;
   font-size: 11px;
   line-height: 1.3;
   color: #374151;
@@ -412,7 +333,7 @@
 }
 
 .vs-prodi-option:hover {
-  background: var(--vs-bg-page);
+  background: #F8FAFC;
 }
 
 .vs-prodi-option input[type="checkbox"] {
@@ -428,23 +349,20 @@
 .vs-prodi-empty {
   padding: 6px 8px;
   font-size: 12px;
-  color: var(--vs-text-placeholder);
+  color: #9CA3AF;
 }
 
 .vs-prodi-clear {
   margin-top: 6px;
   padding-top: 8px;
-  border-top: 1px solid var(--vs-border-light);
+  border-top: 1px solid #F1F5F9;
   font-size: 11px;
   font-weight: 700;
-  color: var(--vs-brand);
+  color: #C0182A;
   text-align: right;
   cursor: pointer;
 }
 
-/* --------------------------------------------------------------------------
-   12. PAGINATION FOOTER
-   -------------------------------------------------------------------------- */
 .vs-footer {
   display: flex;
   align-items: center;
@@ -452,12 +370,12 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid var(--vs-border);
+  border-top: 1px solid #E2E8F0;
 }
 
 .vs-page-info {
   font-size: 12px;
-  color: var(--vs-text-muted);
+  color: #6B7280;
 }
 
 .vs-pagination {
@@ -473,18 +391,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--vs-border-input);
-  border-radius: var(--vs-radius-sm);
-  background: var(--vs-bg-white);
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  background: #fff;
   color: #374151;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--vs-transition-fast);
+  transition: all 0.15s;
 }
 
 .vs-btn-page:hover:not(:disabled) {
-  background: var(--vs-bg-page);
+  background: #F8FAFC;
   border-color: #94A3B8;
 }
 
@@ -494,14 +412,11 @@
 }
 
 .vs-btn-page.active {
-  background: var(--vs-brand);
-  border-color: var(--vs-brand);
+  background: #C0182A;
+  border-color: #C0182A;
   color: #fff;
 }
 
-/* --------------------------------------------------------------------------
-   13. ALERT TOAST
-   -------------------------------------------------------------------------- */
 .vs-alert-overlay {
   position: fixed;
   top: 24px;
@@ -510,9 +425,6 @@
   max-width: 380px;
 }
 
-/* --------------------------------------------------------------------------
-   14. KEYFRAMES
-   -------------------------------------------------------------------------- */
 @keyframes vs-spin {
   to { transform: rotate(360deg); }
 }
