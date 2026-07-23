@@ -1,29 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  Search, ChevronLeft, ChevronRight, Menu,
-  GraduationCap, CheckCircle2, RefreshCw, Loader, ChevronDown,
-  ArrowUp, ArrowDown, ArrowUpDown,
-} from 'lucide-react';
+import {Search, ChevronLeft, ChevronRight, Menu,GraduationCap, CheckCircle2, RefreshCw, Loader, ChevronDown,ArrowUp, ArrowDown, ArrowUpDown,} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
 import SidebarAdmin          from '../../components/sidebar/SidebarAdmin';
 import CustomAlert           from '../../components/common/CustomAlert';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth }           from '../../context/AuthContext';
-import {
-  getAllSidangRegistrations,
-  getSidangRegistrationResponse,
-  getSidangPeriods,
-} from '../../service/api';
-import {
-  determineSidangStatus,
-  STATUS_SIDANG,
-  SIDANG_STATUS_CONFIG,
-} from '../../components/admin/sidang/SidangStatusHelper.js';
+import {getAllSidangRegistrations,getSidangRegistrationResponse,getSidangPeriods,} from '../../service/api';
+import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../../components/admin/sidang/RegistrasiSidang.css';
-
-//  Konstanta 
 
 const FILTER_TABS = [
   { key: '',                                 label: 'Semua'                },
@@ -44,7 +29,7 @@ const STATUS_SORT_ORDER = {
 
 const PAGE_SIZE = 8;
 
-// Master list Program Studi (fixed, sesuai data akademik - bukan hasil derive dari registrasi)
+// Master list Program Studi
 const PRODI_LIST = [
   'S1 Informatika',
   'S1 Rekayasa Perangkat Lunak (Software Engineering)',
@@ -61,8 +46,6 @@ const PRODI_LIST = [
   'S1 Bisnis Digital',
   'D3 Teknologi Telekomunikasi',
 ];
-
-//  Sub-components 
 
 const StatusBadge = ({ status }) => {
   const cfg = SIDANG_STATUS_CONFIG[status];
@@ -138,7 +121,6 @@ const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
     setOpen(o => !o);
   };
 
-  // Tutup dropdown kalau klik di luar tombol ATAU di luar panel (panel-nya di-portal, jadi dicek terpisah)
   useEffect(() => {
     const handleClickOutside = (e) => {
       const clickedButton = btnWrapRef.current?.contains(e.target);
@@ -149,7 +131,6 @@ const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Reposisi kalau window di-resize/scroll selagi panel terbuka
   useEffect(() => {
     if (!open) return;
     const reposition = () => computePosition();
@@ -273,8 +254,8 @@ const RegistrasiSidang = () => {
       const list    = await getAllSidangRegistrations();
       const allList = list ?? [];
 
-      // Fetch response untuk SEMUA registrasi secara paralel dulu
-      // (perlu dilakukan sebelum filter agar bisa tahu mana yg punya response)
+      // Fetch response untuk SEMUA registrasi 
+
       const respArr = await Promise.all(
         allList.map(r => getSidangRegistrationResponse(r.id).catch(() => null))
       );
@@ -284,27 +265,15 @@ const RegistrasiSidang = () => {
       allList.forEach((r, i) => { if (respArr[i]) rMap[r.id] = respArr[i]; });
       setResponseMap(rMap);
 
-      //  FIX: Filter yang benar 
-      // Tampilkan registrasi yang PERNAH disubmit, yaitu:
-      //   a) isDraft=false  → submit normal / sudah resubmit setelah revisi
-      //   b) isDraft=true DAN punya response → admin sudah set revisi
-      //      (BE set isDraft=true kembali saat admin beri revisi = status PERLU_REVISI)
-      // Yang tidak tampil: isDraft=true tanpa response = draft murni belum pernah submit
       const visible = allList.filter((r, i) => {
         const hasResponse = !!respArr[i];
         return !r.isDraft || hasResponse;
       });
 
-      // Fetch semua periode sidang
       const allPeriods = await getSidangPeriods().catch(() => []);
       const prdMap = {};
       (allPeriods ?? []).forEach(p => { prdMap[p.id] = p; });
       setPeriodMap(prdMap);
-
-      //  FIX: Prodi dari student.studyProgram.name 
-      // BE (setelah fix sidangRegistrationController) sudah include
-      // student.studyProgram.name langsung di response list.
-      // Build map: { [studentId]: namaProdi } untuk lookup cepat di tabel.
       const prMap = {};
       visible.forEach(r => {
         const name = r.student?.studyProgram?.name ?? null;
@@ -325,24 +294,18 @@ const RegistrasiSidang = () => {
     if (user?.role === 'ACADEMIC_STAFF') fetchAll();
   }, [user]);
 
-  //  Helper: resolve status per registrasi 
   const getStatus = useCallback((reg) => {
     const response = responseMap[reg.id] ?? null;
-    // sidangPeriodId ada di registration (bukan di response)
     const periodId = reg.sidangPeriodId ?? null;
     const period   = periodId ? (periodMap[periodId] ?? null) : null;
     return determineSidangStatus(reg, response, period);
   }, [responseMap, periodMap]);
 
-  //  Helper: resolve nama prodi per registrasi 
   const getProdiName = useCallback((reg) => {
-    // Prioritas 1: langsung dari student.studyProgram.name (BE sudah include)
     if (reg.student?.studyProgram?.name) return reg.student.studyProgram.name;
-    // Prioritas 2: lookup dari map yang dibangun saat fetch
     return prodiMap[reg.studentId] ?? '-';
   }, [prodiMap]);
 
-  //  Daftar prodi (fixed master list, bukan derive dari data registrasi) 
   const prodiOptions = PRODI_LIST;
 
   const toggleProdiFilter = useCallback((prodi) => {
@@ -397,7 +360,6 @@ const RegistrasiSidang = () => {
           const db = new Date(getSubmitDate(b) ?? 0).getTime();
           return sort.dir === 'asc' ? da - db : db - da;
         }
-        // Default (netral): urutan berdasarkan prioritas status (behavior lama)
         const sa = getStatus(a);
         const sb = getStatus(b);
         return (STATUS_SORT_ORDER[sa] ?? 99) - (STATUS_SORT_ORDER[sb] ?? 99);
@@ -409,11 +371,9 @@ const RegistrasiSidang = () => {
 
   useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus, selectedProdis]);
 
-  //  Counter untuk tab 
   const countAll    = registrations.length;
   const countStatus = (s) => registrations.filter(r => getStatus(r) === s).length;
 
-  //  Format tanggal 
   const fmtDate = (iso) => {
     if (!iso) return '-';
     return new Date(iso).toLocaleDateString('id-ID', {
@@ -421,7 +381,6 @@ const RegistrasiSidang = () => {
     });
   };
 
-  //  Setelah modal berhasil simpan → refresh data 
   const handleModalSaved = useCallback(() => {
     setSelectedReg(null);
     fetchAll();
@@ -444,7 +403,7 @@ const RegistrasiSidang = () => {
 
         <div className="vs-page-wrapper">
           {/* Red header */}
-          <div className="vs-topbar"><h1>Verifikasi Sidang</h1></div>
+          <div classNae="vs-topbar"><h1>Verifikasi Sidang</h1></div>
 
           <div className="vs-content">
             <h2 className="vs-page-title">Daftar Registrasi Sidang Mahasiswa</h2>
