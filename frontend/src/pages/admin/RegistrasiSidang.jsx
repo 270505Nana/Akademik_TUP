@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Search, ChevronLeft, ChevronRight, Menu,
   GraduationCap, CheckCircle2, RefreshCw, Loader, ChevronDown,
+  ArrowUp, ArrowDown, ArrowUpDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -118,33 +120,67 @@ const JalurBadge = ({ jalur }) => {
 
 const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
+  const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
+  const btnWrapRef = useRef(null);
+  const panelRef   = useRef(null);
 
-  // Tutup dropdown kalau klik di luar area
+  const computePosition = useCallback(() => {
+    if (!btnWrapRef.current) return;
+    const rect = btnWrapRef.current.getBoundingClientRect();
+    setPanelPos({
+      top: rect.bottom + 6,
+      right: Math.max(8, window.innerWidth - rect.right), // jangan sampai keluar layar kanan
+    });
+  }, []);
+
+  const handleToggleOpen = () => {
+    if (!open) computePosition();
+    setOpen(o => !o);
+  };
+
+  // Tutup dropdown kalau klik di luar tombol ATAU di luar panel (panel-nya di-portal, jadi dicek terpisah)
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+      const clickedButton = btnWrapRef.current?.contains(e.target);
+      const clickedPanel   = panelRef.current?.contains(e.target);
+      if (!clickedButton && !clickedPanel) setOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Reposisi kalau window di-resize/scroll selagi panel terbuka
+  useEffect(() => {
+    if (!open) return;
+    const reposition = () => computePosition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [open, computePosition]);
+
   const isActive = selected.length > 0;
 
   return (
-    <div className="vs-prodi-filter" ref={wrapRef}>
+    <div className="vs-prodi-filter" ref={btnWrapRef}>
       <button
         type="button"
         className={`vs-tab ${isActive ? 'active' : ''}`}
-        onClick={() => setOpen(o => !o)}
+        onClick={handleToggleOpen}
       >
         Prodi
         {isActive && <span className="vs-tab-count">({selected.length})</span>}
         <ChevronDown size={12} style={{ marginLeft: 2 }} />
       </button>
 
-      {open && (
-        <div className="vs-prodi-panel">
+      {open && createPortal(
+        <div
+          className="vs-prodi-panel"
+          ref={panelRef}
+          style={{ position: 'fixed', top: panelPos.top, right: panelPos.right }}
+        >
           {options.length === 0 ? (
             <div className="vs-prodi-empty">Belum ada data prodi.</div>
           ) : (
@@ -155,7 +191,7 @@ const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
                   checked={selected.includes(prodi)}
                   onChange={() => onToggle(prodi)}
                 />
-                {prodi}
+                <span>{prodi}</span>
               </label>
             ))
           )}
@@ -164,9 +200,30 @@ const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
               Hapus filter prodi
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
+  );
+};
+
+const SortableHeader = ({ label, field, sort, onSort, style }) => {
+  const isActive = sort.field === field;
+  return (
+    <th
+      style={{ ...style, cursor: 'pointer', userSelect: 'none' }}
+      onClick={() => onSort(field)}
+      title="Klik untuk urutkan: A-Z → Z-A → default"
+    >
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {label}
+        {isActive ? (
+          sort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />
+        ) : (
+          <ArrowUpDown size={11} color="#CBD5E1" />
+        )}
+      </span>
+    </th>
   );
 };
 
@@ -188,6 +245,7 @@ const RegistrasiSidang = () => {
   const [searchDebounced, setSearchDebounced] = useState('');
   const [filterStatus,    setFilterStatus]    = useState('');
   const [selectedProdis,  setSelectedProdis]  = useState([]);
+  const [sort, setSort] = useState({ field: null, dir: 'asc' }); // field: 'name' | 'date' | null
   const [currentPage,     setCurrentPage]     = useState(1);
   const [alert,           setAlert]           = useState({ show: false, type: '', title: '', message: '' });
 
@@ -293,6 +351,18 @@ const RegistrasiSidang = () => {
 
   const clearProdiFilter = useCallback(() => setSelectedProdis([]), []);
 
+  const getSubmitDate = useCallback((reg) =>
+    reg.submittedAt ?? reg.sidangRegistrationUploads?.[0]?.createdAt ?? reg.createdAt ?? null,
+  []);
+
+  const handleSort = useCallback((field) => {
+    setSort(prev => {
+      if (prev.field !== field) return { field, dir: 'asc' };       // kolom baru → mulai asc
+      if (prev.dir === 'asc')   return { field, dir: 'desc' };      // klik ke-2 → desc
+      return { field: null, dir: 'asc' };                            // klik ke-3 → netral (balik ke default status order)
+    });
+  }, []);
+
   //  Filter + sort + paginate 
   const filteredList = useMemo(() => {
     return registrations
@@ -311,11 +381,26 @@ const RegistrasiSidang = () => {
         return selectedProdis.includes(getProdiName(r));
       })
       .sort((a, b) => {
+        // Kalau admin lagi aktifin sort kolom (Nama/Tanggal), itu prioritas utama.
+        // Filter status & prodi di atas tetap jalan duluan (data udah ke-filter),
+        // sort ini cuma nentuin URUTAN tampilnya.
+        if (sort.field === 'name') {
+          const na = (a.student?.name || '').toLowerCase();
+          const nb = (b.student?.name || '').toLowerCase();
+          const cmp = na.localeCompare(nb, 'id');
+          return sort.dir === 'asc' ? cmp : -cmp;
+        }
+        if (sort.field === 'date') {
+          const da = new Date(getSubmitDate(a) ?? 0).getTime();
+          const db = new Date(getSubmitDate(b) ?? 0).getTime();
+          return sort.dir === 'asc' ? da - db : db - da;
+        }
+        // Default (netral): urutan berdasarkan prioritas status (behavior lama)
         const sa = getStatus(a);
         const sb = getStatus(b);
         return (STATUS_SORT_ORDER[sa] ?? 99) - (STATUS_SORT_ORDER[sb] ?? 99);
       });
-  }, [registrations, searchDebounced, filterStatus, selectedProdis, getStatus, getProdiName]);
+  }, [registrations, searchDebounced, filterStatus, selectedProdis, sort, getStatus, getProdiName, getSubmitDate]);
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
   const paginated  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -333,9 +418,6 @@ const RegistrasiSidang = () => {
       day: 'numeric', month: 'short', year: 'numeric',
     });
   };
-
-  const getSubmitDate = (reg) =>
-    reg.submittedAt ?? reg.sidangRegistrationUploads?.[0]?.createdAt ?? reg.createdAt ?? null;
 
   //  Setelah modal berhasil simpan → refresh data 
   const handleModalSaved = useCallback(() => {
@@ -417,13 +499,13 @@ const RegistrasiSidang = () => {
                   <thead>
                     <tr>
                       <th style={{ width: 44 }}>NO</th>
-                      <th>MAHASISWA</th>
+                      <SortableHeader label="MAHASISWA" field="name" sort={sort} onSort={handleSort} />
                       <th>PRODI</th>
                       <th>JALUR SIDANG</th>
                       <th>SKEMA</th>
                       <th style={{ textAlign: 'center' }}>STATUS</th>
                       <th>PERIODE SIDANG</th>
-                      <th>TANGGAL</th>
+                      <SortableHeader label="TANGGAL" field="date" sort={sort} onSort={handleSort} />
                       <th style={{ textAlign: 'center' }}>AKSI</th>
                     </tr>
                   </thead>
