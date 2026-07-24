@@ -7,46 +7,56 @@ import illustration from "../../assets/karakter-dashboard.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
-import {getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, getSidangPeriods, getYudisiumPeriods, getSidangRegistrationByStudentId, getSidangRegistrationResponse, getSidangRegistrationUploads, downloadSK } from '../../service/api';
+import {getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, getSidangPeriods, getYudisiumPeriods, getSidangRegistrationByStudentId, getSidangRegistrationResponse, downloadSK } from '../../service/api';
 import {determineSkStatus,unwrapResponse,STATUS_SK,} from '../../components/common/Skstatushelper';
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus} from '../../components/admin/sidang/Sidangstatushelper';
 
-const pickActiveRegistration = (registrations) => {
-  if (!Array.isArray(registrations) || registrations.length === 0) return null;
-  const sorted = [...registrations].sort((a, b) => b.id - a.id);
-  const submitted = sorted.find(r => r.isDraft === false);
-  if (submitted) return submitted;
-  const filledDraft = sorted.find(r => r.isDraft === true && r.programType !== null);
-  if (filledDraft) return filledDraft;
-  return null;
+const normalizeRegistration = (raw) => {
+  if (Array.isArray(raw)) return raw[0] ?? null;
+  return raw ?? null;
 };
 
 const toRowBadge = (cfg) => ({
-  bg    : cfg.bg,
-  border: cfg.border,
-  color : cfg.color,
+  bg    : cfg.badgeBg,
+  border: cfg.borderColor,
+  color : cfg.badgeColor,
   label : cfg.label,
 });
 
 const SIDANG_KETERANGAN_LABEL = {
   [STATUS_SIDANG.BELUM_DAFTAR]         : 'Belum Mengisi Formulir',
-  [STATUS_SIDANG.DRAFT]                : 'Proses Registrasi',
+  [STATUS_SIDANG.PROSES_REGISTRASI]    : 'Proses Registrasi',
   [STATUS_SIDANG.DALAM_PROSES]         : 'Menunggu Verifikasi',
   [STATUS_SIDANG.PERLU_REVISI]         : 'Berkas Perlu Diperbaiki',
-  [STATUS_SIDANG.REVISI_DIPERBARUI]    : 'Menunggu Reverifikasi',
-  [STATUS_SIDANG.PENDAFTARAN_DITERIMA] : 'Menunggu Jadwal Aktif',
-  [STATUS_SIDANG.SIAP_SIDANG]          : 'Periode Sidang Aktif',
+  [STATUS_SIDANG.REVISI_DIPERBARUI]    : 'Menunggu Ulang Verifikasi Admin',
 };
 
-const getSidangKeteranganBadge = (status) => {
+// Warna badge & sebagian label disamakan persis dengan tabel Registrasi Sidang admin
+const getSidangKeteranganBadge = (status, assignedPeriode) => {
   const cfg = SIDANG_STATUS_CONFIG[status];
   if (!cfg) return { bg: '#F3F4F6', border: '#9CA3AF', color: '#6B7280', label: '—' };
-  return {
-    bg    : cfg.bg,
-    border: cfg.border,
-    color : cfg.color,
-    label : SIDANG_KETERANGAN_LABEL[status] ?? cfg.label,
+
+  const base = {
+    bg    : cfg.badgeBg,
+    border: cfg.borderColor,
+    color : cfg.badgeColor,
   };
+
+  if (status === STATUS_SIDANG.PENDAFTARAN_DITERIMA) {
+    return {
+      ...base,
+      label: `Pendaftaran Sidang Diterima, Kamu dijadwalkan pada periode ${assignedPeriode?.name ?? '-'}`,
+    };
+  }
+
+  if (status === STATUS_SIDANG.SIAP_SIDANG) {
+    return {
+      ...base,
+      label: `Pendaftaran Sidang Diterima, Kamu siap sidang! Pada periode ${assignedPeriode?.name ?? '-'}`,
+    };
+  }
+
+  return { ...base, label: SIDANG_KETERANGAN_LABEL[status] ?? cfg.label };
 };
 
 const LOCKED_BADGE = { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Selesaikan Proses Registrasi Sebelumnya' };
@@ -197,6 +207,8 @@ const DashboardMahasiswa = () => {
 
   const [sidangRegStatus,  setSidangRegStatus]  = useState(null);
   const [loadingSidangReg, setLoadingSidangReg] = useState(false);
+  const [sidangResponse,        setSidangResponse]       = useState(null);
+  const [sidangAssignedPeriode, setSidangAssignedPeriode] = useState(null);
 
   const [sidangPeriode,   setSidangPeriode]   = useState(null);
   const [yudisiumPeriode, setYudisiumPeriode] = useState(null);
@@ -260,6 +272,8 @@ const DashboardMahasiswa = () => {
 
       if (!studentId || skStatus !== STATUS_SK.SUDAH_TERBIT) {
         setSidangRegStatus(STATUS_SIDANG.BELUM_DAFTAR);
+        setSidangResponse(null);
+        setSidangAssignedPeriode(null);
         setLoadingSidangReg(false);
         return;
       }
@@ -267,29 +281,35 @@ const DashboardMahasiswa = () => {
       setLoadingSidangReg(true);
       try {
         const rawRegistrations = await getSidangRegistrationByStudentId(studentId);
-        const registrationsArray = Array.isArray(rawRegistrations)
-          ? rawRegistrations
-          : (rawRegistrations ? [rawRegistrations] : []);
-
-        const registration = pickActiveRegistration(registrationsArray);
+        const registration = normalizeRegistration(rawRegistrations);
 
         if (!registration) {
-          setSidangRegStatus(determineSidangStatus(null, null, null, []));
+          setSidangRegStatus(determineSidangStatus(null, null, null));
+          setSidangResponse(null);
+          setSidangAssignedPeriode(null);
           return;
         }
 
-        const [response, uploadsRaw] = await Promise.all([
+        const [response, allPeriods] = await Promise.all([
           getSidangRegistrationResponse(registration.id).catch(() => null),
-          getSidangRegistrationUploads(registration.id).catch(() => []),
+          getSidangPeriods().catch(() => []),
         ]);
 
-        const uploads = Array.isArray(uploadsRaw) ? uploadsRaw : [];
-        const status  = determineSidangStatus(registration, response, null, uploads);
+        // Periode yang sudah di-attach admin ke registrasi mahasiswa ini
+        const assignedPeriode = registration.sidangPeriodId
+          ? (allPeriods ?? []).find(p => p.id === registration.sidangPeriodId) ?? null
+          : null;
+
+        const status = determineSidangStatus(registration, response, assignedPeriode);
         setSidangRegStatus(status);
+        setSidangResponse(response);
+        setSidangAssignedPeriode(assignedPeriode);
 
       } catch (err) {
         console.error('Gagal fetch sidang registration status:', err);
         setSidangRegStatus(null);
+        setSidangResponse(null);
+        setSidangAssignedPeriode(null);
       } finally {
         setLoadingSidangReg(false);
       }
@@ -601,13 +621,29 @@ const DashboardMahasiswa = () => {
                         </div>
                       </td>
                       <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex justify-center">
+                        <div className="flex flex-col items-center gap-1">
                           {rowSidangLoading ? (
                             <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
                           ) : !skSudahTerbit ? (
                             <RowBadge style={LOCKED_BADGE} />
                           ) : (
-                            <RowBadge style={getSidangKeteranganBadge(sidangRegStatus)} />
+                            <>
+                              <RowBadge style={getSidangKeteranganBadge(sidangRegStatus, sidangAssignedPeriode)} />
+                              {sidangRegStatus === STATUS_SIDANG.PERLU_REVISI && sidangResponse?.message && (
+                                <div style={{
+                                  maxWidth: 220, fontSize: 10, color: '#991B1B', textAlign: 'center',
+                                  background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 6,
+                                  padding: '4px 8px', lineHeight: 1.4,
+                                }}>
+                                  <strong>Catatan Admin:</strong> {sidangResponse.message}
+                                  {sidangResponse.isEdit && (
+                                    <div style={{ marginTop: 2, fontSize: 9, color: '#B91C1C' }}>
+                                      Batas revisi: {formatDateShort(sidangResponse.isEdit)}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>
@@ -623,9 +659,13 @@ const DashboardMahasiswa = () => {
                             <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
                               &gt; Daftar Sidang
                             </BtnRed>
-                          ) : sidangRegStatus === STATUS_SIDANG.DRAFT ? (
+                          ) : sidangRegStatus === STATUS_SIDANG.PROSES_REGISTRASI ? (
                             <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
                               &gt; Lanjutkan Form
+                            </BtnRed>
+                          ) : sidangRegStatus === STATUS_SIDANG.PERLU_REVISI ? (
+                            <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
+                              &gt; Lihat Revisi
                             </BtnRed>
                           ) : (
                             <BtnOutline onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
