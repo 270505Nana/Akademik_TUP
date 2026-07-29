@@ -10,7 +10,7 @@ import { useStudent } from "../../context/StudentContext";
 import Step1 from "../../components/mahasiswa/sidang/Step1Sidang";
 import Step2 from "../../components/mahasiswa/sidang/Step2Sidang";
 import CustomAlert from "../../components/common/CustomAlert";
-import {getLecturers,getSidangRegistrationByStudentId, getSidangRegistrationResponse,getSktaResponseUploadByStudentId, saveSidangRegistration,submitSidangRegistration,} from "../../service/api";
+import {getLecturers,getSidangRegistrationByStudentId,getSidangRegistrationResponse,getSktaResponseUploadByStudentId,saveSidangRegistration,submitSidangRegistration,} from "../../service/api";
 import {STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from "../../components/admin/sidang/Sidangstatushelper";
 
 const STEP1_REQUIRED = [
@@ -175,7 +175,6 @@ function PendaftaranSidangContent() {
     dosenPembimbing2Id: data.dosenPembimbing2Id ? Number(data.dosenPembimbing2Id) : null,
   });
 
-  // Simpan & Lanjutkan 
   const handleSaveStep1 = async () => {
     setFormAlert(null);
 
@@ -198,7 +197,6 @@ function PendaftaranSidangContent() {
       setIsSavingStep1(true);
       const result = await saveSidangRegistration(buildSavePayload());
 
-      // Response: { message, data: { id, ... } }
       const savedId = result?.data?.id ?? null;
       if (savedId && !registrationId) {
         setRegistrationId(savedId);
@@ -217,7 +215,6 @@ function PendaftaranSidangContent() {
     }
   };
 
-  //  Submit Final 
   const handleSubmit = async () => {
     setFormAlert(null);
 
@@ -312,8 +309,6 @@ function PendaftaranSidangContent() {
       setRegistrationId(existing.id);
       applyRegistrationToForm(existing);
       setRegistrationMeta(existing);
-
-      // Sinkronkan status berkas (ACC / perlu revisi) dari data yang sudah tersimpan
       if (Array.isArray(existing.sidangRegistrationUploads) && existing.sidangRegistrationUploads.length > 0) {
         dispatch({ type: "RESTORE_SERVER_DOCUMENTS", uploads: existing.sidangRegistrationUploads });
       }
@@ -436,7 +431,12 @@ function PendaftaranSidangContent() {
 
             <main>
               {step === 1 ? (
-                <Step1 studentInfo={studentInfo} lecturers={lecturers} readOnly={isStep1Locked} />
+                <Step1
+                  studentInfo={studentInfo}
+                  lecturers={lecturers}
+                  readOnly={isStep1Locked}
+                  schemeLocked={isRevisionActive}
+                />
               ) : (
                 <Step2 registrationId={registrationId} />
               )}
