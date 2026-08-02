@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Edit3, Check, AlertTriangle } from 'lucide-react';
+import { X, Plus, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 import '../admin/css/keloladatadosen.css';
 
@@ -118,18 +118,18 @@ const KelolaKKModal = ({ researchGroups, onClose, onRename, onCreate }) => {
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && confirmEdit(group.id)}
                     />
-                    <button className="dd-btn-icon save" onClick={() => confirmEdit(group.id)}>
-                      <Check size={14} />
+                    <button className="dd-btn-text save" onClick={() => confirmEdit(group.id)}>
+                      Simpan
                     </button>
-                    <button className="dd-btn-icon" onClick={() => { setEditingId(null); setLocalError(null); }}>
-                      <X size={14} />
+                    <button className="dd-btn-text" onClick={() => { setEditingId(null); setLocalError(null); }}>
+                      Batal
                     </button>
                   </>
                 ) : (
                   <>
                     <span className="dd-kk-row-name">{group.name}</span>
-                    <button className="dd-btn-icon" onClick={() => startEdit(group)}>
-                      <Edit3 size={13} />
+                    <button className="dd-btn-text" onClick={() => startEdit(group)}>
+                      Edit
                     </button>
                   </>
                 )}

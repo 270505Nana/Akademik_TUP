@@ -266,7 +266,7 @@ const KelolaDataDosen = () => {
                       <th style={{ width: 44 }}>NO</th>
                       <th>NAMA DOSEN</th>
                       <th>NIDN/NIP</th>
-                      <th>PRODI</th>
+                      {/* <th>PRODI</th> */}
                       <th>KELOMPOK KEAHLIAN</th>
                       <th style={{ textAlign: 'center' }}>AKSI</th>
                     </tr>
@@ -298,7 +298,7 @@ const KelolaDataDosen = () => {
                             <div className="dd-dosen-nama">{d.nama}</div>
                           </td>
                           <td>{d.nip}</td>
-                          <td><span className="dd-prodi-empty">-</span></td>
+                          {/* <td><span className="dd-prodi-empty">-</span></td> */}
                           <td>
                             <span className="dd-kk-badge">{kkNameById(d.researchGroupId)}</span>
                             {d.isKetuaKK && <div className="dd-ketua-badge">Ketua KK</div>}

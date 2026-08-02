@@ -106,11 +106,13 @@
 .dd-dosen-nip  { font-size: 10px; color: #6B7280; margin-top: 2px; }
 .dd-prodi-empty { font-size: 12px; color: #9CA3AF; }
 
+
 .dd-kk-badge {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 10px; font-weight: 700; padding: 3px 10px;
-  border-radius: 9999; background: #DBEAFE; color: #1D4ED8;
+  border-radius: 10px; background: #DBEAFE; color: #1D4ED8;
   border: 1.5px solid #BFDBFE; white-space: nowrap;
+  margin-right: 5px;
 }
 .dd-ketua-badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -272,5 +274,15 @@
 .dd-btn-icon:hover { background: #F8FAFC; }
 .dd-btn-icon.save { border-color: #16A34A; color: #16A34A; }
 .dd-btn-icon.save:hover { background: #F0FDF4; }
+
+.dd-btn-text {
+  padding: 6px 14px; border-radius: 6px;
+  border: 1px solid #E5E7EB; background: #fff; color: #374151;
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  white-space: nowrap; transition: all 0.15s;
+}
+.dd-btn-text:hover { background: #F8FAFC; }
+.dd-btn-text.save { border-color: #16A34A; color: #16A34A; }
+.dd-btn-text.save:hover { background: #F0FDF4; }
 
 @keyframes dd-spin { to { transform: rotate(360deg); } }
