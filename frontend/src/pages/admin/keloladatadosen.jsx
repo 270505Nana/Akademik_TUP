@@ -1,11 +1,16 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import {Search, ChevronLeft, ChevronRight, Menu,Users, Settings2, X, Plus, Pencil, Check, AlertTriangle,} from 'lucide-react';
+import {
+  Search, ChevronLeft, ChevronRight, Menu,
+  Users, Settings2, X, AlertTriangle,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
-import CustomAlert  from '../../components/common/CustomAlert';
+
+import SidebarAdmin  from '../../components/sidebar/SidebarAdmin';
+import CustomAlert   from '../../components/common/CustomAlert';
+import KelolaKKModal from '../../components/common/KelolaKKModal';
 import '../../components/admin/css/keloladatadosen.css';
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 50;
 
 const INITIAL_RESEARCH_GROUPS = [
   { id: 1, name: 'Applied Artificial Intelligence' },
@@ -137,110 +142,6 @@ const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave }) =
   );
 };
 
-const KelolaKKModal = ({ researchGroups, onClose, onRename, onCreate }) => {
-  const [editingId,   setEditingId]   = useState(null);
-  const [editValue,   setEditValue]   = useState('');
-  const [newKKName,   setNewKKName]   = useState('');
-  const [localError,  setLocalError]  = useState(null);
-
-  const startEdit = (group) => {
-    setEditingId(group.id);
-    setEditValue(group.name);
-    setLocalError(null);
-  };
-
-  const confirmEdit = (id) => {
-    const trimmed = editValue.trim();
-    if (!trimmed) { setLocalError('Nama KK tidak boleh kosong.'); return; }
-    onRename(id, trimmed);
-    setEditingId(null);
-    setEditValue('');
-    setLocalError(null);
-  };
-
-  const handleCreate = () => {
-    const trimmed = newKKName.trim();
-    if (!trimmed) { setLocalError('Nama KK baru tidak boleh kosong.'); return; }
-    onCreate(trimmed);
-    setNewKKName('');
-    setLocalError(null);
-  };
-
-  return (
-    <div className="dd-modal-overlay" onClick={onClose}>
-      <motion.div
-        className="dd-modal-box dd-modal-kk"
-        onClick={e => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-      >
-        <div className="dd-modal-header">
-          <h3 className="dd-modal-title">Kelola Kelompok Keahlian</h3>
-          <button className="dd-modal-close" onClick={onClose}><X size={16} /></button>
-        </div>
-
-        <div className="dd-modal-body">
-          {localError && (
-            <div className="dd-toggle-warning" style={{ marginBottom: 14 }}>
-              <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-              {localError}
-            </div>
-          )}
-
-          <div className="dd-kk-list">
-            {researchGroups.map(group => (
-              <div className="dd-kk-row" key={group.id}>
-                {editingId === group.id ? (
-                  <>
-                    <input
-                      className="dd-kk-row-input"
-                      value={editValue}
-                      autoFocus
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && confirmEdit(group.id)}
-                    />
-                    <button className="dd-btn-icon save" onClick={() => confirmEdit(group.id)}>
-                      <Check size={14} />
-                    </button>
-                    <button className="dd-btn-icon" onClick={() => { setEditingId(null); setLocalError(null); }}>
-                      <X size={14} />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="dd-kk-row-name">{group.name}</span>
-                    <button className="dd-btn-icon" onClick={() => startEdit(group)}>
-                      <Pencil size={13} />
-                    </button>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="dd-form-group" style={{ marginBottom: 0 }}>
-            <label className="dd-form-label">Tambah Kelompok Keahlian Baru</label>
-            <div className="dd-kk-add-row">
-              <input
-                className="dd-form-input"
-                placeholder="Nama kelompok keahlian"
-                value={newKKName}
-                onChange={(e) => setNewKKName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              />
-              <button className="dd-btn-save" style={{ whiteSpace: 'nowrap' }} onClick={handleCreate}>
-                <Plus size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
-                Tambah
-              </button>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
 const KelolaDataDosen = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -252,9 +153,9 @@ const KelolaDataDosen = () => {
   const [filterKK,        setFilterKK]        = useState('');
   const [currentPage,     setCurrentPage]     = useState(1);
 
-  const [editingDosen,   setEditingDosen]   = useState(null);
-  const [showKelolaKK,   setShowKelolaKK]   = useState(false);
-  const [alert,          setAlert]          = useState({ show: false, type: '', title: '', message: '' });
+  const [editingDosen, setEditingDosen] = useState(null);
+  const [showKelolaKK, setShowKelolaKK] = useState(false);
+  const [alert,        setAlert]        = useState({ show: false, type: '', title: '', message: '' });
 
   const showAlert = useCallback((type, title, message) => {
     setAlert({ show: true, type, title, message });
@@ -354,9 +255,6 @@ const KelolaDataDosen = () => {
                     <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
                 </select>
-                <select className="dd-select" disabled>
-                  <option>Filter Prodi (Segera Hadir)</option>
-                </select>
               </div>
 
               <div className="dd-table-divider" />
@@ -449,7 +347,6 @@ const KelolaDataDosen = () => {
       <AnimatePresence>
         {alert.show && (
           <motion.div
-            className="vs-alert-overlay"
             style={{ position: 'fixed', top: 24, right: 24, zIndex: 9999, maxWidth: 380 }}
             initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0,   opacity: 1 }}

@@ -115,7 +115,7 @@
 .dd-ketua-badge {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 9px; font-weight: 800; padding: 2px 8px;
-  border-radius: 9999; background: #FEF3C7; color: #92400E;
+  border-radius: 10px; background: #FEF3C7; color: #92400E;
   border: 1.5px solid #FDE68A; white-space: nowrap; margin-top: 4px;
 }
 
@@ -177,6 +177,15 @@
   border-radius: 8px; border: none; background: #F1F5F9; color: #64748B; cursor: pointer;
 }
 .dd-modal-close:hover { background: #E2E8F0; }
+
+.dd-btn-add-kk {
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border-radius: 8px;
+  border: 1.5px solid #C0182A; background: #fff;
+  font-size: 12px; font-weight: 700; color: #C0182A;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.dd-btn-add-kk:hover { background: #FEF2F2; }
 
 .dd-modal-body { padding: 24px; }
 
@@ -263,9 +272,5 @@
 .dd-btn-icon:hover { background: #F8FAFC; }
 .dd-btn-icon.save { border-color: #16A34A; color: #16A34A; }
 .dd-btn-icon.save:hover { background: #F0FDF4; }
-
-.dd-kk-add-row {
-  display: flex; gap: 8px; padding-top: 14px; border-top: 1px solid #F1F5F9;
-}
 
 @keyframes dd-spin { to { transform: rotate(360deg); } }
