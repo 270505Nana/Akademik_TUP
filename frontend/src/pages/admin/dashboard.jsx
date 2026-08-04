@@ -1,25 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CalendarCheck, FileText, Printer, 
-  Filter, Download, MoreVertical, Activity, Clock, 
-  AlertCircle, ArrowRightCircle, ChevronLeft, ChevronRight,
-  Eye, CheckCircle2, Menu, Users, Loader
-} from 'lucide-react';
+import {CalendarCheck, FileText, Printer, Filter, Download, MoreVertical, Activity, Clock, AlertCircle, ArrowRightCircle, ChevronLeft, ChevronRight,Eye, CheckCircle2, Menu, Users, Loader} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth } from '../../context/AuthContext';
-import {
-  getSidangPeriods,
-  getAllSidangRegistrations,
-  getAllSktaRequests,
-  getSidangRegistrationResponse,
-} from '../../service/api';
-import {
-  determineSidangStatus,
-  SIDANG_STATUS_CONFIG,
-} from '../../components/admin/sidang/SidangStatusHelper.js';
+import {getSidangPeriods,getAllSidangRegistrations,getAllSktaRequests,getSidangRegistrationResponse,} from '../../service/api';
+import {determineSidangStatus,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../dashboard.css';
 
 const MONITORING_PAGE_SIZE = 25;
@@ -46,12 +32,6 @@ const formatActivityTime = (iso) => {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
   });
 };
-
-// Dedup per studentId: BE bisa nyimpen 2 row per mahasiswa (shell kosong +
-// submission asli). Row dengan thesisTitleId terisi = submission asli,
-// diprioritaskan. Kalau gak ada sama sekali → mahasiswa belum submit (Tahap 1).
-// CATATAN: ini BUKAN pickActiveRegistration() dari Dashboard.jsx mahasiswa —
-// belum ada akses ke isi function itu, jadi didekati manual. Ganti kalau beda.
 const pickPrimaryRegistrationPerStudent = (registrations = []) => {
   const grouped = {};
   registrations.forEach((r) => {
@@ -73,8 +53,6 @@ const pickPrimaryRegistrationPerStudent = (registrations = []) => {
   });
 };
 
-// Sama persis dengan logic di Dashboard.jsx mahasiswa (belum ada di shared helper,
-// jadi didup dulu di sini — pertimbangkan extract ke util bersama biar gak duplikat)
 const pickRelevantPeriod = (list = []) => {
   if (!Array.isArray(list) || list.length === 0) return null;
   const open = list.find(p => p.isOpen === true);
@@ -118,7 +96,6 @@ const CardAtas4 = ({ icon, label, value, sub, badge, badgeColor }) => (
 );
 
 const StatusRegistBadge = ({ statusKey, statusLabel }) => {
-  // Tahap 1 (belum submit) — statusKey null, badge netral
   if (!statusKey) {
     return (
       <span style={{
@@ -169,11 +146,8 @@ const MonitoringProgress = ({ onShowToast }) => {
       (allPeriods ?? []).forEach((p) => { prdMap[p.id] = p; });
       setPeriodMap(prdMap);
 
-      // Dedup per mahasiswa
       const primaryList = pickPrimaryRegistrationPerStudent(allRegs);
 
-      // Fetch response cuma buat yang udah submit (thesisTitleId terisi),
-      // biar gak buang request percuma buat draft kosong
       const respArr = await Promise.all(
         primaryList.map((r) =>
           r.thesisTitleId
@@ -396,24 +370,24 @@ const RecentActivity = () => {
 
       const combined = [];
 
-      // Aktivitas: Pengajuan SK
       if (skResult.status === 'fulfilled') {
         const raw = skResult.value;
         const sktaList = raw?.data ?? raw ?? [];
         (Array.isArray(sktaList) ? sktaList : []).forEach((r) => {
-          const name = r.student?.name || r.studentName || `Mahasiswa #${r.studentId}`;
+          const name = r.student?.name || `Mahasiswa #${r.studentId}`;
+          const submittedAt = r.sktaRequestUploads?.[0]?.createdAt ?? null;
+          if (!submittedAt) return; 
           combined.push({
             key: `sk-${r.id}`,
             name,
             action: 'mengajukan SK Pembimbing Tugas Akhir.',
-            time: r.createdAt,
+            time: submittedAt,
           });
         });
       } else {
         console.error('Gagal fetch skta requests (aktivitas):', skResult.reason);
       }
 
-      // Aktivitas: Pendaftaran Sidang (cuma yang sudah submit, bukan draft kosong)
       if (sidangResult.status === 'fulfilled') {
         const list = sidangResult.value ?? [];
         list.filter((r) => r.thesisTitleId).forEach((r) => {
@@ -441,7 +415,7 @@ const RecentActivity = () => {
     <div className="activity-card mt-0">
       <div className="ac-header">
         <h6><Activity size={14} className="inline mr-2" style={{ color: 'var(--primary)' }} />Aktivitas</h6>
-        <a href="#">Semua</a>
+        {/* <a href="#">Semua</a> */}
       </div>
       <div className="activity-list">
         {loading ? (
@@ -474,7 +448,6 @@ const DashboardAkademik = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toasts, setToasts]           = useState([]);
 
-  // --- State 3 card ringkasan (real data) ---
   const [periodeAktif, setPeriodeAktif]     = useState(null);
   const [totalPendaftar, setTotalPendaftar] = useState(null);
   const [jumlahSK, setJumlahSK]             = useState(null);
@@ -487,8 +460,6 @@ const DashboardAkademik = () => {
 
   useEffect(() => {
     const fetchSummaryCards = async () => {
-      // Promise.allSettled dipakai (bukan Promise.all) supaya kalau salah satu
-      // endpoint gagal, dua card lainnya tetap bisa tampil normal.
       const results = await Promise.allSettled([
         getSidangPeriods(),
         getAllSidangRegistrations(),
@@ -506,7 +477,6 @@ const DashboardAkademik = () => {
       }
       setLoadingCards(prev => ({ ...prev, periode: false }));
 
-      // Card 2: Total Pendaftar Sidang (SEMUA status, tanpa filter isDraft)
       if (pendaftarResult.status === 'fulfilled') {
         const registrations = pendaftarResult.value ?? [];
         setTotalPendaftar(registrations.length);
