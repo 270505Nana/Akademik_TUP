@@ -8,8 +8,70 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
-import { getSidangPeriods, getAllSidangRegistrations, getAllSktaRequests } from '../../service/api';
+import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
+import { useAuth } from '../../context/AuthContext';
+import {
+  getSidangPeriods,
+  getAllSidangRegistrations,
+  getAllSktaRequests,
+  getSidangRegistrationResponse,
+} from '../../service/api';
+import {
+  determineSidangStatus,
+  SIDANG_STATUS_CONFIG,
+} from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../dashboard.css';
+
+const MONITORING_PAGE_SIZE = 25;
+const ACTIVITY_LIMIT = 5;
+
+const ACTIVITY_COLORS = [
+  'linear-gradient(135deg,#667EEA,#764BA2)',
+  'linear-gradient(135deg,#4FACFE,#00F2FE)',
+  'linear-gradient(135deg,#FA709A,#FEE140)',
+  'linear-gradient(135deg,#43E97B,#38F9D7)',
+  'linear-gradient(135deg,#FF9A9E,#FAD0C4)',
+];
+
+const getInitials = (name = '') => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
+
+const formatActivityTime = (iso) => {
+  if (!iso) return '-';
+  return new Date(iso).toLocaleString('id-ID', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
+};
+
+// Dedup per studentId: BE bisa nyimpen 2 row per mahasiswa (shell kosong +
+// submission asli). Row dengan thesisTitleId terisi = submission asli,
+// diprioritaskan. Kalau gak ada sama sekali → mahasiswa belum submit (Tahap 1).
+// CATATAN: ini BUKAN pickActiveRegistration() dari Dashboard.jsx mahasiswa —
+// belum ada akses ke isi function itu, jadi didekati manual. Ganti kalau beda.
+const pickPrimaryRegistrationPerStudent = (registrations = []) => {
+  const grouped = {};
+  registrations.forEach((r) => {
+    const sid = r.studentId;
+    if (!grouped[sid]) grouped[sid] = [];
+    grouped[sid].push(r);
+  });
+
+  return Object.values(grouped).map((group) => {
+    const withSubmission = group.filter((r) => r.thesisTitleId);
+    if (withSubmission.length > 0) {
+      return withSubmission.sort(
+        (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+      )[0];
+    }
+    return group.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    )[0];
+  });
+};
 
 // Sama persis dengan logic di Dashboard.jsx mahasiswa (belum ada di shared helper,
 // jadi didup dulu di sini — pertimbangkan extract ke util bersama biar gak duplikat)
@@ -55,16 +117,135 @@ const CardAtas4 = ({ icon, label, value, sub, badge, badgeColor }) => (
   </div>
 );
 
-const MonitoringProgress = ({ onShowToast }) => {
+const StatusRegistBadge = ({ statusKey, statusLabel }) => {
+  // Tahap 1 (belum submit) — statusKey null, badge netral
+  if (!statusKey) {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center',
+        fontSize: 10, fontWeight: 700, padding: '3px 10px',
+        borderRadius: 9999, background: '#F1F5F9',
+        border: '1.5px solid #E2E8F0', color: '#64748B', whiteSpace: 'nowrap',
+      }}>
+        {statusLabel}
+      </span>
+    );
+  }
+  // Tahap 2 — reuse warna dari SIDANG_STATUS_CONFIG biar konsisten sama RegistrasiSidang.jsx
+  const cfg = SIDANG_STATUS_CONFIG[statusKey];
+  if (!cfg) return <span style={{ fontSize: 10, color: '#9CA3AF' }}>{statusLabel}</span>;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      fontSize: 10, fontWeight: 700, padding: '3px 10px',
+      borderRadius: 9999, background: cfg.badgeBg,
+      border: `1.5px solid ${cfg.borderColor}`, color: cfg.badgeColor, whiteSpace: 'nowrap',
+    }}>
+      {cfg.label}
+    </span>
+  );
+};
 
- const data = [
-  { id: 1, name: 'Jeremy Cristo',    nim: '21040110',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
-  { id: 2, name: 'Stella',           nim: '21040160',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 2', percent: 100, status: 'terverifikasi' },
-  { id: 3, name: 'Dika Hutagaol',    nim: '21040110',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
-  { id: 4, name: 'Siti Aminah',      nim: '21040110',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 1', percent: 50,  status: 'on-progress' },
-  { id: 5, name: 'Budi Santoso',     nim: '21040110',  prodi: 'S1 Informatika', progres_sidang: 'Tahap 2', percent: 100, status: 'proses-verifikasi' },
-  { id: 6, name: 'Prajna paramitha', nim: '231110406', prodi: 'S1 Informatika', progres_sidang: 'Tahap 2', percent: 100, status: 'terverifikasi' },
-];
+const MonitoringProgress = ({ onShowToast }) => {
+  const { profile } = useAuth();
+
+  const [rows, setRows]               = useState([]);
+  const [periodMap, setPeriodMap]     = useState({});
+  const [loading, setLoading]         = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedReg, setSelectedReg] = useState(null);
+
+  const fetchMonitoringData = async () => {
+    setLoading(true);
+    try {
+      const [allRegsRaw, allPeriods] = await Promise.all([
+        getAllSidangRegistrations(),
+        getSidangPeriods().catch(() => []),
+      ]);
+
+      const allRegs = allRegsRaw ?? [];
+
+      const prdMap = {};
+      (allPeriods ?? []).forEach((p) => { prdMap[p.id] = p; });
+      setPeriodMap(prdMap);
+
+      // Dedup per mahasiswa
+      const primaryList = pickPrimaryRegistrationPerStudent(allRegs);
+
+      // Fetch response cuma buat yang udah submit (thesisTitleId terisi),
+      // biar gak buang request percuma buat draft kosong
+      const respArr = await Promise.all(
+        primaryList.map((r) =>
+          r.thesisTitleId
+            ? getSidangRegistrationResponse(r.id).catch(() => null)
+            : Promise.resolve(null)
+        )
+      );
+      const responseMap = {};
+      primaryList.forEach((r, i) => { if (respArr[i]) responseMap[r.id] = respArr[i]; });
+
+      const computedRows = primaryList.map((r) => {
+        const hasSubmitted = !!r.thesisTitleId;
+        const prodiName = r.student?.studyProgram?.name ?? '-';
+
+        if (!hasSubmitted) {
+          return {
+            id: r.id,
+            studentId: r.studentId,
+            name: r.student?.name || `Mahasiswa #${r.studentId}`,
+            nim: r.student?.nim || '-',
+            prodi: prodiName,
+            tahap: 'Tahap 1',
+            percent: 50,
+            statusKey: null,
+            statusLabel: 'Proses Registrasi',
+            sortDate: r.createdAt,
+            registration: r,
+          };
+        }
+
+        const period    = r.sidangPeriodId ? prdMap[r.sidangPeriodId] : null;
+        const statusKey = determineSidangStatus(r, responseMap[r.id] ?? null, period);
+
+        return {
+          id: r.id,
+          studentId: r.studentId,
+          name: r.student?.name || `Mahasiswa #${r.studentId}`,
+          nim: r.student?.nim || '-',
+          prodi: prodiName,
+          tahap: 'Tahap 2',
+          percent: 100,
+          statusKey,
+          statusLabel: SIDANG_STATUS_CONFIG[statusKey]?.label ?? statusKey,
+          sortDate: r.updatedAt || r.createdAt,
+          registration: r,
+        };
+      });
+
+      // Terbaru duluan
+      computedRows.sort((a, b) => new Date(b.sortDate) - new Date(a.sortDate));
+      setRows(computedRows);
+    } catch (err) {
+      console.error('Gagal fetch data monitoring:', err);
+      onShowToast?.('Gagal memuat data monitoring progres sidang.', <AlertCircle size={14} />, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchMonitoringData(); }, []);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / MONITORING_PAGE_SIZE));
+  const paginated  = rows.slice(
+    (currentPage - 1) * MONITORING_PAGE_SIZE,
+    currentPage * MONITORING_PAGE_SIZE
+  );
+
+  const handleModalSaved = () => {
+    setSelectedReg(null);
+    fetchMonitoringData();
+    onShowToast?.('Verifikasi berkas berhasil disimpan.', <CheckCircle2 size={14} />, 'success');
+  };
 
   return (
     <div className="section-card">
@@ -93,60 +274,197 @@ const MonitoringProgress = ({ onShowToast }) => {
             </tr>
           </thead>
           <tbody>
-            {data.map((item) => (
-              <tr key={item.id}>
-                <td className="text-center fw-semibold" style={{ color: 'var(--text-muted)' }}>{item.id}</td>
-                <td className="text-center">
-                  <div className="mahasiswa-info">
-                    <div className="name">{item.name}</div>
-                    <div className="nim-prodi">{item.nim}</div>
-                  </div>
-                </td>
-                <td className="text-center">
-                  <div className="text-gray-600 font-medium">{item.prodi}</div>
-                </td>
-                <td className="text-center">
-                  <div className="flex flex-col items-center">
-                    <div className="progres-badge">{item.progres_sidang}</div>
-                    <div className="progres-bar-wrap">
-                      <div
-                        className="progres-bar-fill"
-                        style={{
-                          width: `${item.percent}%`,
-                          background: (item.status === 'terverifikasi' || item.percent === 100) ? 'linear-gradient(90deg,#22C55E,#16A34A)' : undefined
-                        }}
-                      />
-                    </div>
-                  </div>
-                </td>
-                <td className="text-center">
-                  <span className={`badge-status ${item.status}`}>
-                    {item.status.replace('-', ' ')}
-                  </span>
-                </td>
-                <td className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <button className="btn-detail" onClick={(e) => { e.stopPropagation(); onShowToast(`Membuka detail berkas <strong>${item.name}</strong>…`, <Eye size={12} />, 'info'); }}>
-                      Detail
-                    </button>
+            {loading ? (
+              <tr>
+                <td colSpan={6} style={{ padding: '52px 0', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                    <Loader size={22} color="#C0182A" style={{ animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontSize: 13, color: '#6B7280' }}>Memuat data monitoring...</span>
                   </div>
                 </td>
               </tr>
-            ))}
+            ) : paginated.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ padding: '52px 0', textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>
+                  Belum ada data mahasiswa.
+                </td>
+              </tr>
+            ) : (
+              paginated.map((item, idx) => (
+                <tr key={item.id}>
+                  <td className="text-center fw-semibold" style={{ color: 'var(--text-muted)' }}>
+                    {(currentPage - 1) * MONITORING_PAGE_SIZE + idx + 1}
+                  </td>
+                  <td className="text-center">
+                    <div className="mahasiswa-info">
+                      <div className="name">{item.name}</div>
+                      <div className="nim-prodi">{item.nim}</div>
+                    </div>
+                  </td>
+                  <td className="text-center">
+                    <div className="text-gray-600 font-medium">{item.prodi}</div>
+                  </td>
+                  <td className="text-center">
+                    <div className="flex flex-col items-center">
+                      <div className="progres-badge">{item.tahap}</div>
+                      <div className="progres-bar-wrap">
+                        <div
+                          className="progres-bar-fill"
+                          style={{
+                            width: `${item.percent}%`,
+                            background: item.percent === 100 ? 'linear-gradient(90deg,#22C55E,#16A34A)' : undefined,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="text-center">
+                    <StatusRegistBadge statusKey={item.statusKey} statusLabel={item.statusLabel} />
+                  </td>
+                  <td className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      {item.statusKey ? (
+                        <button
+                          className="btn-detail"
+                          onClick={(e) => { e.stopPropagation(); setSelectedReg(item.registration); }}
+                        >
+                          Detail
+                        </button>
+                      ) : (
+                        <span style={{ color: '#9CA3AF', fontSize: 12 }}>-</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="table-footer">
-        <span className="page-info">Menampilkan <strong>1</strong> dari <strong>1</strong></span>
+        <span className="page-info">
+          Menampilkan <strong>{paginated.length === 0 ? 0 : (currentPage - 1) * MONITORING_PAGE_SIZE + 1}–{Math.min(currentPage * MONITORING_PAGE_SIZE, rows.length)}</strong> dari <strong>{rows.length}</strong>
+        </span>
         <div className="flex gap-2">
-          <button className="btn-paging" onClick={() => onShowToast('Navigasi ke halaman: <strong>Sebelumnya</strong>', <ChevronLeft size={14} />, 'info')}>
+          <button
+            className="btn-paging"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          >
             <ChevronLeft size={14} />
           </button>
-          <button className="btn-paging" onClick={() => onShowToast('Navigasi ke halaman: <strong>Selanjutnya</strong>', <ChevronRight size={14} />, 'info')}>
+          <button
+            className="btn-paging"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          >
             <ChevronRight size={14} />
           </button>
         </div>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      <AnimatePresence>
+        {selectedReg && (
+          <VerifikasiBerkasModal
+            registration={selectedReg}
+            academicStaffId={profile?.id}
+            periodMap={periodMap}
+            onClose={() => setSelectedReg(null)}
+            onSaved={handleModalSaved}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const RecentActivity = () => {
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading]       = useState(true);
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      setLoading(true);
+      const results = await Promise.allSettled([
+        getAllSktaRequests(),
+        getAllSidangRegistrations(),
+      ]);
+      const [skResult, sidangResult] = results;
+
+      const combined = [];
+
+      // Aktivitas: Pengajuan SK
+      if (skResult.status === 'fulfilled') {
+        const raw = skResult.value;
+        const sktaList = raw?.data ?? raw ?? [];
+        (Array.isArray(sktaList) ? sktaList : []).forEach((r) => {
+          const name = r.student?.name || r.studentName || `Mahasiswa #${r.studentId}`;
+          combined.push({
+            key: `sk-${r.id}`,
+            name,
+            action: 'mengajukan SK Pembimbing Tugas Akhir.',
+            time: r.createdAt,
+          });
+        });
+      } else {
+        console.error('Gagal fetch skta requests (aktivitas):', skResult.reason);
+      }
+
+      // Aktivitas: Pendaftaran Sidang (cuma yang sudah submit, bukan draft kosong)
+      if (sidangResult.status === 'fulfilled') {
+        const list = sidangResult.value ?? [];
+        list.filter((r) => r.thesisTitleId).forEach((r) => {
+          const name = r.student?.name || `Mahasiswa #${r.studentId}`;
+          combined.push({
+            key: `sidang-${r.id}`,
+            name,
+            action: 'mendaftar Sidang Tugas Akhir.',
+            time: r.createdAt,
+          });
+        });
+      } else {
+        console.error('Gagal fetch sidang registrations (aktivitas):', sidangResult.reason);
+      }
+
+      combined.sort((a, b) => new Date(b.time) - new Date(a.time));
+      setActivities(combined.slice(0, ACTIVITY_LIMIT));
+      setLoading(false);
+    };
+
+    fetchActivities();
+  }, []);
+
+  return (
+    <div className="activity-card mt-0">
+      <div className="ac-header">
+        <h6><Activity size={14} className="inline mr-2" style={{ color: 'var(--primary)' }} />Aktivitas</h6>
+        <a href="#">Semua</a>
+      </div>
+      <div className="activity-list">
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+            <Loader size={18} color="#C0182A" style={{ animation: 'spin 1s linear infinite' }} />
+          </div>
+        ) : activities.length === 0 ? (
+          <div style={{ padding: '24px 0', textAlign: 'center', fontSize: 12, color: '#9CA3AF' }}>
+            Belum ada aktivitas terbaru.
+          </div>
+        ) : (
+          activities.map((act, idx) => (
+            <div className="activity-item" key={act.key}>
+              <div className="act-avatar" style={{ background: ACTIVITY_COLORS[idx % ACTIVITY_COLORS.length] }}>
+                {getInitials(act.name)}
+              </div>
+              <div>
+                <div className="act-text"><strong>{act.name}</strong> {act.action}</div>
+                <div className="act-time"><Clock size={10} className="inline mr-1" /> {formatActivityTime(act.time)}</div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -225,7 +543,7 @@ const DashboardAkademik = () => {
           <button className="topbar-toggle" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </button>
-          <div className="topbar-brand">Beranda</div>
+          <div className="topbar-brand" style={{ background: '#C0182A', color: '#fff', padding: '6px 14px', borderRadius: 8 }}>Beranda</div>
         </header>
         <main className="page-body">
           <div className="welcome-card">
@@ -302,27 +620,7 @@ const DashboardAkademik = () => {
             </div>
 
             <div className="xl:col-span-3">
-              <div className="activity-card mt-0">
-                <div className="ac-header">
-                  <h6><Activity size={14} className="inline mr-2" style={{ color: 'var(--primary)' }} />Aktivitas</h6>
-                  <a href="#">Semua</a>
-                </div>
-                <div className="activity-list">
-                  {[
-                    { initial: 'ME', name: 'Meisari', action: 'upload Berkas Yudisium.', time: '10:00 AM' },
-                    { initial: 'DP', name: 'Dosen', action: 'tambah nilai Naufal Ari.', time: '09:40 AM', color: 'linear-gradient(135deg,#667EEA,#764BA2)' },
-                    { initial: 'DH', name: 'Dika', action: 'upload Berkas Sidang', time: '09:40 AM', color: 'linear-gradient(135deg,#4FACFE,#00F2FE)' },
-                  ].map((act, idx) => (
-                    <div className="activity-item" key={idx}>
-                      <div className="act-avatar" style={act.color ? { background: act.color } : {}}>{act.initial}</div>
-                      <div>
-                        <div className="act-text"><strong>{act.name}</strong> {act.action}</div>
-                        <div className="act-time"><Clock size={10} className="inline mr-1" /> {act.time}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <RecentActivity />
             </div>
           </div>
         </main>
