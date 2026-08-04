@@ -1,14 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CalendarCheck, FileText, Printer, 
   Filter, Download, MoreVertical, Activity, Clock, 
   AlertCircle, ArrowRightCircle, ChevronLeft, ChevronRight,
-  Eye, CheckCircle2, Menu, Users
+  Eye, CheckCircle2, Menu, Users, Loader
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
+import { getSidangPeriods, getAllSidangRegistrations, getAllSktaRequests } from '../../service/api';
 import '../dashboard.css';
+
+// Sama persis dengan logic di Dashboard.jsx mahasiswa (belum ada di shared helper,
+// jadi didup dulu di sini — pertimbangkan extract ke util bersama biar gak duplikat)
+const pickRelevantPeriod = (list = []) => {
+  if (!Array.isArray(list) || list.length === 0) return null;
+  const open = list.find(p => p.isOpen === true);
+  if (open) return { ...open, state: 'aktif' };
+  const now = new Date();
+  const upcoming = list
+    .filter(p => new Date(p.startDate) > now)
+    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+  if (upcoming.length > 0) return { ...upcoming[0], state: 'mendatang' };
+  const past = [...list].sort((a, b) => new Date(b.endDate) - new Date(a.endDate));
+  return past.length > 0 ? { ...past[0], state: 'selesai' } : null;
+};
+
+const getDaysRemaining = (endDate) => {
+  if (!endDate) return null;
+  const end = new Date(endDate);
+  const now = new Date();
+  const diffMs = end.setHours(23, 59, 59, 999) - now.getTime();
+  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+};
 
 const CardAtas4 = ({ icon, label, value, sub, badge, badgeColor }) => (
   <div className="CardAtas4">
@@ -26,7 +50,7 @@ const CardAtas4 = ({ icon, label, value, sub, badge, badgeColor }) => (
     </div>
     <div className="CardAtas4-footer">
       <div className="CardAtas4-divider"></div>
-      <div className="CardAtas4-sub" dangerouslySetInnerHTML={{ __html: sub }} />
+      <div className="CardAtas4-sub">{sub}</div>
     </div>
   </div>
 );
@@ -101,24 +125,10 @@ const MonitoringProgress = ({ onShowToast }) => {
                   </span>
                 </td>
                 <td className="text-center">
-                  {/* <div className="flex items-center justify-center gap-1">
-                    {item.status === 'terverifikasi' ? (
-                      <button className="btn-detail" onClick={(e) => { e.stopPropagation(); onShowToast(`Membuka detail berkas <strong>${item.name}</strong>…`, <Eye size={12} />, 'info'); }}>
-                        Detail
-                      </button>
-                    ) : (
-                      <button className="btn-verif" onClick={(e) => { e.stopPropagation(); onShowToast(`Verifikasi berkas <strong>${item.name}</strong> berhasil diproses.`, <CheckCircle2 size={12} />, 'success'); }}>
-                        Verif
-                      </button>
-                    )}
-                  </div> */}
-
                   <div className="flex items-center justify-center gap-1">
-                    
-                      <button className="btn-detail" onClick={(e) => { e.stopPropagation(); onShowToast(`Membuka detail berkas <strong>${item.name}</strong>…`, <Eye size={12} />, 'info'); }}>
-                        Detail
-                      </button>
-                  
+                    <button className="btn-detail" onClick={(e) => { e.stopPropagation(); onShowToast(`Membuka detail berkas <strong>${item.name}</strong>…`, <Eye size={12} />, 'info'); }}>
+                      Detail
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -146,6 +156,61 @@ const DashboardAkademik = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toasts, setToasts]           = useState([]);
 
+  // --- State 3 card ringkasan (real data) ---
+  const [periodeAktif, setPeriodeAktif]     = useState(null);
+  const [totalPendaftar, setTotalPendaftar] = useState(null);
+  const [jumlahSK, setJumlahSK]             = useState(null);
+
+  const [loadingCards, setLoadingCards] = useState({
+    periode: true,
+    pendaftar: true,
+    sk: true,
+  });
+
+  useEffect(() => {
+    const fetchSummaryCards = async () => {
+      // Promise.allSettled dipakai (bukan Promise.all) supaya kalau salah satu
+      // endpoint gagal, dua card lainnya tetap bisa tampil normal.
+      const results = await Promise.allSettled([
+        getSidangPeriods(),
+        getAllSidangRegistrations(),
+        getAllSktaRequests(),
+      ]);
+
+      const [periodeResult, pendaftarResult, skResult] = results;
+
+      // Card 1: Periode Aktif
+      if (periodeResult.status === 'fulfilled') {
+        const periods = periodeResult.value ?? [];
+        setPeriodeAktif(pickRelevantPeriod(periods));
+      } else {
+        console.error('Gagal fetch sidang periods:', periodeResult.reason);
+      }
+      setLoadingCards(prev => ({ ...prev, periode: false }));
+
+      // Card 2: Total Pendaftar Sidang (SEMUA status, tanpa filter isDraft)
+      if (pendaftarResult.status === 'fulfilled') {
+        const registrations = pendaftarResult.value ?? [];
+        setTotalPendaftar(registrations.length);
+      } else {
+        console.error('Gagal fetch sidang registrations:', pendaftarResult.reason);
+      }
+      setLoadingCards(prev => ({ ...prev, pendaftar: false }));
+
+      // Card 3: Jumlah Pengajuan SK
+      if (skResult.status === 'fulfilled') {
+        const raw = skResult.value;
+        const sktaList = raw?.data ?? raw ?? [];
+        setJumlahSK(Array.isArray(sktaList) ? sktaList.length : 0);
+      } else {
+        console.error('Gagal fetch skta requests:', skResult.reason);
+      }
+      setLoadingCards(prev => ({ ...prev, sk: false }));
+    };
+
+    fetchSummaryCards();
+  }, []);
+
   const showToast = (message, icon, type = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, icon, type }]);
@@ -168,9 +233,60 @@ const DashboardAkademik = () => {
           </div>
 
           <div className="stat-grid mb-6">
-            <CardAtas4 icon={<CalendarCheck size={24} />} label="Periode Aktif" badge="Aktif" value="Sidang Periode Genap" sub="2025/2026 Berakhir dlm 12 Hari" />
-            <CardAtas4 icon={<Users size={24} />} label="Total Pendaftar Sidang" value="1000 Mahasiswa" sub="Periode Genap 2025/2026" />
-            <CardAtas4 icon={<Printer size={24} />} label="Jumlah Pengajuan SK" value="45 Mahasiswa" sub="Berkas menunggu verifikasi" />
+            {/* Card 1: Periode Aktif */}
+            <CardAtas4
+              icon={<CalendarCheck size={24} />}
+              label="Periode Aktif"
+              badge={
+                loadingCards.periode ? null :
+                periodeAktif
+                  ? (periodeAktif.state === 'aktif' ? 'Aktif' : periodeAktif.state === 'mendatang' ? 'Mendatang' : 'Selesai')
+                  : null
+              }
+              badgeColor={
+                periodeAktif?.state === 'aktif'
+                  ? { bg: '#22C55E', text: '#fff' }
+                  : periodeAktif?.state === 'mendatang'
+                    ? { bg: '#3B82F6', text: '#fff' }
+                    : { bg: '#9CA3AF', text: '#fff' }
+              }
+              value={
+                loadingCards.periode
+                  ? <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                  : periodeAktif ? periodeAktif.name : 'Tidak Ada Periode'
+              }
+              sub={
+                loadingCards.periode
+                  ? 'Memuat...'
+                  : periodeAktif
+                    ? `Berakhir dlm ${getDaysRemaining(periodeAktif.endDate)} Hari`
+                    : 'Belum ada periode sidang yang dibuat'
+              }
+            />
+
+            {/* Card 2: Total Pendaftar Sidang */}
+            <CardAtas4
+              icon={<Users size={24} />}
+              label="Total Pendaftar Sidang"
+              value={
+                loadingCards.pendaftar
+                  ? <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                  : `${totalPendaftar ?? 0} Mahasiswa`
+              }
+              sub={periodeAktif ? periodeAktif.name : 'Seluruh periode'}
+            />
+
+            {/* Card 3: Jumlah Pengajuan SK */}
+            <CardAtas4
+              icon={<Printer size={24} />}
+              label="Jumlah Pengajuan SK"
+              value={
+                loadingCards.sk
+                  ? <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                  : `${jumlahSK ?? 0} Mahasiswa`
+              }
+              sub="Total seluruh pengajuan SK"
+            />
           </div>
 
           <div className="flex flex-col xl:grid xl:grid-cols-12 gap-6">
