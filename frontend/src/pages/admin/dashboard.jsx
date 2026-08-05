@@ -5,7 +5,7 @@ import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth } from '../../context/AuthContext';
 import {getSidangPeriods,getAllSidangRegistrations,getAllSktaRequests,getSidangRegistrationResponse,} from '../../service/api';
-import {determineSidangStatus,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
+import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../dashboard.css';
 
 const MONITORING_PAGE_SIZE = 25;
@@ -32,6 +32,16 @@ const formatActivityTime = (iso) => {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
   });
 };
+
+const MONITORING_SORT_PRIORITY = {
+  TAHAP_1: 0,
+  [STATUS_SIDANG.DALAM_PROSES]: 1,
+  [STATUS_SIDANG.SIAP_SIDANG]: 2,
+  [STATUS_SIDANG.PENDAFTARAN_DITERIMA]: 3,
+  [STATUS_SIDANG.PERLU_REVISI]: 4,
+  [STATUS_SIDANG.REVISI_DIPERBARUI]: 5,
+};
+
 const pickPrimaryRegistrationPerStudent = (registrations = []) => {
   const grouped = {};
   registrations.forEach((r) => {
@@ -108,7 +118,6 @@ const StatusRegistBadge = ({ statusKey, statusLabel }) => {
       </span>
     );
   }
-  // Tahap 2 — reuse warna dari SIDANG_STATUS_CONFIG biar konsisten sama RegistrasiSidang.jsx
   const cfg = SIDANG_STATUS_CONFIG[statusKey];
   if (!cfg) return <span style={{ fontSize: 10, color: '#9CA3AF' }}>{statusLabel}</span>;
   return (
@@ -147,7 +156,6 @@ const MonitoringProgress = ({ onShowToast }) => {
       setPeriodMap(prdMap);
 
       const primaryList = pickPrimaryRegistrationPerStudent(allRegs);
-
       const respArr = await Promise.all(
         primaryList.map((r) =>
           r.thesisTitleId
@@ -195,9 +203,14 @@ const MonitoringProgress = ({ onShowToast }) => {
           registration: r,
         };
       });
-
-      // Terbaru duluan
-      computedRows.sort((a, b) => new Date(b.sortDate) - new Date(a.sortDate));
+      computedRows.sort((a, b) => {
+        const priorityKeyA = a.statusKey ?? 'TAHAP_1';
+        const priorityKeyB = b.statusKey ?? 'TAHAP_1';
+        const priorityA = MONITORING_SORT_PRIORITY[priorityKeyA] ?? 99;
+        const priorityB = MONITORING_SORT_PRIORITY[priorityKeyB] ?? 99;
+        if (priorityA !== priorityB) return priorityA - priorityB;
+        return new Date(b.sortDate) - new Date(a.sortDate);
+      });
       setRows(computedRows);
     } catch (err) {
       console.error('Gagal fetch data monitoring:', err);
@@ -369,14 +382,23 @@ const RecentActivity = () => {
       const [skResult, sidangResult] = results;
 
       const combined = [];
-
       if (skResult.status === 'fulfilled') {
         const raw = skResult.value;
         const sktaList = raw?.data ?? raw ?? [];
         (Array.isArray(sktaList) ? sktaList : []).forEach((r) => {
           const name = r.student?.name || `Mahasiswa #${r.studentId}`;
-          const submittedAt = r.sktaRequestUploads?.[0]?.createdAt ?? null;
-          if (!submittedAt) return; 
+
+          const submittedAt =
+            r.sktaRequestUploads?.[0]?.createdAt ??
+            r.createdAt ??
+            r.updatedAt ??
+            null;
+
+          if (!submittedAt) {
+            console.warn('[Aktivitas] SK request tanpa timestamp yang bisa dipakai:', r);
+            return;
+          }
+
           combined.push({
             key: `sk-${r.id}`,
             name,
@@ -387,7 +409,6 @@ const RecentActivity = () => {
       } else {
         console.error('Gagal fetch skta requests (aktivitas):', skResult.reason);
       }
-
       if (sidangResult.status === 'fulfilled') {
         const list = sidangResult.value ?? [];
         list.filter((r) => r.thesisTitleId).forEach((r) => {
@@ -415,7 +436,7 @@ const RecentActivity = () => {
     <div className="activity-card mt-0">
       <div className="ac-header">
         <h6><Activity size={14} className="inline mr-2" style={{ color: 'var(--primary)' }} />Aktivitas</h6>
-        {/* <a href="#">Semua</a> */}
+        <a href="#">Semua</a>
       </div>
       <div className="activity-list">
         {loading ? (
