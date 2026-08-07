@@ -10,26 +10,26 @@ npm install
 cp .env.example .env
 
 # Generate prisma client
-npx prisma generate
+npm run prisma:generate
 ```
 
 ## Run
 
 ```sh
 # Setup DB
-npx prisma db push
-npx prisma db seed
-npx prisma generate
+npm run prisma:db-push
+npm run prisma:db-seed
+npm run prisma:generate
 
 # Run service (development-only)
-npm start
+npm run dev
 ```
 
 ## Jalankan Setiap Setelah Merubah Schema
 
 ```sh
-npx prisma db push
-npx prisma generate
+npm run prisma:db-push
+npm run prisma:generate
 ```
 
 ## Help
