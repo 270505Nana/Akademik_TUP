@@ -1,25 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  Search, ChevronLeft, ChevronRight, Menu,
-  GraduationCap, CheckCircle2, RefreshCw, Loader,
-} from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Menu, GraduationCap, CheckCircle2, RefreshCw, Loader,} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
 import SidebarAdmin          from '../../components/sidebar/SidebarAdmin';
 import CustomAlert           from '../../components/common/CustomAlert';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth }           from '../../context/AuthContext';
-import {
-  getAllSidangRegistrations,
-  getSidangRegistrationResponse,
-  getSidangPeriods,
-} from '../../service/api';
-import {
-  determineSidangStatus,
-  STATUS_SIDANG,
-  SIDANG_STATUS_CONFIG,
-} from '../../components/admin/sidang/Sidangstatushelper.js';
-import '../../components/admin/sidang/Registrasisidang.css';
+import {getAllSidangRegistrations, getSidangRegistrationResponse, getSidangPeriods,} from '../../service/api';
+import { determineSidangStatus, STATUS_SIDANG, SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/Sidangstatushelper.js';
+import '../../components/admin/sidang/RegistrasiSidang.css';
 
 const FILTER_TABS = [
   { key: '',                                 label: 'Semua'                },
@@ -40,6 +28,7 @@ const STATUS_SORT_ORDER = {
 
 const PAGE_SIZE = 8;
 
+//  Sub-components 
 
 const StatusBadge = ({ status }) => {
   const cfg = SIDANG_STATUS_CONFIG[status];
@@ -104,6 +93,8 @@ const RegistrasiSidang = () => {
   const [responseMap,   setResponseMap]   = useState({});
   const [periodMap,     setPeriodMap]     = useState({});
   const [prodiMap,      setProdiMap]      = useState({});
+
+  // UI state
   const [loading,         setLoading]         = useState(true);
   const [search,          setSearch]          = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
@@ -111,39 +102,46 @@ const RegistrasiSidang = () => {
   const [currentPage,     setCurrentPage]     = useState(1);
   const [alert,           setAlert]           = useState({ show: false, type: '', title: '', message: '' });
 
+  // Modal state
   const [selectedReg, setSelectedReg] = useState(null);
 
+  //  Alert helper 
   const showAlert = useCallback((type, title, message) => {
     setAlert({ show: true, type, title, message });
     setTimeout(() => setAlert(p => ({ ...p, show: false })), 4000);
   }, []);
 
+  //  Search debounce 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search.trim().toLowerCase()), 300);
     return () => clearTimeout(t);
   }, [search]);
 
+  //  Fetch semua data 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await getAllSidangRegistrations();
-
+      const list    = await getAllSidangRegistrations();
       const allList = list ?? [];
 
-      // Fetch response untuk semua registrasi secara paralel
+      // Fetch response untuk SEMUA registrasi 
+      // (perlu dilakukan sebelum filter agar  tahu mana yg punya response)
       const respArr = await Promise.all(
         allList.map(r => getSidangRegistrationResponse(r.id).catch(() => null))
       );
 
-      // Build responseMap
+      // Build responseMap: { [registrationId]: response }
       const rMap = {};
       allList.forEach((r, i) => { if (respArr[i]) rMap[r.id] = respArr[i]; });
       setResponseMap(rMap);
 
-      // Filter: tampilkan hanya yang sudah pernah disubmit
+      // Tampilkan registrasi yang PERNAH disubmit:
+      //   a) isDraft=false  → submit normal / sudah resubmit setelah revisi
+      //   b) isDraft=true DAN punya response → admin sudah set revisi
+      //      (BE set isDraft=true kembali saat admin beri revisi = status PERLU_REVISI)
+      // Yang tidak tampil: isDraft=true tanpa response = draf belum pernah submit
       const visible = allList.filter((r, i) => {
         const hasResponse = !!respArr[i];
-        // Pernah submit = isDraft false, ATAU isDraft true tapi sudah punya response
         return !r.isDraft || hasResponse;
       });
 
@@ -153,6 +151,9 @@ const RegistrasiSidang = () => {
       (allPeriods ?? []).forEach(p => { prdMap[p.id] = p; });
       setPeriodMap(prdMap);
 
+      // BE (setelah fix sidangRegistrationController) sudah include
+      // student.studyProgram.name langsung di response list.
+      // Build map: { [studentId]: namaProdi } untuk lookup cepat di tabel.
       const prMap = {};
       visible.forEach(r => {
         const name = r.student?.studyProgram?.name ?? null;
@@ -326,8 +327,8 @@ const RegistrasiSidang = () => {
                       </tr>
                     ) : (
                       paginated.map((reg, idx) => {
-                        const status     = getStatus(reg);
-                        const prodiName  = getProdiName(reg);
+                        const status    = getStatus(reg);
+                        const prodiName = getProdiName(reg);
                         const isVerified = status === STATUS_SIDANG.SIAP_SIDANG
                                         || status === STATUS_SIDANG.PENDAFTARAN_DITERIMA;
 
