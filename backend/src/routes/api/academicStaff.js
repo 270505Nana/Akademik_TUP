@@ -52,7 +52,7 @@ router.get("/", verifyToken, isAcademicStaff, listAcademicStaff);
  *         required: true
  *         schema:
  *           type: integer
- *         description: User ID with ACADEMIC_STAFF role
+ *         description: User ID with ADMIN role
  *     requestBody:
  *       required: true
  *       content:

@@ -6,7 +6,7 @@ async function seedAcademicStaff() {
   console.log("- Seeding academic staff...");
 
   const password = await bcrypt.hash("12345678", 10);
-  const role = "ACADEMIC_STAFF";
+  const role = "ADMIN";
 
   await prisma.user.createMany({
     data: [
@@ -28,7 +28,7 @@ async function seedAcademicStaff() {
 
   const users = await prisma.user.findMany({
     where: {
-      role: "ACADEMIC_STAFF",
+      role: "ADMIN",
     },
   });
 

@@ -6,7 +6,7 @@ async function seedStudent() {
   console.log("- Seeding student...");
 
   const password = await bcrypt.hash("12345678", 10);
-  const role = "STUDENT";
+  const role = "MAHASISWA";
   const students = [
     {
       username: "mahasiswa1",

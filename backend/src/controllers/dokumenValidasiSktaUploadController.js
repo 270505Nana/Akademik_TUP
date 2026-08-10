@@ -18,8 +18,8 @@ const withDownloadUrl = (req, upload) => ({
 const listDokumenValidasiSktaUploads = asyncHandler(async (req, res) => {
   let whereClause = { deletedAt: null };
 
-  // If user is STUDENT, they can only see their own uploads
-  if (req.user.role === "STUDENT") {
+  // If user is MAHASISWA, they can only see their own uploads
+  if (req.user.role === "MAHASISWA") {
     const student = await prisma.student.findUnique({
       where: { userId: req.user.id },
     });
@@ -71,8 +71,8 @@ const getDokumenValidasiSktaUploadById = asyncHandler(async (req, res) => {
     throw new Error("Unggahan dokumen tidak ditemukan");
   }
 
-  // If user is STUDENT, check ownership
-  if (req.user.role === "STUDENT") {
+  // If user is MAHASISWA, check ownership
+  if (req.user.role === "MAHASISWA") {
     const student = await prisma.student.findUnique({
       where: { userId: req.user.id },
     });

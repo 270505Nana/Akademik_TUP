@@ -62,8 +62,8 @@ const registerValidator = [
         return true;
       }
 
-      if (normalizedRole !== "STUDENT") {
-        throw new Error("Role harus STUDENT untuk domain email mahasiswa");
+      if (normalizedRole !== "MAHASISWA") {
+        throw new Error("Role harus MAHASISWA untuk domain email mahasiswa");
       }
 
       return true;
@@ -80,9 +80,9 @@ const registerValidator = [
         );
       }
 
-      if (!["LECTURER", "ACADEMIC_STAFF"].includes(normalizedRole)) {
+      if (!["DOSEN", "ADMIN"].includes(normalizedRole)) {
         throw new Error(
-          "Role harus LECTURER atau ACADEMIC_STAFF untuk domain email telkomuniversity.ac.id",
+          "Role harus DOSEN atau ADMIN untuk domain email telkomuniversity.ac.id",
         );
       }
 

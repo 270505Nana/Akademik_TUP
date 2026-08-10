@@ -21,7 +21,7 @@ const upsertLecturer = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Pengguna tidak ditemukan");
   }
-  if (user.role !== "LECTURER") {
+  if (user.role !== "DOSEN") {
     res.status(400);
     throw new Error("Pengguna bukan dosen");
   }

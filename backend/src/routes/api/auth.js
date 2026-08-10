@@ -46,8 +46,8 @@ import { registerValidator,
  *                 nullable: true
  *               role:
  *                 type: string
- *                 enum: [STUDENT, LECTURER, ACADEMIC_STAFF]
- *                 description: Required for telkomuniversity.ac.id and must be LECTURER or ACADEMIC_STAFF; optional for student.telkomuniversity.ac.id and must be STUDENT if provided
+ *                 enum: [MAHASISWA, DOSEN, ADMIN]
+ *                 description: Required for telkomuniversity.ac.id and must be DOSEN or ADMIN; optional for student.telkomuniversity.ac.id and must be MAHASISWA if provided
  *     responses:
  *       201:
  *         description: Registration successful

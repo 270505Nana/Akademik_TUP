@@ -52,7 +52,7 @@ router.get("/", verifyToken, listLecturers);
  *         required: true
  *         schema:
  *           type: integer
- *         description: User ID with LECTURER role
+ *         description: User ID with DOSEN role
  *     requestBody:
  *       required: true
  *       content:

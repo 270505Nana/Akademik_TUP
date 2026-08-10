@@ -12,35 +12,34 @@ datasource db {
 }
 
 enum Role {
-  STUDENT
-  LECTURER
-  ACADEMIC_STAFF
+  MAHASISWA
+  DOSEN
+  ADMIN
 }
 
 model User {
-  id            Int            @id @default(autoincrement())
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  deletedAt     DateTime?
-  username      String         @unique
-  email         String         @unique
-  password      String
-  phone         String?        @unique
-  role          Role?
-  academicStaff AcademicStaff?
-  lecturer      Lecturer?
-  student       Student?
+  id        String     @id @default(uuid())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+  name      String
+  email     String     @unique
+  password  String
+  phone     String?    @unique
+  role      Role?
+  admin     Admin?
+  dosen     Dosen?
+  mahasiswa Mahasiswa?
 }
 
-// Master Data Tim Akademik
-model AcademicStaff {
-  id                            Int                            @id @default(autoincrement())
+// Master Data Admin
+model Admin {
+  id                            String                         @id @default(uuid())
   createdAt                     DateTime                       @default(now())
   updatedAt                     DateTime                       @updatedAt
   deletedAt                     DateTime?
-  name                          String
   user                          User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId                        Int                            @unique
+  userId                        String                         @unique
   sktaResponses                 SktaResponse[]
   sidangRegistrationResponses   SidangRegistrationResponse[]
   yudisiumRegistrationResponses YudisiumRegistrationResponse[]
@@ -48,77 +47,78 @@ model AcademicStaff {
 
 // Master Data Dosen
 model ResearchGroup {
-  id        Int        @id @default(autoincrement())
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   name      String
-  lecturers Lecturer[]
+  isActive  Boolean   @default(true)
+  dosen     Dosen[]
 }
 
-model Lecturer {
-  id                               Int                    @id @default(autoincrement())
+model Dosen {
+  id                               String                 @id @default(uuid())
   createdAt                        DateTime               @default(now())
   updatedAt                        DateTime               @updatedAt
   deletedAt                        DateTime?
   nip                              String                 @unique
   nidn                             String?                @unique
-  lecturerCode                     String
-  name                             String
+  kodeDosen                        String
   researchGroup                    ResearchGroup          @relation(fields: [researchGroupId], references: [id])
-  researchGroupId                  Int
+  researchGroupId                  String
   user                             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId                           Int                    @unique
-  students                         Student[]
+  userId                           String                 @unique
+  mahasiswa                        Mahasiswa[]
   pembimbing1SktaRequests          SktaRequest[]          @relation("Pembimbing1SktaRequests")
   pembimbing2SktaRequests          SktaRequest[]          @relation("Pembimbing2SktaRequests")
   pembimbing1SidangRegistrations   SidangRegistration[]   @relation("Pembimbing1SidangRegistrations")
   pembimbing2SidangRegistrations   SidangRegistration[]   @relation("Pembimbing2SidangRegistrations")
   pembimbing1YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing1YudisiumRegistrations")
   pembimbing2YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing2YudisiumRegistrations")
+  pembimbing1Skta                  PermohonanSkta[]       @relation("Pembimbing1Skta")
+  pembimbing2Skta                  PermohonanSkta[]       @relation("Pembimbing2Skta")
 }
 
 // Master Data Mahasiswa
 model Faculty {
-  id            Int            @id @default(autoincrement())
+  id            String         @id @default(uuid())
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   deletedAt     DateTime?
   name          String
-  isPublish     Boolean        @default(true)
+  isActive      Boolean        @default(true)
   studyPrograms StudyProgram[]
 }
 
 model StudyProgram {
-  id        Int       @id @default(autoincrement())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String      @id @default(uuid())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
   deletedAt DateTime?
   name      String
-  isPublish Boolean   @default(true)
-  faculty   Faculty   @relation(fields: [facultyId], references: [id])
-  facultyId Int
-  students  Student[]
+  isActive  Boolean     @default(true)
+  faculty   Faculty     @relation(fields: [facultyId], references: [id])
+  facultyId String
+  mahasiswa Mahasiswa[]
 }
 
-model Student {
-  id                            Int                            @id @default(autoincrement())
+model Mahasiswa {
+  id                            String                         @id @default(uuid())
   createdAt                     DateTime                       @default(now())
   updatedAt                     DateTime                       @updatedAt
   deletedAt                     DateTime?
   nim                           String                         @unique
-  name                          String
-  className                     String
-  year                          Int
+  kelasAsal                     String
+  tahunAngkatan                 Int
   sks                           Int?
   ipk                           Float?
   tak                           Int?
   studyProgram                  StudyProgram                   @relation(fields: [studyProgramId], references: [id])
-  studyProgramId                Int
+  studyProgramId                String
   user                          User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId                        Int                            @unique
-  dosenWali                     Lecturer                       @relation(fields: [dosenWaliId], references: [id])
-  dosenWaliId                   Int // Dosen Wali
+  userId                        String                         @unique
+  dosenWali                     Dosen                          @relation(fields: [dosenWaliId], references: [id])
+  dosenWaliId                   String // Dosen Wali
   sktaRequests                  SktaRequest[]
   sidangRegistrations           SidangRegistration[]
   yudisiumRegistrations         YudisiumRegistration[]
@@ -129,22 +129,42 @@ model Student {
   transkripUploads              TranskripUpload[]
   dokumenValidasiSktaUploads    DokumenValidasiSktaUpload[]
   formulirPenerbitanSktaUploads FormulirPenerbitanSktaUpload[]
+  permohonanSktas               PermohonanSkta[]
 }
 
-// Surat Keputusan TA
+// Permohonan Surat Keputusan TA
+model PermohonanSkta {
+  id                       String    @id @default(uuid())
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  deletedAt                DateTime?
+  judulProposalIndonesia   String // di form yang baru tidak menyertakan judulProposalIndonesia
+  judulProposalInggris     String // di form yang baru tidak menyertakan judulProposalInggris
+  evidenceUploadPath       String
+  mahasiswa                Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade) // NIM, Prodi, No HP
+  mahasiswaId              String
+  dosenPembimbing1         Dosen     @relation("Pembimbing1Skta", fields: [dosenPembimbing1Id], references: [id]) // Nama, Kode, Kelompok Keilmuan (Research Group) Dosen Pembimbing 1
+  dosenPembimbing1Id       String
+  dosenPembimbing2         Dosen     @relation("Pembimbing2Skta", fields: [dosenPembimbing2Id], references: [id]) // Nama, Kode Dosen Pembimbing 2
+  dosenPembimbing2Id       String
+  hasUploadedFinalProposal Boolean?
+  hasTakenLanguageTest     Boolean?
+  expDate                  DateTime? @db.Date
+}
+
 model SktaRequest {
-  id                  Int                  @id @default(autoincrement())
+  id                  String               @id @default(uuid())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   deletedAt           DateTime?
   proposalTitleId     String
   proposalTitleEn     String
-  student             Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId           Int
-  dosenPembimbing1    Lecturer             @relation("Pembimbing1SktaRequests", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id  Int
-  dosenPembimbing2    Lecturer             @relation("Pembimbing2SktaRequests", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id  Int
+  mahasiswa           Mahasiswa            @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId         String
+  dosenPembimbing1    Dosen                @relation("Pembimbing1SktaRequests", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id  String
+  dosenPembimbing2    Dosen                @relation("Pembimbing2SktaRequests", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id  String
   sktaResponses       SktaResponse[]
   sktaResponseUploads SktaResponseUpload[]
   sktaRequestUploads  SktaRequestUpload[]
@@ -152,7 +172,7 @@ model SktaRequest {
 
 // Upload Evidence
 model SktaRequestUpload {
-  id            Int         @id @default(autoincrement())
+  id            String      @id @default(uuid())
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   deletedAt     DateTime?
@@ -160,14 +180,14 @@ model SktaRequestUpload {
   filename      String
   slug          String      @default("evidence")
   path          String
-  student       Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId     Int?
+  mahasiswa     Mahasiswa?  @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId   String?
   sktaRequest   SktaRequest @relation(fields: [sktaRequestId], references: [id], onDelete: Cascade)
-  sktaRequestId Int
+  sktaRequestId String
 }
 
 model SktaResponse {
-  id                       Int                  @id @default(autoincrement())
+  id                       String               @id @default(uuid())
   createdAt                DateTime             @default(now())
   updatedAt                DateTime             @updatedAt
   deletedAt                DateTime?
@@ -176,18 +196,18 @@ model SktaResponse {
   expDate                  DateTime?            @db.Date
   message                  String?
   isEdit                   DateTime?
-  student                  Student?             @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId                Int?
-  academicStaff            AcademicStaff        @relation(fields: [academicStaffId], references: [id])
-  academicStaffId          Int
+  mahasiswa                Mahasiswa?           @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId              String?
+  admin                    Admin                @relation(fields: [adminId], references: [id])
+  adminId                  String
   sktaRequest              SktaRequest          @relation(fields: [sktaRequestId], references: [id], onDelete: Cascade)
-  sktaRequestId            Int
+  sktaRequestId            String
   sktaResponseUploads      SktaResponseUpload[]
 }
 
 // Upload SKTA
 model SktaResponseUpload {
-  id             Int           @id @default(autoincrement())
+  id             String        @id @default(uuid())
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?
@@ -195,17 +215,17 @@ model SktaResponseUpload {
   filename       String
   slug           String        @default("skta")
   path           String
-  student        Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId      Int?
+  mahasiswa      Mahasiswa?    @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId    String?
   sktaRequest    SktaRequest   @relation(fields: [sktaRequestId], references: [id], onDelete: Cascade)
-  sktaRequestId  Int
+  sktaRequestId  String
   sktaResponse   SktaResponse? @relation(fields: [sktaResponseId], references: [id], onDelete: Cascade)
-  sktaResponseId Int?
+  sktaResponseId String?
 }
 
 // Daftar Sidang
 model SidangPeriod {
-  id                  Int                  @id @default(autoincrement())
+  id                  String               @id @default(uuid())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   deletedAt           DateTime?
@@ -217,7 +237,7 @@ model SidangPeriod {
 }
 
 model SidangRegistrationPeriod {
-  id                  Int                  @id @default(autoincrement())
+  id                  String               @id @default(uuid())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   deletedAt           DateTime?
@@ -229,7 +249,7 @@ model SidangRegistrationPeriod {
 }
 
 model SidangRegistration {
-  id                          Int                          @id @default(autoincrement())
+  id                          String                       @id @default(uuid())
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
   submittedAt                 DateTime?
@@ -244,23 +264,23 @@ model SidangRegistration {
   thesisTitleEn               String?
   sidangScheme                String?
   jalurNonSidang              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
-  student                     Student?                     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId                   Int?
-  dosenPembimbing1            Lecturer?                    @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id          Int?
-  dosenPembimbing2            Lecturer?                    @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id          Int?
+  mahasiswa                   Mahasiswa?                   @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId                 String?
+  dosenPembimbing1            Dosen?                       @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id          String?
+  dosenPembimbing2            Dosen?                       @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id          String?
   sidangPeriod                SidangPeriod?                @relation(fields: [sidangPeriodId], references: [id])
-  sidangPeriodId              Int?
+  sidangPeriodId              String?
   sidangRegistrationPeriod    SidangRegistrationPeriod?    @relation(fields: [sidangRegistrationPeriodId], references: [id])
-  sidangRegistrationPeriodId  Int?
+  sidangRegistrationPeriodId  String?
   sidangRegistrationUploads   SidangRegistrationUpload[]
   sidangRegistrationResponses SidangRegistrationResponse[]
 }
 
 // Upload Dokumen Persyaratan
 model SidangRegistrationUpload {
-  id                   Int                @id @default(autoincrement())
+  id                   String             @id @default(uuid())
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   deletedAt            DateTime?
@@ -270,25 +290,25 @@ model SidangRegistrationUpload {
   path                 String
   isValid              Boolean?
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
-  sidangRegistrationId Int
+  sidangRegistrationId String
 }
 
 model SidangRegistrationResponse {
-  id                   Int                @id @default(autoincrement())
+  id                   String             @id @default(uuid())
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   deletedAt            DateTime?
   message              String?
   isEdit               DateTime?
-  academicStaff        AcademicStaff      @relation(fields: [academicStaffId], references: [id])
-  academicStaffId      Int
+  admin                Admin              @relation(fields: [adminId], references: [id])
+  adminId              String
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
-  sidangRegistrationId Int
+  sidangRegistrationId String
 }
 
 // Daftar Yudisium
 model YudisiumPeriod {
-  id                    Int                    @id @default(autoincrement())
+  id                    String                 @id @default(uuid())
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   deletedAt             DateTime?
@@ -300,7 +320,7 @@ model YudisiumPeriod {
 }
 
 model YudisiumRegistrationPeriod {
-  id                    Int                    @id @default(autoincrement())
+  id                    String                 @id @default(uuid())
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   deletedAt             DateTime?
@@ -312,7 +332,7 @@ model YudisiumRegistrationPeriod {
 }
 
 model YudisiumRegistration {
-  id                            Int                            @id @default(autoincrement())
+  id                            String                         @id @default(uuid())
   createdAt                     DateTime                       @default(now())
   updatedAt                     DateTime                       @updatedAt
   submittedAt                   DateTime?
@@ -330,23 +350,23 @@ model YudisiumRegistration {
   jalurNonYudisium              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Pameran", "Lomba", "HKI"]
   eviden_cumlaude               String?                        @db.Text
   // wajib
-  student                       Student?                       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId                     Int?
-  dosenPembimbing1              Lecturer?                      @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id            Int?
-  dosenPembimbing2              Lecturer?                      @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id            Int?
+  mahasiswa                     Mahasiswa?                     @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId                   String?
+  dosenPembimbing1              Dosen?                         @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id            String?
+  dosenPembimbing2              Dosen?                         @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id            String?
   yudisiumPeriod                YudisiumPeriod?                @relation(fields: [yudisiumPeriodId], references: [id])
-  yudisiumPeriodId              Int?
+  yudisiumPeriodId              String?
   yudisiumRegistrationPeriod    YudisiumRegistrationPeriod?    @relation(fields: [yudisiumRegistrationPeriodId], references: [id])
-  yudisiumRegistrationPeriodId  Int?
+  yudisiumRegistrationPeriodId  String?
   yudisiumRegistrationUploads   YudisiumRegistrationUpload[]
   yudisiumRegistrationResponses YudisiumRegistrationResponse[]
 }
 
 // Upload Dokumen Persyaratan
 model YudisiumRegistrationUpload {
-  id                     Int                  @id @default(autoincrement())
+  id                     String               @id @default(uuid())
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   deletedAt              DateTime?
@@ -355,72 +375,72 @@ model YudisiumRegistrationUpload {
   slug                   String // misal: formValidasiDosenWali
   path                   String
   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id], onDelete: Cascade)
-  yudisiumRegistrationId Int
+  yudisiumRegistrationId String
 }
 
 model YudisiumRegistrationResponse {
-  id                     Int                  @id @default(autoincrement())
+  id                     String               @id @default(uuid())
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   deletedAt              DateTime?
   message                String?
   isEdit                 DateTime?
-  academicStaff          AcademicStaff        @relation(fields: [academicStaffId], references: [id])
-  academicStaffId        Int
+  admin                  Admin                @relation(fields: [adminId], references: [id])
+  adminId                String
   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id], onDelete: Cascade)
-  yudisiumRegistrationId Int
+  yudisiumRegistrationId String
 }
 
 model FormulirPenerbitanSktaUpload {
-  id        String    @id
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  name      String
-  filename  String
-  path      String
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId Int
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  name        String
+  filename    String
+  path        String
+  mahasiswa   Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId String
 }
 
 model DokumenValidasiSktaUpload {
-  id        String    @id
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  name      String
-  filename  String
-  path      String
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId Int
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  name        String
+  filename    String
+  path        String
+  mahasiswa   Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId String
 }
 
 model SklUpload {
-  id        Int       @id @default(autoincrement())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  name      String
-  filename  String
-  path      String
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId Int
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  name        String
+  filename    String
+  path        String
+  mahasiswa   Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId String
 }
 
 model TranskripUpload {
-  id        Int       @id @default(autoincrement())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  name      String
-  filename  String
-  path      String
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId Int
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  name        String
+  filename    String
+  path        String
+  mahasiswa   Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId String
 }
 
 model TemplateUpload {
-  id        Int       @id @default(autoincrement())
+  id        String    @id @default(uuid())
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?

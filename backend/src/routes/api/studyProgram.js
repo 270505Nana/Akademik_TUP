@@ -71,7 +71,7 @@ router.get("/", verifyToken, listStudyPrograms);
 router.post(
   "/",
   verifyToken,
-  authorize("ACADEMIC_STAFF"),
+  authorize("ADMIN"),
   createStudyProgramValidator,
   validate,
   createStudyProgram,
@@ -133,7 +133,7 @@ router.get("/:id", verifyToken, findStudyProgramById);
 router.put(
   "/:id",
   verifyToken,
-  authorize("ACADEMIC_STAFF"),
+  authorize("ADMIN"),
   updateStudyProgramValidator,
   validate,
   updateStudyProgram,
@@ -162,7 +162,7 @@ router.put(
 router.delete(
   "/:id",
   verifyToken,
-  authorize("ACADEMIC_STAFF"),
+  authorize("ADMIN"),
   deleteStudyProgram,
 );
 
@@ -189,7 +189,7 @@ router.delete(
 router.patch(
   "/:id/toggle-publish",
   verifyToken,
-  authorize("ACADEMIC_STAFF"),
+  authorize("ADMIN"),
   toggleStudyProgramPublish,
 );
 

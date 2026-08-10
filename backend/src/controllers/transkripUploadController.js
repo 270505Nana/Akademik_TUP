@@ -17,8 +17,8 @@ const withDownloadUrl = (req, upload) => ({
 const listTranskripUploads = asyncHandler(async (req, res) => {
   let whereClause = { deletedAt: null };
 
-  // If user is STUDENT, they can only see their own transkrip uploads
-  if (req.user.role === "STUDENT") {
+  // If user is MAHASISWA, they can only see their own transkrip uploads
+  if (req.user.role === "MAHASISWA") {
     const student = await prisma.student.findUnique({
       where: { userId: req.user.id },
     });
@@ -70,8 +70,8 @@ const getTranskripUploadById = asyncHandler(async (req, res) => {
     throw new Error("Unggahan transkrip tidak ditemukan");
   }
 
-  // If user is STUDENT, check ownership
-  if (req.user.role === "STUDENT") {
+  // If user is MAHASISWA, check ownership
+  if (req.user.role === "MAHASISWA") {
     const student = await prisma.student.findUnique({
       where: { userId: req.user.id },
     });
@@ -224,8 +224,8 @@ const downloadTranskripUpload = asyncHandler(async (req, res) => {
     throw new Error("File transkrip tidak ditemukan");
   }
 
-  // Check ownership if STUDENT
-  if (req.user.role === "STUDENT") {
+  // Check ownership if MAHASISWA
+  if (req.user.role === "MAHASISWA") {
     const student = await prisma.student.findUnique({
       where: { userId: req.user.id },
     });

@@ -53,7 +53,7 @@ router.get("/", verifyToken, listStudents);
  *         required: true
  *         schema:
  *           type: integer
- *         description: User ID with STUDENT role
+ *         description: User ID with MAHASISWA role
  *     requestBody:
  *       required: true
  *       content:
