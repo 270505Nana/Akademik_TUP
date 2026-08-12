@@ -43,17 +43,22 @@ model Admin {
   sktaResponses                 SktaResponse[]
   sidangRegistrationResponses   SidangRegistrationResponse[]
   yudisiumRegistrationResponses YudisiumRegistrationResponse[]
+  permohonanSktas               PermohonanSkta[]
+  sidangRegistrations           SidangRegistration[]
+  yudisiumRegistrations         YudisiumRegistration[]
 }
 
 // Master Data Dosen
 model ResearchGroup {
-  id        String    @id @default(uuid())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  name      String
-  isActive  Boolean   @default(true)
-  dosen     Dosen[]
+  id                  String               @id @default(uuid())
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
+  name                String
+  isActive            Boolean              @default(true)
+  dosen               Dosen[]
+  permohonanSktas     PermohonanSkta[]
+  sidangRegistrations SidangRegistration[]
 }
 
 model Dosen {
@@ -71,8 +76,10 @@ model Dosen {
   mahasiswa                        Mahasiswa[]
   pembimbing1SktaRequests          SktaRequest[]          @relation("Pembimbing1SktaRequests")
   pembimbing2SktaRequests          SktaRequest[]          @relation("Pembimbing2SktaRequests")
+  waliSidangRegistrations          SidangRegistration[]   @relation("WaliSidangRegistrations")
   pembimbing1SidangRegistrations   SidangRegistration[]   @relation("Pembimbing1SidangRegistrations")
   pembimbing2SidangRegistrations   SidangRegistration[]   @relation("Pembimbing2SidangRegistrations")
+  waliYudisiumRegistrations        YudisiumRegistration[] @relation("WaliYudisiumRegistrations")
   pembimbing1YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing1YudisiumRegistrations")
   pembimbing2YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing2YudisiumRegistrations")
   pembimbing1Skta                  PermohonanSkta[]       @relation("Pembimbing1Skta")
@@ -130,26 +137,49 @@ model Mahasiswa {
   dokumenValidasiSktaUploads    DokumenValidasiSktaUpload[]
   formulirPenerbitanSktaUploads FormulirPenerbitanSktaUpload[]
   permohonanSktas               PermohonanSkta[]
+  berkasMahasiswas              BerkasMahasiswa[]
+}
+
+model DokumenPersyaratanBerkas {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  name      String // Nama Berkas
+  category  String // Sidang Reguler / Non Sidang Publikasi Jurnal / Non Sidang Proceeding International / Yudisium
+  filepath  String
+  isPublish Boolean   @default(true)
 }
 
 // Permohonan Surat Keputusan TA
 model PermohonanSkta {
-  id                       String    @id @default(uuid())
-  createdAt                DateTime  @default(now())
-  updatedAt                DateTime  @updatedAt
+  id                       String        @id @default(uuid())
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
   deletedAt                DateTime?
+  // Buat Permohonan
+  category                 String // Buat baru, Pembaruan Ganti Judul, Pembaruan Ganti Dospem, Pembaruan Ganti Judul dan Dospem, Perpanjangan
+  mahasiswa                Mahasiswa     @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade) // NIM, Prodi, No HP
+  mahasiswaId              String
   judulProposalIndonesia   String // di form yang baru tidak menyertakan judulProposalIndonesia
   judulProposalInggris     String // di form yang baru tidak menyertakan judulProposalInggris
-  evidenceUploadPath       String
-  mahasiswa                Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade) // NIM, Prodi, No HP
-  mahasiswaId              String
-  dosenPembimbing1         Dosen     @relation("Pembimbing1Skta", fields: [dosenPembimbing1Id], references: [id]) // Nama, Kode, Kelompok Keilmuan (Research Group) Dosen Pembimbing 1
+  dosenPembimbing1         Dosen         @relation("Pembimbing1Skta", fields: [dosenPembimbing1Id], references: [id]) // Nama, Kode, Kelompok Keilmuan (Research Group) Dosen Pembimbing 1
   dosenPembimbing1Id       String
-  dosenPembimbing2         Dosen     @relation("Pembimbing2Skta", fields: [dosenPembimbing2Id], references: [id]) // Nama, Kode Dosen Pembimbing 2
+  dosenPembimbing2         Dosen         @relation("Pembimbing2Skta", fields: [dosenPembimbing2Id], references: [id]) // Nama, Kode Dosen Pembimbing 2
   dosenPembimbing2Id       String
+  researchGroup            ResearchGroup @relation(fields: [researchGroupId], references: [id])
+  researchGroupId          String
+  evidenceUploadPath       String
+  // Setujui Permohonan
   hasUploadedFinalProposal Boolean?
   hasTakenLanguageTest     Boolean?
-  expDate                  DateTime? @db.Date
+  sktaUploadPath           String?
+  expDate                  DateTime?     @db.Date
+  // Tolak Permohonan
+  message                  String?
+  isEdit                   DateTime?
+  admin                    Admin         @relation(fields: [adminId], references: [id])
+  adminId                  String
 }
 
 model SktaRequest {
@@ -229,12 +259,25 @@ model SidangPeriod {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   deletedAt           DateTime?
-  name                String
+  category            String // tipe aktivitas: pendaftaran sidang / sidang
+  period              String // nama periode: 2026/2027
   startDate           DateTime             @map("start_date") @db.Date
   endDate             DateTime             @map("end_date") @db.Date
-  isOpen              Boolean
+  isOpen              Boolean              @default(false)
   sidangRegistrations SidangRegistration[]
 }
+
+// model SidangPeriod {
+//   id                  String               @id @default(uuid())
+//   createdAt           DateTime             @default(now())
+//   updatedAt           DateTime             @updatedAt
+//   deletedAt           DateTime?
+//   name                String
+//   startDate           DateTime             @map("start_date") @db.Date
+//   endDate             DateTime             @map("end_date") @db.Date
+//   isOpen              Boolean
+//   sidangRegistrations SidangRegistration[]
+// }
 
 model SidangRegistrationPeriod {
   id                  String               @id @default(uuid())
@@ -252,28 +295,40 @@ model SidangRegistration {
   id                          String                       @id @default(uuid())
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
-  submittedAt                 DateTime?
   deletedAt                   DateTime?
+  // draft
   isDraft                     Boolean                      @default(true)
-  programType                 String?
+  mahasiswa                   Mahasiswa?                   @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId                 String?
+  program                     String? // Reguler / Alih Jenjang
+  dosenWali                   Dosen?                       @relation("WaliSidangRegistrations", fields: [dosenWaliId], references: [id]) // Dosen Wali 1
+  dosenWaliId                 String?
   sks                         Int?
   ipk                         Float?
   tak                         Int?
   sktaExpDate                 DateTime?                    @map("skta_exp_date") @db.Date
-  thesisTitleId               String?
-  thesisTitleEn               String?
-  sidangScheme                String?
-  jalurNonSidang              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
-  mahasiswa                   Mahasiswa?                   @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
-  mahasiswaId                 String?
+  judulTugasAkhirIndonesia    String?
+  judulTugasAkhirInggris      String?
   dosenPembimbing1            Dosen?                       @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
   dosenPembimbing1Id          String?
   dosenPembimbing2            Dosen?                       @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
   dosenPembimbing2Id          String?
-  sidangPeriod                SidangPeriod?                @relation(fields: [sidangPeriodId], references: [id])
-  sidangPeriodId              String?
+  researchGroup               ResearchGroup?               @relation(fields: [researchGroupId], references: [id])
+  researchGroupId             String?
+  skemaSidang                 String? // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
+  jalurNonSidang              String[] // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
+  // submited
+  submittedAt                 DateTime?
   sidangRegistrationPeriod    SidangRegistrationPeriod?    @relation(fields: [sidangRegistrationPeriodId], references: [id])
   sidangRegistrationPeriodId  String?
+  // Setuju
+  sidangPeriod                SidangPeriod?                @relation(fields: [sidangPeriodId], references: [id])
+  sidangPeriodId              String?
+  // Tolak Permohonan
+  message                     String?
+  isEdit                      DateTime?
+  admin                       Admin                        @relation(fields: [adminId], references: [id])
+  adminId                     String
   sidangRegistrationUploads   SidangRegistrationUpload[]
   sidangRegistrationResponses SidangRegistrationResponse[]
 }
@@ -284,10 +339,11 @@ model SidangRegistrationUpload {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   deletedAt            DateTime?
-  name                 String
-  filename             String
-  slug                 String // misal: formValidasiDosenWali
-  path                 String
+  // mahasiswa via sistem
+  name                 String // Nama Berkas
+  category             String
+  filepath             String
+  // admin
   isValid              Boolean?
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
   sidangRegistrationId String
@@ -312,12 +368,25 @@ model YudisiumPeriod {
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   deletedAt             DateTime?
-  name                  String
+  category              String // tipe aktivitas: pendaftaran yudisium / yudisium
+  period                String // nama periode: 2026/2027
   startDate             DateTime               @map("start_date") @db.Date
   endDate               DateTime               @map("end_date") @db.Date
-  isOpen                Boolean
+  isOpen                Boolean                @default(false)
   yudisiumRegistrations YudisiumRegistration[]
 }
+
+// model YudisiumPeriod {
+//   id                    String                 @id @default(uuid())
+//   createdAt             DateTime               @default(now())
+//   updatedAt             DateTime               @updatedAt
+//   deletedAt             DateTime?
+//   name                  String
+//   startDate             DateTime               @map("start_date") @db.Date
+//   endDate               DateTime               @map("end_date") @db.Date
+//   isOpen                Boolean
+//   yudisiumRegistrations YudisiumRegistration[]
+// }
 
 model YudisiumRegistrationPeriod {
   id                    String                 @id @default(uuid())
@@ -335,31 +404,38 @@ model YudisiumRegistration {
   id                            String                         @id @default(uuid())
   createdAt                     DateTime                       @default(now())
   updatedAt                     DateTime                       @updatedAt
-  submittedAt                   DateTime?
   deletedAt                     DateTime?
+  // draft
   isDraft                       Boolean                        @default(true)
-  // wajib
-  programType                   String? // Reguler, Alih Jenjang
-  tak                           Int?
-  thesisTitleId                 String?
-  thesisTitleEn                 String?
-  isConfirmed                   Boolean? // Saya telah memastikan bahwa Judul Tugas Akhir yang saya inputkan sudah sesuai dengan yang tertera pada iGracias.
-  sidangScheme                  String?
-  cumlaudeScheme                String? // Non Cumlaude, Pengajuan Cumlaude, Pengajuan Summa Cumlaude
-  // wajib jika memilih selain non cumlaude
-  jalurNonYudisium              Json? // Contoh isi JSON: ["Publikasi Jurnal", "Pameran", "Lomba", "HKI"]
-  eviden_cumlaude               String?                        @db.Text
   // wajib
   mahasiswa                     Mahasiswa?                     @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
   mahasiswaId                   String?
+  program                       String? // Reguler / Alih Jenjang
+  dosenWali                     Dosen?                         @relation("WaliYudisiumRegistrations", fields: [dosenWaliId], references: [id]) // Dosen Wali 1
+  dosenWaliId                   String?
+  judulTugasAkhirIndonesia      String?
+  judulTugasAkhirInggris        String?
+  tak                           Int?
+  skemaSidang                   String? // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
+  pengajuanCumlaude             String? // Non Cumlaude, Pengajuan Cumlaude, Pengajuan Summa Cumlaude
+  skemaCumlaude                 String? // Publikasi Jurnal, Pameran, Lomba, HKI
+  evidenCumlaude                String?                        @db.Text
   dosenPembimbing1              Dosen?                         @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id            String?
+  dosenPembimbing1Id            String? // di form yang baru tidak menyertakan Dospem 1
   dosenPembimbing2              Dosen?                         @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id            String?
-  yudisiumPeriod                YudisiumPeriod?                @relation(fields: [yudisiumPeriodId], references: [id])
-  yudisiumPeriodId              String?
+  dosenPembimbing2Id            String? // di form yang baru tidak menyertakan Dospem 2
+  // submitted
+  submittedAt                   DateTime?
   yudisiumRegistrationPeriod    YudisiumRegistrationPeriod?    @relation(fields: [yudisiumRegistrationPeriodId], references: [id])
   yudisiumRegistrationPeriodId  String?
+  // Setuju
+  yudisiumPeriod                YudisiumPeriod?                @relation(fields: [yudisiumPeriodId], references: [id])
+  yudisiumPeriodId              String?
+  // Tolak Permohonan
+  message                       String?
+  isEdit                        DateTime?
+  admin                         Admin                          @relation(fields: [adminId], references: [id])
+  adminId                       String
   yudisiumRegistrationUploads   YudisiumRegistrationUpload[]
   yudisiumRegistrationResponses YudisiumRegistrationResponse[]
 }
@@ -370,13 +446,28 @@ model YudisiumRegistrationUpload {
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   deletedAt              DateTime?
-  name                   String
-  filename               String
-  slug                   String // misal: formValidasiDosenWali
-  path                   String
+  // mahasiswa via sistem
+  name                   String // Nama Berkas
+  category               String // Evidence Cumlaude / Dokumen Kelengkapan Yudisium
+  filepath               String
+  // admin
+  isValid                Boolean?
   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id], onDelete: Cascade)
   yudisiumRegistrationId String
 }
+
+// model YudisiumRegistrationUpload {
+//   id                     String               @id @default(uuid())
+//   createdAt              DateTime             @default(now())
+//   updatedAt              DateTime             @updatedAt
+//   deletedAt              DateTime?
+//   name                   String
+//   filename               String
+//   slug                   String // misal: formValidasiDosenWali
+//   path                   String
+//   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id], onDelete: Cascade)
+//   yudisiumRegistrationId String
+// }
 
 model YudisiumRegistrationResponse {
   id                     String               @id @default(uuid())
@@ -389,6 +480,19 @@ model YudisiumRegistrationResponse {
   adminId                String
   yudisiumRegistration   YudisiumRegistration @relation(fields: [yudisiumRegistrationId], references: [id], onDelete: Cascade)
   yudisiumRegistrationId String
+}
+
+model BerkasMahasiswa {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  name        String // Nama Berkas
+  category    String // SKL, Transkrip, Dokumen Validasi Skta, Formulir Penerbitan Skta
+  filepath    String
+  isValid     Boolean?
+  mahasiswa   Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId String
 }
 
 model FormulirPenerbitanSktaUpload {
@@ -437,16 +541,4 @@ model TranskripUpload {
   path        String
   mahasiswa   Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
   mahasiswaId String
-}
-
-model TemplateUpload {
-  id        String    @id @default(uuid())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  name      String
-  slug      String    @unique // contoh: formulirPenerbitanSkta
-  filename  String
-  path      String
-  isPublish Boolean   @default(true)
 }
