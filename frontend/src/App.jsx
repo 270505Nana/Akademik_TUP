@@ -18,6 +18,7 @@ import UploadSKL           from "./pages/admin/skltranskrip";
 import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";             
 import ProtectedRoute      from "./components/common/protectedRoute";
 import PendaftaranSidang   from "./pages/mahasiswa/pendaftaransidang";
+import KelolaDataDosen      from "./pages/admin/keloladatadosen";
 
 const Placeholder = ({ title }) => (
   <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -117,9 +118,7 @@ const App = () => {
                 <AturPeriodeYudisium />
               </ProtectedRoute>
             }
-          />
-
-          
+          />          
           <Route
             path="/akademik/permohonan-sk"
             element={
@@ -143,6 +142,15 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
                 <RegistrasiSidang />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/akademik/data-dosen"
+            element={
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+                <KelolaDataDosen />
               </ProtectedRoute>
             }
           />

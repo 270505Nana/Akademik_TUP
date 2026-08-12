@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, ChevronLeft, ChevronRight, Menu, GraduationCap, CheckCircle2, RefreshCw, Loader,} from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import {Search, ChevronLeft, ChevronRight, Menu,GraduationCap, CheckCircle2, RefreshCw, Loader, ChevronDown,ArrowUp, ArrowDown, ArrowUpDown,} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin          from '../../components/sidebar/SidebarAdmin';
 import CustomAlert           from '../../components/common/CustomAlert';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth }           from '../../context/AuthContext';
-import {getAllSidangRegistrations, getSidangRegistrationResponse, getSidangPeriods,} from '../../service/api';
-import { determineSidangStatus, STATUS_SIDANG, SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/Sidangstatushelper.js';
+import {getAllSidangRegistrations,getSidangRegistrationResponse,getSidangPeriods,} from '../../service/api';
+import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../../components/admin/sidang/RegistrasiSidang.css';
 
 const FILTER_TABS = [
@@ -28,7 +29,23 @@ const STATUS_SORT_ORDER = {
 
 const PAGE_SIZE = 8;
 
-//  Sub-components 
+// Master list Program Studi
+const PRODI_LIST = [
+  'S1 Informatika',
+  'S1 Rekayasa Perangkat Lunak (Software Engineering)',
+  'S1 Sains Data (Data Science)',
+  'S1 Teknik Telekomunikasi',
+  'S1 Teknik Elektro',
+  'S1 Teknik Biomedis',
+  'S1 Teknik Industri',
+  'S1 Sistem Informasi',
+  'S1 Teknik Logistik',
+  'S1 Teknologi Pangan',
+  'S1 Desain Komunikasi Visual (DKV)',
+  'S1 Desain Produk',
+  'S1 Bisnis Digital',
+  'D3 Teknologi Telekomunikasi',
+];
 
 const StatusBadge = ({ status }) => {
   const cfg = SIDANG_STATUS_CONFIG[status];
@@ -49,7 +66,7 @@ const StatusBadge = ({ status }) => {
 };
 
 const SchemaBadge = ({ scheme }) => {
-  if (!scheme) return <span style={{ color: '#9CA3AF', fontSize: 12 }}>—</span>;
+  if (!scheme) return <span style={{ color: '#9CA3AF', fontSize: 12 }}>-</span>;
   const isNonSidang = scheme.toLowerCase().includes('non');
   return (
     <span style={{
@@ -84,6 +101,117 @@ const JalurBadge = ({ jalur }) => {
   );
 };
 
+const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
+  const [open, setOpen] = useState(false);
+  const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
+  const btnWrapRef = useRef(null);
+  const panelRef   = useRef(null);
+
+  const computePosition = useCallback(() => {
+    if (!btnWrapRef.current) return;
+    const rect = btnWrapRef.current.getBoundingClientRect();
+    setPanelPos({
+      top: rect.bottom + 6,
+      right: Math.max(8, window.innerWidth - rect.right), // jangan sampai keluar layar kanan
+    });
+  }, []);
+
+  const handleToggleOpen = () => {
+    if (!open) computePosition();
+    setOpen(o => !o);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const clickedButton = btnWrapRef.current?.contains(e.target);
+      const clickedPanel   = panelRef.current?.contains(e.target);
+      if (!clickedButton && !clickedPanel) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const reposition = () => computePosition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [open, computePosition]);
+
+  const isActive = selected.length > 0;
+
+  return (
+    <div className="vs-prodi-filter" ref={btnWrapRef}>
+      <button
+        type="button"
+        className={`vs-tab ${isActive ? 'active' : ''}`}
+        onClick={handleToggleOpen}
+      >
+        Prodi
+        {isActive && <span className="vs-tab-count">({selected.length})</span>}
+        <ChevronDown size={12} style={{ marginLeft: 2 }} />
+      </button>
+
+      {open && createPortal(
+        <div
+          className="vs-prodi-panel"
+          ref={panelRef}
+          style={{ position: 'fixed', top: panelPos.top, right: panelPos.right }}
+        >
+          {options.length === 0 ? (
+            <div className="vs-prodi-empty">Belum ada data prodi.</div>
+          ) : (
+            <div className="vs-prodi-options-grid">
+              {options.map((prodi) => (
+                <label key={prodi} className="vs-prodi-option">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(prodi)}
+                    onChange={() => onToggle(prodi)}
+                  />
+                  <span>{prodi}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          {isActive && (
+            <div className="vs-prodi-clear" onClick={onClear}>
+              Hapus filter prodi
+            </div>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+};
+
+const SortableHeader = ({ label, field, sort, onSort, style }) => {
+  const isActive = sort.field === field;
+  return (
+    <th
+      style={{ ...style, cursor: 'pointer', userSelect: 'none' }}
+      onClick={() => onSort(field)}
+      title="Klik untuk urutkan: A-Z → Z-A → default"
+    >
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {label}
+        {isActive ? (
+          sort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />
+        ) : (
+          <ArrowUpDown size={11} color="#CBD5E1" />
+        )}
+      </span>
+    </th>
+  );
+};
+
+//  Main Component 
+
 const RegistrasiSidang = () => {
   const { user, profile, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -99,6 +227,8 @@ const RegistrasiSidang = () => {
   const [search,          setSearch]          = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [filterStatus,    setFilterStatus]    = useState('');
+  const [selectedProdis,  setSelectedProdis]  = useState([]);
+  const [sort, setSort] = useState({ field: null, dir: 'asc' }); // field: 'name' | 'date' | null
   const [currentPage,     setCurrentPage]     = useState(1);
   const [alert,           setAlert]           = useState({ show: false, type: '', title: '', message: '' });
 
@@ -125,7 +255,7 @@ const RegistrasiSidang = () => {
       const allList = list ?? [];
 
       // Fetch response untuk SEMUA registrasi 
-      // (perlu dilakukan sebelum filter agar  tahu mana yg punya response)
+
       const respArr = await Promise.all(
         allList.map(r => getSidangRegistrationResponse(r.id).catch(() => null))
       );
@@ -135,25 +265,15 @@ const RegistrasiSidang = () => {
       allList.forEach((r, i) => { if (respArr[i]) rMap[r.id] = respArr[i]; });
       setResponseMap(rMap);
 
-      // Tampilkan registrasi yang PERNAH disubmit:
-      //   a) isDraft=false  → submit normal / sudah resubmit setelah revisi
-      //   b) isDraft=true DAN punya response → admin sudah set revisi
-      //      (BE set isDraft=true kembali saat admin beri revisi = status PERLU_REVISI)
-      // Yang tidak tampil: isDraft=true tanpa response = draf belum pernah submit
       const visible = allList.filter((r, i) => {
         const hasResponse = !!respArr[i];
         return !r.isDraft || hasResponse;
       });
 
-      // Fetch semua periode sidang
       const allPeriods = await getSidangPeriods().catch(() => []);
       const prdMap = {};
       (allPeriods ?? []).forEach(p => { prdMap[p.id] = p; });
       setPeriodMap(prdMap);
-
-      // BE (setelah fix sidangRegistrationController) sudah include
-      // student.studyProgram.name langsung di response list.
-      // Build map: { [studentId]: namaProdi } untuk lookup cepat di tabel.
       const prMap = {};
       visible.forEach(r => {
         const name = r.student?.studyProgram?.name ?? null;
@@ -176,7 +296,6 @@ const RegistrasiSidang = () => {
 
   const getStatus = useCallback((reg) => {
     const response = responseMap[reg.id] ?? null;
-    // sidangPeriodId ada di registration (bukan di response)
     const periodId = reg.sidangPeriodId ?? null;
     const period   = periodId ? (periodMap[periodId] ?? null) : null;
     return determineSidangStatus(reg, response, period);
@@ -184,9 +303,32 @@ const RegistrasiSidang = () => {
 
   const getProdiName = useCallback((reg) => {
     if (reg.student?.studyProgram?.name) return reg.student.studyProgram.name;
-    return prodiMap[reg.studentId] ?? '—';
+    return prodiMap[reg.studentId] ?? '-';
   }, [prodiMap]);
 
+  const prodiOptions = PRODI_LIST;
+
+  const toggleProdiFilter = useCallback((prodi) => {
+    setSelectedProdis(prev =>
+      prev.includes(prodi) ? prev.filter(p => p !== prodi) : [...prev, prodi]
+    );
+  }, []);
+
+  const clearProdiFilter = useCallback(() => setSelectedProdis([]), []);
+
+  const getSubmitDate = useCallback((reg) =>
+    reg.submittedAt ?? reg.sidangRegistrationUploads?.[0]?.createdAt ?? reg.createdAt ?? null,
+  []);
+
+  const handleSort = useCallback((field) => {
+    setSort(prev => {
+      if (prev.field !== field) return { field, dir: 'asc' };       // kolom baru → mulai asc
+      if (prev.dir === 'asc')   return { field, dir: 'desc' };      // klik ke-2 → desc
+      return { field: null, dir: 'asc' };                            // klik ke-3 → netral (balik ke default status order)
+    });
+  }, []);
+
+  //  Filter + sort + paginate 
   const filteredList = useMemo(() => {
     return registrations
       .filter(r => {
@@ -199,30 +341,42 @@ const RegistrasiSidang = () => {
         if (!filterStatus) return true;
         return getStatus(r) === filterStatus;
       })
+      .filter(r => {
+        if (selectedProdis.length === 0) return true;
+        return selectedProdis.includes(getProdiName(r));
+      })
       .sort((a, b) => {
+        if (sort.field === 'name') {
+          const na = (a.student?.name || '').toLowerCase();
+          const nb = (b.student?.name || '').toLowerCase();
+          const cmp = na.localeCompare(nb, 'id');
+          return sort.dir === 'asc' ? cmp : -cmp;
+        }
+        if (sort.field === 'date') {
+          const da = new Date(getSubmitDate(a) ?? 0).getTime();
+          const db = new Date(getSubmitDate(b) ?? 0).getTime();
+          return sort.dir === 'asc' ? da - db : db - da;
+        }
         const sa = getStatus(a);
         const sb = getStatus(b);
         return (STATUS_SORT_ORDER[sa] ?? 99) - (STATUS_SORT_ORDER[sb] ?? 99);
       });
-  }, [registrations, searchDebounced, filterStatus, getStatus]);
+  }, [registrations, searchDebounced, filterStatus, selectedProdis, sort, getStatus, getProdiName, getSubmitDate]);
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
   const paginated  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus]);
+  useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus, selectedProdis]);
 
   const countAll    = registrations.length;
   const countStatus = (s) => registrations.filter(r => getStatus(r) === s).length;
 
   const fmtDate = (iso) => {
-    if (!iso) return '—';
+    if (!iso) return '-';
     return new Date(iso).toLocaleDateString('id-ID', {
       day: 'numeric', month: 'short', year: 'numeric',
     });
   };
-
-  const getSubmitDate = (reg) =>
-    reg.submittedAt ?? reg.sidangRegistrationUploads?.[0]?.createdAt ?? reg.createdAt ?? null;
 
   const handleModalSaved = useCallback(() => {
     setSelectedReg(null);
@@ -230,6 +384,7 @@ const RegistrasiSidang = () => {
     showAlert('success', 'Berhasil', 'Verifikasi berkas berhasil disimpan.');
   }, [fetchAll, showAlert]);
 
+  // 
   return (
     <div className="vs-root">
       <SidebarAdmin isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -285,6 +440,13 @@ const RegistrasiSidang = () => {
                     </button>
                   );
                 })}
+
+                <ProdiFilterDropdown
+                  options={prodiOptions}
+                  selected={selectedProdis}
+                  onToggle={toggleProdiFilter}
+                  onClear={clearProdiFilter}
+                />
               </div>
 
               <div className="vs-table-divider" />
@@ -295,19 +457,20 @@ const RegistrasiSidang = () => {
                   <thead>
                     <tr>
                       <th style={{ width: 44 }}>NO</th>
-                      <th>MAHASISWA</th>
+                      <SortableHeader label="MAHASISWA" field="name" sort={sort} onSort={handleSort} />
                       <th>PRODI</th>
                       <th>JALUR SIDANG</th>
                       <th>SKEMA</th>
                       <th style={{ textAlign: 'center' }}>STATUS</th>
-                      <th>TANGGAL REGIST</th>
+                      <th>PERIODE SIDANG</th>
+                      <SortableHeader label="TANGGAL" field="date" sort={sort} onSort={handleSort} />
                       <th style={{ textAlign: 'center' }}>AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={8} style={{ padding: '52px 0', textAlign: 'center' }}>
+                        <td colSpan={9} style={{ padding: '52px 0', textAlign: 'center' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                             <Loader size={24} color="#C0182A" style={{ animation: 'vs-spin 1s linear infinite' }} />
                             <span style={{ fontSize: 13, color: '#6B7280' }}>Memuat data registrasi...</span>
@@ -316,7 +479,7 @@ const RegistrasiSidang = () => {
                       </tr>
                     ) : paginated.length === 0 ? (
                       <tr>
-                        <td colSpan={8} style={{ padding: '52px 0', textAlign: 'center' }}>
+                        <td colSpan={9} style={{ padding: '52px 0', textAlign: 'center' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                             <GraduationCap size={36} color="#D1D5DB" />
                             <span style={{ fontSize: 13, color: '#9CA3AF' }}>
@@ -345,7 +508,7 @@ const RegistrasiSidang = () => {
                             </td>
                             <td>
                               <div className="vs-mhs-name">{reg.student?.name || `Mahasiswa #${reg.studentId}`}</div>
-                              <div className="vs-mhs-nim">{reg.student?.nim  || '—'}</div>
+                              <div className="vs-mhs-nim">{reg.student?.nim  || '-'}</div>
                             </td>
                             <td>
                               <span className="vs-prodi-text">{prodiName}</span>
@@ -358,6 +521,12 @@ const RegistrasiSidang = () => {
                             </td>
                             <td className="vs-td-center">
                               <StatusBadge status={status} />
+                            </td>
+                            <td>
+                              {reg.sidangPeriodId && periodMap[reg.sidangPeriodId]
+                                ? <span className="vs-period-text">{periodMap[reg.sidangPeriodId].name}</span>
+                                : <span className="vs-period-empty">-</span>
+                              }
                             </td>
                             <td className="vs-td-date">{fmtDate(getSubmitDate(reg))}</td>
                             <td className="vs-td-center">

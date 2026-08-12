@@ -12,13 +12,7 @@
  *   SIAP_SIDANG           (sidangPeriod.isOpen === true)
  *   PENDAFTARAN_DITERIMA  (sidangPeriod.isOpen === false)
  *
- * Catatan penting:
- * - Saat admin set revisi, BE mengubah isDraft=true. List page harus
- *   menyertakan registrasi ini meski isDraft=true jika punya response.
- * - submittedAt cukup untuk membedakan PERLU_REVISI vs REVISI_DIPERBARUI
- *   karena BE sudah clear isEdit saat mahasiswa resubmit.
- * - sidangPeriodId tersimpan di tabel SidangRegistration (bukan di response).
- * - `period` di-pass terpisah karena sidangPeriod tidak nested di response.
+
  */
 
 
@@ -78,55 +72,30 @@ export const SIDANG_STATUS_CONFIG = {
   },
 };
 
-//  determineSidangStatus 
-/**
- * @param {object|null} registration  - object dari GET /api/sidang-registrations
- * @param {object|null} response      - object dari GET /api/sidang-registration-responses/registration/{id}
- * @param {object|null} period        - object dari GET /api/sidang-periods, di-match by registration.sidangPeriodId
- *
- * Urutan pengecekan:
- * 1. Belum Daftar         : registration null
- * 2. Proses Registrasi    : isDraft=true, response null
- * 3. Dalam Proses         : isDraft=false, response null
- * 4. Perlu Revisi         : response ada, response.isEdit not null, submittedAt null
- *                           (isDraft=true saat ini — admin sudah set revisi)
- * 5. Revisi Diperbarui    : registration.submittedAt not null
- *                           (BE sudah clear isEdit saat mahasiswa resubmit)
- * 6. Siap Sidang          : sidangPeriodId ada, period.isOpen === true
- * 7. Pendaftaran Diterima : sidangPeriodId ada, period.isOpen === false
- */
+
 export const determineSidangStatus = (registration, response, period) => {
-  // 1. Belum daftar
+
   if (!registration) return STATUS_SIDANG.BELUM_DAFTAR;
 
-  // 5. Revisi Diperbarui — cek duluan karena submittedAt paling definitif
-  //    Mahasiswa sudah resubmit setelah revisi (BE clear isEdit, submittedAt terisi)
-  if (registration.submittedAt && response) return STATUS_SIDANG.REVISI_DIPERBARUI;
-
-  // 2. Proses registrasi (draft murni, belum pernah submit, belum ada response)
   if (registration.isDraft && !response) return STATUS_SIDANG.PROSES_REGISTRASI;
 
-  // 3. Dalam proses (sudah submit pertama kali, admin belum respons)
   if (!registration.isDraft && !response) return STATUS_SIDANG.DALAM_PROSES;
 
-  // 4. Perlu Revisi — ada response dengan isEdit (admin sudah set deadline revisi)
-  //    isDraft=true karena BE set ulang saat admin beri revisi
   if (response && response.isEdit !== null && response.isEdit !== undefined) {
     return STATUS_SIDANG.PERLU_REVISI;
   }
 
-  // 6 & 7. isEdit null → admin approve, cek periode sidang
-  if (period) {
+  if (registration.sidangPeriodId && period) {
     const now       = new Date();
     const startDate = new Date(period.startDate);
     const endDate   = new Date(period.endDate);
-    // isOpen di DB tidak auto-update, gunakan rentang tanggal sebagai sumber kebenaran
     const isActive  = now >= startDate && now <= endDate;
     return isActive
       ? STATUS_SIDANG.SIAP_SIDANG
       : STATUS_SIDANG.PENDAFTARAN_DITERIMA;
   }
 
-  // Response ada tapi sidangPeriodId belum di-assign (edge case)
+  if (registration.submittedAt && response) return STATUS_SIDANG.REVISI_DIPERBARUI;
+
   return STATUS_SIDANG.DALAM_PROSES;
 };

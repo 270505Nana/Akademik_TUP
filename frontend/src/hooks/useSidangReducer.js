@@ -14,6 +14,9 @@ const generateDocuments = () => {
         fileName: "",
         fileSize: "",
         error: null,
+        isValid: null,       // null = belum direview, true = ACC admin, false = perlu revisi
+        downloadUrl: null,   
+        uploadId: null,      
       });
     });
   });
@@ -89,6 +92,7 @@ export function formReducer(state, action) {
             fileSize: action.fileSize,
             status: "uploaded",
             error: null,
+            isValid: null,
           };
         }
 
@@ -118,6 +122,7 @@ export function formReducer(state, action) {
               fileSize: action.fileSize,
               status: "uploaded",
               error: null,
+              isValid: null,
             };
           }
         }
@@ -151,9 +156,31 @@ export function formReducer(state, action) {
     }
     case "COMPLETE_DOCUMENT": {
       const completedDocs = state.documents.map((doc) =>
-        doc.id === action.docId ? { ...doc, status: "completed" } : doc,
+        doc.id === action.docId ? { ...doc, status: "completed", isValid: null } : doc,
       );
       return { ...state, documents: completedDocs };
+    }
+    case "RESTORE_SERVER_DOCUMENTS": {
+      // Sinkronkan status dokumen dari data sidangRegistrationUploads 
+      const uploadsBySlug = {};
+      (action.uploads || []).forEach((u) => {
+        uploadsBySlug[u.slug] = u;
+      });
+
+      const merged = state.documents.map((doc) => {
+        const serverDoc = uploadsBySlug[doc.slug];
+        if (!serverDoc) return doc;
+        return {
+          ...doc,
+          status: "completed",
+          isValid: serverDoc.isValid ?? null,
+          fileName: serverDoc.name || serverDoc.filename || doc.fileName,
+          downloadUrl: serverDoc.downloadUrl || null,
+          uploadId: serverDoc.id ?? null,
+          error: null,
+        };
+      });
+      return { ...state, documents: merged };
     }
     case "RESTORE_DRAFT":
       return action.payload;

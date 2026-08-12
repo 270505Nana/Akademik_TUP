@@ -4,22 +4,14 @@ import { useNavigate } from "react-router-dom";
 import "../../components/mahasiswa/sidang/sidang.css";
 import logoSimta from "../../assets/logo-simta.png";
 import logoTelkom from "../../assets/logo-telkom.png";
-import {
-  useSidangContext,
-  SidangFormProvider,
-} from "../../context/SidangFormContext";
+import {useSidangContext,SidangFormProvider,} from "../../context/SidangFormContext";
 import { useAuth } from "../../context/AuthContext";
 import { useStudent } from "../../context/StudentContext";
 import Step1 from "../../components/mahasiswa/sidang/Step1Sidang";
 import Step2 from "../../components/mahasiswa/sidang/Step2Sidang";
 import CustomAlert from "../../components/common/CustomAlert";
-import {
-  getLecturers,
-  getSidangRegistrationByStudentId,
-  getSktaResponseUploadByStudentId,
-  saveSidangRegistration,
-  submitSidangRegistration,
-} from "../../service/api";
+import {getLecturers,getSidangRegistrationByStudentId,getSidangRegistrationResponse,getSktaResponseUploadByStudentId,saveSidangRegistration,submitSidangRegistration,} from "../../service/api";
+import {STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from "../../components/admin/sidang/Sidangstatushelper";
 
 const STEP1_REQUIRED = [
   { key: "programType",        label: "Program (Reguler / Alih Jenjang)" },
@@ -130,9 +122,27 @@ function PendaftaranSidangContent() {
   const [isSavingStep1,         setIsSavingStep1]         = useState(false);
   const [lecturers,             setLecturers]             = useState([]);
   const [registrationId,        setRegistrationId]        = useState(null);
+  const [registrationMeta,      setRegistrationMeta]      = useState(null);
+  const [sidangAdminResponse,   setSidangAdminResponse]   = useState(null);
   const [formAlert,             setFormAlert]             = useState(null);
 
   const studentId = profile?.id || student?.studentId || user?.id;
+
+  const isStep1Locked = Boolean(registrationMeta?.submittedAt);
+
+  const isRevisionActive = Boolean(
+    sidangAdminResponse?.isEdit !== null &&
+    sidangAdminResponse?.isEdit !== undefined &&
+    sidangAdminResponse?.message
+  );
+
+  const revisionDueDateText = sidangAdminResponse?.isEdit
+    ? new Date(sidangAdminResponse.isEdit).toLocaleDateString("id-ID", {
+        day: "numeric", month: "long", year: "numeric",
+      })
+    : null;
+
+  const revisiCfg = SIDANG_STATUS_CONFIG[STATUS_SIDANG.PERLU_REVISI];
 
   const studentInfo = {
     nama:          student?.namaLengkap || profile?.name || user?.username || "-",
@@ -165,7 +175,6 @@ function PendaftaranSidangContent() {
     dosenPembimbing2Id: data.dosenPembimbing2Id ? Number(data.dosenPembimbing2Id) : null,
   });
 
-  // Simpan & Lanjutkan 
   const handleSaveStep1 = async () => {
     setFormAlert(null);
 
@@ -188,7 +197,6 @@ function PendaftaranSidangContent() {
       setIsSavingStep1(true);
       const result = await saveSidangRegistration(buildSavePayload());
 
-      // Response: { message, data: { id, ... } }
       const savedId = result?.data?.id ?? null;
       if (savedId && !registrationId) {
         setRegistrationId(savedId);
@@ -207,7 +215,6 @@ function PendaftaranSidangContent() {
     }
   };
 
-  //  Submit Final 
   const handleSubmit = async () => {
     setFormAlert(null);
 
@@ -295,11 +302,23 @@ function PendaftaranSidangContent() {
         const newId = created?.data?.id ?? null;
         setRegistrationId(newId);
         applyRegistrationToForm(created?.data ?? created);
+        setRegistrationMeta(created?.data ?? created ?? null);
         return;
       }
 
       setRegistrationId(existing.id);
       applyRegistrationToForm(existing);
+      setRegistrationMeta(existing);
+      if (Array.isArray(existing.sidangRegistrationUploads) && existing.sidangRegistrationUploads.length > 0) {
+        dispatch({ type: "RESTORE_SERVER_DOCUMENTS", uploads: existing.sidangRegistrationUploads });
+      }
+
+      try {
+        const adminResponse = await getSidangRegistrationResponse(existing.id);
+        setSidangAdminResponse(adminResponse);
+      } catch {
+        setSidangAdminResponse(null);
+      }
     } catch (e) {
       console.error("Gagal memuat data pendaftaran sidang:", e);
       setFormAlert({
@@ -372,6 +391,38 @@ function PendaftaranSidangContent() {
           </div>
         ) : skta ? (
           <>
+            {isRevisionActive && (
+              <div style={{ padding: "16px 24px 0", marginBottom: 16 }}>
+                <div style={{
+                  padding: "16px 20px",
+                  borderRadius: 12,
+                  background: revisiCfg.badgeBg,
+                  border: `1.5px solid ${revisiCfg.borderColor}`,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: "3px 12px", borderRadius: 9999,
+                      background: "#fff", color: revisiCfg.badgeColor,
+                      border: `1.5px solid ${revisiCfg.borderColor}`,
+                    }}>
+                      {revisiCfg.label}
+                    </span>
+                    {revisionDueDateText && (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: revisiCfg.badgeColor }}>
+                        Batas waktu perbaikan: {revisionDueDateText}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13, color: revisiCfg.badgeColor, lineHeight: 1.6 }}>
+                    <strong>Catatan dari Admin:</strong> {sidangAdminResponse.message}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {formAlert && (
               <div style={{ padding: "16px 24px 0" }}>
                 <CustomAlert type={formAlert.type} message={formAlert.msg} />
@@ -380,7 +431,12 @@ function PendaftaranSidangContent() {
 
             <main>
               {step === 1 ? (
-                <Step1 studentInfo={studentInfo} lecturers={lecturers} />
+                <Step1
+                  studentInfo={studentInfo}
+                  lecturers={lecturers}
+                  readOnly={isStep1Locked}
+                  schemeLocked={isRevisionActive}
+                />
               ) : (
                 <Step2 registrationId={registrationId} />
               )}

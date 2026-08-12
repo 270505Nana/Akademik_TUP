@@ -21,7 +21,8 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--body-bg);
 .page-footer { background: #fff; padding: 16px; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 11px; }
 
 /* TOP LAYOUT */
-.topbar { background: #fff; height: 64px; padding: 0 32px; display: flex; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+/* .topbar { background: #C0182A; height: 64px; padding: 0 32px; display: flex; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; } */
+.topbar { background: #C0182A; height: 64px; padding: 0 32px; display: flex; align-items: center; border-bottom: 1px solid var(--border); top: 0; z-index: 100; }
 .topbar-toggle { background: none; border: none; cursor: pointer; color: var(--text-primary); display: none; align-items: center; padding: 8px; border-radius: 8px; transition: all var(--transition); }
 .topbar-toggle:hover { background: var(--primary-xlight); color: var(--primary); }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
