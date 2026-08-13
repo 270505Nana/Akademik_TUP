@@ -10,7 +10,7 @@ const getEmailDomain = (email) => email.toLowerCase().split("@")[1];
 
 // Register
 const register = asyncHandler(async (req, res) => {
-  const { username, email, password, phone, role } = req.body;
+  const { name, email, password, phone, role } = req.body;
   const emailDomain = getEmailDomain(email);
   const normalizedRole = typeof role === "string" ? role.trim() : role;
 
@@ -65,7 +65,7 @@ const register = asyncHandler(async (req, res) => {
 
   const data = await prisma.user.create({
     data: {
-      username,
+      name,
       email,
       password: hashedPassword,
       phone,

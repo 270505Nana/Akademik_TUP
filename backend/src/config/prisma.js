@@ -17,10 +17,10 @@ const prisma = new PrismaClient({
     faculty: hideTimestamps,
     studyProgram: hideTimestamps,
 
-    academicStaff: hidedeletedAt,
-    lecturer: hideTimestamps,
-    student: hideTimestamps,
-    sktaRequest: hideTimestamps,
+    admin: hidedeletedAt,
+    dosen: hideTimestamps,
+    mahasiswa: hideTimestamps,
+    permohonanSkta: hideTimestamps,
   },
 });
 

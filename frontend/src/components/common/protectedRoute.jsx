@@ -52,7 +52,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
     return <Navigate to="/forbidden" replace />;
   }
 
-  if (user.role === "ACADEMIC_STAFF" && !location.pathname.startsWith("/akademik")) {
+  if ((user.role === "ACADEMIC_STAFF" || user.role === "ADMIN") && !location.pathname.startsWith("/akademik")) {
     return <Navigate to="/akademik/dashboard" replace />;
   }
 
@@ -62,7 +62,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
 
   // Redirect mahasiswa yang belum lengkapi data
   if (
-    user.role === "STUDENT" &&
+    (user.role === "STUDENT" || user.role === "MAHASISWA") &&
     requireCompleteProfile &&
     !isComplete &&
     location.pathname !== "/lengkapi-data"

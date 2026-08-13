@@ -104,7 +104,7 @@ const LengkapiData = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === 'studyProgramId') {
-      const selected = studyPrograms.find(p => p.id === Number(value));
+      const selected = studyPrograms.find(p => String(p.id) === String(value));
       setFormData(prev => ({
         ...prev,
         studyProgramId:   value,
@@ -159,8 +159,8 @@ const LengkapiData = () => {
       name:           formData.namaLengkap,
       className:      formData.kelas,
       year:           Number(formData.angkatan),
-      studyProgramId: Number(formData.studyProgramId),
-      dosenWaliId:    Number(formData.dosenWaliId),
+      studyProgramId: formData.studyProgramId,
+      dosenWaliId:    formData.dosenWaliId,
       sks:            null,
       ipk:            null,
       tak:            null,

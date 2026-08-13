@@ -20,20 +20,20 @@ const listFormulirPenerbitanSktaUploads = asyncHandler(async (req, res) => {
 
   // If user is MAHASISWA, they can only see their own uploads
   if (req.user.role === "MAHASISWA") {
-    const student = await prisma.student.findUnique({
+    const student = await prisma.mahasiswa.findUnique({
       where: { userId: req.user.id },
     });
     if (!student) {
       res.status(404);
       throw new Error("Data mahasiswa tidak ditemukan");
     }
-    whereClause.studentId = student.id;
+    whereClause.mahasiswaId = student.id;
   }
 
   const uploads = await prisma.formulirPenerbitanSktaUpload.findMany({
     where: whereClause,
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -56,7 +56,7 @@ const getFormulirPenerbitanSktaUploadById = asyncHandler(async (req, res) => {
   const upload = await prisma.formulirPenerbitanSktaUpload.findFirst({
     where: { id, deletedAt: null },
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -73,10 +73,10 @@ const getFormulirPenerbitanSktaUploadById = asyncHandler(async (req, res) => {
 
   // If user is MAHASISWA, check ownership
   if (req.user.role === "MAHASISWA") {
-    const student = await prisma.student.findUnique({
+    const student = await prisma.mahasiswa.findUnique({
       where: { userId: req.user.id },
     });
-    if (!student || upload.studentId !== student.id) {
+    if (!student || upload.mahasiswaId !== student.id) {
       res.status(403);
       throw new Error("Akses ditolak");
     }
@@ -95,10 +95,10 @@ const createFormulirPenerbitanSktaUpload = asyncHandler(async (req, res) => {
 
   try {
     const { name } = req.body;
-    const studentId = parseInt(req.body.studentId);
+    const mahasiswaId = parseInt(req.body.mahasiswaId);
 
-    const studentExists = await prisma.student.findUnique({
-      where: { id: studentId },
+    const studentExists = await prisma.mahasiswa.findUnique({
+      where: { id: mahasiswaId },
     });
     if (!studentExists) {
       res.status(404);
@@ -111,7 +111,7 @@ const createFormulirPenerbitanSktaUpload = asyncHandler(async (req, res) => {
         name,
         filename: file.filename,
         path: file.path,
-        studentId,
+        mahasiswaId,
       },
     });
 
@@ -145,11 +145,11 @@ const updateFormulirPenerbitanSktaUpload = asyncHandler(async (req, res) => {
       throw new Error("Unggahan formulir tidak ditemukan");
     }
 
-    const { name, studentId } = req.body;
+    const { name, mahasiswaId } = req.body;
 
-    if (studentId) {
-      const studentExists = await prisma.student.findUnique({
-        where: { id: parseInt(studentId) },
+    if (mahasiswaId) {
+      const studentExists = await prisma.mahasiswa.findUnique({
+        where: { id: parseInt(mahasiswaId) },
       });
       if (!studentExists) {
         if (file?.path) {
@@ -166,7 +166,7 @@ const updateFormulirPenerbitanSktaUpload = asyncHandler(async (req, res) => {
       where: { id },
       data: {
         name: name !== undefined ? name : uploadRecord.name,
-        studentId: studentId !== undefined ? parseInt(studentId) : uploadRecord.studentId,
+        mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : uploadRecord.mahasiswaId,
         ...(file
           ? {
               filename: file.filename,
@@ -228,10 +228,10 @@ const downloadFormulirPenerbitanSktaUpload = asyncHandler(async (req, res) => {
 
   // Check ownership if MAHASISWA
   if (req.user.role === "MAHASISWA") {
-    const student = await prisma.student.findUnique({
+    const student = await prisma.mahasiswa.findUnique({
       where: { userId: req.user.id },
     });
-    if (!student || upload.studentId !== student.id) {
+    if (!student || upload.mahasiswaId !== student.id) {
       res.status(403);
       throw new Error("Akses ditolak");
     }

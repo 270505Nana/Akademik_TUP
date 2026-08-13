@@ -30,9 +30,9 @@ import { registerValidator,
  *         application/json:
  *           schema:
  *             type: object
- *             required: [username, email, password, confirmPassword]
+ *             required: [name, email, password, confirmPassword]
  *             properties:
- *               username:
+ *               name:
  *                 type: string
  *               email:
  *                 type: string

@@ -19,20 +19,20 @@ const listSklUploads = asyncHandler(async (req, res) => {
 
   // If user is MAHASISWA, they can only see their own SKL uploads
   if (req.user.role === "MAHASISWA") {
-    const student = await prisma.student.findUnique({
+    const student = await prisma.mahasiswa.findUnique({
       where: { userId: req.user.id },
     });
     if (!student) {
       res.status(404);
       throw new Error("Data mahasiswa tidak ditemukan");
     }
-    whereClause.studentId = student.id;
+    whereClause.mahasiswaId = student.id;
   }
 
   const sklUploads = await prisma.sklUpload.findMany({
     where: whereClause,
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -55,7 +55,7 @@ const getSklUploadById = asyncHandler(async (req, res) => {
   const sklUpload = await prisma.sklUpload.findFirst({
     where: { id, deletedAt: null },
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -72,10 +72,10 @@ const getSklUploadById = asyncHandler(async (req, res) => {
 
   // If user is MAHASISWA, check ownership
   if (req.user.role === "MAHASISWA") {
-    const student = await prisma.student.findUnique({
+    const student = await prisma.mahasiswa.findUnique({
       where: { userId: req.user.id },
     });
-    if (!student || sklUpload.studentId !== student.id) {
+    if (!student || sklUpload.mahasiswaId !== student.id) {
       res.status(403);
       throw new Error("Akses ditolak");
     }
@@ -94,10 +94,10 @@ const createSklUpload = asyncHandler(async (req, res) => {
 
   try {
     const { name } = req.body;
-    const studentId = parseInt(req.body.studentId);
+    const mahasiswaId = parseInt(req.body.mahasiswaId);
 
-    const studentExists = await prisma.student.findUnique({
-      where: { id: studentId },
+    const studentExists = await prisma.mahasiswa.findUnique({
+      where: { id: mahasiswaId },
     });
     if (!studentExists) {
       res.status(404);
@@ -109,7 +109,7 @@ const createSklUpload = asyncHandler(async (req, res) => {
         name,
         filename: file.filename,
         path: file.path,
-        studentId,
+        mahasiswaId,
       },
     });
 
@@ -143,11 +143,11 @@ const updateSklUpload = asyncHandler(async (req, res) => {
       throw new Error("Unggahan SKL tidak ditemukan");
     }
 
-    const { name, studentId } = req.body;
+    const { name, mahasiswaId } = req.body;
 
-    if (studentId) {
-      const studentExists = await prisma.student.findUnique({
-        where: { id: parseInt(studentId) },
+    if (mahasiswaId) {
+      const studentExists = await prisma.mahasiswa.findUnique({
+        where: { id: parseInt(mahasiswaId) },
       });
       if (!studentExists) {
         if (file?.path) {
@@ -164,7 +164,7 @@ const updateSklUpload = asyncHandler(async (req, res) => {
       where: { id },
       data: {
         name: name !== undefined ? name : sklUpload.name,
-        studentId: studentId !== undefined ? parseInt(studentId) : sklUpload.studentId,
+        mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : sklUpload.mahasiswaId,
         ...(file
           ? {
               filename: file.filename,
@@ -226,10 +226,10 @@ const downloadSklUpload = asyncHandler(async (req, res) => {
 
   // Check ownership if MAHASISWA
   if (req.user.role === "MAHASISWA") {
-    const student = await prisma.student.findUnique({
+    const student = await prisma.mahasiswa.findUnique({
       where: { userId: req.user.id },
     });
-    if (!student || upload.studentId !== student.id) {
+    if (!student || upload.mahasiswaId !== student.id) {
       res.status(403);
       throw new Error("Akses ditolak");
     }

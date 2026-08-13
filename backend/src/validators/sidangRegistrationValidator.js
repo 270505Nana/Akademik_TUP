@@ -67,7 +67,7 @@ const submitSidangRegistrationValidator = [
     .isString()
     .withMessage("Judul TA (EN) harus berupa string"),
 
-  body("studentId")
+  body("mahasiswaId")
     .notEmpty()
     .withMessage("ID mahasiswa wajib diisi")
     .bail()
@@ -148,7 +148,7 @@ const saveSidangRegistrationValidator = [
     .isString()
     .withMessage("Judul TA (EN) harus berupa string"),
 
-  body("studentId")
+  body("mahasiswaId")
     .optional({ nullable: true })
     .isInt()
     .withMessage("ID mahasiswa harus berupa integer")

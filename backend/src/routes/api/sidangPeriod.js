@@ -9,7 +9,7 @@ import { listSidangPeriods,
   deleteSidangPeriod, } from '../../controllers/sidangPeriodController.js';
 import { createSidangPeriodValidator,
   updateSidangPeriodValidator, } from '../../validators/sidangPeriodValidator.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -109,7 +109,7 @@ router.get("/:id", verifyToken, getSidangPeriodById);
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   createSidangPeriodValidator,
   validate,
   createSidangPeriod,
@@ -166,7 +166,7 @@ router.post(
 router.patch(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   updateSidangPeriodValidator,
   validate,
   updateSidangPeriod,
@@ -197,6 +197,6 @@ router.patch(
  *       403:
  *         description: Invalid token
  */
-router.delete("/:id", verifyToken, isAcademicStaff, deleteSidangPeriod);
+router.delete("/:id", verifyToken, isAdmin, deleteSidangPeriod);
 
 export default router;

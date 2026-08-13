@@ -42,7 +42,7 @@ const App = () => {
           <Route
             path="/lengkapi-data"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]}>
+              <ProtectedRoute allowedRoles={["STUDENT", "MAHASISWA"]}>
                 <LengkapiData />
               </ProtectedRoute>
             }
@@ -52,7 +52,7 @@ const App = () => {
           <Route
             path="/mahasiswa/dashboard"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
+              <ProtectedRoute allowedRoles={["STUDENT", "MAHASISWA"]} requireCompleteProfile={true}>
                 <DashboardMahasiswa />
               </ProtectedRoute>
             }
@@ -61,7 +61,7 @@ const App = () => {
           <Route
             path="/mahasiswa/pengajuan-sk"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
+              <ProtectedRoute allowedRoles={["STUDENT", "MAHASISWA"]} requireCompleteProfile={true}>
                 <PengajuanSK />
               </ProtectedRoute>
             }
@@ -70,7 +70,7 @@ const App = () => {
           <Route
             path="/mahasiswa/pendaftaran-sidang"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
+              <ProtectedRoute allowedRoles={["STUDENT", "MAHASISWA"]} requireCompleteProfile={true}>
                 <PendaftaranSidang />
               </ProtectedRoute>
             }
@@ -78,7 +78,7 @@ const App = () => {
           <Route
             path="/mahasiswa/pendaftaran-yudisium"
             element={
-              <ProtectedRoute allowedRoles={["STUDENT"]} requireCompleteProfile={true}>
+              <ProtectedRoute allowedRoles={["STUDENT", "MAHASISWA"]} requireCompleteProfile={true}>
                 <Placeholder title="Pendaftaran Yudisium" />
               </ProtectedRoute>
             }
@@ -88,7 +88,7 @@ const App = () => {
           <Route
             path="/dosen/dashboard"
             element={
-              <ProtectedRoute allowedRoles={["LECTURER"]}>
+              <ProtectedRoute allowedRoles={["LECTURER", "DOSEN"]}>
                 <DashboardDosen />
               </ProtectedRoute>
             }
@@ -98,7 +98,7 @@ const App = () => {
           <Route
             path="/akademik/dashboard"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
                 <DashboardAkademik />
               </ProtectedRoute>
             }
@@ -106,7 +106,7 @@ const App = () => {
           <Route
             path="/akademik/atur-periode/sidang"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
                 <AturPeriodeSidang />
               </ProtectedRoute>
             }
@@ -114,7 +114,7 @@ const App = () => {
           <Route
             path="/akademik/atur-periode/yudisium"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
                 <AturPeriodeYudisium />
               </ProtectedRoute>
             }
@@ -122,7 +122,7 @@ const App = () => {
           <Route
             path="/akademik/permohonan-sk"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
                 <PermohonanSK />
               </ProtectedRoute>
             }
@@ -131,7 +131,7 @@ const App = () => {
           <Route
             path="/akademik/atur-berkas"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
                 <AturBerkas />
               </ProtectedRoute>
             }
@@ -140,7 +140,7 @@ const App = () => {
           <Route
             path="/akademik/registrasi-sidang-all"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
                 <RegistrasiSidang />
               </ProtectedRoute>
             }
@@ -149,7 +149,7 @@ const App = () => {
           <Route
             path="/akademik/data-dosen"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
                 <KelolaDataDosen />
               </ProtectedRoute>
             }
@@ -158,7 +158,7 @@ const App = () => {
           <Route
             path="/akademik/upload-skl"
             element={
-              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF"]}>
+              <ProtectedRoute allowedRoles={["ACADEMIC_STAFF", "ADMIN"]}>
                 <UploadSKL />
               </ProtectedRoute>
             }

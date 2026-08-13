@@ -9,7 +9,7 @@ const STUDENT_EMAIL_DOMAIN = "student.telkomuniversity.ac.id";
 const TELKOM_EMAIL_DOMAIN = "telkomuniversity.ac.id";
 
 const registerValidator = [
-  body("username").notEmpty().withMessage("Username wajib diisi"),
+  body("name").notEmpty().withMessage("Nama wajib diisi"),
 
   body("email")
     .notEmpty()

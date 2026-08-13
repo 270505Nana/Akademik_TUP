@@ -1,7 +1,7 @@
 import { body } from 'express-validator';
 
-const upsertAcademicStaffValidator = [
+const upsertAdminValidator = [
   body("name").notEmpty().withMessage("Nama wajib diisi"),
 ];
 
-export { upsertAcademicStaffValidator };
+export { upsertAdminValidator };

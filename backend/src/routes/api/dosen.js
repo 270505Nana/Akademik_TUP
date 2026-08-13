@@ -2,48 +2,48 @@ import express from 'express';
 
 const router = express.Router();
 
-import { listLecturers,
-  upsertLecturer,
-  findLecturerByUserId, } from '../../controllers/lecturerController.js';
+import { listDosens,
+  upsertDosen,
+  findDosenByUserId, } from '../../controllers/dosenController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
 
 import { validate } from '../../middlewares/validate.js';
 
-import { upsertLecturerValidator, } from '../../validators/lecturerValidator.js';
-import { isLecturer } from '../../middlewares/authorize.js';
+import { upsertDosenValidator, } from '../../validators/dosenValidator.js';
+import { isDosen } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
  * tags:
- *   name: Lecturer
- *   description: Lecturer endpoints
+ *   name: Dosen
+ *   description: Dosen endpoints
  */
 
 /**
  * @swagger
- * /api/lecturers:
+ * /api/dosen:
  *   get:
- *     summary: Get all lecturer data
- *     tags: [Lecturer]
+ *     summary: Get all dosen data
+ *     tags: [Dosen]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Lecturer data retrieved successfully
+ *         description: Dosen data retrieved successfully
  *       401:
  *         description: Token not found
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listLecturers);
+router.get("/", verifyToken, listDosens);
 
 /**
  * @swagger
- * /api/lecturers/{userId}:
+ * /api/dosen/{userId}:
  *   put:
- *     summary: Create or update lecturer data by user ID
- *     tags: [Lecturer]
+ *     summary: Create or update dosen data by user ID
+ *     tags: [Dosen]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -51,7 +51,7 @@ router.get("/", verifyToken, listLecturers);
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *         description: User ID with DOSEN role
  *     requestBody:
  *       required: true
@@ -59,7 +59,7 @@ router.get("/", verifyToken, listLecturers);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [nip, nidn, lecturerCode, name, researchGroupId]
+ *             required: [nip, name, researchGroupId]
  *             properties:
  *               nip:
  *                 type: string
@@ -67,6 +67,9 @@ router.get("/", verifyToken, listLecturers);
  *               nidn:
  *                 type: string
  *                 example: 1122334455
+ *               kodeDosen:
+ *                 type: string
+ *                 example: JDO
  *               lecturerCode:
  *                 type: string
  *                 example: JDO
@@ -74,13 +77,13 @@ router.get("/", verifyToken, listLecturers);
  *                 type: string
  *                 example: John Doe
  *               researchGroupId:
- *                 type: int
- *                 example: 1
+ *                 type: string
+ *                 example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
  *     responses:
  *       200:
- *         description: Lecturer data created or updated successfully
+ *         description: Dosen data created or updated successfully
  *       400:
- *         description: User is not an lecturer
+ *         description: User is not a dosen
  *       401:
  *         description: Token not found
  *       403:
@@ -93,18 +96,18 @@ router.get("/", verifyToken, listLecturers);
 router.put(
   "/:userId",
   verifyToken,
-  isLecturer,
-  upsertLecturerValidator,
+  isDosen,
+  upsertDosenValidator,
   validate,
-  upsertLecturer,
+  upsertDosen,
 );
 
 /**
  * @swagger
- * /api/lecturers/{userId}:
+ * /api/dosen/{userId}:
  *   get:
- *     summary: Get lecturer data by user ID
- *     tags: [Lecturer]
+ *     summary: Get dosen data by user ID
+ *     tags: [Dosen]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -112,20 +115,20 @@ router.put(
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: User ID of lecturer
+ *           type: string
+ *         description: User ID of dosen
  *     responses:
  *       200:
- *         description: Lecturer data retrieved successfully
+ *         description: Dosen data retrieved successfully
  *       401:
  *         description: Token not found
  *       403:
  *         description: Invalid token
  *       404:
- *         description: Lecturer data not found
+ *         description: Dosen data not found
  *       500:
  *         description: Internal server error
  */
-router.get("/:userId", verifyToken, findLecturerByUserId);
+router.get("/:userId", verifyToken, findDosenByUserId);
 
 export default router;

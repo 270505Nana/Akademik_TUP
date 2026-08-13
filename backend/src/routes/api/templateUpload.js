@@ -15,7 +15,7 @@ import { upload } from '../../middlewares/upload.js';
 
 import { createTemplateUploadValidator,
   updateTemplateUploadValidator, } from '../../validators/templateUploadValidator.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -88,7 +88,7 @@ router.get("/", verifyToken, listTemplateUploads);
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   upload("templates").single("templateFile"),
   createTemplateUploadValidator,
   validate,
@@ -176,7 +176,7 @@ router.get("/:slug", verifyToken, findTemplateUploadBySlug);
 router.patch(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   upload("templates").single("templateFile"),
   updateTemplateUploadValidator,
   validate,
@@ -210,6 +210,6 @@ router.patch(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAcademicStaff, deleteTemplateUpload);
+router.delete("/:id", verifyToken, isAdmin, deleteTemplateUpload);
 
 export default router;

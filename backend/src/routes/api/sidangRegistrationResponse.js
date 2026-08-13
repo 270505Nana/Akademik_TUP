@@ -11,7 +11,7 @@ import { listSidangRegistrationResponses,
   toggleSidangRegistrationUploadIsValid, } from '../../controllers/sidangRegistrationResponseController.js';
 import { createSidangRegistrationResponseValidator,
   updateSidangRegistrationResponseValidator, } from '../../validators/sidangRegistrationResponseValidator.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -112,12 +112,12 @@ router.get(
  *             type: object
  *             required:
  *               - sidangRegistrationId
- *               - academicStaffId
+ *               - adminId
  *             properties:
  *               sidangRegistrationId:
  *                 type: integer
  *                 example: 1
- *               academicStaffId:
+ *               adminId:
  *                 type: integer
  *                 example: 1
  *               message:
@@ -155,7 +155,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   createSidangRegistrationResponseValidator,
   validate,
   createSidangRegistrationResponse,
@@ -190,7 +190,7 @@ router.post(
  *                 type: string
  *                 format: date-time
  *                 nullable: true
- *               academicStaffId:
+ *               adminId:
  *                 type: integer
  *               sidangRegistrationId:
  *                 type: integer
@@ -216,7 +216,7 @@ router.post(
 router.put(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   updateSidangRegistrationResponseValidator,
   validate,
   updateSidangRegistrationResponse,
@@ -252,7 +252,7 @@ router.put(
 router.delete(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   deleteSidangRegistrationResponse,
 );
 
@@ -286,7 +286,7 @@ router.delete(
 router.put(
   "/uploads/:uploadId/toggle-is-valid",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   toggleSidangRegistrationUploadIsValid,
 );
 

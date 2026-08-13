@@ -14,7 +14,7 @@ import {
 } from "../service/api";
 
 const AuthContext = createContext(null);
-const INACTIVITY_ROLES = ["ACADEMIC_STAFF", "LECTURER"];
+const INACTIVITY_ROLES = ["ACADEMIC_STAFF", "LECTURER", "ADMIN", "DOSEN"];
 // Timeout inactivity: 30 menit tidak ada aktivitas
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
@@ -62,11 +62,11 @@ export const AuthProvider = ({ children }) => {
     async function fetchProfile(role, id) {
       let profile;
 
-      if (role === "STUDENT") {
+      if (role === "STUDENT" || role === "MAHASISWA") {
         profile = await getStudentData(id);
-      } else if (role === "LECTURER") {
+      } else if (role === "LECTURER" || role === "DOSEN") {
         profile = await getLecturerData(id);
-      } else if (role === "ACADEMIC_STAFF") {
+      } else if (role === "ACADEMIC_STAFF" || role === "ADMIN") {
         profile = await getAcademicStaffData(id);
       }
 

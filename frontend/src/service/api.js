@@ -47,14 +47,14 @@ api.interceptors.response.use(
 
 // ------------------------------------------- AUTH -------------------------------------------
 export const registerUser = async ({
-  username,
+  name,
   email,
   no_telp,
   password,
   confirmPassword,
 }) => {
   const response = await api.post("/api/auth/register", {
-    username,
+    name,
     email,
     phone: no_telp,
     password,
@@ -70,12 +70,12 @@ export const loginUser = async ({ email, password }) => {
 
 // ------------------------------------------- MAHASISWA SIDE-------------------------------------------
 export const getStudentData = async (userId) => {
-  const response = await api.get(`/api/students/${userId}`);
+  const response = await api.get(`/api/mahasiswa/${userId}`);
   return response.data;
 };
 
 export const saveStudentData = async (userId, payload) => {
-  const response = await api.put(`/api/students/${userId}`, payload);
+  const response = await api.put(`/api/mahasiswa/${userId}`, payload);
   return response.data;
 };
 
@@ -153,18 +153,18 @@ export const getSKTAResponse = async (sktaRequestId) => {
 
 // ------------------------------------------- DOSEN -------------------------------------------
 export const getLecturersData = async () => {
-  const response = await api.get(`/api/lecturers`);
+  const response = await api.get(`/api/dosen`);
   return response.data;
 };
 
 export const getLecturerData = async (userId) => {
-  const response = await api.get(`/api/lecturers/${userId}`);
+  const response = await api.get(`/api/dosen/${userId}`);
   return response.data;
 };
 
 // ------------------------------------------- ADMIN (Permohonan SK) -------------------------------------------
 export const getAcademicStaffData = async (userId) => {
-  const response = await api.get(`/api/academic-staff/${userId}`);
+  const response = await api.get(`/api/admin/${userId}`);
   return response.data;
 };
 
@@ -434,7 +434,7 @@ export const upsertSidangRegistrationResponse = async (payload, existingId) => {
 
 // ------------------------------------------- ETC -------------------------------------------
 export const getLecturers = async () =>
-  api.get("/api/lecturers").then((r) => r.data?.data ?? r.data);
+  api.get("/api/dosen").then((r) => r.data?.data ?? r.data);
 export const getFaculties = async () =>
   api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
 export const getStudyPrograms = async () =>

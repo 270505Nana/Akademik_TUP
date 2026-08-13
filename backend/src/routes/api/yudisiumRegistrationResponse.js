@@ -10,7 +10,7 @@ import { listYudisiumRegistrationResponses,
   deleteYudisiumRegistrationResponse, } from '../../controllers/yudisiumRegistrationResponseController.js';
 import { createYudisiumRegistrationResponseValidator,
   updateYudisiumRegistrationResponseValidator, } from '../../validators/yudisiumRegistrationResponseValidator.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -111,12 +111,12 @@ router.get(
  *             type: object
  *             required:
  *               - yudisiumRegistrationId
- *               - academicStaffId
+ *               - adminId
  *             properties:
  *               yudisiumRegistrationId:
  *                 type: integer
  *                 example: 1
- *               academicStaffId:
+ *               adminId:
  *                 type: integer
  *                 example: 1
  *               message:
@@ -145,7 +145,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   createYudisiumRegistrationResponseValidator,
   validate,
   createYudisiumRegistrationResponse,
@@ -180,7 +180,7 @@ router.post(
  *                 type: string
  *                 format: date-time
  *                 nullable: true
- *               academicStaffId:
+ *               adminId:
  *                 type: integer
  *               yudisiumRegistrationId:
  *                 type: integer
@@ -201,7 +201,7 @@ router.post(
 router.put(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   updateYudisiumRegistrationResponseValidator,
   validate,
   updateYudisiumRegistrationResponse,
@@ -237,7 +237,7 @@ router.put(
 router.delete(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   deleteYudisiumRegistrationResponse,
 );
 

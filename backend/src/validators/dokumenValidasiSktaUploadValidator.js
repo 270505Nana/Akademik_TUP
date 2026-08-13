@@ -4,11 +4,11 @@ const allowedMimeTypes = ["application/pdf"];
 
 const createDokumenValidasiSktaUploadValidator = [
   body("name").notEmpty().withMessage("name wajib diisi"),
-  body("studentId")
+  body("mahasiswaId")
     .notEmpty()
-    .withMessage("studentId wajib diisi")
+    .withMessage("mahasiswaId wajib diisi")
     .isInt()
-    .withMessage("studentId harus berupa integer")
+    .withMessage("mahasiswaId harus berupa integer")
     .toInt(),
   body("dokumenFile").custom((value, { req }) => {
     if (!req.file) {
@@ -25,10 +25,10 @@ const createDokumenValidasiSktaUploadValidator = [
 
 const updateDokumenValidasiSktaUploadValidator = [
   body("name").optional().notEmpty().withMessage("name tidak boleh kosong jika diisi"),
-  body("studentId")
+  body("mahasiswaId")
     .optional()
     .isInt()
-    .withMessage("studentId harus berupa integer")
+    .withMessage("mahasiswaId harus berupa integer")
     .toInt(),
   body("dokumenFile").custom((value, { req }) => {
     if (!req.file) {

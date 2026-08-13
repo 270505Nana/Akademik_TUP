@@ -41,7 +41,7 @@ const submitYudisiumRegistrationValidator = [
     .withMessage("Konfirmasi harus berupa boolean")
     .toBoolean(),
 
-  body("studentId")
+  body("mahasiswaId")
     .notEmpty()
     .withMessage("ID mahasiswa wajib diisi")
     .bail()
@@ -152,7 +152,7 @@ const saveYudisiumRegistrationValidator = [
     .isString()
     .withMessage("Eviden cumlaude harus berupa string"),
 
-  body("studentId")
+  body("mahasiswaId")
     .optional({ nullable: true })
     .isInt()
     .withMessage("ID mahasiswa harus berupa integer")
