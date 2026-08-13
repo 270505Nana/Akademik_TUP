@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil } from '../utils/validationHelper.js';
 
 // Daftar Semua Admin
 const listAdmins = asyncHandler(async (req, res) => {
@@ -43,6 +44,13 @@ const upsertAdmin = asyncHandler(async (req, res) => {
 
   const { name } = req.body;
 
+  const errors = [];
+  if (isNil(name) || String(name).trim() === '') {
+    errors.push({ field: 'name', message: 'Nama wajib diisi' });
+  }
+  if (errors.length > 0) {
+    return sendValidationError(res, errors, req);
+  }
   // Update name in User table
   const updatedUser = await prisma.user.update({
     where: { id: userId },

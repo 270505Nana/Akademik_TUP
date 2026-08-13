@@ -1,7 +1,6 @@
 import express from 'express';
 const router = express.Router();
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 import { listSidangRegistrations,
   getSidangRegistrationById,
@@ -12,8 +11,6 @@ import { listSidangRegistrations,
   uploadSidangRegistrationFile,
   getSidangRegistrationFiles,
   downloadSidangRegistrationFile, } from '../../controllers/sidangRegistrationController.js';
-import { saveSidangRegistrationValidator,
-  submitSidangRegistrationValidator, } from '../../validators/sidangRegistrationValidator.js';
 import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -101,7 +98,7 @@ router.get(
 
 /**
  * @swagger
- * /api/sidang-registrations/save:
+ * /api/sidang-registrations/:
  *   post:
  *     summary: Save draft sidang registration
  *     tags: [Sidang Registration]
@@ -142,11 +139,9 @@ router.get(
  *         description: Internal server error
  */
 router.post(
-  "/save",
+  "/",
   verifyToken,
   isMahasiswa,
-  saveSidangRegistrationValidator,
-  validate,
   saveSidangRegistration,
 );
 
@@ -196,8 +191,6 @@ router.post(
   "/submit",
   verifyToken,
   isMahasiswa,
-  submitSidangRegistrationValidator,
-  validate,
   submitSidangRegistration,
 );
 

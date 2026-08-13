@@ -1,7 +1,6 @@
 import express from 'express';
 const router = express.Router();
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { listSidangRegistrationResponses,
   getSidangRegistrationResponseById,
   getSidangRegistrationResponseBySidangRegistrationId,
@@ -9,8 +8,6 @@ import { listSidangRegistrationResponses,
   updateSidangRegistrationResponse,
   deleteSidangRegistrationResponse,
   toggleSidangRegistrationUploadIsValid, } from '../../controllers/sidangRegistrationResponseController.js';
-import { createSidangRegistrationResponseValidator,
-  updateSidangRegistrationResponseValidator, } from '../../validators/sidangRegistrationResponseValidator.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -156,8 +153,6 @@ router.post(
   "/",
   verifyToken,
   isAdmin,
-  createSidangRegistrationResponseValidator,
-  validate,
   createSidangRegistrationResponse,
 );
 
@@ -217,8 +212,6 @@ router.put(
   "/:id",
   verifyToken,
   isAdmin,
-  updateSidangRegistrationResponseValidator,
-  validate,
   updateSidangRegistrationResponse,
 );
 

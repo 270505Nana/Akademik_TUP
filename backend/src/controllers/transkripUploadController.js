@@ -1,7 +1,9 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
+import { sendValidationError, isNil } from '../utils/validationHelper.js';
+
 
 const buildDownloadUrl = (req, uploadId) => {
   if (!uploadId) return null;
@@ -86,10 +88,26 @@ const getTranskripUploadById = asyncHandler(async (req, res) => {
 
 // Create Transkrip upload
 const createTranskripUpload = asyncHandler(async (req, res) => {
-  const file = req.file;
+    const file = req.file;
+  const errors = {};
+
+  if (isNil(req.body.name)) {
+    errors.name = "name wajib diisi";
+  }
+  if (isNil(req.body.mahasiswaId)) {
+    errors.mahasiswaId = "mahasiswaId wajib diisi";
+  } else if (isNaN(parseInt(req.body.mahasiswaId))) {
+    errors.mahasiswaId = "mahasiswaId harus berupa integer";
+  }
   if (!file) {
-    res.status(400);
-    throw new Error("File transkrip wajib diunggah");
+    errors.transkripFile = "transkripFile wajib diunggah";
+  } else if (!["application/pdf"].includes(file.mimetype)) {
+    errors.transkripFile = "Tipe file tidak valid (hanya diperbolehkan PDF)";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    if (file?.path) fs.unlink(file.path, () => {});
+    return sendValidationError(res, errors, req);
   }
 
   try {
@@ -129,6 +147,23 @@ const createTranskripUpload = asyncHandler(async (req, res) => {
 const updateTranskripUpload = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   const file = req.file;
+
+  const errors = {};
+
+  if (!isNil(req.body.name) && req.body.name === "") {
+    errors.name = "name tidak boleh kosong jika diisi";
+  }
+  if (!isNil(req.body.mahasiswaId) && isNaN(parseInt(req.body.mahasiswaId))) {
+    errors.mahasiswaId = "mahasiswaId harus berupa integer";
+  }
+  if (file && !["application/pdf"].includes(file.mimetype)) {
+    errors.transkripFile = "Tipe file tidak valid (hanya diperbolehkan PDF)";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    if (file?.path) fs.unlink(file.path, () => {});
+    return sendValidationError(res, errors, req);
+  }
 
   try {
     const transkripUpload = await prisma.transkripUpload.findFirst({

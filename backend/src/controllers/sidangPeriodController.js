@@ -1,5 +1,7 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../utils/validationHelper.js';
+
 
 // Daftar Semua Periode Sidang
 const listSidangPeriods = asyncHandler(async (req, res) => {
@@ -39,6 +41,40 @@ const getSidangPeriodById = asyncHandler(async (req, res) => {
 // Buat Sidang Period Baru
 const createSidangPeriod = asyncHandler(async (req, res) => {
   const { name, startDate, endDate, isOpen } = req.body;
+  const errors = {};
+  if (isNil(name)) {
+    errors.name = "Nama wajib diisi";
+  } else if (typeof name !== 'string') {
+    errors.name = "Nama harus berupa string";
+  }
+  
+  if (isNil(startDate)) {
+    errors.startDate = "Tanggal mulai wajib diisi";
+  } else if (!isValidISO8601(startDate)) {
+    errors.startDate = "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
+  } else if (new Date(startDate) < new Date()) {
+    errors.startDate = "Tanggal mulai tidak boleh di masa lalu";
+  }
+  
+  if (isNil(endDate)) {
+    errors.endDate = "Tanggal selesai wajib diisi";
+  } else if (!isValidISO8601(endDate)) {
+    errors.endDate = "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)";
+  } else if (startDate && new Date(endDate) <= new Date(startDate)) {
+    errors.endDate = "Tanggal selesai harus setelah tanggal mulai";
+  }
+  
+  if (!isNil(isOpen)) {
+    const p = parseBoolean(isOpen);
+    if (p === null) {
+      errors.isOpen = "isOpen harus berupa boolean";
+    }
+  }
+  
+  if (Object.keys(errors).length > 0) {
+    return sendValidationError(res, errors, req);
+  }
+  
 
   const sidangPeriod = await prisma.sidangPeriod.create({
     data: {
@@ -59,6 +95,36 @@ const createSidangPeriod = asyncHandler(async (req, res) => {
 const updateSidangPeriod = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name, startDate, endDate, isOpen } = req.body;
+  const errors = {};
+  if (!isNil(name) && typeof name !== 'string') {
+    errors.name = "Nama harus berupa string";
+  }
+  
+  if (!isNil(startDate)) {
+    if (!isValidISO8601(startDate)) {
+      errors.startDate = "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
+    } else if (new Date(startDate) < new Date()) {
+      errors.startDate = "Tanggal mulai tidak boleh di masa lalu";
+    }
+  }
+  
+  if (!isNil(endDate)) {
+    if (!isValidISO8601(endDate)) {
+      errors.endDate = "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)";
+    }
+  }
+  
+  if (!isNil(isOpen)) {
+    const p = parseBoolean(isOpen);
+    if (p === null) {
+      errors.isOpen = "isOpen harus berupa boolean";
+    }
+  }
+  
+  if (Object.keys(errors).length > 0) {
+    return sendValidationError(res, errors, req);
+  }
+  
 
   // Cek apakah sidang period ada
   const sidangPeriodExists = await prisma.sidangPeriod.findFirst({
@@ -73,6 +139,14 @@ const updateSidangPeriod = asyncHandler(async (req, res) => {
     throw new Error("Periode sidang tidak ditemukan");
   }
 
+  if (!isNil(endDate) && !errors.endDate) {
+    const startToCompare = req.body.startDate || sidangPeriodExists.startDate;
+    if (new Date(endDate) <= new Date(startToCompare)) {
+      errors.endDate = "Tanggal selesai harus setelah tanggal mulai";
+      return sendValidationError(res, errors, req);
+    }
+  }
+  
   const sidangPeriod = await prisma.sidangPeriod.update({
     where: {
       id: parseInt(id),

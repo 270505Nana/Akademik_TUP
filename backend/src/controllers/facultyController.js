@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil } from '../utils/validationHelper.js';
 
 // Daftar Semua Fakultas
 const listFaculties = asyncHandler(async (req, res) => {
@@ -16,10 +17,15 @@ const listFaculties = asyncHandler(async (req, res) => {
 const createFaculty = asyncHandler(async (req, res) => {
   const { name } = req.body;
 
-  if (!name) {
-    res.status(400);
-    throw new Error("Nama fakultas wajib diisi");
+  const errors = [];
+  if (isNil(name)) {
+    errors.push({ field: 'name', message: 'Nama fakultas wajib diisi' });
+  } else {
+    const trimmed = String(name).trim();
+    if (trimmed.length < 3) errors.push({ field: 'name', message: 'Nama fakultas minimal 3 karakter' });
+    else if (trimmed.length > 100) errors.push({ field: 'name', message: 'Nama fakultas maksimal 100 karakter' });
   }
+  if (errors.length > 0) return sendValidationError(res, errors, req);
 
   const faculty = await prisma.faculty.create({
     data: {
@@ -54,6 +60,18 @@ const findFacultyById = asyncHandler(async (req, res) => {
 const updateFaculty = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   const { name } = req.body;
+
+  const errors = [];
+  if (req.body.name !== undefined) {
+    if (isNil(name)) {
+      errors.push({ field: 'name', message: 'Nama fakultas tidak boleh kosong' });
+    } else {
+      const trimmed = String(name).trim();
+      if (trimmed.length < 3) errors.push({ field: 'name', message: 'Nama fakultas minimal 3 karakter' });
+      else if (trimmed.length > 100) errors.push({ field: 'name', message: 'Nama fakultas maksimal 100 karakter' });
+    }
+  }
+  if (errors.length > 0) return sendValidationError(res, errors, req);
 
   const faculty = await prisma.faculty.findUnique({ where: { id } });
 

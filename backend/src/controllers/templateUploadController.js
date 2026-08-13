@@ -1,5 +1,12 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil } from '../utils/validationHelper.js';
+
+const allowedMimeTypes = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
 import fs from 'fs';
 import path from 'path';
 
@@ -49,6 +56,17 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
     const { name, slug } = req.body;
     const file = req.file;
 
+    const errors = [];
+    if (isNil(name)) errors.push({ field: 'name', message: 'name wajib diisi' });
+    if (isNil(slug)) errors.push({ field: 'slug', message: 'slug wajib diisi' });
+    if (!file) {
+      errors.push({ field: 'templateFile', message: 'templateFile wajib diunggah' });
+    } else if (!allowedMimeTypes.includes(file.mimetype)) {
+      errors.push({ field: 'templateFile', message: 'Tipe file tidak valid' });
+    }
+
+    if (errors.length > 0) return sendValidationError(res, errors, req);
+
     const createdTemplateUpload = await prisma.templateUpload.create({
       data: {
         name,
@@ -94,6 +112,15 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id);
     const { name, slug } = req.body;
     const file = req.file;
+
+    const errors = [];
+    if (isNil(name)) errors.push({ field: 'name', message: 'name wajib diisi' });
+    if (isNil(slug)) errors.push({ field: 'slug', message: 'slug wajib diisi' });
+    if (file && !allowedMimeTypes.includes(file.mimetype)) {
+      errors.push({ field: 'templateFile', message: 'Tipe file tidak valid' });
+    }
+
+    if (errors.length > 0) return sendValidationError(res, errors, req);
 
     const templateUpload = await prisma.templateUpload.findFirst({
       where: { id, deletedAt: null },

@@ -9,12 +9,9 @@ import { listSklUploads,
   downloadSklUpload, } from '../../controllers/sklUploadController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
-import { createSklUploadValidator,
-  updateSklUploadValidator, } from '../../validators/sklUploadValidator.js';
 
 /**
  * @swagger
@@ -121,8 +118,6 @@ router.post(
   verifyToken,
   isAdmin,
   upload("skl").single("sklFile"),
-  createSklUploadValidator,
-  validate,
   createSklUpload,
 );
 
@@ -178,8 +173,6 @@ router.patch(
   verifyToken,
   isAdmin,
   upload("skl").single("sklFile"),
-  updateSklUploadValidator,
-  validate,
   updateSklUpload,
 );
 

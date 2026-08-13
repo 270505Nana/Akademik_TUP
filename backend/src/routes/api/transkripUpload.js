@@ -9,12 +9,9 @@ import { listTranskripUploads,
   downloadTranskripUpload, } from '../../controllers/transkripUploadController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
-import { createTranskripUploadValidator,
-  updateTranskripUploadValidator, } from '../../validators/transkripUploadValidator.js';
 
 /**
  * @swagger
@@ -121,8 +118,6 @@ router.post(
   verifyToken,
   isAdmin,
   upload("transkrip").single("transkripFile"),
-  createTranskripUploadValidator,
-  validate,
   createTranskripUpload,
 );
 
@@ -178,8 +173,6 @@ router.patch(
   verifyToken,
   isAdmin,
   upload("transkrip").single("transkripFile"),
-  updateTranskripUploadValidator,
-  validate,
   updateTranskripUpload,
 );
 

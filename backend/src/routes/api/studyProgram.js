@@ -12,9 +12,7 @@ import { listStudyPrograms,
 import { verifyToken } from '../../middlewares/auth.js';
 import { authorize } from '../../middlewares/authorize.js';
 
-import { validate } from '../../middlewares/validate.js';
-import { createStudyProgramValidator,
-  updateStudyProgramValidator, } from '../../validators/studyProgramValidator.js';
+
 
 /**
  * @swagger
@@ -72,8 +70,6 @@ router.post(
   "/",
   verifyToken,
   authorize("ADMIN"),
-  createStudyProgramValidator,
-  validate,
   createStudyProgram,
 );
 
@@ -134,8 +130,6 @@ router.put(
   "/:id",
   verifyToken,
   authorize("ADMIN"),
-  updateStudyProgramValidator,
-  validate,
   updateStudyProgram,
 );
 

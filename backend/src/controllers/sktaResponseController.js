@@ -1,7 +1,9 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
+import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../utils/validationHelper.js';
+
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
@@ -64,6 +66,48 @@ const createSktaResponse = asyncHandler(async (req, res) => {
 
     // const file = req.file;
     const sktaFile = getUploadedFile(req.files, "sktaFile");
+    const errors = {};
+    if (isNil(hasUploadedFinalProposal)) {
+      errors.hasUploadedFinalProposal = "hasUploadedFinalProposal wajib diisi";
+    } else {
+      const p = parseBoolean(hasUploadedFinalProposal);
+      if (p === null) {
+        errors.hasUploadedFinalProposal = "hasUploadedFinalProposal harus berupa boolean";
+      }
+    }
+    if (isNil(hasTakenLanguageTest)) {
+      errors.hasTakenLanguageTest = "hasTakenLanguageTest wajib diisi";
+    } else {
+      const p = parseBoolean(hasTakenLanguageTest);
+      if (p === null) {
+        errors.hasTakenLanguageTest = "hasTakenLanguageTest harus berupa boolean";
+      }
+    }
+    if (!isNil(message) && typeof message !== 'string') {
+      errors.message = "message harus berupa string";
+    }
+    if (!isNil(expDate) && expDate !== "" && !isValidISO8601(expDate)) {
+      errors.expDate = "expDate harus berupa tanggal yang valid";
+    }
+    if (isNil(adminId)) {
+      errors.adminId = "adminId wajib diisi";
+    } else if (isNaN(parseInt(adminId))) {
+      errors.adminId = "adminId harus berupa integer";
+    }
+    if (isNil(sktaRequestId)) {
+      errors.sktaRequestId = "sktaRequestId wajib diisi";
+    } else if (isNaN(parseInt(sktaRequestId))) {
+      errors.sktaRequestId = "sktaRequestId harus berupa integer";
+    }
+    if (sktaFile && !["application/pdf"].includes(sktaFile.mimetype)) {
+      errors.sktaFile = "Tipe file tidak valid";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      removeUploadedFiles(req.file || req.files);
+      return sendValidationError(res, errors, req);
+    }
+    
 
     // Cek apakah ada data admin akademik
     const academicStaff = await prisma.admin.findFirst({
@@ -144,6 +188,48 @@ const updateSktaResponse = asyncHandler(async (req, res) => {
     } = req.body;
 
     const sktaFile = getUploadedFile(req.files, "sktaFile");
+    const errors = {};
+    if (isNil(hasUploadedFinalProposal)) {
+      errors.hasUploadedFinalProposal = "hasUploadedFinalProposal wajib diisi";
+    } else {
+      const p = parseBoolean(hasUploadedFinalProposal);
+      if (p === null) {
+        errors.hasUploadedFinalProposal = "hasUploadedFinalProposal harus berupa boolean";
+      }
+    }
+    if (isNil(hasTakenLanguageTest)) {
+      errors.hasTakenLanguageTest = "hasTakenLanguageTest wajib diisi";
+    } else {
+      const p = parseBoolean(hasTakenLanguageTest);
+      if (p === null) {
+        errors.hasTakenLanguageTest = "hasTakenLanguageTest harus berupa boolean";
+      }
+    }
+    if (!isNil(message) && typeof message !== 'string') {
+      errors.message = "message harus berupa string";
+    }
+    if (!isNil(expDate) && expDate !== "" && !isValidISO8601(expDate)) {
+      errors.expDate = "expDate harus berupa tanggal yang valid";
+    }
+    if (isNil(adminId)) {
+      errors.adminId = "adminId wajib diisi";
+    } else if (isNaN(parseInt(adminId))) {
+      errors.adminId = "adminId harus berupa integer";
+    }
+    if (isNil(sktaRequestId)) {
+      errors.sktaRequestId = "sktaRequestId wajib diisi";
+    } else if (isNaN(parseInt(sktaRequestId))) {
+      errors.sktaRequestId = "sktaRequestId harus berupa integer";
+    }
+    if (sktaFile && !["application/pdf"].includes(sktaFile.mimetype)) {
+      errors.sktaFile = "Tipe file tidak valid";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      removeUploadedFiles(req.file || req.files);
+      return sendValidationError(res, errors, req);
+    }
+    
 
     // Cek apakah ada data admin akademik
     const academicStaff = await prisma.admin.findFirst({

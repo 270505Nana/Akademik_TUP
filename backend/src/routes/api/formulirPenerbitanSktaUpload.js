@@ -9,12 +9,9 @@ import { listFormulirPenerbitanSktaUploads,
   downloadFormulirPenerbitanSktaUpload, } from '../../controllers/formulirPenerbitanSktaUploadController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
-import { createFormulirPenerbitanSktaUploadValidator,
-  updateFormulirPenerbitanSktaUploadValidator, } from '../../validators/formulirPenerbitanSktaUploadValidator.js';
 
 /**
  * @swagger
@@ -121,8 +118,6 @@ router.post(
   verifyToken,
   isAdmin,
   upload("formulir-penerbitan").single("formulirFile"),
-  createFormulirPenerbitanSktaUploadValidator,
-  validate,
   createFormulirPenerbitanSktaUpload,
 );
 
@@ -178,8 +173,6 @@ router.patch(
   verifyToken,
   isAdmin,
   upload("formulir-penerbitan").single("formulirFile"),
-  updateFormulirPenerbitanSktaUploadValidator,
-  validate,
   updateFormulirPenerbitanSktaUpload,
 );
 

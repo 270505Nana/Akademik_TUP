@@ -1,7 +1,9 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
+import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../utils/validationHelper.js';
+
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
@@ -79,6 +81,40 @@ const createSktaRequest = asyncHandler(async (req, res) => {
     } = req.body;
 
     const evidenceFile = getUploadedFile(req.files, "evidence");
+    
+    const errors = {};
+    if (isNil(proposalTitleId)) {
+      errors.proposalTitleId = "proposalTitleId wajib diisi";
+    }
+    if (isNil(proposalTitleEn)) {
+      errors.proposalTitleEn = "proposalTitleEn wajib diisi";
+    }
+    if (isNil(mahasiswaId)) {
+      errors.mahasiswaId = "mahasiswaId wajib diisi";
+    } else if (isNaN(parseInt(mahasiswaId))) {
+      errors.mahasiswaId = "mahasiswaId wajib diisi"; // validator isInt message was "mahasiswaId wajib diisi" in original, wait, it was just "mahasiswaId wajib diisi"
+    }
+    if (isNil(dosenPembimbing1Id)) {
+      errors.dosenPembimbing1Id = "dosenPembimbing1Id wajib diisi";
+    } else if (isNaN(parseInt(dosenPembimbing1Id))) {
+      errors.dosenPembimbing1Id = "dosenPembimbing1Id wajib diisi";
+    }
+    if (isNil(dosenPembimbing2Id)) {
+      errors.dosenPembimbing2Id = "dosenPembimbing2Id wajib diisi";
+    } else if (isNaN(parseInt(dosenPembimbing2Id))) {
+      errors.dosenPembimbing2Id = "dosenPembimbing2Id wajib diisi";
+    }
+    if (!evidenceFile) {
+      errors.evidence = "evidence wajib diunggah";
+    } else if (!["application/pdf"].includes(evidenceFile.mimetype)) {
+      errors.evidence = "Tipe file tidak valid";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      removeUploadedFiles(req.file || req.files);
+      return sendValidationError(res, errors, req);
+    }
+    
 
     // Cek apakah ada data mahasiswa
     const student = await prisma.mahasiswa.findFirst({
@@ -198,6 +234,40 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
     } = req.body;
 
     const evidenceFile = getUploadedFile(req.files, "evidence");
+    
+    const errors = {};
+    if (isNil(proposalTitleId)) {
+      errors.proposalTitleId = "proposalTitleId wajib diisi";
+    }
+    if (isNil(proposalTitleEn)) {
+      errors.proposalTitleEn = "proposalTitleEn wajib diisi";
+    }
+    if (isNil(mahasiswaId)) {
+      errors.mahasiswaId = "mahasiswaId wajib diisi";
+    } else if (isNaN(parseInt(mahasiswaId))) {
+      errors.mahasiswaId = "mahasiswaId wajib diisi"; 
+    }
+    if (isNil(dosenPembimbing1Id)) {
+      errors.dosenPembimbing1Id = "dosenPembimbing1Id wajib diisi";
+    } else if (isNaN(parseInt(dosenPembimbing1Id))) {
+      errors.dosenPembimbing1Id = "dosenPembimbing1Id wajib diisi";
+    }
+    if (isNil(dosenPembimbing2Id)) {
+      errors.dosenPembimbing2Id = "dosenPembimbing2Id wajib diisi";
+    } else if (isNaN(parseInt(dosenPembimbing2Id))) {
+      errors.dosenPembimbing2Id = "dosenPembimbing2Id wajib diisi";
+    }
+    if (!evidenceFile) {
+      errors.evidence = "evidence wajib diunggah";
+    } else if (!["application/pdf"].includes(evidenceFile.mimetype)) {
+      errors.evidence = "Tipe file tidak valid";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      removeUploadedFiles(req.file || req.files);
+      return sendValidationError(res, errors, req);
+    }
+    
 
     // Cek apakah ada data mahasiswa
     const student = await prisma.mahasiswa.findFirst({

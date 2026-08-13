@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil, isValidISO8601 } from '../utils/validationHelper.js';
 
 // List Yudisium Registration Response
 const listYudisiumRegistrationResponses = asyncHandler(async (req, res) => {
@@ -129,6 +130,31 @@ const getYudisiumRegistrationResponseByYudisiumRegistrationId = asyncHandler(
 const createYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
   const { yudisiumRegistrationId, adminId, message, isEdit } = req.body;
 
+  const errors = [];
+  if (isNil(yudisiumRegistrationId)) {
+    errors.push({ field: "yudisiumRegistrationId", message: "ID pendaftaran yudisium wajib diisi" });
+  } else if (isNaN(parseInt(yudisiumRegistrationId))) {
+    errors.push({ field: "yudisiumRegistrationId", message: "ID pendaftaran yudisium harus berupa integer" });
+  }
+
+  if (isNil(adminId)) {
+    errors.push({ field: "adminId", message: "ID staf akademik wajib diisi" });
+  } else if (isNaN(parseInt(adminId))) {
+    errors.push({ field: "adminId", message: "ID staf akademik harus berupa integer" });
+  }
+
+  if (!isNil(message) && typeof message !== "string") {
+    errors.push({ field: "message", message: "Pesan harus berupa string" });
+  }
+
+  if (!isNil(isEdit) && !isValidISO8601(isEdit)) {
+    errors.push({ field: "isEdit", message: "isEdit harus berupa tanggal yang valid (format ISO 8601)" });
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
+
   const yudisiumRegistrationExists =
     await prisma.yudisiumRegistration.findUnique({
       where: { id: yudisiumRegistrationId },
@@ -196,6 +222,27 @@ const createYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
 const updateYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { message, isEdit, adminId, yudisiumRegistrationId } = req.body;
+
+  const errors = [];
+  if (!isNil(message) && typeof message !== "string") {
+    errors.push({ field: "message", message: "Pesan harus berupa string" });
+  }
+
+  if (!isNil(isEdit) && !isValidISO8601(isEdit)) {
+    errors.push({ field: "isEdit", message: "isEdit harus berupa tanggal yang valid (format ISO 8601)" });
+  }
+
+  if (!isNil(adminId) && isNaN(parseInt(adminId))) {
+    errors.push({ field: "adminId", message: "ID staf akademik harus berupa integer" });
+  }
+
+  if (!isNil(yudisiumRegistrationId) && isNaN(parseInt(yudisiumRegistrationId))) {
+    errors.push({ field: "yudisiumRegistrationId", message: "ID pendaftaran yudisium harus berupa integer" });
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
 
   const responseExists = await prisma.yudisiumRegistrationResponse.findFirst({
     where: {

@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil } from '../utils/validationHelper.js';
 
 // Daftar Semua Dosen
 const listDosens = asyncHandler(async (req, res) => {
@@ -43,6 +44,18 @@ const upsertDosen = asyncHandler(async (req, res) => {
 
   const { nip, nidn, lecturerCode, kodeDosen, name, researchGroupId } = req.body;
   const targetKodeDosen = kodeDosen || lecturerCode;
+
+  const errors = [];
+  if (isNil(nip)) errors.push({ field: 'nip', message: 'NIP wajib diisi' });
+  if (isNil(name)) errors.push({ field: 'name', message: 'Nama wajib diisi' });
+  if (isNil(researchGroupId)) errors.push({ field: 'researchGroupId', message: 'ID kelompok riset wajib diisi' });
+  if (req.body.kodeDosen !== undefined && isNil(kodeDosen)) {
+    errors.push({ field: 'kodeDosen', message: 'Kode dosen wajib diisi' });
+  }
+  if (req.body.lecturerCode !== undefined && isNil(lecturerCode)) {
+    errors.push({ field: 'lecturerCode', message: 'Kode dosen wajib diisi' });
+  }
+  if (errors.length > 0) return sendValidationError(res, errors, req);
 
   // Update name in User table
   const updatedUser = await prisma.user.update({

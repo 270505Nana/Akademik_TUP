@@ -8,9 +8,6 @@ import { listDosens,
 
 import { verifyToken } from '../../middlewares/auth.js';
 
-import { validate } from '../../middlewares/validate.js';
-
-import { upsertDosenValidator, } from '../../validators/dosenValidator.js';
 import { isDosen } from '../../middlewares/authorize.js';
 
 /**
@@ -97,8 +94,6 @@ router.put(
   "/:userId",
   verifyToken,
   isDosen,
-  upsertDosenValidator,
-  validate,
   upsertDosen,
 );
 

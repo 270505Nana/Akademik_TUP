@@ -10,11 +10,8 @@ import { listSktaResponses,
   downloadSktaResponseUpload, } from '../../controllers/sktaResponseController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 
-import { createSktaResponsetValidator,
-  updateSktaResponsetValidator, } from '../../validators/sktaResponseValidator.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -109,8 +106,6 @@ router.post(
   isAdmin,
   // upload("skta").single("sktaFile"),
   upload("skta").fields([{ name: "sktaFile", maxCount: 1 }]),
-  createSktaResponsetValidator,
-  validate,
   createSktaResponse,
 );
 
@@ -185,8 +180,6 @@ router.patch(
   verifyToken,
   isAdmin,
   upload("skta").fields([{ name: "sktaFile", maxCount: 1 }]),
-  updateSktaResponsetValidator,
-  validate,
   updateSktaResponse,
 );
 

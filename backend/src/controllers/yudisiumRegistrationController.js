@@ -1,7 +1,8 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
+import { sendValidationError, isNil, parseBoolean } from '../utils/validationHelper.js';
 
 // Constants for File Validation
 const REQUIRED_SLUGS = [];
@@ -213,6 +214,73 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     yudisiumRegistrationPeriodId,
   } = req.body;
 
+  const errors = [];
+
+  if (!isNil(id) && isNaN(parseInt(id))) {
+    errors.push({ field: "id", message: "ID harus berupa integer" });
+  }
+
+  if (!isNil(programType) && typeof programType !== "string") {
+    errors.push({ field: "programType", message: "Tipe program harus berupa string" });
+  }
+
+  if (!isNil(tak) && isNaN(parseInt(tak))) {
+    errors.push({ field: "tak", message: "TAK harus berupa integer" });
+  }
+
+  if (!isNil(thesisTitleId) && typeof thesisTitleId !== "string") {
+    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) harus berupa string" });
+  }
+
+  if (!isNil(thesisTitleEn) && typeof thesisTitleEn !== "string") {
+    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) harus berupa string" });
+  }
+
+  const parsedIsConfirmed = parseBoolean(isConfirmed);
+  if (!isNil(isConfirmed) && parsedIsConfirmed === undefined) {
+    errors.push({ field: "isConfirmed", message: "Konfirmasi harus berupa boolean" });
+  }
+
+  if (!isNil(sidangScheme) && typeof sidangScheme !== "string") {
+    errors.push({ field: "sidangScheme", message: "Skema sidang harus berupa string jika diisi" });
+  }
+
+  if (!isNil(cumlaudeScheme) && typeof cumlaudeScheme !== "string") {
+    errors.push({ field: "cumlaudeScheme", message: "Skema cumlaude harus berupa string jika diisi" });
+  }
+
+  if (!isNil(jalurNonYudisium) && !Array.isArray(jalurNonYudisium)) {
+    errors.push({ field: "jalurNonYudisium", message: "Jalur non yudisium harus berupa array jika diisi" });
+  }
+
+  if (!isNil(eviden_cumlaude) && typeof eviden_cumlaude !== "string") {
+    errors.push({ field: "eviden_cumlaude", message: "Eviden cumlaude harus berupa string" });
+  }
+
+  if (!isNil(mahasiswaId) && isNaN(parseInt(mahasiswaId))) {
+    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa integer" });
+  }
+
+  if (!isNil(dosenPembimbing1Id) && isNaN(parseInt(dosenPembimbing1Id))) {
+    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa integer" });
+  }
+
+  if (!isNil(dosenPembimbing2Id) && isNaN(parseInt(dosenPembimbing2Id))) {
+    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa integer" });
+  }
+
+  if (!isNil(yudisiumPeriodId) && isNaN(parseInt(yudisiumPeriodId))) {
+    errors.push({ field: "yudisiumPeriodId", message: "ID periode yudisium harus berupa integer" });
+  }
+
+  if (!isNil(yudisiumRegistrationPeriodId) && isNaN(parseInt(yudisiumRegistrationPeriodId))) {
+    errors.push({ field: "yudisiumRegistrationPeriodId", message: "ID periode pendaftaran yudisium harus berupa integer" });
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
+
   // Validate references if provided
   if (mahasiswaId) {
     const studentExists = await prisma.mahasiswa.findUnique({
@@ -267,7 +335,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     tak: tak !== undefined ? tak : undefined,
     thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
     thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
-    isConfirmed: isConfirmed !== undefined ? isConfirmed : undefined,
+    isConfirmed: parsedIsConfirmed !== undefined ? parsedIsConfirmed : undefined,
     sidangScheme: sidangScheme !== undefined ? sidangScheme : undefined,
     cumlaudeScheme: cumlaudeScheme !== undefined ? cumlaudeScheme : undefined,
     jalurNonYudisium:
@@ -401,9 +469,89 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     yudisiumRegistrationPeriodId,
   } = req.body;
 
-  if (!id) {
-    res.status(400);
-    throw new Error("ID pendaftaran yudisium diperlukan untuk submit");
+  const errors = [];
+
+  if (isNil(id)) {
+    errors.push({ field: "id", message: "ID wajib diisi untuk submit" });
+  } else if (isNaN(parseInt(id))) {
+    errors.push({ field: "id", message: "ID harus berupa integer" });
+  }
+
+  if (isNil(programType)) {
+    errors.push({ field: "programType", message: "Tipe program wajib diisi" });
+  } else if (typeof programType !== "string") {
+    errors.push({ field: "programType", message: "Tipe program harus berupa string" });
+  }
+
+  if (isNil(tak)) {
+    errors.push({ field: "tak", message: "TAK wajib diisi" });
+  } else if (isNaN(parseInt(tak))) {
+    errors.push({ field: "tak", message: "TAK harus berupa integer" });
+  }
+
+  if (isNil(thesisTitleId)) {
+    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) wajib diisi" });
+  } else if (typeof thesisTitleId !== "string") {
+    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) harus berupa string" });
+  }
+
+  if (isNil(thesisTitleEn)) {
+    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) wajib diisi" });
+  } else if (typeof thesisTitleEn !== "string") {
+    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) harus berupa string" });
+  }
+
+  const parsedIsConfirmed = parseBoolean(isConfirmed);
+  if (isNil(isConfirmed)) {
+    errors.push({ field: "isConfirmed", message: "Konfirmasi wajib diisi" });
+  } else if (parsedIsConfirmed === undefined) {
+    errors.push({ field: "isConfirmed", message: "Konfirmasi harus berupa boolean" });
+  }
+
+  if (isNil(mahasiswaId)) {
+    errors.push({ field: "mahasiswaId", message: "ID mahasiswa wajib diisi" });
+  } else if (isNaN(parseInt(mahasiswaId))) {
+    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa integer" });
+  }
+
+  if (isNil(dosenPembimbing1Id)) {
+    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 wajib diisi" });
+  } else if (isNaN(parseInt(dosenPembimbing1Id))) {
+    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa integer" });
+  }
+
+  if (isNil(dosenPembimbing2Id)) {
+    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 wajib diisi" });
+  } else if (isNaN(parseInt(dosenPembimbing2Id))) {
+    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa integer" });
+  }
+
+  if (!isNil(sidangScheme) && typeof sidangScheme !== "string") {
+    errors.push({ field: "sidangScheme", message: "Skema sidang harus berupa string jika diisi" });
+  }
+
+  if (!isNil(cumlaudeScheme) && typeof cumlaudeScheme !== "string") {
+    errors.push({ field: "cumlaudeScheme", message: "Skema cumlaude harus berupa string jika diisi" });
+  }
+
+  if (!isNil(jalurNonYudisium) && !Array.isArray(jalurNonYudisium)) {
+    errors.push({ field: "jalurNonYudisium", message: "Jalur non yudisium harus berupa array jika diisi" });
+  }
+
+  if (!isNil(eviden_cumlaude) && typeof eviden_cumlaude !== "string") {
+    errors.push({ field: "eviden_cumlaude", message: "Eviden cumlaude harus berupa string" });
+  }
+
+  if (!isNil(yudisiumPeriodId) && isNaN(parseInt(yudisiumPeriodId))) {
+    errors.push({ field: "yudisiumPeriodId", message: "ID periode yudisium harus berupa integer" });
+  }
+
+  if (!isNil(yudisiumRegistrationPeriodId) && isNaN(parseInt(yudisiumRegistrationPeriodId))) {
+    errors.push({ field: "yudisiumRegistrationPeriodId", message: "ID periode pendaftaran yudisium harus berupa integer" });
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
   }
 
   const existingRegistration = await prisma.yudisiumRegistration.findUnique({
@@ -429,7 +577,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     tak: tak !== undefined ? tak : undefined,
     thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
     thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
-    isConfirmed: isConfirmed !== undefined ? isConfirmed : undefined,
+    isConfirmed: parsedIsConfirmed !== undefined ? parsedIsConfirmed : undefined,
     sidangScheme: sidangScheme !== undefined ? sidangScheme : undefined,
     cumlaudeScheme: cumlaudeScheme !== undefined ? cumlaudeScheme : undefined,
     jalurNonYudisium:

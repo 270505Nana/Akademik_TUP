@@ -9,12 +9,9 @@ import { listDokumenValidasiSktaUploads,
   downloadDokumenValidasiSktaUpload, } from '../../controllers/dokumenValidasiSktaUploadController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
-import { createDokumenValidasiSktaUploadValidator,
-  updateDokumenValidasiSktaUploadValidator, } from '../../validators/dokumenValidasiSktaUploadValidator.js';
 
 /**
  * @swagger
@@ -121,8 +118,6 @@ router.post(
   verifyToken,
   isAdmin,
   upload("dokumen-validasi").single("dokumenFile"),
-  createDokumenValidasiSktaUploadValidator,
-  validate,
   createDokumenValidasiSktaUpload,
 );
 
@@ -178,8 +173,6 @@ router.patch(
   verifyToken,
   isAdmin,
   upload("dokumen-validasi").single("dokumenFile"),
-  updateDokumenValidasiSktaUploadValidator,
-  validate,
   updateDokumenValidasiSktaUpload,
 );
 

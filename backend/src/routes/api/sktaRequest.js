@@ -9,11 +9,8 @@ import { listSktaRequests,
   downloadSktaRequestUpload, } from '../../controllers/sktaRequestController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 
-import { createSktaRequestValidator,
-  updateSktaRequestValidator, } from '../../validators/sktaRequestValidator.js';
 import { isMahasiswa } from '../../middlewares/authorize.js';
 
 /**
@@ -103,8 +100,6 @@ router.post(
   verifyToken,
   isMahasiswa,
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
-  createSktaRequestValidator,
-  validate,
   createSktaRequest,
 );
 
@@ -175,8 +170,6 @@ router.patch(
   verifyToken,
   isMahasiswa,
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
-  updateSktaRequestValidator,
-  validate,
   updateSktaRequest,
 );
 

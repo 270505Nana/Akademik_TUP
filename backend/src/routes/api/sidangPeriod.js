@@ -1,14 +1,11 @@
 import express from 'express';
 const router = express.Router();
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { listSidangPeriods,
   getSidangPeriodById,
   createSidangPeriod,
   updateSidangPeriod,
   deleteSidangPeriod, } from '../../controllers/sidangPeriodController.js';
-import { createSidangPeriodValidator,
-  updateSidangPeriodValidator, } from '../../validators/sidangPeriodValidator.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -110,8 +107,6 @@ router.post(
   "/",
   verifyToken,
   isAdmin,
-  createSidangPeriodValidator,
-  validate,
   createSidangPeriod,
 );
 
@@ -167,8 +162,6 @@ router.patch(
   "/:id",
   verifyToken,
   isAdmin,
-  updateSidangPeriodValidator,
-  validate,
   updateSidangPeriod,
 );
 

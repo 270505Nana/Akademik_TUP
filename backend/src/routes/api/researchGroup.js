@@ -6,8 +6,6 @@ import { listResearchGroups, } from '../../controllers/researchGroupController.j
 
 import { verifyToken } from '../../middlewares/auth.js';
 
-import { validate } from '../../middlewares/validate.js';
-
 /**
  * @swagger
  * tags:
