@@ -30,20 +30,31 @@ export const unwrapResponse = (raw) => {
 export const determineStatus = (sktaResponse, skUploads = [], sktaRequest = null) => {
   if (!sktaResponse) return 'dalam-proses';
 
-  const hasLang     = sktaResponse.hasTakenLanguageTest     === true;
-  const hasProposal = sktaResponse.hasUploadedFinalProposal === true;
-  const hasFile     = Array.isArray(skUploads) && skUploads.length > 0;
+  // Cek apakah data persetujuan ada isinya
+  const hasApprovedFields =
+    (sktaResponse.hasUploadedFinalProposal === true) &&
+    (sktaResponse.hasTakenLanguageTest === true) &&
+    (sktaResponse.sktaUploadPath || (Array.isArray(skUploads) && skUploads.length > 0)) &&
+    sktaResponse.expDate;
 
-  if (hasLang && hasProposal && hasFile) return 'sudah-terbit';
+  if (hasApprovedFields) return 'sudah-terbit';
 
-  // Cek apakah mahasiswa sudah kirim revisi setelah admin minta perbaikan
-  if (sktaResponse.isEdit && sktaRequest?.updatedAt) {
-    const isEditTime   = new Date(sktaResponse.isEdit).getTime();
-    const requestUpdAt = new Date(sktaRequest.updatedAt).getTime();
-    if (requestUpdAt > isEditTime) return 'mengirim-revisi';
+  // Cek apakah data penolakan ada isinya (mengindikasikan revisi/ditolak)
+  const hasRejectedFields = sktaResponse.message || sktaResponse.isEdit;
+
+  if (hasRejectedFields) {
+    // Cek apakah mahasiswa sudah kirim revisi setelah admin minta perbaikan
+    const targetRequest = sktaRequest || sktaResponse;
+    if (sktaResponse.isEdit && targetRequest?.updatedAt) {
+      const isEditTime   = new Date(sktaResponse.isEdit).getTime();
+      const requestUpdAt = new Date(targetRequest.updatedAt).getTime();
+      if (requestUpdAt > isEditTime) return 'mengirim-revisi';
+    }
+    return 'belum-terbit';
   }
 
-  return 'belum-terbit';
+  // Jika tidak disetujui dan tidak ada data penolakan, maka statusnya sedang diproses
+  return 'dalam-proses';
 };
 
 /**

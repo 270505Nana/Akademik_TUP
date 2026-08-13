@@ -36,15 +36,15 @@ const getResearchGroupName = (lect) =>
 
 const formatLecturer = (lect) => {
   if (!lect) return "-";
-  const kode = lect.lecturerCode || lect.kode || "-";
-  const nama = lect.name || lect.nama || "-";
+  const kode = lect.kodeDosen || lect.lecturerCode || lect.kode || "-";
+  const nama = lect.user?.name || lect.name || lect.nama || "-";
   return `${kode} - ${nama} (${getResearchGroupName(lect)})`;
 };
 
 const formatLecturerShort = (lect) => {
   if (!lect) return "-";
-  const kode = lect.lecturerCode || lect.kode || "-";
-  const nama = lect.name || lect.nama || "-";
+  const kode = lect.kodeDosen || lect.lecturerCode || lect.kode || "-";
+  const nama = lect.user?.name || lect.name || lect.nama || "-";
   return `${kode} - ${nama}`;
 };
 
@@ -79,7 +79,7 @@ const LecturerDropdown = ({ lecturers, value, onChange, placeholder, excludeId }
   const filtered = lecturers.filter((l) => {
     if (excludeId && String(l.id) === String(excludeId)) return false;
     if (!query) return true;
-    const label = `${l.lecturerCode || l.kode || ""} ${l.name || l.nama || ""}`.toLowerCase();
+    const label = `${l.kodeDosen || l.lecturerCode || l.kode || ""} ${l.user?.name || l.name || l.nama || ""}`.toLowerCase();
     return label.includes(query.toLowerCase());
   });
 

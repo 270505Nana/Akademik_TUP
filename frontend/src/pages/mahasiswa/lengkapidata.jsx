@@ -44,9 +44,9 @@ const LengkapiData = () => {
         const data = await getLecturers();
         const mapped = data.map((d) => ({
           id:   d.id,
-          kode: d.lecturerCode ?? d.kode,
-          nama: d.name         ?? d.nama,
-          nip:  d.nip,
+          kode: d.kodeDosen    ?? d.lecturerCode ?? d.kode ?? '',
+          nama: d.user?.name   ?? d.name         ?? d.nama ?? '',
+          nip:  d.nip          ?? '',
         }));
         setLecturers(mapped);
       } catch (err) {
@@ -79,14 +79,23 @@ const LengkapiData = () => {
     const draft = localStorage.getItem('student_form_draft');
     if (draft) {
       const parsed = JSON.parse(draft);
-      setFormData(parsed);
+      setFormData(prev => ({
+        ...prev,
+        ...parsed,
+        namaLengkap: parsed.namaLengkap || user?.name || ''
+      }));
       setSearchQuery({
         dosenWali: parsed.dosenWaliKode
           ? `${parsed.dosenWaliKode} - ${parsed.dosenWaliNama}`
           : '',
       });
+    } else if (user?.name) {
+      setFormData(prev => ({
+        ...prev,
+        namaLengkap: user.name
+      }));
     }
-  }, []);
+  }, [user]);
 
   // Autosave draft ke localStorage
   useEffect(() => {

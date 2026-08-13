@@ -21,10 +21,9 @@ import CustomAlert from "../../components/common/CustomAlert";
 import "./Auth.css";
 import { useStudent } from "../../context/StudentContext";
 
-// mapping tab sesuai roles
 const TAB_ALLOWED_ROLES = {
-  mahasiswa: ["STUDENT", "MAHASISWA"],
-  dosen: ["LECTURER", "ACADEMIC_STAFF", "DOSEN", "ADMIN"],
+  mahasiswa: ["MAHASISWA"],
+  dosen: ["DOSEN", "ADMIN"],
 };
 
 const LoginPage = () => {
@@ -59,11 +58,8 @@ const LoginPage = () => {
 
   if (isAuthenticated && user) {
     const roleMap = {
-      STUDENT: "/mahasiswa/dashboard",
       MAHASISWA: "/mahasiswa/dashboard",
-      LECTURER: "/dosen/dashboard",
       DOSEN: "/dosen/dashboard",
-      ACADEMIC_STAFF: "/akademik/dashboard",
       ADMIN: "/akademik/dashboard",
     };
     return <Navigate to={roleMap[user.role] || "/login"} replace />;
@@ -113,17 +109,14 @@ const LoginPage = () => {
         token: data.token,
       });
 
-      if (role === "STUDENT" || role === "MAHASISWA") {
+      if (role === "MAHASISWA") {
         await fetchAndLoadStudent(data.data?.id);
       }
 
       const destination =
         {
-          STUDENT: "/mahasiswa/dashboard",
           MAHASISWA: "/mahasiswa/dashboard",
-          LECTURER: "/dosen/dashboard",
           DOSEN: "/dosen/dashboard",
-          ACADEMIC_STAFF: "/akademik/dashboard",
           ADMIN: "/akademik/dashboard",
         }[role] || "/login";
 

@@ -121,11 +121,8 @@ const RegisterPage = () => {
   if (isAuthenticated) {
     const role = user?.role?.toUpperCase();
     const roleMap = {
-      STUDENT: "/mahasiswa/dashboard",
       MAHASISWA: "/mahasiswa/dashboard",
-      LECTURER: "/dosen/dashboard",
       DOSEN: "/dosen/dashboard",
-      ACADEMIC_STAFF: "/akademik/dashboard",
       ADMIN: "/akademik/dashboard",
     };
     const destination = roleMap[role] || "/mahasiswa/dashboard";

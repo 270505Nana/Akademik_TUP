@@ -253,11 +253,11 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
             {/* Nama dari StudentContext */}
             <div className="user-name">{namaDisplay}</div>
             <div className="user-role">
-              {user?.role === "STUDENT"
+              {user?.role === "MAHASISWA"
                 ? "Mahasiswa"
-                : user?.role === "LECTURER"
+                : user?.role === "DOSEN"
                   ? "Dosen"
-                  : user?.role === "ACADEMIC_STAFF"
+                  : user?.role === "ADMIN"
                     ? "Staf Akademik"
                     : (user?.role ?? "Mahasiswa")}
             </div>

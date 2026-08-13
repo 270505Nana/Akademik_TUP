@@ -252,8 +252,8 @@ const PengajuanSK = () => {
         const data    = await getLecturers();
         const options = data.map((d) => ({
           value: d.id,
-          label: `${d.lecturerCode ?? d.kode} — ${d.name ?? d.nama}`,
-          nama:  d.name ?? d.nama,
+          label: `${d.kodeDosen ?? d.lecturerCode ?? d.kode ?? ''} — ${d.user?.name ?? d.name ?? d.nama ?? ''}`,
+          nama:  d.user?.name ?? d.name ?? d.nama ?? '',
           researchGroupId: d.researchGroupId ?? null,
         }));
         setLecturerOptions(options);
@@ -416,6 +416,21 @@ const PengajuanSK = () => {
           setPageStatus('success');
         }
       } else {
+        let category = "Permohonan Baru";
+        if (isExpired) {
+          category = "Perpanjangan SK";
+        } else if (requestData) {
+          const titleChanged = formData.judulIndo.trim() !== requestData.proposalTitleId;
+          const dospemChanged = formData.kode1?.value !== requestData.dosenPembimbing1Id || formData.kode2?.value !== requestData.dosenPembimbing2Id;
+          if (titleChanged && dospemChanged) {
+            category = "Perubahan Judul dan Dosen Pembimbing";
+          } else if (titleChanged) {
+            category = "Perubahan Judul";
+          } else if (dospemChanged) {
+            category = "Perubahan Dosen Pembimbing";
+          }
+        }
+
         const result = await submitSKTARequest({
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
@@ -423,6 +438,7 @@ const PengajuanSK = () => {
           dosenPembimbing1Id: formData.kode1.value,
           dosenPembimbing2Id: formData.kode2.value,
           evidence:           actualFile,
+          category,
         });
         const newSktaRequestId = result?.data?.id;
         if (newSktaRequestId) updateSktaRequestId(newSktaRequestId);

@@ -67,14 +67,14 @@ export const StudentProvider = ({ children }) => {
       if (!studentData?.nim) return false;
 
       const matchedProdi = rawStudyPrograms.find(
-        (p) => p.id === Number(studentData.studyProgramId),
+        (p) => String(p.id) === String(studentData.studyProgramId),
       );
       const matchedFakultas = rawFaculties.find(
         (f) =>
-          f.id === Number(matchedProdi?.facultyId ?? matchedProdi?.faculty_id),
+          String(f.id) === String(matchedProdi?.facultyId ?? matchedProdi?.faculty_id),
       );
       const matchedDosen = rawLecturers.find(
-        (d) => d.id === Number(studentData.dosenWaliId),
+        (d) => String(d.id) === String(studentData.dosenWaliId),
       );
 
       const mapped = {
@@ -90,8 +90,8 @@ export const StudentProvider = ({ children }) => {
         ),
         fakultasNama: matchedFakultas?.name ?? "",
         dosenWaliId: String(studentData.dosenWaliId ?? ""),
-        dosenWaliKode: matchedDosen?.lecturerCode ?? matchedDosen?.kode ?? "",
-        dosenWaliNama: matchedDosen?.name ?? matchedDosen?.nama ?? "",
+        dosenWaliKode: matchedDosen?.kodeDosen ?? matchedDosen?.lecturerCode ?? matchedDosen?.kode ?? "",
+        dosenWaliNama: matchedDosen?.user?.name ?? matchedDosen?.name ?? matchedDosen?.nama ?? "",
         dosenWaliNip: matchedDosen?.nip ?? "",
       };
 
