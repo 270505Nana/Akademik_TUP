@@ -9,7 +9,7 @@ import { listYudisiumRegistrationPeriods,
   deleteYudisiumRegistrationPeriod, } from '../../controllers/yudisiumRegistrationPeriodController.js';
 import { createYudisiumRegistrationPeriodValidator,
   updateYudisiumRegistrationPeriodValidator, } from '../../validators/yudisiumRegistrationPeriodValidator.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -109,7 +109,7 @@ router.get("/:id", verifyToken, getYudisiumRegistrationPeriodById);
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   createYudisiumRegistrationPeriodValidator,
   validate,
   createYudisiumRegistrationPeriod,
@@ -166,7 +166,7 @@ router.post(
 router.patch(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   updateYudisiumRegistrationPeriodValidator,
   validate,
   updateYudisiumRegistrationPeriod,
@@ -200,7 +200,7 @@ router.patch(
 router.delete(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   deleteYudisiumRegistrationPeriod,
 );
 

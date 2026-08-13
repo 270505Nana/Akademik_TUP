@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Check, GraduationCap, Info, Mail, Phone, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, GraduationCap, Info, Mail, Phone, User } from "lucide-react";
 import { useSidangContext } from "../../../context/SidangFormContext";
 import CustomAlert from "../../common/CustomAlert";
 
@@ -9,12 +9,190 @@ const TAK_MINIMUM = {
   Diploma: 45,
 };
 
-export default function Step1({ studentInfo = {}, lecturers = [] }) {
+const kelompokKeilmuan = [
+  { id: "kk1", researchGroupId: 1, label: "ELECTRONICS AND TELECOMMUNICATIONS SCIENCE" },
+  { id: "kk2", researchGroupId: 2, label: "INDUSTRIAL SYSTEMS ENGINEERING" },
+  { id: "kk3", researchGroupId: 3, label: "MEDIA, DESIGN AND CREATIVE INNOVATION" },
+  { id: "kk4", researchGroupId: 4, label: "APPLIED ARTIFICIAL INTELLIGENCE" },
+  { id: "kk5", researchGroupId: 5, label: "CYBER SECURITY, IOT, AND CLOUD SYSTEM" },
+  { id: "kk6", researchGroupId: 6, label: "DATA SCIENCE AND OPTIMIZATION" },
+  { id: "kk7", researchGroupId: 7, label: "BIOENGINEERING, FOOD TECHNOLOGY AND ADVANCE MATERIAL" },
+  { id: "kk8", researchGroupId: 8, label: "SOFTWARE ENGINEERING AND MULTIMEDIA" },
+];
+
+const getKelompokLabel = (researchGroupId) => {
+  if (!researchGroupId) return null;
+  return kelompokKeilmuan.find((kk) => kk.researchGroupId === researchGroupId)?.label || null;
+};
+
+const getResearchGroupName = (lect) =>
+  getKelompokLabel(lect?.researchGroupId) ||
+  lect?.researchGroup?.name ||
+  (typeof lect?.researchGroup === "string" ? lect.researchGroup : null) ||
+  lect?.researchGroupName ||
+  lect?.kelompokKeilmuan ||
+  lect?.group?.name ||
+  "-";
+
+const formatLecturer = (lect) => {
+  if (!lect) return "-";
+  const kode = lect.kodeDosen || lect.lecturerCode || lect.kode || "-";
+  const nama = lect.user?.name || lect.name || lect.nama || "-";
+  return `${kode} - ${nama} (${getResearchGroupName(lect)})`;
+};
+
+const formatLecturerShort = (lect) => {
+  if (!lect) return "-";
+  const kode = lect.kodeDosen || lect.lecturerCode || lect.kode || "-";
+  const nama = lect.user?.name || lect.name || lect.nama || "-";
+  return `${kode} - ${nama}`;
+};
+
+const formatDateID = (value) => {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+};
+const StaticValue = ({ children }) => (
+  <div className="static-field">{children ?? "-"}</div>
+);
+
+const LecturerDropdown = ({ lecturers, value, onChange, placeholder, excludeId }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selected = lecturers.find((l) => String(l.id) === String(value));
+
+  const filtered = lecturers.filter((l) => {
+    if (excludeId && String(l.id) === String(excludeId)) return false;
+    if (!query) return true;
+    const label = `${l.kodeDosen || l.lecturerCode || l.kode || ""} ${l.user?.name || l.name || l.nama || ""}`.toLowerCase();
+    return label.includes(query.toLowerCase());
+  });
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="input-field"
+        style={{
+          width: "100%",
+          textAlign: "left",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          background: "#fff",
+          cursor: "pointer",
+        }}
+      >
+        <span style={{
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          color: selected ? "inherit" : "#94A3B8",
+        }}>
+          {selected ? formatLecturerShort(selected) : (placeholder || "Pilih Dosen")}
+        </span>
+        <ChevronDown size={16} style={{ flexShrink: 0, color: "#94A3B8" }} />
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            right: 0,
+            zIndex: 50,
+            background: "#fff",
+            border: "1px solid #E2E8F0",
+            borderRadius: 10,
+            boxShadow: "0 12px 28px rgba(15,23,42,0.14)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ padding: 8, borderBottom: "1px solid #F1F5F9" }}>
+            <input
+              type="text"
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari nama / kode dosen..."
+              style={{
+                width: "100%",
+                padding: "8px 10px",
+                border: "1px solid #E2E8F0",
+                borderRadius: 8,
+                fontSize: 13,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+          <div style={{ maxHeight: 260, overflowY: "auto" }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "14px 12px", fontSize: 13, color: "#9CA3AF", textAlign: "center" }}>
+                Dosen tidak ditemukan.
+              </div>
+            ) : (
+              filtered.map((lect) => {
+                const isSelected = String(lect.id) === String(value);
+                return (
+                  <div
+                    key={lect.id}
+                    onClick={() => {
+                      onChange(String(lect.id));
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                    style={{
+                      padding: "10px 14px",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: isSelected ? 700 : 500,
+                      background: isSelected ? "#FEF2F2" : "#fff",
+                      color: isSelected ? "#C0182A" : "#1E293B",
+                      borderBottom: "1px solid #F8FAFC",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) e.currentTarget.style.background = "#F8FAFC";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) e.currentTarget.style.background = "#fff";
+                    }}
+                  >
+                    {formatLecturerShort(lect)}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function Step1({ studentInfo = {}, lecturers = [], readOnly = false, schemeLocked = false }) {
   const { state, dispatch } = useSidangContext();
   const { data } = state;
   const [takAlert, setTakAlert] = useState(null);
 
   const updateField = (field, value) => {
+    if (readOnly) return;
     dispatch({ type: "UPDATE_FIELD", field, value });
   };
 
@@ -32,6 +210,7 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
   ];
 
   const toggleJalurNonSidang = (option) => {
+    if (readOnly || schemeLocked) return;
     const current = data.jalurNonSidang || [];
     const next = current.includes(option)
       ? current.filter((i) => i !== option)
@@ -42,11 +221,15 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
   const pembimbing1 = lecturers.find(
     (lect) => String(lect.id) === String(data.dosenPembimbing1Id),
   );
-  const pembimbing1Group =
-    pembimbing1?.researchGroup?.name || pembimbing1?.researchGroupName || "-";
+  const pembimbing2 = lecturers.find(
+    (lect) => String(lect.id) === String(data.dosenPembimbing2Id),
+  );
+  const pembimbing1Group = getResearchGroupName(pembimbing1);
 
-  //   TAK dengan validasi minimum 
+  const isSchemeLocked = schemeLocked;
+
   const handleTakChange = (value) => {
+    if (readOnly) return;
     updateField("tak", value);
     setTakAlert(null);
 
@@ -65,6 +248,7 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
   };
 
   const handleProgramTypeChange = (p) => {
+    if (readOnly) return;
     updateField("programType", p);
     if (data.tak !== "") {
       const numVal = Number(data.tak);
@@ -81,6 +265,22 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
 
   return (
     <div className="step-content">
+      {readOnly && (
+        <div className="info-banner" style={{ background: "#F0FDF4", borderColor: "#BBF7D0" }}>
+          <div className="banner-icon-container" style={{ background: "#DCFCE7" }}>
+            <Check color="#16A34A" size={24} />
+          </div>
+          <div className="banner-content">
+            <h4 style={{ color: "#166534" }}>Data Sudah Terkunci</h4>
+            <p>
+              Data diri & akademik di tahap ini tidak bisa diubah lagi karena
+              pendaftaran sidang sudah di submit. Jika ada kesalahan
+              data, silakan hubungi admin akademik. 
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="info-banner">
         <div className="banner-icon-container">
           <Info color="#d69e2e" size={24} />
@@ -164,68 +364,86 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
 
           <div className="input-group">
             <label>Program</label>
-            <div className="program-selector">
-              {programs.map((p) => (
-                <div
-                  key={p}
-                  className={`program-card ${data.programType === p ? "active" : ""}`}
-                  onClick={() => handleProgramTypeChange(p)}
-                >
-                  <div className="checkbox-visual">
-                    {data.programType === p && (
-                      <span className="checkbox-dot" />
-                    )}
+            {readOnly ? (
+              <StaticValue>{data.programType || "-"}</StaticValue>
+            ) : (
+              <div className="program-selector">
+                {programs.map((p) => (
+                  <div
+                    key={p}
+                    className={`program-card ${data.programType === p ? "active" : ""}`}
+                    onClick={() => handleProgramTypeChange(p)}
+                  >
+                    <div className="checkbox-visual">
+                      {data.programType === p && (
+                        <span className="checkbox-dot" />
+                      )}
+                    </div>
+                    <span>{p}</span>
                   </div>
-                  <span>{p}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="input-group">
             <label>Jumlah Total SKS Lulus</label>
-            <div className="input-with-icon">
-              <input
-                type="number"
-                className="input-field"
-                placeholder="0"
-                value={data.sks}
-                onChange={(e) => updateField("sks", e.target.value)}
-              />
-            </div>
+            {readOnly ? (
+              <StaticValue>{data.sks || "-"}</StaticValue>
+            ) : (
+              <div className="input-with-icon">
+                <input
+                  type="number"
+                  className="input-field"
+                  placeholder="0"
+                  value={data.sks}
+                  onChange={(e) => updateField("sks", e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <div className="input-group">
             <label>Nilai IPK Sebelum Sidang</label>
-            <div className="input-with-icon">
-              <input
-                type="number"
-                step="0.01"
-                className="input-field"
-                placeholder="0.00"
-                value={data.ipk}
-                onChange={(e) => updateField("ipk", e.target.value)}
-              />
-            </div>
+            {readOnly ? (
+              <StaticValue>{data.ipk || "-"}</StaticValue>
+            ) : (
+              <div className="input-with-icon">
+                <input
+                  type="number"
+                  step="0.01"
+                  className="input-field"
+                  placeholder="0.00"
+                  value={data.ipk}
+                  onChange={(e) => updateField("ipk", e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           {/*  TAK  validasi minimum  */}
           <div className="input-group">
             <label>TAK</label>
-            <div className="input-with-icon">
-              <input
-                type="number"
-                className="input-field"
-                placeholder="0"
-                value={data.tak}
-                onChange={(e) => handleTakChange(e.target.value)}
-              />
-            </div>
-            <span className="helper-text">
-              Poin minimum untuk TAK Mahasiswa Reguler : 60, Alih Jenjang : 25,
-              Diploma : 45
-            </span>
-            {takAlert && (
+            {readOnly ? (
+              <StaticValue>{data.tak || "-"}</StaticValue>
+            ) : (
+              <div className="input-with-icon">
+                <input
+                  type="number"
+                  className="input-field"
+                  placeholder="0"
+                  value={data.tak}
+                  onChange={(e) => handleTakChange(e.target.value)}
+                />
+              </div>
+            )}
+            {!readOnly && (
+              <span className="helper-text">
+                Poin minimum untuk TAK Mahasiswa Reguler : 60, Alih Jenjang : 25,
+                Diploma : 45
+              </span>
+            )}
+            {takAlert && !readOnly && (
               <div style={{ marginTop: "8px" }}>
                 <CustomAlert type="warning" message={takAlert} />
               </div>
@@ -234,14 +452,18 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
 
           <div className="input-group">
             <label>Tanggal Batas Akhir SKTA</label>
-            <div className="input-with-icon">
-              <input
-                type="date"
-                className="input-field"
-                value={data.sktaExpDate}
-                onChange={(e) => updateField("sktaExpDate", e.target.value)}
-              />
-            </div>
+            {readOnly ? (
+              <StaticValue>{formatDateID(data.sktaExpDate)}</StaticValue>
+            ) : (
+              <div className="input-with-icon">
+                <input
+                  type="date"
+                  className="input-field"
+                  value={data.sktaExpDate}
+                  onChange={(e) => updateField("sktaExpDate", e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -259,26 +481,17 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
           </div>
           <div className="input-group">
             <label>Dosen Pembimbing 1</label>
-            <div className="input-with-icon">
-              <select
-                className="input-field"
+            {readOnly ? (
+              <StaticValue>{formatLecturer(pembimbing1)}</StaticValue>
+            ) : (
+              <LecturerDropdown
+                lecturers={lecturers}
                 value={data.dosenPembimbing1Id}
-                onChange={(e) =>
-                  updateField("dosenPembimbing1Id", e.target.value)
-                }
-              >
-                <option value="">Pilih Dosen Pembimbing 1</option>
-                {lecturers.map((lect) => (
-                  <option key={lect.id} value={lect.id}>
-                    {lect.lecturerCode || lect.kode || "-"} -{" "}
-                    {lect.name || lect.nama} ({lect.researchGroup?.name || "-"})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <span className="helper-text">
-              Kelompok keilmuan: {pembimbing1Group}
-            </span>
+                onChange={(id) => updateField("dosenPembimbing1Id", id)}
+                placeholder="Pilih Dosen Pembimbing 1"
+                excludeId={data.dosenPembimbing2Id}
+              />
+            )}
           </div>
           <div className="input-group">
             <label>Nama Dosen Wali</label>
@@ -290,23 +503,17 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
           </div>
           <div className="input-group">
             <label>Dosen Pembimbing 2</label>
-            <div className="input-with-icon">
-              <select
-                className="input-field"
+            {readOnly ? (
+              <StaticValue>{formatLecturer(pembimbing2)}</StaticValue>
+            ) : (
+              <LecturerDropdown
+                lecturers={lecturers}
                 value={data.dosenPembimbing2Id}
-                onChange={(e) =>
-                  updateField("dosenPembimbing2Id", e.target.value)
-                }
-              >
-                <option value="">Pilih Dosen Pembimbing 2</option>
-                {lecturers.map((lect) => (
-                  <option key={lect.id} value={lect.id}>
-                    {lect.lecturerCode || lect.kode || "-"} -{" "}
-                    {lect.name || lect.nama} ({lect.researchGroup?.name || "-"})
-                  </option>
-                ))}
-              </select>
-            </div>
+                onChange={(id) => updateField("dosenPembimbing2Id", id)}
+                placeholder="Pilih Dosen Pembimbing 2"
+                excludeId={data.dosenPembimbing1Id}
+              />
+            )}
           </div>
           <div className="input-group">
             <label>NIP Dosen Wali</label>
@@ -318,22 +525,74 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
           </div>
         </div>
 
+        {/* Kelompok Keilmuan — otomatis mengikuti KK Dosen Pembimbing 1 */}
+        <div className="input-group" style={{ marginTop: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+            <label style={{ margin: 0 }}>Kelompok Keilmuan</label>
+            <span style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>
+              Otomatis diambil dari KK Dosen Pembimbing 1
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "10px" }}>
+            {kelompokKeilmuan.map((item) => {
+              const isSelected = pembimbing1Group === item.label;
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "10px 14px", borderRadius: 8,
+                    border: `1.5px solid ${isSelected ? "#C0182A" : "#E5E7EB"}`,
+                    background: isSelected ? "#FEF2F2" : "#F9FAFB",
+                    cursor: "default", transition: "all 0.15s ease",
+                  }}
+                >
+                  <div style={{
+                    width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
+                    border: `2px solid ${isSelected ? "#C0182A" : "#D1D5DB"}`,
+                    background: isSelected ? "#C0182A" : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    {isSelected && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />}
+                  </div>
+                  <span style={{
+                    fontSize: 11, fontWeight: isSelected ? 700 : 500,
+                    color: isSelected ? "#B91C1C" : "#6B7280",
+                    lineHeight: 1.4, userSelect: "none",
+                  }}>
+                    {item.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {!pembimbing1 && (
+            <p style={{ fontSize: 11, color: "#9CA3AF", marginTop: 10, fontStyle: "italic" }}>
+              Pilih Dosen Pembimbing 1 terlebih dahulu untuk menentukan kelompok keilmuan.
+            </p>
+          )}
+        </div>
+
         <div className="input-group" style={{ marginTop: "2rem" }}>
           <label>Skema Sidang</label>
-          <div className="input-with-icon">
-            <select
-              className="input-field"
-              value={data.sidangScheme}
-              onChange={(e) => updateField("sidangScheme", e.target.value)}
-            >
-              <option value="">Pilih Skema Sidang</option>
-              {skemas.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isSchemeLocked ? (
+            <StaticValue>{data.sidangScheme || "-"}</StaticValue>
+          ) : (
+            <div className="input-with-icon">
+              <select
+                className="input-field"
+                value={data.sidangScheme}
+                onChange={(e) => updateField("sidangScheme", e.target.value)}
+              >
+                <option value="">Pilih Skema Sidang</option>
+                {skemas.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {data.sidangScheme === "Non Sidang" && (
@@ -353,54 +612,88 @@ export default function Step1({ studentInfo = {}, lecturers = [] }) {
             <span className="helper-text">
               Pilih opsi publikasi yang sesuai
             </span>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "1rem",
-                marginTop: "1rem",
-              }}
-            >
-              {jalurNonSidangOptions.map((option) => (
-                <div
-                  key={option}
-                  className={`program-card ${data.jalurNonSidang?.includes(option) ? "active" : ""}`}
-                  onClick={() => toggleJalurNonSidang(option)}
-                  style={{ padding: "0.5rem 1rem" }}
-                >
-                  <div className="checkbox-visual">
-                    {data.jalurNonSidang?.includes(option) && (
-                      <Check color="white" size={14} strokeWidth={3} />
-                    )}
+
+            {isSchemeLocked ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "1rem" }}>
+                {(data.jalurNonSidang || []).length > 0 ? (
+                  data.jalurNonSidang.map((option) => (
+                    <span
+                      key={option}
+                      style={{
+                        fontSize: "0.8rem", fontWeight: 700, padding: "4px 12px",
+                        borderRadius: 9999, background: "#F0FDF4",
+                        border: "1.5px solid #BBF7D0", color: "#166534",
+                      }}
+                    >
+                      {option}
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ fontSize: "0.85rem", color: "var(--text-grey)", fontStyle: "italic" }}>
+                    Tidak ada jalur non sidang dipilih.
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                  marginTop: "1rem",
+                }}
+              >
+                {jalurNonSidangOptions.map((option) => (
+                  <div
+                    key={option}
+                    className={`program-card ${data.jalurNonSidang?.includes(option) ? "active" : ""}`}
+                    onClick={() => toggleJalurNonSidang(option)}
+                    style={{ padding: "0.5rem 1rem" }}
+                  >
+                    <div className="checkbox-visual">
+                      {data.jalurNonSidang?.includes(option) && (
+                        <Check color="white" size={14} strokeWidth={3} />
+                      )}
+                    </div>
+                    <span style={{ fontSize: "0.85rem" }}>{option}</span>
                   </div>
-                  <span style={{ fontSize: "0.85rem" }}>{option}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         <div className="input-group" style={{ marginTop: "2rem" }}>
           <label>Judul Tugas Akhir (Bahasa Indonesia) *</label>
-          <textarea
-            className="textarea-field"
-            placeholder="Masukan Judul Tugas Akhir (Bahasa Indonesia)"
-            value={data.thesisTitleId}
-            onChange={(e) => updateField("thesisTitleId", e.target.value)}
-          ></textarea>
+          {readOnly ? (
+            <StaticValue>{data.thesisTitleId || "-"}</StaticValue>
+          ) : (
+            <textarea
+              className="textarea-field"
+              placeholder="Masukan Judul Tugas Akhir (Bahasa Indonesia)"
+              value={data.thesisTitleId}
+              onChange={(e) => updateField("thesisTitleId", e.target.value)}
+            ></textarea>
+          )}
         </div>
 
         <div className="input-group" style={{ marginTop: "2rem" }}>
           <label>Judul Tugas Akhir (Bahasa Inggris) *</label>
-          <textarea
-            className="textarea-field"
-            placeholder="Masukan Judul Tugas Akhir (Bahasa Inggris)"
-            value={data.thesisTitleEn}
-            onChange={(e) => updateField("thesisTitleEn", e.target.value)}
-          ></textarea>
-          <span className="helper-text">
-            Pastikan judul sesuai dengan yang tertera di SK TA terakhir.
-          </span>
+          {readOnly ? (
+            <StaticValue>{data.thesisTitleEn || "-"}</StaticValue>
+          ) : (
+            <>
+              <textarea
+                className="textarea-field"
+                placeholder="Masukan Judul Tugas Akhir (Bahasa Inggris)"
+                value={data.thesisTitleEn}
+                onChange={(e) => updateField("thesisTitleEn", e.target.value)}
+              ></textarea>
+              <span className="helper-text">
+                Pastikan judul sesuai dengan yang tertera di SK TA terakhir.
+              </span>
+            </>
+          )}
         </div>
       </section>
     </div>

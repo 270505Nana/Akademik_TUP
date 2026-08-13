@@ -5,7 +5,7 @@ const router = express.Router();
 import { listSktaRequests,
   createSktaRequest,
   updateSktaRequest,
-  findSktaRequestByStudentId,
+  findSktaRequestByMahasiswaId,
   downloadSktaRequestUpload, } from '../../controllers/sktaRequestController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
@@ -14,7 +14,7 @@ import { upload } from '../../middlewares/upload.js';
 
 import { createSktaRequestValidator,
   updateSktaRequestValidator, } from '../../validators/sktaRequestValidator.js';
-import { isStudent } from '../../middlewares/authorize.js';
+import { isMahasiswa } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -60,7 +60,7 @@ router.get("/", verifyToken, listSktaRequests);
  *             required:
  *               - proposalTitleId
  *               - proposalTitleEn
- *               - studentId
+ *               - mahasiswaId
  *               - dosenPembimbing1Id
  *               - dosenPembimbing2Id
  *               - evidence
@@ -71,7 +71,7 @@ router.get("/", verifyToken, listSktaRequests);
  *               proposalTitleEn:
  *                 type: string
  *                 example: Web Based Academic Information System
- *               studentId:
+ *               mahasiswaId:
  *                 type: integer
  *                 example: 1
  *               dosenPembimbing1Id:
@@ -94,14 +94,14 @@ router.get("/", verifyToken, listSktaRequests);
  *       403:
  *         description: Invalid token
  *       404:
- *         description: Student or lecturer not found
+ *         description: Mahasiswa or lecturer not found
  *       500:
  *         description: Internal server error
  */
 router.post(
   "/",
   verifyToken,
-  isStudent,
+  isMahasiswa,
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   createSktaRequestValidator,
   validate,
@@ -132,7 +132,7 @@ router.post(
  *             required:
  *               - proposalTitleId
  *               - proposalTitleEn
- *               - studentId
+ *               - mahasiswaId
  *               - dosenPembimbing1Id
  *               - dosenPembimbing2Id
  *               - evidence
@@ -143,7 +143,7 @@ router.post(
  *               proposalTitleEn:
  *                 type: string
  *                 example: Web Based Academic Information System
- *               studentId:
+ *               mahasiswaId:
  *                 type: integer
  *                 example: 1
  *               dosenPembimbing1Id:
@@ -173,7 +173,7 @@ router.post(
 router.patch(
   "/:id",
   verifyToken,
-  isStudent,
+  isMahasiswa,
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   updateSktaRequestValidator,
   validate,
@@ -215,7 +215,7 @@ router.get(
 
 /**
  * @swagger
- * /api/skta-requests/{studentId}:
+ * /api/skta-requests/{mahasiswaId}:
  *   get:
  *     summary: Get SKTA request data by student ID
  *     tags: [SKTA Request]
@@ -223,11 +223,11 @@ router.get(
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: studentId
+ *         name: mahasiswaId
  *         required: true
  *         schema:
  *           type: integer
- *         description: Student ID
+ *         description: Mahasiswa ID
  *     responses:
  *       200:
  *         description: SKTA request data retrieved successfully
@@ -240,6 +240,6 @@ router.get(
  *       500:
  *         description: Internal server error
  */
-router.get("/:studentId", verifyToken, findSktaRequestByStudentId);
+router.get("/:mahasiswaId", verifyToken, findSktaRequestByMahasiswaId);
 
 export default router;

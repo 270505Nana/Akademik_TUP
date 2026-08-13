@@ -36,13 +36,13 @@ const parseBEError = (err) => {
     return "Pastikan Email menggunakan @student.telkomuniversity.ac.id";
   }
 
-  // Prisma unique constraint — username sudah dipakai
-  if (
-    rawMsg.includes("Unique constraint") &&
-    rawMsg.includes("`username`")
-  ) {
-    return "Username sudah digunakan. Silakan pilih username lain.";
-  }
+    // Prisma unique constraint — name sudah dipakai
+    if (
+      rawMsg.includes("Unique constraint") &&
+      rawMsg.includes("`name`")
+    ) {
+      return "Nama sudah digunakan. Silakan pilih nama lain.";
+    }
 
   // Prisma unique constraint — email sudah dipakai
   if (
@@ -72,9 +72,9 @@ const parseBEError = (err) => {
 };
 
 function validate(formData) {
-  const { username, email, no_telp, password, confirmPassword } = formData;
+  const { name, email, no_telp, password, confirmPassword } = formData;
 
-  if (!username.trim())       return { type: "error", msg: "Username tidak boleh kosong." };
+  if (!name.trim())       return { type: "error", msg: "Nama Lengkap tidak boleh kosong." };
   if (!email.trim())          return { type: "error", msg: "Email tidak boleh kosong." };
 
   // ── Validasi domain email ──────────────────────────────────────────────────
@@ -103,7 +103,7 @@ function validate(formData) {
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
-    username:        "",
+    name:            "",
     email:           "",
     no_telp:         "",
     password:        "",
@@ -121,9 +121,9 @@ const RegisterPage = () => {
   if (isAuthenticated) {
     const role = user?.role?.toUpperCase();
     const roleMap = {
-      STUDENT: "/mahasiswa/dashboard",
-      LECTURER: "/dosen/dashboard",
-      ACADEMIC_STAFF: "/akademik/dashboard",
+      MAHASISWA: "/mahasiswa/dashboard",
+      DOSEN: "/dosen/dashboard",
+      ADMIN: "/akademik/dashboard",
     };
     const destination = roleMap[role] || "/mahasiswa/dashboard";
     return <Navigate to={destination} replace />;
@@ -156,7 +156,7 @@ const RegisterPage = () => {
 
     try {
       await registerUser({
-        username:        formData.username,
+        name:            formData.name,
         email:           formData.email,
         no_telp:         formData.no_telp,
         password:        formData.password,
@@ -249,18 +249,18 @@ const RegisterPage = () => {
           <form onSubmit={handleSubmit} noValidate>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="reg-username">
-                <i className="bi bi-person-fill" />&nbsp; Username
+              <label className="form-label" htmlFor="reg-name">
+                <i className="bi bi-person-fill" />&nbsp; Nama Lengkap
               </label>
               <div className="input-wrapper">
                 <i className="bi bi-person input-icon" />
                 <input
-                  id="reg-username"
+                  id="reg-name"
                   type="text"
-                  name="username"
+                  name="name"
                   className="form-input"
                   placeholder="Masukkan nama lengkap"
-                  value={formData.username}
+                  value={formData.name}
                   onChange={handleChange}
                   autoComplete="name"
                 />

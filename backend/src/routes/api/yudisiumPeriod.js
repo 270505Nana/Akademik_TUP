@@ -9,7 +9,7 @@ import { listYudisiumPeriods,
   deleteYudisiumPeriod, } from '../../controllers/yudisiumPeriodController.js';
 import { createYudisiumPeriodValidator,
   updateYudisiumPeriodValidator, } from '../../validators/yudisiumPeriodValidator.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -109,7 +109,7 @@ router.get("/:id", verifyToken, getYudisiumPeriodById);
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   createYudisiumPeriodValidator,
   validate,
   createYudisiumPeriod,
@@ -166,7 +166,7 @@ router.post(
 router.patch(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   updateYudisiumPeriodValidator,
   validate,
   updateYudisiumPeriod,
@@ -197,6 +197,6 @@ router.patch(
  *       403:
  *         description: Invalid token
  */
-router.delete("/:id", verifyToken, isAcademicStaff, deleteYudisiumPeriod);
+router.delete("/:id", verifyToken, isAdmin, deleteYudisiumPeriod);
 
 export default router;

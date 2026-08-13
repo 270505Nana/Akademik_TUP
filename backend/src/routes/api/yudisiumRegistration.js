@@ -5,7 +5,7 @@ import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 import { listYudisiumRegistrations,
   getYudisiumRegistrationById,
-  getYudisiumRegistrationByStudentId,
+  getYudisiumRegistrationByMahasiswaId,
   saveYudisiumRegistration,
   submitYudisiumRegistration,
   deleteYudisiumRegistration,
@@ -14,7 +14,7 @@ import { listYudisiumRegistrations,
   downloadYudisiumRegistrationFile, } from '../../controllers/yudisiumRegistrationController.js';
 import { saveYudisiumRegistrationValidator,
   submitYudisiumRegistrationValidator, } from '../../validators/yudisiumRegistrationValidator.js';
-import { isStudent, isAcademicStaff } from '../../middlewares/authorize.js';
+import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -70,7 +70,7 @@ router.get("/:id", verifyToken, getYudisiumRegistrationById);
 
 /**
  * @swagger
- * /api/yudisium-registrations/student/{studentId}:
+ * /api/yudisium-registrations/student/{mahasiswaId}:
  *   get:
  *     summary: Get yudisium registration by student ID
  *     tags: [Yudisium Registration]
@@ -78,11 +78,11 @@ router.get("/:id", verifyToken, getYudisiumRegistrationById);
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: studentId
+ *         name: mahasiswaId
  *         required: true
  *         schema:
  *           type: integer
- *         description: Student ID
+ *         description: Mahasiswa ID
  *     responses:
  *       200:
  *         description: Yudisium registration data retrieved successfully
@@ -94,9 +94,9 @@ router.get("/:id", verifyToken, getYudisiumRegistrationById);
  *         description: Yudisium registration not found
  */
 router.get(
-  "/student/:studentId",
+  "/student/:mahasiswaId",
   verifyToken,
-  getYudisiumRegistrationByStudentId,
+  getYudisiumRegistrationByMahasiswaId,
 );
 
 /**
@@ -123,14 +123,14 @@ router.get(
  *       403:
  *         description: Invalid token
  *       404:
- *         description: Student or lecturer not found
+ *         description: Mahasiswa or lecturer not found
  *       500:
  *         description: Internal server error
  */
 router.post(
   "/save",
   verifyToken,
-  isStudent,
+  isMahasiswa,
   saveYudisiumRegistrationValidator,
   validate,
   saveYudisiumRegistration,
@@ -160,14 +160,14 @@ router.post(
  *       403:
  *         description: Invalid token
  *       404:
- *         description: Student or lecturer not found
+ *         description: Mahasiswa or lecturer not found
  *       500:
  *         description: Internal server error
  */
 router.post(
   "/submit",
   verifyToken,
-  isStudent,
+  isMahasiswa,
   submitYudisiumRegistrationValidator,
   validate,
   submitYudisiumRegistration,
@@ -200,7 +200,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAcademicStaff, deleteYudisiumRegistration);
+router.delete("/:id", verifyToken, isAdmin, deleteYudisiumRegistration);
 
 /**
  * @swagger
@@ -253,7 +253,7 @@ router.delete("/:id", verifyToken, isAcademicStaff, deleteYudisiumRegistration);
 router.post(
   "/:id/uploads",
   verifyToken,
-  isStudent,
+  isMahasiswa,
   upload("yudisium-requirements").single("file"),
   uploadYudisiumRegistrationFile,
 );

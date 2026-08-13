@@ -51,7 +51,7 @@ const removeUploadedFiles = (files) => {
 const listSktaRequests = asyncHandler(async (req, res) => {
   const sktaRequests = await prisma.sktaRequest.findMany({
     include: {
-      student: true,
+      mahasiswa: true,
       dosenPembimbing1: true,
       dosenPembimbing2: true,
       sktaRequestUploads: true,
@@ -73,7 +73,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
     const {
       proposalTitleId,
       proposalTitleEn,
-      studentId,
+      mahasiswaId,
       dosenPembimbing1Id,
       dosenPembimbing2Id,
     } = req.body;
@@ -81,8 +81,8 @@ const createSktaRequest = asyncHandler(async (req, res) => {
     const evidenceFile = getUploadedFile(req.files, "evidence");
 
     // Cek apakah ada data mahasiswa
-    const student = await prisma.student.findFirst({
-      where: { id: studentId },
+    const student = await prisma.mahasiswa.findFirst({
+      where: { id: mahasiswaId },
     });
     if (!student) {
       res.status(404);
@@ -91,7 +91,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
 
     // cek pengajuan MHS sebelumnya, udh ada atau belum
     const existingRequest = await prisma.sktaRequest.findFirst({
-      where: { studentId: parseInt(studentId) },
+      where: { mahasiswaId: parseInt(mahasiswaId) },
     });
     if (existingRequest) {
       res.status(409);
@@ -100,7 +100,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
       );
     }
     // Cek apakah ada data dospem 1
-    const dosenPembimbing1 = await prisma.lecturer.findFirst({
+    const dosenPembimbing1 = await prisma.dosen.findFirst({
       where: { id: dosenPembimbing1Id },
     });
     if (!dosenPembimbing1) {
@@ -109,7 +109,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
     }
 
     // Cek apakah ada data dospem 2
-    const dosenPembimbing2 = await prisma.lecturer.findFirst({
+    const dosenPembimbing2 = await prisma.dosen.findFirst({
       where: { id: dosenPembimbing2Id },
     });
     if (!dosenPembimbing2) {
@@ -121,7 +121,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
       data: {
         proposalTitleId,
         proposalTitleEn,
-        studentId,
+        mahasiswaId,
         dosenPembimbing1Id,
         dosenPembimbing2Id,
 
@@ -131,7 +131,7 @@ const createSktaRequest = asyncHandler(async (req, res) => {
               name: `Evidence_SKTA_${student?.nim}_${student?.name}`,
               filename: evidenceFile.filename,
               path: evidenceFile.path,
-              studentId,
+              mahasiswaId,
             },
           ],
         },
@@ -192,7 +192,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
     const {
       proposalTitleId,
       proposalTitleEn,
-      studentId,
+      mahasiswaId,
       dosenPembimbing1Id,
       dosenPembimbing2Id,
     } = req.body;
@@ -200,8 +200,8 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
     const evidenceFile = getUploadedFile(req.files, "evidence");
 
     // Cek apakah ada data mahasiswa
-    const student = await prisma.student.findFirst({
-      where: { id: studentId },
+    const student = await prisma.mahasiswa.findFirst({
+      where: { id: mahasiswaId },
     });
     if (!student) {
       res.status(404);
@@ -209,7 +209,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
     }
 
     // Cek apakah ada data dospem 1
-    const dosenPembimbing1 = await prisma.lecturer.findFirst({
+    const dosenPembimbing1 = await prisma.dosen.findFirst({
       where: { id: dosenPembimbing1Id },
     });
     if (!dosenPembimbing1) {
@@ -218,7 +218,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
     }
 
     // Cek apakah ada data dospem 2
-    const dosenPembimbing2 = await prisma.lecturer.findFirst({
+    const dosenPembimbing2 = await prisma.dosen.findFirst({
       where: { id: dosenPembimbing2Id },
     });
     if (!dosenPembimbing2) {
@@ -231,7 +231,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
       data: {
         proposalTitleId,
         proposalTitleEn,
-        studentId,
+        mahasiswaId,
         dosenPembimbing1Id,
         dosenPembimbing2Id,
         sktaRequestUploads: {
@@ -241,7 +241,7 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
               name: `Evidence_SKTA_${student?.nim}_${student?.name}`,
               filename: evidenceFile.filename,
               path: evidenceFile.path,
-              studentId,
+              mahasiswaId,
             },
           ],
         },
@@ -259,13 +259,13 @@ const updateSktaRequest = asyncHandler(async (req, res) => {
 });
 
 // [Route] Find SKTA Request By Mahasiswa Id
-const findSktaRequestByStudentId = asyncHandler(async (req, res) => {
-  const studentId = parseInt(req.params.studentId);
+const findSktaRequestByMahasiswaId = asyncHandler(async (req, res) => {
+  const mahasiswaId = parseInt(req.params.mahasiswaId);
 
   const sktaRequest = await prisma.sktaRequest.findFirst({
-    where: { studentId },
+    where: { mahasiswaId },
     include: {
-      student: {
+      mahasiswa: {
         include: {
           studyProgram: {
             select: {
@@ -314,5 +314,5 @@ const downloadSktaRequestUpload = asyncHandler(async (req, res) => {
 export { listSktaRequests,
   createSktaRequest,
   updateSktaRequest,
-  findSktaRequestByStudentId,
+  findSktaRequestByMahasiswaId,
   downloadSktaRequestUpload, };

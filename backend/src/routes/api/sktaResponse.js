@@ -6,7 +6,7 @@ import { listSktaResponses,
   createSktaResponse,
   updateSktaResponse,
   findSktaResponseBySktaRequestId,
-  getSktaResponseUploadsByStudentId,
+  getSktaResponseUploadsByMahasiswaId,
   downloadSktaResponseUpload, } from '../../controllers/sktaResponseController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
@@ -15,7 +15,7 @@ import { upload } from '../../middlewares/upload.js';
 
 import { createSktaResponsetValidator,
   updateSktaResponsetValidator, } from '../../validators/sktaResponseValidator.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -61,7 +61,7 @@ router.get("/", verifyToken, listSktaResponses);
  *             required:
  *               - hasUploadedFinalProposal
  *               - hasTakenLanguageTest
- *               - academicStaffId
+ *               - adminId
  *               - sktaRequestId
  *             properties:
  *               hasUploadedFinalProposal:
@@ -79,7 +79,7 @@ router.get("/", verifyToken, listSktaResponses);
  *                 format: date
  *                 nullable: true
  *                 example: 2026-12-31
- *               academicStaffId:
+ *               adminId:
  *                 type: integer
  *                 example: 1
  *               sktaRequestId:
@@ -106,7 +106,7 @@ router.get("/", verifyToken, listSktaResponses);
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   // upload("skta").single("sktaFile"),
   upload("skta").fields([{ name: "sktaFile", maxCount: 1 }]),
   createSktaResponsetValidator,
@@ -138,7 +138,7 @@ router.post(
  *             required:
  *               - hasUploadedFinalProposal
  *               - hasTakenLanguageTest
- *               - academicStaffId
+ *               - adminId
  *               - sktaRequestId
  *             properties:
  *               hasUploadedFinalProposal:
@@ -156,7 +156,7 @@ router.post(
  *                 format: date
  *                 nullable: true
  *                 example: 2026-12-31
- *               academicStaffId:
+ *               adminId:
  *                 type: integer
  *                 example: 1
  *               sktaRequestId:
@@ -183,7 +183,7 @@ router.post(
 router.patch(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   upload("skta").fields([{ name: "sktaFile", maxCount: 1 }]),
   updateSktaResponsetValidator,
   validate,
@@ -192,19 +192,19 @@ router.patch(
 
 /**
  * @swagger
- * /api/skta-responses/requests/{studentId}/uploads:
+ * /api/skta-responses/requests/{mahasiswaId}/uploads:
  *   get:
- *     summary: Get SKTA response uploads by Student ID
+ *     summary: Get SKTA response uploads by Mahasiswa ID
  *     tags: [SKTA Response]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: studentId
+ *         name: mahasiswaId
  *         required: true
  *         schema:
  *           type: integer
- *         description: Student ID
+ *         description: Mahasiswa ID
  *     responses:
  *       200:
  *         description: SKTA response uploads retrieved successfully
@@ -213,14 +213,14 @@ router.patch(
  *       403:
  *         description: Invalid token
  *       404:
- *         description: Student not found
+ *         description: Mahasiswa not found
  *       500:
  *         description: Internal server error
  */
 router.get(
-  "/requests/:studentId/uploads",
+  "/requests/:mahasiswaId/uploads",
   verifyToken,
-  getSktaResponseUploadsByStudentId,
+  getSktaResponseUploadsByMahasiswaId,
 );
 
 /**

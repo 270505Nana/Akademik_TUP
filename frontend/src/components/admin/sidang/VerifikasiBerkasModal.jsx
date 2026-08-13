@@ -467,7 +467,7 @@ const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) =>
     }}>
       <CheckCircle2 size={16} color={CLR.green} />
       <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>
-        Semua {uploads.length} berkas telah diverifikasi sesuai — pilih periode sidang untuk mahasiswa ini
+        Semua {uploads.length} berkas telah diverifikasi sesuai - pilih periode sidang untuk mahasiswa ini
       </span>
     </div>
 
@@ -756,7 +756,7 @@ const VerifikasiBerkasModal = ({
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
         }}>
           <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0F172A' }}>
-            Verifikasi Berkas — {studentName}
+            Verifikasi Berkas - {studentName}
           </h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: CLR.sub, background: '#F1F5F9', padding: '4px 12px', borderRadius: 9999 }}>

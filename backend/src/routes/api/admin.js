@@ -2,48 +2,48 @@ import express from 'express';
 
 const router = express.Router();
 
-import { listAcademicStaff,
-  upsertAcademicStaff,
-  findAcademicStaffByUserId, } from '../../controllers/academicStaffController.js';
+import { listAdmins,
+  upsertAdmin,
+  findAdminByUserId, } from '../../controllers/adminController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
 
 import { validate } from '../../middlewares/validate.js';
 
-import { upsertAcademicStaffValidator, } from '../../validators/academicStaffValidator.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { upsertAdminValidator, } from '../../validators/adminValidator.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
  * tags:
- *   name: Academic Staff
- *   description: Academic staff endpoints
+ *   name: Admin
+ *   description: Admin endpoints
  */
 
 /**
  * @swagger
- * /api/academic-staff:
+ * /api/admin:
  *   get:
- *     summary: Get all academic staff data
- *     tags: [Academic Staff]
+ *     summary: Get all admin data
+ *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Academic staff data retrieved successfully
+ *         description: Admin data retrieved successfully
  *       401:
  *         description: Token not found
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, isAcademicStaff, listAcademicStaff);
+router.get("/", verifyToken, isAdmin, listAdmins);
 
 /**
  * @swagger
- * /api/academic-staff/{userId}:
+ * /api/admin/{userId}:
  *   put:
- *     summary: Create or update academic staff data by user ID
- *     tags: [Academic Staff]
+ *     summary: Create or update admin data by user ID
+ *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -51,8 +51,8 @@ router.get("/", verifyToken, isAcademicStaff, listAcademicStaff);
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: User ID with ACADEMIC_STAFF role
+ *           type: string
+ *         description: User ID with ADMIN role
  *     requestBody:
  *       required: true
  *       content:
@@ -66,9 +66,9 @@ router.get("/", verifyToken, isAcademicStaff, listAcademicStaff);
  *                 example: John Doe
  *     responses:
  *       200:
- *         description: Academic staff data created or updated successfully
+ *         description: Admin data created or updated successfully
  *       400:
- *         description: User is not an academic staff
+ *         description: User is not an admin
  *       401:
  *         description: Token not found
  *       403:
@@ -81,18 +81,18 @@ router.get("/", verifyToken, isAcademicStaff, listAcademicStaff);
 router.put(
   "/:userId",
   verifyToken,
-  isAcademicStaff,
-  upsertAcademicStaffValidator,
+  isAdmin,
+  upsertAdminValidator,
   validate,
-  upsertAcademicStaff,
+  upsertAdmin,
 );
 
 /**
  * @swagger
- * /api/academic-staff/{userId}:
+ * /api/admin/{userId}:
  *   get:
- *     summary: Get academic staff data by user ID
- *     tags: [Academic Staff]
+ *     summary: Get admin data by user ID
+ *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -100,20 +100,20 @@ router.put(
  *         name: userId
  *         required: true
  *         schema:
- *           type: integer
- *         description: User ID of academic staff
+ *           type: string
+ *         description: User ID of admin
  *     responses:
  *       200:
- *         description: Academic staff data retrieved successfully
+ *         description: Admin data retrieved successfully
  *       401:
  *         description: Token not found
  *       403:
  *         description: Invalid token
  *       404:
- *         description: Academic staff data not found
+ *         description: Admin data not found
  *       500:
  *         description: Internal server error
  */
-router.get("/:userId", verifyToken, isAcademicStaff, findAcademicStaffByUserId);
+router.get("/:userId", verifyToken, isAdmin, findAdminByUserId);
 
 export default router;

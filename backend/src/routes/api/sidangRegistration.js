@@ -5,7 +5,7 @@ import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 import { listSidangRegistrations,
   getSidangRegistrationById,
-  getSidangRegistrationByStudentId,
+  getSidangRegistrationByMahasiswaId,
   saveSidangRegistration,
   submitSidangRegistration,
   deleteSidangRegistration,
@@ -14,7 +14,7 @@ import { listSidangRegistrations,
   downloadSidangRegistrationFile, } from '../../controllers/sidangRegistrationController.js';
 import { saveSidangRegistrationValidator,
   submitSidangRegistrationValidator, } from '../../validators/sidangRegistrationValidator.js';
-import { isStudent, isAcademicStaff } from '../../middlewares/authorize.js';
+import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -70,7 +70,7 @@ router.get("/:id", verifyToken, getSidangRegistrationById);
 
 /**
  * @swagger
- * /api/sidang-registrations/student/{studentId}:
+ * /api/sidang-registrations/student/{mahasiswaId}:
  *   get:
  *     summary: Get sidang registration by student ID
  *     tags: [Sidang Registration]
@@ -78,11 +78,11 @@ router.get("/:id", verifyToken, getSidangRegistrationById);
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: studentId
+ *         name: mahasiswaId
  *         required: true
  *         schema:
  *           type: integer
- *         description: Student ID
+ *         description: Mahasiswa ID
  *     responses:
  *       200:
  *         description: Sidang registration data retrieved successfully
@@ -94,9 +94,9 @@ router.get("/:id", verifyToken, getSidangRegistrationById);
  *         description: Sidang registration not found
  */
 router.get(
-  "/student/:studentId",
+  "/student/:mahasiswaId",
   verifyToken,
-  getSidangRegistrationByStudentId,
+  getSidangRegistrationByMahasiswaId,
 );
 
 /**
@@ -124,7 +124,7 @@ router.get(
  *               sktaExpDate: "2026-12-31"
  *               thesisTitleId: "Analisis Sistem X"
  *               thesisTitleEn: "Analysis of System X"
- *               studentId: 20
+ *               mahasiswaId: 20
  *               dosenPembimbing1Id: 5
  *               dosenPembimbing2Id: 7
  *     responses:
@@ -137,14 +137,14 @@ router.get(
  *       403:
  *         description: Invalid token
  *       404:
- *         description: Student or lecturer not found
+ *         description: Mahasiswa or lecturer not found
  *       500:
  *         description: Internal server error
  */
 router.post(
   "/save",
   verifyToken,
-  isStudent,
+  isMahasiswa,
   saveSidangRegistrationValidator,
   validate,
   saveSidangRegistration,
@@ -175,7 +175,7 @@ router.post(
  *               sktaExpDate: "2026-12-31"
  *               thesisTitleId: "Analisis Sistem X"
  *               thesisTitleEn: "Analysis of System X"
- *               studentId: 20
+ *               mahasiswaId: 20
  *               dosenPembimbing1Id: 5
  *               dosenPembimbing2Id: 7
  *     responses:
@@ -188,14 +188,14 @@ router.post(
  *       403:
  *         description: Invalid token
  *       404:
- *         description: Student or lecturer not found
+ *         description: Mahasiswa or lecturer not found
  *       500:
  *         description: Internal server error
  */
 router.post(
   "/submit",
   verifyToken,
-  isStudent,
+  isMahasiswa,
   submitSidangRegistrationValidator,
   validate,
   submitSidangRegistration,
@@ -228,7 +228,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAcademicStaff, deleteSidangRegistration);
+router.delete("/:id", verifyToken, isAdmin, deleteSidangRegistration);
 
 /**
  * @swagger
@@ -285,7 +285,7 @@ router.delete("/:id", verifyToken, isAcademicStaff, deleteSidangRegistration);
 router.post(
   "/:id/uploads",
   verifyToken,
-  isStudent,
+  isMahasiswa,
   upload("sidang-requirements").single("file"),
   uploadSidangRegistrationFile,
 );

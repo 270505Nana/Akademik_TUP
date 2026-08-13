@@ -39,12 +39,22 @@ export const unwrapResponse = (raw) => {
 export const determineStatus = (sktaResponse, skUploads = []) => {
   if (!sktaResponse) return STATUS_SK.DALAM_PROSES;
 
-  const hasLang     = sktaResponse.hasTakenLanguageTest     === true;
-  const hasProposal = sktaResponse.hasUploadedFinalProposal === true;
-  const hasFile     = Array.isArray(skUploads) && skUploads.length > 0;
+  // Cek apakah data persetujuan ada isinya
+  const hasApprovedFields =
+    (sktaResponse.hasUploadedFinalProposal === true) &&
+    (sktaResponse.hasTakenLanguageTest === true) &&
+    (sktaResponse.sktaUploadPath || (Array.isArray(skUploads) && skUploads.length > 0)) &&
+    sktaResponse.expDate;
 
-  if (hasLang && hasProposal && hasFile) return STATUS_SK.SUDAH_TERBIT;
-  return STATUS_SK.BELUM_TERBIT;
+  if (hasApprovedFields) return STATUS_SK.SUDAH_TERBIT;
+
+  // Cek apakah data penolakan ada isinya
+  const hasRejectedFields = sktaResponse.message || sktaResponse.isEdit;
+
+  if (hasRejectedFields) return STATUS_SK.BELUM_TERBIT; // Ditolak / Perlu Perbaikan
+
+  // Jika tidak ada isi disetujui dan ditolak, berarti sedang diproses
+  return STATUS_SK.DALAM_PROSES;
 };
 
 /**

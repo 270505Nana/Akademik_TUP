@@ -14,11 +14,11 @@ const authorize = (...allowedRoles) => {
   };
 };
 
-const isStudent = authorize("STUDENT");
-const isLecturer = authorize("LECTURER");
-const isAcademicStaff = authorize("ACADEMIC_STAFF");
+const isMahasiswa = authorize("MAHASISWA");
+const isDosen = authorize("DOSEN");
+const isAdmin = authorize("ADMIN");
 
 export { authorize,
-  isStudent,
-  isLecturer,
-  isAcademicStaff, };
+  isMahasiswa,
+  isDosen,
+  isAdmin, };
