@@ -20,6 +20,7 @@ import sklUploadRouter from './sklUpload.js';
 import transkripUploadRouter from './transkripUpload.js';
 import dokumenValidasiSktaUploadRouter from './dokumenValidasiSktaUpload.js';
 import formulirPenerbitanSktaUploadRouter from './formulirPenerbitanSktaUpload.js';
+import berkasMahasiswaRouter from './berkasMahasiswa.js';
 
 const router = express.Router();
 
@@ -44,5 +45,6 @@ router.use("/skl", sklUploadRouter);
 router.use("/transkrip", transkripUploadRouter);
 router.use("/dokumen-validasi-skta", dokumenValidasiSktaUploadRouter);
 router.use("/formulir-penerbitan-skta", formulirPenerbitanSktaUploadRouter);
+router.use("/berkas-mahasiswa", berkasMahasiswaRouter);
 
 export default router;

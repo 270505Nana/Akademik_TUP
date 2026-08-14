@@ -11,6 +11,7 @@ import {
   downloadEvidence,
   approvePermohonanSkta,
   rejectPermohonanSkta,
+  generateDokumenValidasiSkta,
 } from '../../controllers/permohonanSktaController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
@@ -334,6 +335,33 @@ router.patch(
   verifyToken,
   isAdmin,
   rejectPermohonanSkta
+);
+
+/**
+ * @swagger
+ * /api/permohonan-skta/{id}/generate/dokumen-validasi-skta:
+ *   get:
+ *     summary: Generate or retrieve existing Dokumen Validasi SKTA
+ *     tags: [Permohonan SKTA]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Retrieve existing Dokumen Validasi SKTA
+ *       201:
+ *         description: Successfully generated new placeholder Dokumen Validasi SKTA
+ */
+router.get(
+  "/:id/generate/dokumen-validasi-skta",
+  verifyToken,
+  isAdmin,
+  generateDokumenValidasiSkta
 );
 
 export default router;

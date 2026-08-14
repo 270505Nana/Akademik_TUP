@@ -317,22 +317,23 @@ export const downloadSK = async (permohonanId) => {
  */
 
 export const uploadDokumenValidasi = async (studentId, pdfBlob, namaFile) => {
-// buat debug
-  console.log('pdfBlob type:', pdfBlob?.type);
-  console.log('pdfBlob size:', pdfBlob?.size);
-  console.log('studentId:', studentId);
-
   const formData = new FormData();
-  formData.append('studentId',   String(studentId));
+  formData.append('mahasiswaId', String(studentId));
   formData.append('name',        namaFile || `Dokumen_Validasi_SKTA_${studentId}`);
-  formData.append('dokumenFile', pdfBlob, `validasi-skta-${studentId}.pdf`);
+  formData.append('category',    'Dokumen Validasi Skta');
+  formData.append('berkas',      pdfBlob, `validasi-skta-${studentId}.pdf`);
 
   const response = await api.post(
-    '/api/dokumen-validasi-skta',
+    '/api/berkas-mahasiswa',
     formData,
     { headers: { 'Content-Type': 'multipart/form-data' } }
   );
 
+  return response.data?.data ?? response.data;
+};
+
+export const generateDokumenValidasiSkta = async (permohonanId) => {
+  const response = await api.get(`/api/permohonan-skta/${permohonanId}/generate/dokumen-validasi-skta`);
   return response.data?.data ?? response.data;
 };
 
