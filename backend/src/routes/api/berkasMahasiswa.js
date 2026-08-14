@@ -92,7 +92,7 @@ router.get("/:id", verifyToken, getBerkasMahasiswaById);
  *             required:
  *               - name
  *               - category
- *               - studentId
+ *               - mahasiswaId
  *               - berkas
  *             properties:
  *               name:
@@ -101,7 +101,7 @@ router.get("/:id", verifyToken, getBerkasMahasiswaById);
  *               category:
  *                 type: string
  *                 example: Dokumen Validasi Skta
- *               studentId:
+ *               mahasiswaId:
  *                 type: string
  *                 description: Target student ID (UUID)
  *               berkas:

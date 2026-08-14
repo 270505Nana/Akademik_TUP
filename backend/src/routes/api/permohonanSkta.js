@@ -6,12 +6,12 @@ import {
   createPermohonanSkta,
   updatePermohonanSkta,
   getPermohonanSktaById,
-  getLatestPermohonanSktaByStudentId,
   downloadSkta,
   downloadEvidence,
   approvePermohonanSkta,
   rejectPermohonanSkta,
   generateDokumenValidasiSkta,
+  getLatestPermohonanSktaByMahasiswaId,
 } from '../../controllers/permohonanSktaController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
@@ -109,7 +109,7 @@ router.post(
  * @swagger
  * /api/permohonan-skta/mahasiswa/{mahasiswaId}:
  *   get:
- *     summary: Get latest Permohonan SKTA by student ID
+ *     summary: Get latest Permohonan SKTA by mahasiswa ID
  *     tags: [Permohonan SKTA]
  *     security:
  *       - bearerAuth: []
@@ -119,14 +119,16 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
- *         description: Student ID (UUID)
+ *         description: Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: Latest Permohonan SKTA data retrieved successfully
  *       404:
  *         description: Permohonan SKTA data not found
+ *     security:
+ *       - bearerAuth: []
  */
-router.get("/mahasiswa/:mahasiswaId", verifyToken, getLatestPermohonanSktaByStudentId);
+router.get("/mahasiswa/:mahasiswaId", verifyToken, getLatestPermohonanSktaByMahasiswaId);
 
 /**
  * @swagger

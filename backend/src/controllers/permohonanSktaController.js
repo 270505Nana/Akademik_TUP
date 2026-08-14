@@ -30,11 +30,9 @@ const mapPermohonanToFrontend = (item, req) => {
     ...item,
     proposalTitleId: item.judulProposalIndonesia,
     proposalTitleEn: item.judulProposalInggris,
-    studentId: item.mahasiswaId,
     student: item.mahasiswa
       ? {
           id: item.mahasiswa.id,
-          studentId: item.mahasiswa.id,
           name: item.mahasiswa.user?.name || '',
           nim: item.mahasiswa.nim || '',
           studyProgramId: item.mahasiswa.studyProgramId,
@@ -105,7 +103,6 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
   try {
     const category = req.query.category || "Permohonan Baru";
     const {
-      studentId,
       mahasiswaId,
       proposalTitleId,
       judulProposalIndonesia,
@@ -115,7 +112,7 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
       dosenPembimbing2Id,
     } = req.body;
 
-    const mhsId = studentId || mahasiswaId;
+    const mhsId = mahasiswaId;
     const judulIndo = proposalTitleId || judulProposalIndonesia;
     const judulEng = proposalTitleEn || judulProposalInggris;
 
@@ -282,7 +279,7 @@ const getPermohonanSktaById = asyncHandler(async (req, res) => {
 });
 
 // [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa
-const getLatestPermohonanSktaByStudentId = asyncHandler(async (req, res) => {
+const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
   const { mahasiswaId } = req.params;
   const data = await prisma.permohonanSkta.findFirst({
     where: { mahasiswaId },
@@ -551,7 +548,7 @@ export {
   createPermohonanSkta,
   updatePermohonanSkta,
   getPermohonanSktaById,
-  getLatestPermohonanSktaByStudentId,
+  getLatestPermohonanSktaByMahasiswaId,
   downloadSkta,
   downloadEvidence,
   approvePermohonanSkta,
