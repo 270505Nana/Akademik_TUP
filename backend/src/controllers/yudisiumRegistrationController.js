@@ -313,8 +313,8 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
   }
 
   // Get active registration period
-  const activePeriod = await prisma.yudisiumRegistrationPeriod.findFirst({
-    where: { isOpen: true, deletedAt: null },
+  const activePeriod = await prisma.yudisiumPeriod.findFirst({
+    where: { category: "pendaftaran yudisium", isOpen: true, deletedAt: null },
   });
 
   // Check edit permission if updating an existing registration by ID
@@ -601,16 +601,16 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
         : undefined,
   };
 
-  const activePeriod = await prisma.yudisiumRegistrationPeriod.findFirst({
-    where: { isOpen: true, deletedAt: null },
+  const activePeriod = await prisma.yudisiumPeriod.findFirst({
+    where: { category: "pendaftaran yudisium", isOpen: true, deletedAt: null },
   });
 
   const periodIdToCheck = yudisiumRegistrationPeriodId
-    ? parseInt(yudisiumRegistrationPeriodId)
+    ? yudisiumRegistrationPeriodId
     : (existingRegistration.yudisiumRegistrationPeriodId || (activePeriod ? activePeriod.id : null));
 
   if (periodIdToCheck) {
-    const period = await prisma.yudisiumRegistrationPeriod.findUnique({
+    const period = await prisma.yudisiumPeriod.findUnique({
       where: { id: periodIdToCheck },
     });
     if (!period || !period.isOpen) {

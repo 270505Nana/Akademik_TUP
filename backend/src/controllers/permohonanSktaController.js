@@ -470,7 +470,7 @@ const generateDokumenValidasiSkta = asyncHandler(async (req, res) => {
 
   const buildDownloadUrl = (req, berkasId) => {
     if (!berkasId) return null;
-    return `${req.protocol}://${req.get("host")}/api/berkas-mahasiswa/download/${berkasId}`;
+    return `${req.protocol}://${req.get("host")}/api/permohonan-skta/download/validasi/${berkasId}`;
   };
 
   if (existingBerkas) {
@@ -543,6 +543,29 @@ const generateDokumenValidasiSkta = asyncHandler(async (req, res) => {
   });
 });
 
+// [Route] Download Dokumen Validasi SKTA
+const downloadValidasi = asyncHandler(async (req, res) => {
+  const { berkasId } = req.params;
+
+  const upload = await prisma.berkasMahasiswa.findFirst({
+    where: { id: berkasId, deletedAt: null },
+  });
+
+  if (!upload) {
+    res.status(404);
+    throw new Error("File dokumen tidak ditemukan");
+  }
+
+  const filePath = path.resolve(process.cwd(), upload.filepath);
+
+  if (!fs.existsSync(filePath)) {
+    res.status(404);
+    throw new Error("File fisik tidak ditemukan di server");
+  }
+
+  res.download(filePath, upload.name);
+});
+
 export {
   listPermohonanSkta,
   createPermohonanSkta,
@@ -554,4 +577,5 @@ export {
   approvePermohonanSkta,
   rejectPermohonanSkta,
   generateDokumenValidasiSkta,
+  downloadValidasi,
 };

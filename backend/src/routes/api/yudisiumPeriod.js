@@ -12,7 +12,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * tags:
  *   name: Yudisium Period
- *   description: Yudisium period endpoints
+ *   description: Consolidated Yudisium Period CRUD endpoints
  */
 
 /**
@@ -23,9 +23,15 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *     tags: [Yudisium Period]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter periods by category (pendaftaran yudisium / yudisium)
  *     responses:
  *       200:
- *         description: Sidang period data retrieved successfully
+ *         description: Yudisium period data retrieved successfully
  *       401:
  *         description: Token not found
  *       403:
@@ -45,14 +51,14 @@ router.get("/", verifyToken, listYudisiumPeriods);
  *       - in: path
  *         name: id
  *         schema:
- *           type: integer
+ *           type: string
  *         required: true
- *         description: Sidang period ID
+ *         description: Yudisium period ID (UUID)
  *     responses:
  *       200:
- *         description: Sidang period retrieved successfully
+ *         description: Yudisium period retrieved successfully
  *       404:
- *         description: Sidang period not found
+ *         description: Yudisium period not found
  *       401:
  *         description: Token not found
  *       403:
@@ -75,13 +81,19 @@ router.get("/:id", verifyToken, getYudisiumPeriodById);
  *           schema:
  *             type: object
  *             required:
- *               - name
+ *               - category
+ *               - period
  *               - startDate
  *               - endDate
  *             properties:
- *               name:
+ *               category:
  *                 type: string
- *                 example: Periode Yudisium 2026
+ *                 example: pendaftaran yudisium
+ *                 description: Type of activity (pendaftaran yudisium / yudisium)
+ *               period:
+ *                 type: string
+ *                 example: 2026/2027
+ *                 description: Academic period
  *               startDate:
  *                 type: string
  *                 format: date-time
@@ -95,7 +107,7 @@ router.get("/:id", verifyToken, getYudisiumPeriodById);
  *                 example: false
  *     responses:
  *       201:
- *         description: Sidang period created successfully
+ *         description: Yudisium period created successfully
  *       400:
  *         description: Validation error
  *       401:
@@ -122,9 +134,9 @@ router.post(
  *       - in: path
  *         name: id
  *         schema:
- *           type: integer
+ *           type: string
  *         required: true
- *         description: Sidang period ID
+ *         description: Yudisium period ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -132,9 +144,12 @@ router.post(
  *           schema:
  *             type: object
  *             properties:
- *               name:
+ *               category:
  *                 type: string
- *                 example: Updated Period Name
+ *                 example: yudisium
+ *               period:
+ *                 type: string
+ *                 example: 2026/2027
  *               startDate:
  *                 type: string
  *                 format: date-time
@@ -148,9 +163,9 @@ router.post(
  *                 example: false
  *     responses:
  *       200:
- *         description: Sidang period updated successfully
+ *         description: Yudisium period updated successfully
  *       404:
- *         description: Sidang period not found
+ *         description: Yudisium period not found
  *       400:
  *         description: Validation error
  *       401:
@@ -177,14 +192,14 @@ router.patch(
  *       - in: path
  *         name: id
  *         schema:
- *           type: integer
+ *           type: string
  *         required: true
- *         description: Sidang period ID
+ *         description: Yudisium period ID (UUID)
  *     responses:
  *       200:
- *         description: Sidang period deleted successfully
+ *         description: Yudisium period deleted successfully
  *       404:
- *         description: Sidang period not found
+ *         description: Yudisium period not found
  *       401:
  *         description: Token not found
  *       403:

@@ -4,8 +4,15 @@ import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../uti
 
 // Daftar Semua Periode Yudisium
 const listYudisiumPeriods = asyncHandler(async (req, res) => {
-  const yudisiumPeriods = await prisma.sidangPeriod.findMany({
-    where: { deletedAt: null },
+  const { category } = req.query;
+
+  const whereClause = { deletedAt: null };
+  if (category) {
+    whereClause.category = category;
+  }
+
+  const yudisiumPeriods = await prisma.yudisiumPeriod.findMany({
+    where: whereClause,
     orderBy: {
       createdAt: "desc",
     },
@@ -20,9 +27,9 @@ const listYudisiumPeriods = asyncHandler(async (req, res) => {
 const getYudisiumPeriodById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const yudisiumPeriod = await prisma.sidangPeriod.findFirst({
+  const yudisiumPeriod = await prisma.yudisiumPeriod.findFirst({
     where: {
-      id: parseInt(id),
+      id,
       deletedAt: null,
     },
   });
@@ -39,15 +46,21 @@ const getYudisiumPeriodById = asyncHandler(async (req, res) => {
 
 // Buat Yudisium Period Baru
 const createYudisiumPeriod = asyncHandler(async (req, res) => {
-  const { name, startDate, endDate, isOpen } = req.body;
-
+  const { category, period, startDate, endDate, isOpen } = req.body;
   const errors = [];
-  if (isNil(name)) {
-    errors.push({ field: "name", message: "Nama wajib diisi" });
-  } else if (typeof name !== "string") {
-    errors.push({ field: "name", message: "Nama harus berupa string" });
+
+  if (isNil(category)) {
+    errors.push({ field: "category", message: "Category wajib diisi" });
+  } else if (typeof category !== 'string') {
+    errors.push({ field: "category", message: "Category harus berupa string" });
   }
 
+  if (isNil(period)) {
+    errors.push({ field: "period", message: "Period wajib diisi" });
+  } else if (typeof period !== 'string') {
+    errors.push({ field: "period", message: "Period harus berupa string" });
+  }
+  
   if (isNil(startDate)) {
     errors.push({ field: "startDate", message: "Tanggal mulai wajib diisi" });
   } else if (!isValidISO8601(startDate)) {
@@ -55,27 +68,28 @@ const createYudisiumPeriod = asyncHandler(async (req, res) => {
   } else if (new Date(startDate) < new Date()) {
     errors.push({ field: "startDate", message: "Tanggal mulai tidak boleh di masa lalu" });
   }
-
+  
   if (isNil(endDate)) {
     errors.push({ field: "endDate", message: "Tanggal selesai wajib diisi" });
   } else if (!isValidISO8601(endDate)) {
     errors.push({ field: "endDate", message: "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)" });
-  } else if (new Date(endDate) <= new Date(startDate)) {
+  } else if (startDate && new Date(endDate) <= new Date(startDate)) {
     errors.push({ field: "endDate", message: "Tanggal selesai harus setelah tanggal mulai" });
   }
-
+  
   const parsedIsOpen = parseBoolean(isOpen);
   if (!isNil(isOpen) && parsedIsOpen === undefined) {
     errors.push({ field: "isOpen", message: "isOpen harus berupa boolean" });
   }
-
+  
   if (errors.length > 0) {
     return sendValidationError(res, errors);
   }
 
-  const yudisiumPeriod = await prisma.sidangPeriod.create({
+  const newYudisiumPeriod = await prisma.yudisiumPeriod.create({
     data: {
-      name,
+      category,
+      period,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       isOpen: parsedIsOpen !== undefined ? parsedIsOpen : false,
@@ -84,20 +98,24 @@ const createYudisiumPeriod = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     message: "Yudisium period created successfully",
-    data: yudisiumPeriod,
+    data: newYudisiumPeriod,
   });
 });
 
 // Update Yudisium Period
 const updateYudisiumPeriod = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, startDate, endDate, isOpen } = req.body;
-
+  const { category, period, startDate, endDate, isOpen } = req.body;
   const errors = [];
-  if (!isNil(name) && typeof name !== "string") {
-    errors.push({ field: "name", message: "Nama harus berupa string" });
+
+  if (!isNil(category) && typeof category !== 'string') {
+    errors.push({ field: "category", message: "Category harus berupa string" });
   }
 
+  if (!isNil(period) && typeof period !== 'string') {
+    errors.push({ field: "period", message: "Period harus berupa string" });
+  }
+  
   if (!isNil(startDate)) {
     if (!isValidISO8601(startDate)) {
       errors.push({ field: "startDate", message: "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)" });
@@ -105,16 +123,26 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
       errors.push({ field: "startDate", message: "Tanggal mulai tidak boleh di masa lalu" });
     }
   }
-
+  
+  if (!isNil(endDate)) {
+    if (!isValidISO8601(endDate)) {
+      errors.push({ field: "endDate", message: "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)" });
+    }
+  }
+  
   const parsedIsOpen = parseBoolean(isOpen);
   if (!isNil(isOpen) && parsedIsOpen === undefined) {
     errors.push({ field: "isOpen", message: "isOpen harus berupa boolean" });
   }
+  
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
 
   // Cek apakah yudisium period ada
-  const yudisiumPeriodExists = await prisma.sidangPeriod.findFirst({
+  const yudisiumPeriodExists = await prisma.yudisiumPeriod.findFirst({
     where: {
-      id: parseInt(id),
+      id,
       deletedAt: null,
     },
   });
@@ -125,26 +153,20 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
   }
 
   if (!isNil(endDate)) {
-    if (!isValidISO8601(endDate)) {
-      errors.push({ field: "endDate", message: "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)" });
-    } else {
-      const compareStartDate = startDate || yudisiumPeriodExists.startDate;
-      if (new Date(endDate) <= new Date(compareStartDate)) {
-        errors.push({ field: "endDate", message: "Tanggal selesai harus setelah tanggal mulai" });
-      }
+    const startToCompare = startDate || yudisiumPeriodExists.startDate;
+    if (new Date(endDate) <= new Date(startToCompare)) {
+      errors.push({ field: "endDate", message: "Tanggal selesai harus setelah tanggal mulai" });
+      return sendValidationError(res, errors);
     }
   }
-
-  if (errors.length > 0) {
-    return sendValidationError(res, errors);
-  }
-
-  const yudisiumPeriod = await prisma.sidangPeriod.update({
+  
+  const updatedYudisiumPeriod = await prisma.yudisiumPeriod.update({
     where: {
-      id: parseInt(id),
+      id,
     },
     data: {
-      ...(name && { name }),
+      ...(category !== undefined && { category }),
+      ...(period !== undefined && { period }),
       ...(startDate && { startDate: new Date(startDate) }),
       ...(endDate && { endDate: new Date(endDate) }),
       ...(parsedIsOpen !== undefined && { isOpen: parsedIsOpen }),
@@ -153,7 +175,7 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
 
   res.json({
     message: "Yudisium period updated successfully",
-    data: yudisiumPeriod,
+    data: updatedYudisiumPeriod,
   });
 });
 
@@ -162,9 +184,9 @@ const deleteYudisiumPeriod = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   // Cek apakah yudisium period ada
-  const yudisiumPeriodExists = await prisma.sidangPeriod.findUnique({
+  const yudisiumPeriodExists = await prisma.yudisiumPeriod.findUnique({
     where: {
-      id: parseInt(id),
+      id,
     },
   });
 
@@ -173,8 +195,8 @@ const deleteYudisiumPeriod = asyncHandler(async (req, res) => {
     throw new Error("Periode yudisium tidak ditemukan");
   }
 
-  await prisma.sidangPeriod.update({
-    where: { id: parseInt(id) },
+  await prisma.yudisiumPeriod.update({
+    where: { id },
     data: { deletedAt: new Date() },
   });
 
@@ -183,8 +205,10 @@ const deleteYudisiumPeriod = asyncHandler(async (req, res) => {
   });
 });
 
-export { listYudisiumPeriods,
+export {
+  listYudisiumPeriods,
   getYudisiumPeriodById,
   createYudisiumPeriod,
   updateYudisiumPeriod,
-  deleteYudisiumPeriod, };
+  deleteYudisiumPeriod,
+};

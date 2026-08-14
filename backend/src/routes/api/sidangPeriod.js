@@ -12,7 +12,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * tags:
  *   name: Sidang Period
- *   description: Sidang period endpoints
+ *   description: Consolidated Sidang Period CRUD endpoints
  */
 
 /**
@@ -23,6 +23,12 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *     tags: [Sidang Period]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter periods by category (pendaftaran sidang / sidang)
  *     responses:
  *       200:
  *         description: Sidang period data retrieved successfully
@@ -45,9 +51,9 @@ router.get("/", verifyToken, listSidangPeriods);
  *       - in: path
  *         name: id
  *         schema:
- *           type: integer
+ *           type: string
  *         required: true
- *         description: Sidang period ID
+ *         description: Sidang period ID (UUID)
  *     responses:
  *       200:
  *         description: Sidang period retrieved successfully
@@ -75,13 +81,19 @@ router.get("/:id", verifyToken, getSidangPeriodById);
  *           schema:
  *             type: object
  *             required:
- *               - name
+ *               - category
+ *               - period
  *               - startDate
  *               - endDate
  *             properties:
- *               name:
+ *               category:
  *                 type: string
- *                 example: Periode Sidang 2026
+ *                 example: pendaftaran sidang
+ *                 description: Type of activity (pendaftaran sidang / sidang)
+ *               period:
+ *                 type: string
+ *                 example: 2026/2027
+ *                 description: Academic period
  *               startDate:
  *                 type: string
  *                 format: date-time
@@ -122,9 +134,9 @@ router.post(
  *       - in: path
  *         name: id
  *         schema:
- *           type: integer
+ *           type: string
  *         required: true
- *         description: Sidang period ID
+ *         description: Sidang period ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -132,9 +144,12 @@ router.post(
  *           schema:
  *             type: object
  *             properties:
- *               name:
+ *               category:
  *                 type: string
- *                 example: Updated Period Name
+ *                 example: sidang
+ *               period:
+ *                 type: string
+ *                 example: 2026/2027
  *               startDate:
  *                 type: string
  *                 format: date-time
@@ -177,9 +192,9 @@ router.patch(
  *       - in: path
  *         name: id
  *         schema:
- *           type: integer
+ *           type: string
  *         required: true
- *         description: Sidang period ID
+ *         description: Sidang period ID (UUID)
  *     responses:
  *       200:
  *         description: Sidang period deleted successfully

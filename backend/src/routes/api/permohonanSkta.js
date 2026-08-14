@@ -12,6 +12,7 @@ import {
   rejectPermohonanSkta,
   generateDokumenValidasiSkta,
   getLatestPermohonanSktaByMahasiswaId,
+  downloadValidasi,
 } from '../../controllers/permohonanSktaController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
@@ -125,8 +126,6 @@ router.post(
  *         description: Latest Permohonan SKTA data retrieved successfully
  *       404:
  *         description: Permohonan SKTA data not found
- *     security:
- *       - bearerAuth: []
  */
 router.get("/mahasiswa/:mahasiswaId", verifyToken, getLatestPermohonanSktaByMahasiswaId);
 
@@ -365,5 +364,23 @@ router.get(
   isAdmin,
   generateDokumenValidasiSkta
 );
+
+/**
+ * @swagger
+ * /api/permohonan-skta/download/validasi/{berkasId}:
+ *   get:
+ *     summary: Download generated Dokumen Validasi SKTA file
+ *     tags: [Permohonan SKTA]
+ *     parameters:
+ *       - in: path
+ *         name: berkasId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: File downloaded successfully
+ */
+router.get("/download/validasi/:berkasId", downloadValidasi);
 
 export default router;

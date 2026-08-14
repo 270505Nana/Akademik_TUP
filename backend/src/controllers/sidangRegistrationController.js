@@ -353,8 +353,8 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   // Get active registration period
-  const activePeriod = await prisma.sidangRegistrationPeriod.findFirst({
-    where: { isOpen: true, deletedAt: null },
+  const activePeriod = await prisma.sidangPeriod.findFirst({
+    where: { category: "pendaftaran sidang", isOpen: true, deletedAt: null },
   });
 
   // Check edit permission if updating an existing registration by ID
@@ -619,12 +619,12 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
         : undefined,
   };
 
-  const activePeriod = await prisma.sidangRegistrationPeriod.findFirst({
-    where: { isOpen: true, deletedAt: null },
+  const activePeriod = await prisma.sidangPeriod.findFirst({
+    where: { category: "pendaftaran sidang", isOpen: true, deletedAt: null },
   });
 
   if (existingRegistration.sidangRegistrationPeriodId) {
-    const period = await prisma.sidangRegistrationPeriod.findUnique({
+    const period = await prisma.sidangPeriod.findUnique({
       where: { id: existingRegistration.sidangRegistrationPeriodId },
     });
     if (!period || !period.isOpen) {

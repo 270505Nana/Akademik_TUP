@@ -3,21 +3,26 @@ import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
 import { sendValidationError, isNil } from '../utils/validationHelper.js';
-
+import { v4 as uuidv4 } from 'uuid';
 
 const buildDownloadUrl = (req, uploadId) => {
   if (!uploadId) return null;
   return `${req.protocol}://${req.get("host")}/api/skl/uploads/${uploadId}/download`;
 };
 
-const withDownloadUrl = (req, upload) => ({
-  ...upload,
-  downloadUrl: buildDownloadUrl(req, upload.id),
-});
+const withDownloadUrl = (req, upload) => {
+  if (!upload) return null;
+  return {
+    ...upload,
+    path: upload.filepath,
+    filename: upload.name,
+    downloadUrl: buildDownloadUrl(req, upload.id),
+  };
+};
 
-// List all SKL uploads
+// List all SKL uploads (from BerkasMahasiswa with category "SKL")
 const listSklUploads = asyncHandler(async (req, res) => {
-  let whereClause = { deletedAt: null };
+  let whereClause = { deletedAt: null, category: "SKL" };
 
   // If user is MAHASISWA, they can only see their own SKL uploads
   if (req.user.role === "MAHASISWA") {
@@ -31,37 +36,56 @@ const listSklUploads = asyncHandler(async (req, res) => {
     whereClause.mahasiswaId = student.id;
   }
 
-  const sklUploads = await prisma.sklUpload.findMany({
+  const sklUploads = await prisma.berkasMahasiswa.findMany({
     where: whereClause,
     include: {
       mahasiswa: {
         select: {
           id: true,
           nim: true,
-          name: true,
+          user: {
+            select: {
+              name: true,
+            }
+          }
         },
       },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  const data = sklUploads.map((item) => withDownloadUrl(req, item));
+  // Map to format that frontend expects
+  const data = sklUploads.map((item) => {
+    const formattedItem = {
+      ...item,
+      mahasiswa: {
+        id: item.mahasiswa.id,
+        nim: item.mahasiswa.nim,
+        name: item.mahasiswa.user?.name || "",
+      }
+    };
+    return withDownloadUrl(req, formattedItem);
+  });
 
   res.json({ data });
 });
 
 // Get SKL upload by ID
 const getSklUploadById = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const { id } = req.params;
 
-  const sklUpload = await prisma.sklUpload.findFirst({
-    where: { id, deletedAt: null },
+  const sklUpload = await prisma.berkasMahasiswa.findFirst({
+    where: { id, deletedAt: null, category: "SKL" },
     include: {
       mahasiswa: {
         select: {
           id: true,
           nim: true,
-          name: true,
+          user: {
+            select: {
+              name: true,
+            }
+          }
         },
       },
     },
@@ -83,12 +107,21 @@ const getSklUploadById = asyncHandler(async (req, res) => {
     }
   }
 
-  res.json({ data: withDownloadUrl(req, sklUpload) });
+  const formattedItem = {
+    ...sklUpload,
+    mahasiswa: {
+      id: sklUpload.mahasiswa.id,
+      nim: sklUpload.mahasiswa.nim,
+      name: sklUpload.mahasiswa.user?.name || "",
+    }
+  };
+
+  res.json({ data: withDownloadUrl(req, formattedItem) });
 });
 
 // Create SKL upload
 const createSklUpload = asyncHandler(async (req, res) => {
-    const file = req.file;
+  const file = req.file;
   const errors = {};
 
   if (isNil(req.body.name)) {
@@ -96,8 +129,6 @@ const createSklUpload = asyncHandler(async (req, res) => {
   }
   if (isNil(req.body.mahasiswaId)) {
     errors.mahasiswaId = "mahasiswaId wajib diisi";
-  } else if (isNaN(parseInt(req.body.mahasiswaId))) {
-    errors.mahasiswaId = "mahasiswaId harus berupa integer";
   }
   if (!file) {
     errors.sklFile = "sklFile wajib diunggah";
@@ -112,7 +143,7 @@ const createSklUpload = asyncHandler(async (req, res) => {
 
   try {
     const { name } = req.body;
-    const mahasiswaId = parseInt(req.body.mahasiswaId);
+    const mahasiswaId = req.body.mahasiswaId;
 
     const studentExists = await prisma.mahasiswa.findUnique({
       where: { id: mahasiswaId },
@@ -122,21 +153,49 @@ const createSklUpload = asyncHandler(async (req, res) => {
       throw new Error("Mahasiswa tidak ditemukan");
     }
 
-    const createdSklUpload = await prisma.sklUpload.create({
-      data: {
-        name,
-        filename: file.filename,
-        path: file.path,
+    // Check if there is an existing SKL for this student and category "SKL"
+    const existingSkl = await prisma.berkasMahasiswa.findFirst({
+      where: {
         mahasiswaId,
+        category: "SKL",
+        deletedAt: null,
       },
     });
 
-    res.status(201).json({
+    let resultUpload;
+    if (existingSkl) {
+      // 1. Delete physical file of the old upload
+      if (existingSkl.filepath && fs.existsSync(existingSkl.filepath)) {
+        fs.unlink(existingSkl.filepath, () => {});
+      }
+
+      // 2. Update record in the database
+      resultUpload = await prisma.berkasMahasiswa.update({
+        where: { id: existingSkl.id },
+        data: {
+          name,
+          filepath: file.path,
+        },
+      });
+    } else {
+      // Create new record
+      resultUpload = await prisma.berkasMahasiswa.create({
+        data: {
+          id: uuidv4(),
+          name,
+          category: "SKL",
+          filepath: file.path,
+          mahasiswaId,
+        },
+      });
+    }
+
+    res.status(existingSkl ? 200 : 201).json({
       message: "SKL uploaded successfully",
-      data: withDownloadUrl(req, createdSklUpload),
+      data: withDownloadUrl(req, resultUpload),
     });
   } catch (error) {
-    if (file.path) {
+    if (file?.path) {
       fs.unlink(file.path, () => {});
     }
     throw error;
@@ -145,16 +204,13 @@ const createSklUpload = asyncHandler(async (req, res) => {
 
 // Update SKL upload
 const updateSklUpload = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const { id } = req.params;
   const file = req.file;
 
   const errors = {};
 
   if (!isNil(req.body.name) && req.body.name === "") {
     errors.name = "name tidak boleh kosong jika diisi";
-  }
-  if (!isNil(req.body.mahasiswaId) && isNaN(parseInt(req.body.mahasiswaId))) {
-    errors.mahasiswaId = "mahasiswaId harus berupa integer";
   }
   if (file && !["application/pdf"].includes(file.mimetype)) {
     errors.sklFile = "Tipe file tidak valid (hanya diperbolehkan PDF)";
@@ -166,8 +222,8 @@ const updateSklUpload = asyncHandler(async (req, res) => {
   }
 
   try {
-    const sklUpload = await prisma.sklUpload.findFirst({
-      where: { id, deletedAt: null },
+    const sklUpload = await prisma.berkasMahasiswa.findFirst({
+      where: { id, deletedAt: null, category: "SKL" },
     });
 
     if (!sklUpload) {
@@ -182,7 +238,7 @@ const updateSklUpload = asyncHandler(async (req, res) => {
 
     if (mahasiswaId) {
       const studentExists = await prisma.mahasiswa.findUnique({
-        where: { id: parseInt(mahasiswaId) },
+        where: { id: mahasiswaId },
       });
       if (!studentExists) {
         if (file?.path) {
@@ -193,17 +249,16 @@ const updateSklUpload = asyncHandler(async (req, res) => {
       }
     }
 
-    const oldPath = sklUpload.path;
+    const oldPath = sklUpload.filepath;
 
-    const updatedSklUpload = await prisma.sklUpload.update({
+    const updatedSklUpload = await prisma.berkasMahasiswa.update({
       where: { id },
       data: {
         name: name !== undefined ? name : sklUpload.name,
-        mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : sklUpload.mahasiswaId,
+        mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : sklUpload.mahasiswaId,
         ...(file
           ? {
-              filename: file.filename,
-              path: file.path,
+              filepath: file.path,
             }
           : {}),
       },
@@ -227,10 +282,10 @@ const updateSklUpload = asyncHandler(async (req, res) => {
 
 // Delete SKL upload (soft delete)
 const deleteSklUpload = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const { id } = req.params;
 
-  const sklUpload = await prisma.sklUpload.findFirst({
-    where: { id, deletedAt: null },
+  const sklUpload = await prisma.berkasMahasiswa.findFirst({
+    where: { id, deletedAt: null, category: "SKL" },
   });
 
   if (!sklUpload) {
@@ -238,7 +293,7 @@ const deleteSklUpload = asyncHandler(async (req, res) => {
     throw new Error("Unggahan SKL tidak ditemukan");
   }
 
-  await prisma.sklUpload.update({
+  await prisma.berkasMahasiswa.update({
     where: { id },
     data: { deletedAt: new Date() },
   });
@@ -248,10 +303,10 @@ const deleteSklUpload = asyncHandler(async (req, res) => {
 
 // Download SKL upload file
 const downloadSklUpload = asyncHandler(async (req, res) => {
-  const uploadId = parseInt(req.params.uploadId);
+  const { uploadId } = req.params;
 
-  const upload = await prisma.sklUpload.findFirst({
-    where: { id: uploadId, deletedAt: null },
+  const upload = await prisma.berkasMahasiswa.findFirst({
+    where: { id: uploadId, deletedAt: null, category: "SKL" },
   });
 
   if (!upload) {
@@ -270,19 +325,21 @@ const downloadSklUpload = asyncHandler(async (req, res) => {
     }
   }
 
-  const filePath = path.resolve(process.cwd(), upload.path);
+  const filePath = path.resolve(process.cwd(), upload.filepath);
 
   if (!fs.existsSync(filePath)) {
     res.status(404);
     throw new Error("File fisik tidak ditemukan di server");
   }
 
-  res.download(filePath, upload.filename);
+  res.download(filePath, upload.name);
 });
 
-export { listSklUploads,
+export {
+  listSklUploads,
   getSklUploadById,
   createSklUpload,
   updateSklUpload,
   deleteSklUpload,
-  downloadSklUpload, };
+  downloadSklUpload,
+};

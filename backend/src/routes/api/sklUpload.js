@@ -53,8 +53,8 @@ router.get("/", verifyToken, listSklUploads);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: SKL upload ID
+ *           type: string
+ *         description: SKL upload ID (UUID)
  *     responses:
  *       200:
  *         description: SKL upload details retrieved successfully
@@ -92,9 +92,9 @@ router.get("/:id", verifyToken, getSklUploadById);
  *                 type: string
  *                 example: Surat Keterangan Lulus (SKL)
  *               mahasiswaId:
- *                 type: integer
+ *                 type: string
  *                 description: Required student ID (only academic staff can upload).
- *                 example: 1
+ *                 example: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
  *               sklFile:
  *                 type: string
  *                 format: binary
@@ -134,8 +134,8 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: SKL upload ID
+ *           type: string
+ *         description: SKL upload ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -147,9 +147,9 @@ router.post(
  *                 type: string
  *                 example: Updated SKL Name
  *               mahasiswaId:
- *                 type: integer
+ *                 type: string
  *                 description: Target student ID if updating owner.
- *                 example: 1
+ *                 example: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
  *               sklFile:
  *                 type: string
  *                 format: binary
@@ -189,8 +189,8 @@ router.patch(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: SKL upload ID
+ *           type: string
+ *         description: SKL upload ID (UUID)
  *     responses:
  *       200:
  *         description: SKL deleted successfully
@@ -218,8 +218,8 @@ router.delete("/:id", verifyToken, isAdmin, deleteSklUpload);
  *         name: uploadId
  *         required: true
  *         schema:
- *           type: integer
- *         description: SKL upload ID
+ *           type: string
+ *         description: SKL upload ID (UUID)
  *     responses:
  *       200:
  *         description: File downloaded successfully

@@ -53,8 +53,8 @@ router.get("/", verifyToken, listTranskripUploads);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Transkrip upload ID
+ *           type: string
+ *         description: Transkrip upload ID (UUID)
  *     responses:
  *       200:
  *         description: Transkrip upload details retrieved successfully
@@ -92,9 +92,9 @@ router.get("/:id", verifyToken, getTranskripUploadById);
  *                 type: string
  *                 example: Transkrip Nilai Akademik
  *               mahasiswaId:
- *                 type: integer
+ *                 type: string
  *                 description: Required student ID (only academic staff can upload).
- *                 example: 1
+ *                 example: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
  *               transkripFile:
  *                 type: string
  *                 format: binary
@@ -134,8 +134,8 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Transkrip upload ID
+ *           type: string
+ *         description: Transkrip upload ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -147,9 +147,9 @@ router.post(
  *                 type: string
  *                 example: Updated Transkrip Name
  *               mahasiswaId:
- *                 type: integer
+ *                 type: string
  *                 description: Target student ID if updating owner.
- *                 example: 1
+ *                 example: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
  *               transkripFile:
  *                 type: string
  *                 format: binary
@@ -189,8 +189,8 @@ router.patch(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Transkrip upload ID
+ *           type: string
+ *         description: Transkrip upload ID (UUID)
  *     responses:
  *       200:
  *         description: Transkrip deleted successfully
@@ -218,8 +218,8 @@ router.delete("/:id", verifyToken, isAdmin, deleteTranskripUpload);
  *         name: uploadId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Transkrip upload ID
+ *           type: string
+ *         description: Transkrip upload ID (UUID)
  *     responses:
  *       200:
  *         description: File downloaded successfully
