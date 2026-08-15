@@ -1,23 +1,30 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
+import { sendValidationError, isNil } from '../utils/validationHelper.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const buildDownloadUrl = (req, uploadId) => {
   if (!uploadId) return null;
   return `${req.protocol}://${req.get("host")}/api/transkrip/uploads/${uploadId}/download`;
 };
 
-const withDownloadUrl = (req, upload) => ({
-  ...upload,
-  downloadUrl: buildDownloadUrl(req, upload.id),
-});
+const withDownloadUrl = (req, upload) => {
+  if (!upload) return null;
+  return {
+    ...upload,
+    path: upload.filepath,
+    filename: upload.name,
+    downloadUrl: buildDownloadUrl(req, upload.id),
+  };
+};
 
-// List all Transkrip uploads
+// List all Transkrip uploads (from BerkasMahasiswa with category "Transkrip")
 const listTranskripUploads = asyncHandler(async (req, res) => {
-  let whereClause = { deletedAt: null };
+  let whereClause = { deletedAt: null, category: "Transkrip" };
 
-  // If user is MAHASISWA, they can only see their own transkrip uploads
+  // If user is MAHASISWA, they can only see their own Transkrip uploads
   if (req.user.role === "MAHASISWA") {
     const student = await prisma.mahasiswa.findUnique({
       where: { userId: req.user.id },
@@ -29,37 +36,56 @@ const listTranskripUploads = asyncHandler(async (req, res) => {
     whereClause.mahasiswaId = student.id;
   }
 
-  const transkripUploads = await prisma.transkripUpload.findMany({
+  const transkripUploads = await prisma.berkasMahasiswa.findMany({
     where: whereClause,
     include: {
       mahasiswa: {
         select: {
           id: true,
           nim: true,
-          name: true,
+          user: {
+            select: {
+              name: true,
+            }
+          }
         },
       },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  const data = transkripUploads.map((item) => withDownloadUrl(req, item));
+  // Map to format that frontend expects
+  const data = transkripUploads.map((item) => {
+    const formattedItem = {
+      ...item,
+      mahasiswa: {
+        id: item.mahasiswa.id,
+        nim: item.mahasiswa.nim,
+        name: item.mahasiswa.user?.name || "",
+      }
+    };
+    return withDownloadUrl(req, formattedItem);
+  });
 
   res.json({ data });
 });
 
 // Get Transkrip upload by ID
 const getTranskripUploadById = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const { id } = req.params;
 
-  const transkripUpload = await prisma.transkripUpload.findFirst({
-    where: { id, deletedAt: null },
+  const transkripUpload = await prisma.berkasMahasiswa.findFirst({
+    where: { id, deletedAt: null, category: "Transkrip" },
     include: {
       mahasiswa: {
         select: {
           id: true,
           nim: true,
-          name: true,
+          user: {
+            select: {
+              name: true,
+            }
+          }
         },
       },
     },
@@ -81,20 +107,43 @@ const getTranskripUploadById = asyncHandler(async (req, res) => {
     }
   }
 
-  res.json({ data: withDownloadUrl(req, transkripUpload) });
+  const formattedItem = {
+    ...transkripUpload,
+    mahasiswa: {
+      id: transkripUpload.mahasiswa.id,
+      nim: transkripUpload.mahasiswa.nim,
+      name: transkripUpload.mahasiswa.user?.name || "",
+    }
+  };
+
+  res.json({ data: withDownloadUrl(req, formattedItem) });
 });
 
 // Create Transkrip upload
 const createTranskripUpload = asyncHandler(async (req, res) => {
   const file = req.file;
+  const errors = {};
+
+  if (isNil(req.body.name)) {
+    errors.name = "name wajib diisi";
+  }
+  if (isNil(req.body.mahasiswaId)) {
+    errors.mahasiswaId = "mahasiswaId wajib diisi";
+  }
   if (!file) {
-    res.status(400);
-    throw new Error("File transkrip wajib diunggah");
+    errors.transkripFile = "transkripFile wajib diunggah";
+  } else if (!["application/pdf"].includes(file.mimetype)) {
+    errors.transkripFile = "Tipe file tidak valid (hanya diperbolehkan PDF)";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    if (file?.path) fs.unlink(file.path, () => {});
+    return sendValidationError(res, errors, req);
   }
 
   try {
     const { name } = req.body;
-    const mahasiswaId = parseInt(req.body.mahasiswaId);
+    const mahasiswaId = req.body.mahasiswaId;
 
     const studentExists = await prisma.mahasiswa.findUnique({
       where: { id: mahasiswaId },
@@ -104,21 +153,49 @@ const createTranskripUpload = asyncHandler(async (req, res) => {
       throw new Error("Mahasiswa tidak ditemukan");
     }
 
-    const createdTranskripUpload = await prisma.transkripUpload.create({
-      data: {
-        name,
-        filename: file.filename,
-        path: file.path,
+    // Check if there is an existing Transkrip for this student and category "Transkrip"
+    const existingTranskrip = await prisma.berkasMahasiswa.findFirst({
+      where: {
         mahasiswaId,
+        category: "Transkrip",
+        deletedAt: null,
       },
     });
 
-    res.status(201).json({
+    let resultUpload;
+    if (existingTranskrip) {
+      // 1. Delete physical file of the old upload
+      if (existingTranskrip.filepath && fs.existsSync(existingTranskrip.filepath)) {
+        fs.unlink(existingTranskrip.filepath, () => {});
+      }
+
+      // 2. Update record in the database
+      resultUpload = await prisma.berkasMahasiswa.update({
+        where: { id: existingTranskrip.id },
+        data: {
+          name,
+          filepath: file.path,
+        },
+      });
+    } else {
+      // Create new record
+      resultUpload = await prisma.berkasMahasiswa.create({
+        data: {
+          id: uuidv4(),
+          name,
+          category: "Transkrip",
+          filepath: file.path,
+          mahasiswaId,
+        },
+      });
+    }
+
+    res.status(existingTranskrip ? 200 : 201).json({
       message: "Transkrip uploaded successfully",
-      data: withDownloadUrl(req, createdTranskripUpload),
+      data: withDownloadUrl(req, resultUpload),
     });
   } catch (error) {
-    if (file.path) {
+    if (file?.path) {
       fs.unlink(file.path, () => {});
     }
     throw error;
@@ -127,12 +204,26 @@ const createTranskripUpload = asyncHandler(async (req, res) => {
 
 // Update Transkrip upload
 const updateTranskripUpload = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const { id } = req.params;
   const file = req.file;
 
+  const errors = {};
+
+  if (!isNil(req.body.name) && req.body.name === "") {
+    errors.name = "name tidak boleh kosong jika diisi";
+  }
+  if (file && !["application/pdf"].includes(file.mimetype)) {
+    errors.transkripFile = "Tipe file tidak valid (hanya diperbolehkan PDF)";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    if (file?.path) fs.unlink(file.path, () => {});
+    return sendValidationError(res, errors, req);
+  }
+
   try {
-    const transkripUpload = await prisma.transkripUpload.findFirst({
-      where: { id, deletedAt: null },
+    const transkripUpload = await prisma.berkasMahasiswa.findFirst({
+      where: { id, deletedAt: null, category: "Transkrip" },
     });
 
     if (!transkripUpload) {
@@ -147,7 +238,7 @@ const updateTranskripUpload = asyncHandler(async (req, res) => {
 
     if (mahasiswaId) {
       const studentExists = await prisma.mahasiswa.findUnique({
-        where: { id: parseInt(mahasiswaId) },
+        where: { id: mahasiswaId },
       });
       if (!studentExists) {
         if (file?.path) {
@@ -158,17 +249,16 @@ const updateTranskripUpload = asyncHandler(async (req, res) => {
       }
     }
 
-    const oldPath = transkripUpload.path;
+    const oldPath = transkripUpload.filepath;
 
-    const updatedTranskripUpload = await prisma.transkripUpload.update({
+    const updatedTranskripUpload = await prisma.berkasMahasiswa.update({
       where: { id },
       data: {
         name: name !== undefined ? name : transkripUpload.name,
-        mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : transkripUpload.mahasiswaId,
+        mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : transkripUpload.mahasiswaId,
         ...(file
           ? {
-              filename: file.filename,
-              path: file.path,
+              filepath: file.path,
             }
           : {}),
       },
@@ -192,10 +282,10 @@ const updateTranskripUpload = asyncHandler(async (req, res) => {
 
 // Delete Transkrip upload (soft delete)
 const deleteTranskripUpload = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const { id } = req.params;
 
-  const transkripUpload = await prisma.transkripUpload.findFirst({
-    where: { id, deletedAt: null },
+  const transkripUpload = await prisma.berkasMahasiswa.findFirst({
+    where: { id, deletedAt: null, category: "Transkrip" },
   });
 
   if (!transkripUpload) {
@@ -203,7 +293,7 @@ const deleteTranskripUpload = asyncHandler(async (req, res) => {
     throw new Error("Unggahan transkrip tidak ditemukan");
   }
 
-  await prisma.transkripUpload.update({
+  await prisma.berkasMahasiswa.update({
     where: { id },
     data: { deletedAt: new Date() },
   });
@@ -213,10 +303,10 @@ const deleteTranskripUpload = asyncHandler(async (req, res) => {
 
 // Download Transkrip upload file
 const downloadTranskripUpload = asyncHandler(async (req, res) => {
-  const uploadId = parseInt(req.params.uploadId);
+  const { uploadId } = req.params;
 
-  const upload = await prisma.transkripUpload.findFirst({
-    where: { id: uploadId, deletedAt: null },
+  const upload = await prisma.berkasMahasiswa.findFirst({
+    where: { id: uploadId, deletedAt: null, category: "Transkrip" },
   });
 
   if (!upload) {
@@ -235,19 +325,21 @@ const downloadTranskripUpload = asyncHandler(async (req, res) => {
     }
   }
 
-  const filePath = path.resolve(process.cwd(), upload.path);
+  const filePath = path.resolve(process.cwd(), upload.filepath);
 
   if (!fs.existsSync(filePath)) {
     res.status(404);
     throw new Error("File fisik tidak ditemukan di server");
   }
 
-  res.download(filePath, upload.filename);
+  res.download(filePath, upload.name);
 });
 
-export { listTranskripUploads,
+export {
+  listTranskripUploads,
   getTranskripUploadById,
   createTranskripUpload,
   updateTranskripUpload,
   deleteTranskripUpload,
-  downloadTranskripUpload, };
+  downloadTranskripUpload,
+};

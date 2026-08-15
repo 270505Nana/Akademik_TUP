@@ -9,9 +9,6 @@ import { listMahasiswa,
 
 import { verifyToken } from '../../middlewares/auth.js';
 
-import { validate } from '../../middlewares/validate.js';
-
-import { upsertMahasiswaValidator } from '../../validators/mahasiswaValidator.js';
 import { isMahasiswa } from '../../middlewares/authorize.js';
 
 /**
@@ -122,8 +119,6 @@ router.put(
   "/:userId",
   verifyToken,
   isMahasiswa,
-  upsertMahasiswaValidator,
-  validate,
   upsertMahasiswa,
 );
 

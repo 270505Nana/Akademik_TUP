@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Document, Page, Text, View, Image, StyleSheet, pdf } from '@react-pdf/renderer';
 import { generateDokumenValidasiBlob, mapSktaDataToPDF } from './Dokumenvalidasipdf';
-import { uploadDokumenValidasi } from '../../../service/api';
+import { generateDokumenValidasiSkta } from '../../../service/api';
 import logoTelkom from '../../../assets/logo-telkom.png';
 
 const formatTanggal = (isoStr) => {
@@ -230,6 +230,8 @@ const FormulirPDF = ({ item, sktaResponse, prodiName, qrDataUrl }) => {
   );
 };
 
+const activeUploadPromises = new Map();
+
 //  Modal 
 const FormulirSKModal = ({ item, existingResponse, onClose }) => {
   const qrCanvasRef = useRef(null);
@@ -248,11 +250,15 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
         const studentId = item?.studentId;
         if (!studentId) throw new Error('studentId tidak ditemukan');
 
-        const pdfData  = mapSktaDataToPDF(item, existingResponse, logoTelkom);
-        const pdfBlob  = await generateDokumenValidasiBlob(pdfData);
-        const namaFile = `Dokumen_Validasi_SKTA_${item?.student?.nim || studentId}`;
-        const result   = await uploadDokumenValidasi(studentId, pdfBlob, namaFile);
+        const uploadKey = `${studentId}_Dokumen Validasi Skta`;
+        let uploadPromise = activeUploadPromises.get(uploadKey);
 
+        if (!uploadPromise) {
+          uploadPromise = generateDokumenValidasiSkta(item.id);
+          activeUploadPromises.set(uploadKey, uploadPromise);
+        }
+
+        const result = await uploadPromise;
         const downloadUrl = result?.downloadUrl;
         if (!downloadUrl) throw new Error('downloadUrl tidak ditemukan dari response BE');
 
@@ -261,6 +267,11 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
         console.error('[FormulirSKModal] initQR error:', err);
         setError(err.message || 'Gagal memproses dokumen validasi.');
       } finally {
+        const studentId = item?.studentId;
+        if (studentId) {
+          const uploadKey = `${studentId}_Dokumen Validasi Skta`;
+          activeUploadPromises.delete(uploadKey);
+        }
         setIsLoading(false);
       }
     };

@@ -9,17 +9,13 @@ import mahasiswaRouter from './mahasiswa.js';
 import permohonanSktaRouter from './permohonanSkta.js';
 import templateRouter from './templateUpload.js';
 import sidangPeriodRouter from './sidangPeriod.js';
-import sidangRegistrationPeriodRouter from './sidangRegsitrationPeriod.js';
 import sidangRegistrationRouter from './sidangRegistration.js';
 import sidangRegistrationResponseRouter from './sidangRegistrationResponse.js';
 import yudisiumPeriodRouter from './yudisiumPeriod.js';
-import yudisiumRegistrationPeriodRouter from './yudisiumRegsitrationPeriod.js';
 import yudisiumRegistrationRouter from './yudisiumRegistration.js';
 import yudisiumRegistrationResponseRouter from './yudisiumRegistrationResponse.js';
 import sklUploadRouter from './sklUpload.js';
 import transkripUploadRouter from './transkripUpload.js';
-import dokumenValidasiSktaUploadRouter from './dokumenValidasiSktaUpload.js';
-import formulirPenerbitanSktaUploadRouter from './formulirPenerbitanSktaUpload.js';
 
 const router = express.Router();
 
@@ -33,16 +29,12 @@ router.use("/mahasiswa", mahasiswaRouter);
 router.use("/permohonan-skta", permohonanSktaRouter);
 router.use("/templates", templateRouter);
 router.use("/sidang-periods", sidangPeriodRouter);
-router.use("/sidang-registration-periods", sidangRegistrationPeriodRouter);
 router.use("/sidang-registrations", sidangRegistrationRouter);
 router.use("/sidang-registration-responses", sidangRegistrationResponseRouter);
 router.use("/yudisium-periods", yudisiumPeriodRouter);
-router.use("/yudisium-registration-periods", yudisiumRegistrationPeriodRouter);
 router.use("/yudisium-registrations", yudisiumRegistrationRouter);
 router.use("/yudisium-registration-responses", yudisiumRegistrationResponseRouter);
 router.use("/skl", sklUploadRouter);
 router.use("/transkrip", transkripUploadRouter);
-router.use("/dokumen-validasi-skta", dokumenValidasiSktaUploadRouter);
-router.use("/formulir-penerbitan-skta", formulirPenerbitanSktaUploadRouter);
 
 export default router;

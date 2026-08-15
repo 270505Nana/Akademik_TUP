@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil } from '../utils/validationHelper.js';
 
 // Daftar Semua Program Studi
 const listStudyPrograms = asyncHandler(async (req, res) => {
@@ -16,6 +17,21 @@ const listStudyPrograms = asyncHandler(async (req, res) => {
 // Buat Program Studi Baru
 const createStudyProgram = asyncHandler(async (req, res) => {
   const { name, facultyId } = req.body;
+
+  const errors = [];
+  if (isNil(name)) {
+    errors.push({ field: 'name', message: 'Nama program studi wajib diisi' });
+  } else {
+    const trimmed = String(name).trim();
+    if (trimmed.length < 3) errors.push({ field: 'name', message: 'Nama program studi minimal 3 karakter' });
+    else if (trimmed.length > 100) errors.push({ field: 'name', message: 'Nama program studi maksimal 100 karakter' });
+  }
+  if (isNil(facultyId)) {
+    errors.push({ field: 'facultyId', message: 'ID fakultas wajib diisi' });
+  } else if (isNaN(parseInt(facultyId))) {
+    errors.push({ field: 'facultyId', message: 'ID fakultas harus berupa integer' });
+  }
+  if (errors.length > 0) return sendValidationError(res, errors, req);
 
   // Check if faculty exists
   const faculty = await prisma.faculty.findUnique({
@@ -63,6 +79,25 @@ const findStudyProgramById = asyncHandler(async (req, res) => {
 const updateStudyProgram = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, facultyId } = req.body;
+
+  const errors = [];
+  if (req.body.name !== undefined) {
+    if (isNil(name)) {
+      errors.push({ field: 'name', message: 'Nama program studi tidak boleh kosong' });
+    } else {
+      const trimmed = String(name).trim();
+      if (trimmed.length < 3) errors.push({ field: 'name', message: 'Nama program studi minimal 3 karakter' });
+      else if (trimmed.length > 100) errors.push({ field: 'name', message: 'Nama program studi maksimal 100 karakter' });
+    }
+  }
+  if (req.body.facultyId !== undefined) {
+    if (isNil(facultyId)) {
+      errors.push({ field: 'facultyId', message: 'ID fakultas tidak boleh kosong' });
+    } else if (isNaN(parseInt(facultyId))) {
+      errors.push({ field: 'facultyId', message: 'ID fakultas harus berupa integer' });
+    }
+  }
+  if (errors.length > 0) return sendValidationError(res, errors, req);
 
   const studyProgram = await prisma.studyProgram.findUnique({
     where: { id },

@@ -1,7 +1,8 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
+import { sendValidationError, isNil, isValidISO8601 } from '../utils/validationHelper.js';
 
 // Constants for File Validation
 const REQUIRED_SLUGS = [
@@ -266,6 +267,60 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     dosenPembimbing2Id,
   } = req.body;
 
+  const errors = [];
+  
+  if (!isNil(id) && isNaN(parseInt(id))) {
+    errors.push({ field: "id", message: "ID harus berupa integer" });
+  }
+  
+  if (!isNil(programType) && typeof programType !== "string") {
+    errors.push({ field: "programType", message: "Tipe program harus berupa string" });
+  }
+
+  if (!isNil(jalurNonSidang) && !Array.isArray(jalurNonSidang)) {
+    errors.push({ field: "jalurNonSidang", message: "Jalur non sidang harus berupa array jika diisi" });
+  }
+
+  if (!isNil(sks) && isNaN(parseInt(sks))) {
+    errors.push({ field: "sks", message: "SKS harus berupa integer" });
+  }
+
+  if (!isNil(ipk) && isNaN(parseFloat(ipk))) {
+    errors.push({ field: "ipk", message: "IPK harus berupa float" });
+  }
+
+  if (!isNil(tak) && isNaN(parseInt(tak))) {
+    errors.push({ field: "tak", message: "TAK harus berupa integer" });
+  }
+
+  if (!isNil(sktaExpDate) && !isValidISO8601(sktaExpDate)) {
+    errors.push({ field: "sktaExpDate", message: "Tanggal berlaku SKTA harus berupa tanggal yang valid (format ISO 8601)" });
+  }
+
+  if (!isNil(thesisTitleId) && typeof thesisTitleId !== "string") {
+    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) harus berupa string" });
+  }
+
+  if (!isNil(thesisTitleEn) && typeof thesisTitleEn !== "string") {
+    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) harus berupa string" });
+  }
+
+  if (!isNil(mahasiswaId) && isNaN(parseInt(mahasiswaId))) {
+    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa integer" });
+  }
+
+  if (!isNil(dosenPembimbing1Id) && isNaN(parseInt(dosenPembimbing1Id))) {
+    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa integer" });
+  }
+
+  if (!isNil(dosenPembimbing2Id) && isNaN(parseInt(dosenPembimbing2Id))) {
+    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa integer" });
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
+
   // Validate references if provided
   if (mahasiswaId) {
     const studentExists = await prisma.mahasiswa.findUnique({
@@ -298,8 +353,8 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   // Get active registration period
-  const activePeriod = await prisma.sidangRegistrationPeriod.findFirst({
-    where: { isOpen: true, deletedAt: null },
+  const activePeriod = await prisma.sidangPeriod.findFirst({
+    where: { category: "pendaftaran sidang", isOpen: true, deletedAt: null },
   });
 
   // Check edit permission if updating an existing registration by ID
@@ -448,9 +503,80 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     dosenPembimbing2Id,
   } = req.body;
 
-  if (!id) {
-    res.status(400);
-    throw new Error("ID pendaftaran sidang diperlukan untuk submit");
+  const errors = [];
+  
+  if (isNil(id)) {
+    errors.push({ field: "id", message: "ID wajib diisi untuk submit" });
+  } else if (isNaN(parseInt(id))) {
+    errors.push({ field: "id", message: "ID harus berupa integer" });
+  }
+
+  if (isNil(programType)) {
+    errors.push({ field: "programType", message: "Tipe program wajib diisi" });
+  } else if (typeof programType !== "string") {
+    errors.push({ field: "programType", message: "Tipe program harus berupa string" });
+  }
+
+  if (!isNil(jalurNonSidang) && !Array.isArray(jalurNonSidang)) {
+    errors.push({ field: "jalurNonSidang", message: "Jalur non sidang harus berupa array jika diisi" });
+  }
+
+  if (isNil(sks)) {
+    errors.push({ field: "sks", message: "SKS wajib diisi" });
+  } else if (isNaN(parseInt(sks))) {
+    errors.push({ field: "sks", message: "SKS harus berupa integer" });
+  }
+
+  if (isNil(ipk)) {
+    errors.push({ field: "ipk", message: "IPK wajib diisi" });
+  } else if (isNaN(parseFloat(ipk))) {
+    errors.push({ field: "ipk", message: "IPK harus berupa float" });
+  }
+
+  if (isNil(tak)) {
+    errors.push({ field: "tak", message: "TAK wajib diisi" });
+  } else if (isNaN(parseInt(tak))) {
+    errors.push({ field: "tak", message: "TAK harus berupa integer" });
+  }
+
+  if (isNil(sktaExpDate)) {
+    errors.push({ field: "sktaExpDate", message: "Tanggal berlaku SKTA wajib diisi" });
+  } else if (!isValidISO8601(sktaExpDate)) {
+    errors.push({ field: "sktaExpDate", message: "Tanggal berlaku SKTA harus berupa tanggal yang valid (format ISO 8601)" });
+  }
+
+  if (isNil(thesisTitleId)) {
+    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) wajib diisi" });
+  } else if (typeof thesisTitleId !== "string") {
+    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) harus berupa string" });
+  }
+
+  if (isNil(thesisTitleEn)) {
+    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) wajib diisi" });
+  } else if (typeof thesisTitleEn !== "string") {
+    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) harus berupa string" });
+  }
+
+  if (isNil(mahasiswaId)) {
+    errors.push({ field: "mahasiswaId", message: "ID mahasiswa wajib diisi" });
+  } else if (isNaN(parseInt(mahasiswaId))) {
+    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa integer" });
+  }
+
+  if (isNil(dosenPembimbing1Id)) {
+    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 wajib diisi" });
+  } else if (isNaN(parseInt(dosenPembimbing1Id))) {
+    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa integer" });
+  }
+
+  if (isNil(dosenPembimbing2Id)) {
+    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 wajib diisi" });
+  } else if (isNaN(parseInt(dosenPembimbing2Id))) {
+    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa integer" });
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
   }
 
   const existingRegistration = await prisma.sidangRegistration.findUnique({
@@ -493,12 +619,12 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
         : undefined,
   };
 
-  const activePeriod = await prisma.sidangRegistrationPeriod.findFirst({
-    where: { isOpen: true, deletedAt: null },
+  const activePeriod = await prisma.sidangPeriod.findFirst({
+    where: { category: "pendaftaran sidang", isOpen: true, deletedAt: null },
   });
 
   if (existingRegistration.sidangRegistrationPeriodId) {
-    const period = await prisma.sidangRegistrationPeriod.findUnique({
+    const period = await prisma.sidangPeriod.findUnique({
       where: { id: existingRegistration.sidangRegistrationPeriodId },
     });
     if (!period || !period.isOpen) {

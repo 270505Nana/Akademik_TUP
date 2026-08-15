@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil, isValidISO8601 } from '../utils/validationHelper.js';
 
 // List Sidang Registration Response
 const listSidangRegistrationResponses = asyncHandler(async (req, res) => {
@@ -169,6 +170,46 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
 const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
   const { sidangRegistrationId, adminId, message, isEdit, sidangPeriodId, sidangRegistrationUploadIds } = req.body;
 
+  const errors = [];
+  if (isNil(sidangRegistrationId)) {
+    errors.push({ field: "sidangRegistrationId", message: "ID pendaftaran sidang wajib diisi" });
+  } else if (isNaN(parseInt(sidangRegistrationId))) {
+    errors.push({ field: "sidangRegistrationId", message: "ID pendaftaran sidang harus berupa integer" });
+  }
+
+  if (isNil(adminId)) {
+    errors.push({ field: "adminId", message: "ID staf akademik wajib diisi" });
+  } else if (isNaN(parseInt(adminId))) {
+    errors.push({ field: "adminId", message: "ID staf akademik harus berupa integer" });
+  }
+
+  if (!isNil(message) && typeof message !== "string") {
+    errors.push({ field: "message", message: "Pesan harus berupa string" });
+  }
+
+  if (!isNil(isEdit) && !isValidISO8601(isEdit)) {
+    errors.push({ field: "isEdit", message: "isEdit harus berupa tanggal yang valid (format ISO 8601)" });
+  }
+
+  if (!isNil(sidangPeriodId) && isNaN(parseInt(sidangPeriodId))) {
+    errors.push({ field: "sidangPeriodId", message: "ID periode sidang harus berupa integer" });
+  }
+
+  if (!isNil(sidangRegistrationUploadIds) && !Array.isArray(sidangRegistrationUploadIds)) {
+    errors.push({ field: "sidangRegistrationUploadIds", message: "sidangRegistrationUploadIds harus berupa array" });
+  } else if (Array.isArray(sidangRegistrationUploadIds)) {
+    for (const val of sidangRegistrationUploadIds) {
+      if (isNaN(parseInt(val))) {
+        errors.push({ field: "sidangRegistrationUploadIds.*", message: "Setiap element sidangRegistrationUploadIds harus berupa integer" });
+        break;
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
+
   // Validate sidang registration exists
   const sidangRegistrationExists = await prisma.sidangRegistration.findUnique({
     where: { id: sidangRegistrationId },
@@ -285,6 +326,38 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
 const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { message, isEdit, adminId, sidangRegistrationId, sidangRegistrationUploadIds, sidangPeriodId } = req.body;
+
+  const errors = [];
+  if (!isNil(message) && typeof message !== "string") {
+    errors.push({ field: "message", message: "Pesan harus berupa string" });
+  }
+
+  if (!isNil(isEdit) && !isValidISO8601(isEdit)) {
+    errors.push({ field: "isEdit", message: "isEdit harus berupa tanggal yang valid (format ISO 8601)" });
+  }
+
+  if (!isNil(adminId) && isNaN(parseInt(adminId))) {
+    errors.push({ field: "adminId", message: "ID staf akademik harus berupa integer" });
+  }
+
+  if (!isNil(sidangRegistrationId) && isNaN(parseInt(sidangRegistrationId))) {
+    errors.push({ field: "sidangRegistrationId", message: "ID pendaftaran sidang harus berupa integer" });
+  }
+
+  if (!isNil(sidangRegistrationUploadIds) && !Array.isArray(sidangRegistrationUploadIds)) {
+    errors.push({ field: "sidangRegistrationUploadIds", message: "sidangRegistrationUploadIds harus berupa array" });
+  } else if (Array.isArray(sidangRegistrationUploadIds)) {
+    for (const val of sidangRegistrationUploadIds) {
+      if (isNaN(parseInt(val))) {
+        errors.push({ field: "sidangRegistrationUploadIds.*", message: "Setiap element sidangRegistrationUploadIds harus berupa integer" });
+        break;
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
 
   // Check if response exists
   const responseExists = await prisma.sidangRegistrationResponse.findFirst({

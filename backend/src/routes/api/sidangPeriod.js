@@ -1,21 +1,18 @@
 import express from 'express';
 const router = express.Router();
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { listSidangPeriods,
   getSidangPeriodById,
   createSidangPeriod,
   updateSidangPeriod,
   deleteSidangPeriod, } from '../../controllers/sidangPeriodController.js';
-import { createSidangPeriodValidator,
-  updateSidangPeriodValidator, } from '../../validators/sidangPeriodValidator.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
  * tags:
  *   name: Sidang Period
- *   description: Sidang period endpoints
+ *   description: Consolidated Sidang Period CRUD endpoints
  */
 
 /**
@@ -26,6 +23,12 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *     tags: [Sidang Period]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter periods by category (pendaftaran sidang / sidang)
  *     responses:
  *       200:
  *         description: Sidang period data retrieved successfully
@@ -48,9 +51,9 @@ router.get("/", verifyToken, listSidangPeriods);
  *       - in: path
  *         name: id
  *         schema:
- *           type: integer
+ *           type: string
  *         required: true
- *         description: Sidang period ID
+ *         description: Sidang period ID (UUID)
  *     responses:
  *       200:
  *         description: Sidang period retrieved successfully
@@ -79,12 +82,23 @@ router.get("/:id", verifyToken, getSidangPeriodById);
  *             type: object
  *             required:
  *               - name
+ *               - category
+ *               - period
  *               - startDate
  *               - endDate
  *             properties:
  *               name:
  *                 type: string
- *                 example: Periode Sidang 2026
+ *                 example: Sidang Periode Ganjil 2026/2027
+ *                 description: Period name
+ *               category:
+ *                 type: string
+ *                 example: pendaftaran sidang
+ *                 description: Type of activity (pendaftaran sidang / sidang)
+ *               period:
+ *                 type: string
+ *                 example: 2026/2027
+ *                 description: Academic period
  *               startDate:
  *                 type: string
  *                 format: date-time
@@ -110,15 +124,13 @@ router.post(
   "/",
   verifyToken,
   isAdmin,
-  createSidangPeriodValidator,
-  validate,
   createSidangPeriod,
 );
 
 /**
  * @swagger
  * /api/sidang-periods/{id}:
- *   patch:
+ *   put:
  *     summary: Update sidang period
  *     tags: [Sidang Period]
  *     security:
@@ -127,9 +139,9 @@ router.post(
  *       - in: path
  *         name: id
  *         schema:
- *           type: integer
+ *           type: string
  *         required: true
- *         description: Sidang period ID
+ *         description: Sidang period ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -139,7 +151,13 @@ router.post(
  *             properties:
  *               name:
  *                 type: string
- *                 example: Updated Period Name
+ *                 example: Sidang Periode Genap 2026/2027
+ *               category:
+ *                 type: string
+ *                 example: sidang
+ *               period:
+ *                 type: string
+ *                 example: 2026/2027
  *               startDate:
  *                 type: string
  *                 format: date-time
@@ -163,12 +181,10 @@ router.post(
  *       403:
  *         description: Invalid token
  */
-router.patch(
+router.put(
   "/:id",
   verifyToken,
   isAdmin,
-  updateSidangPeriodValidator,
-  validate,
   updateSidangPeriod,
 );
 
@@ -184,9 +200,9 @@ router.patch(
  *       - in: path
  *         name: id
  *         schema:
- *           type: integer
+ *           type: string
  *         required: true
- *         description: Sidang period ID
+ *         description: Sidang period ID (UUID)
  *     responses:
  *       200:
  *         description: Sidang period deleted successfully

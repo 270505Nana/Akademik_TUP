@@ -1,7 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil, isValidEmail, isValidPhone } from '../utils/validationHelper.js';
 
 const STUDENT_EMAIL_DOMAIN = "student.telkomuniversity.ac.id";
 const TELKOM_EMAIL_DOMAIN = "telkomuniversity.ac.id";
@@ -10,7 +11,31 @@ const getEmailDomain = (email) => email.toLowerCase().split("@")[1];
 
 // Register
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password, phone, role } = req.body;
+  const { name, email, password, confirmPassword, phone, role } = req.body;
+  
+  const errors = [];
+  if (isNil(name)) errors.push({ field: 'name', message: 'Nama wajib diisi' });
+  if (isNil(email)) {
+    errors.push({ field: 'email', message: 'Email wajib diisi' });
+  } else if (!isValidEmail(email)) {
+    errors.push({ field: 'email', message: 'Email tidak valid' });
+  }
+  if (!isNil(phone) && !isValidPhone(phone)) {
+    errors.push({ field: 'phone', message: 'Nomor telepon tidak valid' });
+  }
+  if (isNil(password)) {
+    errors.push({ field: 'password', message: 'Kata sandi wajib diisi' });
+  } else if (password.length < 8) {
+    errors.push({ field: 'password', message: 'Kata sandi minimal 8 karakter' });
+  }
+  if (isNil(confirmPassword)) {
+    errors.push({ field: 'confirmPassword', message: 'Konfirmasi kata sandi wajib diisi' });
+  } else if (confirmPassword !== password) {
+    errors.push({ field: 'confirmPassword', message: 'Konfirmasi kata sandi tidak cocok' });
+  }
+
+  if (errors.length > 0) return sendValidationError(res, errors, req);
+
   const emailDomain = getEmailDomain(email);
   const normalizedRole = typeof role === "string" ? role.trim() : role;
 
@@ -90,6 +115,19 @@ const register = asyncHandler(async (req, res) => {
 // Login
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+
+  const errors = [];
+  if (isNil(email)) {
+    errors.push({ field: 'email', message: 'Email wajib diisi' });
+  } else if (!isValidEmail(email)) {
+    errors.push({ field: 'email', message: 'Email tidak valid' });
+  }
+  if (isNil(password)) {
+    errors.push({ field: 'password', message: 'Kata sandi wajib diisi' });
+  } else if (password.length < 8) {
+    errors.push({ field: 'password', message: 'Kata sandi minimal 8 karakter' });
+  }
+  if (errors.length > 0) return sendValidationError(res, errors, req);
 
   const user = await prisma.user.findUnique({
     where: { email },
