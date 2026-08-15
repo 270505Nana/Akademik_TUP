@@ -16,8 +16,6 @@ import yudisiumRegistrationRouter from './yudisiumRegistration.js';
 import yudisiumRegistrationResponseRouter from './yudisiumRegistrationResponse.js';
 import sklUploadRouter from './sklUpload.js';
 import transkripUploadRouter from './transkripUpload.js';
-import dokumenValidasiSktaUploadRouter from './dokumenValidasiSktaUpload.js';
-import formulirPenerbitanSktaUploadRouter from './formulirPenerbitanSktaUpload.js';
 
 const router = express.Router();
 
@@ -38,7 +36,5 @@ router.use("/yudisium-registrations", yudisiumRegistrationRouter);
 router.use("/yudisium-registration-responses", yudisiumRegistrationResponseRouter);
 router.use("/skl", sklUploadRouter);
 router.use("/transkrip", transkripUploadRouter);
-router.use("/dokumen-validasi-skta", dokumenValidasiSktaUploadRouter);
-router.use("/formulir-penerbitan-skta", formulirPenerbitanSktaUploadRouter);
 
 export default router;

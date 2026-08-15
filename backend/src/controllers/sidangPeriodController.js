@@ -46,8 +46,14 @@ const getSidangPeriodById = asyncHandler(async (req, res) => {
 
 // Buat Sidang Period Baru
 const createSidangPeriod = asyncHandler(async (req, res) => {
-  const { category, period, startDate, endDate, isOpen } = req.body;
+  const { name, category, period, startDate, endDate, isOpen } = req.body;
   const errors = {};
+
+  if (isNil(name)) {
+    errors.name = "Nama wajib diisi";
+  } else if (typeof name !== 'string') {
+    errors.name = "Nama harus berupa string";
+  }
 
   if (isNil(category)) {
     errors.category = "Category wajib diisi";
@@ -65,16 +71,14 @@ const createSidangPeriod = asyncHandler(async (req, res) => {
     errors.startDate = "Tanggal mulai wajib diisi";
   } else if (!isValidISO8601(startDate)) {
     errors.startDate = "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
-  } else if (new Date(startDate) < new Date()) {
-    errors.startDate = "Tanggal mulai tidak boleh di masa lalu";
   }
   
   if (isNil(endDate)) {
     errors.endDate = "Tanggal selesai wajib diisi";
   } else if (!isValidISO8601(endDate)) {
     errors.endDate = "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)";
-  } else if (startDate && new Date(endDate) <= new Date(startDate)) {
-    errors.endDate = "Tanggal selesai harus setelah tanggal mulai";
+  } else if (startDate && new Date(endDate) < new Date(startDate)) {
+    errors.endDate = "Tanggal selesai tidak boleh sebelum tanggal mulai";
   }
   
   if (!isNil(isOpen)) {
@@ -90,6 +94,7 @@ const createSidangPeriod = asyncHandler(async (req, res) => {
 
   const newSidangPeriod = await prisma.sidangPeriod.create({
     data: {
+      name,
       category,
       period,
       startDate: new Date(startDate),
@@ -107,8 +112,12 @@ const createSidangPeriod = asyncHandler(async (req, res) => {
 // Update Sidang Period
 const updateSidangPeriod = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { category, period, startDate, endDate, isOpen } = req.body;
+  const { name, category, period, startDate, endDate, isOpen } = req.body;
   const errors = {};
+
+  if (!isNil(name) && typeof name !== 'string') {
+    errors.name = "Nama harus berupa string";
+  }
 
   if (!isNil(category) && typeof category !== 'string') {
     errors.category = "Category harus berupa string";
@@ -121,8 +130,6 @@ const updateSidangPeriod = asyncHandler(async (req, res) => {
   if (!isNil(startDate)) {
     if (!isValidISO8601(startDate)) {
       errors.startDate = "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
-    } else if (new Date(startDate) < new Date()) {
-      errors.startDate = "Tanggal mulai tidak boleh di masa lalu";
     }
   }
   
@@ -158,8 +165,8 @@ const updateSidangPeriod = asyncHandler(async (req, res) => {
 
   if (!isNil(endDate) && !errors.endDate) {
     const startToCompare = req.body.startDate || sidangPeriodExists.startDate;
-    if (new Date(endDate) <= new Date(startToCompare)) {
-      errors.endDate = "Tanggal selesai harus setelah tanggal mulai";
+    if (new Date(endDate) < new Date(startToCompare)) {
+      errors.endDate = "Tanggal selesai tidak boleh sebelum tanggal mulai";
       return sendValidationError(res, errors, req);
     }
   }
@@ -169,6 +176,7 @@ const updateSidangPeriod = asyncHandler(async (req, res) => {
       id,
     },
     data: {
+      ...(name !== undefined && { name }),
       ...(category !== undefined && { category }),
       ...(period !== undefined && { period }),
       ...(startDate && { startDate: new Date(startDate) }),

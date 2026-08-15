@@ -277,6 +277,7 @@ model SidangPeriod {
   createdAt                 DateTime             @default(now()) @map("created_at")
   updatedAt                 DateTime             @updatedAt @map("updated_at")
   deletedAt                 DateTime?            @map("deleted_at")
+  name                      String
   category                  String // tipe aktivitas: pendaftaran sidang / sidang
   period                    String // nama periode: 2026/2027
   startDate                 DateTime             @map("start_date")
@@ -393,6 +394,7 @@ model YudisiumPeriod {
   createdAt                   DateTime               @default(now()) @map("created_at")
   updatedAt                   DateTime               @updatedAt @map("updated_at")
   deletedAt                   DateTime?              @map("deleted_at")
+  name                        String
   category                    String // tipe aktivitas: pendaftaran yudisium / yudisium
   period                      String // nama periode: 2026/2027
   startDate                   DateTime               @map("start_date")

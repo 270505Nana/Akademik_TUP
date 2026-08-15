@@ -46,8 +46,14 @@ const getYudisiumPeriodById = asyncHandler(async (req, res) => {
 
 // Buat Yudisium Period Baru
 const createYudisiumPeriod = asyncHandler(async (req, res) => {
-  const { category, period, startDate, endDate, isOpen } = req.body;
+  const { name, category, period, startDate, endDate, isOpen } = req.body;
   const errors = [];
+
+  if (isNil(name)) {
+    errors.push({ field: "name", message: "Nama wajib diisi" });
+  } else if (typeof name !== 'string') {
+    errors.push({ field: "name", message: "Nama harus berupa string" });
+  }
 
   if (isNil(category)) {
     errors.push({ field: "category", message: "Category wajib diisi" });
@@ -65,16 +71,14 @@ const createYudisiumPeriod = asyncHandler(async (req, res) => {
     errors.push({ field: "startDate", message: "Tanggal mulai wajib diisi" });
   } else if (!isValidISO8601(startDate)) {
     errors.push({ field: "startDate", message: "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)" });
-  } else if (new Date(startDate) < new Date()) {
-    errors.push({ field: "startDate", message: "Tanggal mulai tidak boleh di masa lalu" });
   }
   
   if (isNil(endDate)) {
     errors.push({ field: "endDate", message: "Tanggal selesai wajib diisi" });
   } else if (!isValidISO8601(endDate)) {
     errors.push({ field: "endDate", message: "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)" });
-  } else if (startDate && new Date(endDate) <= new Date(startDate)) {
-    errors.push({ field: "endDate", message: "Tanggal selesai harus setelah tanggal mulai" });
+  } else if (startDate && new Date(endDate) < new Date(startDate)) {
+    errors.push({ field: "endDate", message: "Tanggal selesai tidak boleh sebelum tanggal mulai" });
   }
   
   const parsedIsOpen = parseBoolean(isOpen);
@@ -88,6 +92,7 @@ const createYudisiumPeriod = asyncHandler(async (req, res) => {
 
   const newYudisiumPeriod = await prisma.yudisiumPeriod.create({
     data: {
+      name,
       category,
       period,
       startDate: new Date(startDate),
@@ -105,8 +110,12 @@ const createYudisiumPeriod = asyncHandler(async (req, res) => {
 // Update Yudisium Period
 const updateYudisiumPeriod = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { category, period, startDate, endDate, isOpen } = req.body;
+  const { name, category, period, startDate, endDate, isOpen } = req.body;
   const errors = [];
+
+  if (!isNil(name) && typeof name !== 'string') {
+    errors.push({ field: "name", message: "Nama harus berupa string" });
+  }
 
   if (!isNil(category) && typeof category !== 'string') {
     errors.push({ field: "category", message: "Category harus berupa string" });
@@ -119,8 +128,6 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
   if (!isNil(startDate)) {
     if (!isValidISO8601(startDate)) {
       errors.push({ field: "startDate", message: "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)" });
-    } else if (new Date(startDate) < new Date()) {
-      errors.push({ field: "startDate", message: "Tanggal mulai tidak boleh di masa lalu" });
     }
   }
   
@@ -154,8 +161,8 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
 
   if (!isNil(endDate)) {
     const startToCompare = startDate || yudisiumPeriodExists.startDate;
-    if (new Date(endDate) <= new Date(startToCompare)) {
-      errors.push({ field: "endDate", message: "Tanggal selesai harus setelah tanggal mulai" });
+    if (new Date(endDate) < new Date(startToCompare)) {
+      errors.push({ field: "endDate", message: "Tanggal selesai tidak boleh sebelum tanggal mulai" });
       return sendValidationError(res, errors);
     }
   }
@@ -165,6 +172,7 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
       id,
     },
     data: {
+      ...(name !== undefined && { name }),
       ...(category !== undefined && { category }),
       ...(period !== undefined && { period }),
       ...(startDate && { startDate: new Date(startDate) }),

@@ -81,11 +81,16 @@ router.get("/:id", verifyToken, getYudisiumPeriodById);
  *           schema:
  *             type: object
  *             required:
+ *               - name
  *               - category
  *               - period
  *               - startDate
  *               - endDate
  *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Yudisium Periode Ganjil 2026/2027
+ *                 description: Period name
  *               category:
  *                 type: string
  *                 example: pendaftaran yudisium
@@ -144,6 +149,9 @@ router.post(
  *           schema:
  *             type: object
  *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Yudisium Periode Genap 2026/2027
  *               category:
  *                 type: string
  *                 example: yudisium
