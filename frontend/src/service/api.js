@@ -47,14 +47,14 @@ api.interceptors.response.use(
 
 // ------------------------------------------- AUTH -------------------------------------------
 export const registerUser = async ({
-  username,
+  name,
   email,
   no_telp,
   password,
   confirmPassword,
 }) => {
   const response = await api.post("/api/auth/register", {
-    username,
+    name,
     email,
     phone: no_telp,
     password,
@@ -70,12 +70,12 @@ export const loginUser = async ({ email, password }) => {
 
 // ------------------------------------------- MAHASISWA SIDE-------------------------------------------
 export const getStudentData = async (userId) => {
-  const response = await api.get(`/api/students/${userId}`);
+  const response = await api.get(`/api/mahasiswa/${userId}`);
   return response.data;
 };
 
 export const saveStudentData = async (userId, payload) => {
-  const response = await api.put(`/api/students/${userId}`, payload);
+  const response = await api.put(`/api/mahasiswa/${userId}`, payload);
   return response.data;
 };
 
@@ -83,7 +83,7 @@ export const saveStudentData = async (userId, payload) => {
 // Cek request SK milik mahasiswa sendiri
 export const getSKTARequest = async (studentId) => {
   try {
-    const response = await api.get(`/api/skta-requests/${studentId}`);
+    const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
     return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
@@ -99,6 +99,7 @@ export const submitSKTARequest = async ({
   dosenPembimbing1Id,
   dosenPembimbing2Id,
   evidence,
+  category,
 }) => {
   const formData = new FormData();
   formData.append("proposalTitleId", proposalTitleId);
@@ -108,7 +109,11 @@ export const submitSKTARequest = async ({
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   formData.append("evidence", evidence);
 
-  const response = await api.post("/api/skta-requests", formData, {
+  const url = category
+    ? `/api/permohonan-skta?category=${encodeURIComponent(category)}`
+    : "/api/permohonan-skta";
+
+  const response = await api.post(url, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
@@ -133,7 +138,7 @@ export const resubmitSKTARequest = async ({
   if (evidence) formData.append("evidence", evidence);
 
   const response = await api.patch(
-    `/api/skta-requests/${sktaRequestId}`,
+    `/api/permohonan-skta/${sktaRequestId}`,
     formData,
     {
       headers: { "Content-Type": "multipart/form-data" },
@@ -141,9 +146,10 @@ export const resubmitSKTARequest = async ({
   );
   return response.data;
 };
+
 export const getSKTAResponse = async (sktaRequestId) => {
   try {
-    const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
+    const response = await api.get(`/api/permohonan-skta/${sktaRequestId}`);
     return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
@@ -153,29 +159,25 @@ export const getSKTAResponse = async (sktaRequestId) => {
 
 // ------------------------------------------- DOSEN -------------------------------------------
 export const getLecturersData = async () => {
-  const response = await api.get(`/api/lecturers`);
+  const response = await api.get(`/api/dosen`);
   return response.data;
 };
 
 export const getLecturerData = async (userId) => {
-  const response = await api.get(`/api/lecturers/${userId}`);
+  const response = await api.get(`/api/dosen/${userId}`);
   return response.data;
 };
 
 // ------------------------------------------- ADMIN (Permohonan SK) -------------------------------------------
 export const getAcademicStaffData = async (userId) => {
-  const response = await api.get(`/api/academic-staff/${userId}`);
+  const response = await api.get(`/api/admin/${userId}`);
   return response.data;
 };
 
 export const getAllSktaRequests = async (params = {}) => {
   try {
-    const response = await api.get("/api/skta-requests", { params });
-    if (response.data?.data) {
-      return response.data;         
-    }
-    
-    return response.data;            
+    const response = await api.get("/api/permohonan-skta", { params });
+    return response.data?.data ?? response.data;
   } catch (err) {
     console.error("Error fetching all SKTA requests:", err);
     throw err;
@@ -183,14 +185,14 @@ export const getAllSktaRequests = async (params = {}) => {
 };
 
 export const getSktaRequestById = async (id) => {
-  const response = await api.get(`/api/skta-requests/${id}`);
-  return response.data;
+  const response = await api.get(`/api/permohonan-skta/${id}`);
+  return response.data?.data ?? response.data;
 };
 
 // Response Admin
 export const getSktaResponseByRequestId = async (sktaRequestId) => {
   try {
-    const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
+    const response = await api.get(`/api/permohonan-skta/${sktaRequestId}`);
     return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
@@ -200,83 +202,108 @@ export const getSktaResponseByRequestId = async (sktaRequestId) => {
 
 export const getSktaResponseUploadByStudentId = async (studentId) => {
   try {
-    const response = await api.get(
-      `/api/skta-responses/requests/${studentId}/uploads`,
-    );
-    return response.data;
-  } catch (err) {
-    if (err.response?.status === 404) return null;
-    throw err;
-  }
-};
-
-export const createOrUpdateSktaResponse = async (payload) => {
-  if (payload instanceof FormData) {
-    const existingId = payload.get('id');
-    if (existingId) {
-      // Update: gunakan PATCH dengan id yang sudah ada
-      payload.delete('id'); 
-      return api.patch(`/api/skta-responses/${existingId}`, payload, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-    }
-    // Create baru
-    return api.post("/api/skta-responses", payload, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-  }
-
-  const { id, ...data } = payload;
-  if (id) {
-    return api.patch(`/api/skta-responses/${id}`, data);
-  }
-  return api.post("/api/skta-responses", data);
-};
-
-
-export const uploadSkFinal = async (sktaResponseId, file) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("sktaResponseId", sktaResponseId);
-
-  const response = await api.post(
-    `/api/skta-responses/${sktaResponseId}/uploads`,
-    formData,
-    {
-      headers: { "Content-Type": "multipart/form-data" },
-    },
-  );
-  return response.data;
-};
-
-// Download Evidence Mahasiswa — endpoint confirmed 200 OK
-// uploadId = upload.id (integer primary key dari tabel SktaRequestUpload)
-export const downloadEvidence = async (uploadId) => {
-  const response = await api.get(
-    `/api/skta-requests/uploads/${uploadId}/download`,
-    { responseType: 'blob' }
-  );
-  return response.data;
-};
- 
-// Get Evidence Uploads by Student ID 
-export const getEvidenceUploadsByStudentId = async (studentId) => {
-  try {
-    const response = await api.get(`/api/skta-requests/${studentId}`);
-    const requestData = response.data?.data ?? response.data;
-    return requestData?.sktaRequestUploads || [];
+    const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
+    const data = response.data?.data ?? response.data;
+    return data?.sktaResponseUploads || [];
   } catch (err) {
     if (err.response?.status === 404) return [];
     throw err;
   }
 };
 
-export const downloadSK = async (uploadId) => {
+// Admin approve & reject endpoints
+export const approvePermohonanSK = async (id, {
+  hasUploadedFinalProposal,
+  hasTakenLanguageTest,
+  expDate,
+  adminId,
+  sktaFile,
+}) => {
+  const formData = new FormData();
+  formData.append("hasUploadedFinalProposal", String(hasUploadedFinalProposal));
+  formData.append("hasTakenLanguageTest", String(hasTakenLanguageTest));
+  if (expDate) formData.append("expDate", expDate);
+  formData.append("adminId", String(adminId));
+  if (sktaFile) formData.append("skta", sktaFile);
+
+  const response = await api.patch(`/api/permohonan-skta/${id}/approve`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
+
+export const rejectPermohonanSK = async (id, {
+  message,
+  adminId,
+}) => {
+  const response = await api.patch(`/api/permohonan-skta/${id}/reject`, {
+    message,
+    adminId,
+  });
+  return response.data;
+};
+
+// Compatibility shim for legacy file upload
+export const createOrUpdateSktaResponse = async (payload) => {
+  // If payload is FormData, extract the fields and call the correct endpoint
+  if (payload instanceof FormData) {
+    const id = payload.get("id") || payload.get("sktaRequestId");
+    const adminId = payload.get("adminId") || payload.get("academicStaffId");
+    const message = payload.get("message");
+    const sktaFile = payload.get("sktaFile") || payload.get("skta");
+
+    if (message) {
+      // It's a rejection
+      return rejectPermohonanSK(id, { message, adminId });
+    } else {
+      // It's an approval
+      return approvePermohonanSK(id, {
+        hasUploadedFinalProposal: payload.get("hasUploadedFinalProposal") === "true",
+        hasTakenLanguageTest: payload.get("hasTakenLanguageTest") === "true",
+        expDate: payload.get("expDate"),
+        adminId,
+        sktaFile,
+      });
+    }
+  }
+
+  const { id, adminId, academicStaffId, message, ...data } = payload;
+  const targetAdminId = adminId || academicStaffId;
+  const targetId = id || payload.sktaRequestId;
+
+  if (message) {
+    return rejectPermohonanSK(targetId, { message, adminId: targetAdminId });
+  } else {
+    return approvePermohonanSK(targetId, { ...data, adminId: targetAdminId });
+  }
+};
+
+// Download Evidence Mahasiswa
+export const downloadEvidence = async (permohonanId) => {
   const response = await api.get(
-    `/api/skta-responses/uploads/${uploadId}/download`,
-    {
-      responseType: "blob",
-    },
+    `/api/permohonan-skta/${permohonanId}/download/evidence`,
+    { responseType: 'blob' }
+  );
+  return response.data;
+};
+
+// Get Evidence Uploads by Student ID
+export const getEvidenceUploadsByStudentId = async (studentId) => {
+  try {
+    const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
+    const data = response.data?.data ?? response.data;
+    return data?.sktaRequestUploads || [];
+  } catch (err) {
+    if (err.response?.status === 404) return [];
+    throw err;
+  }
+};
+
+// Download SK
+export const downloadSK = async (permohonanId) => {
+  const response = await api.get(
+    `/api/permohonan-skta/${permohonanId}/download/skta`,
+    { responseType: "blob" },
   );
   return response.data;
 };
@@ -434,7 +461,7 @@ export const upsertSidangRegistrationResponse = async (payload, existingId) => {
 
 // ------------------------------------------- ETC -------------------------------------------
 export const getLecturers = async () =>
-  api.get("/api/lecturers").then((r) => r.data?.data ?? r.data);
+  api.get("/api/dosen").then((r) => r.data?.data ?? r.data);
 export const getFaculties = async () =>
   api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
 export const getStudyPrograms = async () =>

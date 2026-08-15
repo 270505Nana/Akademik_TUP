@@ -1,13 +1,12 @@
 import express from 'express';
 import authRouter from './auth.js';
-import academicStaffRouter from './academicStaff.js';
+import adminRouter from './admin.js';
 import researchGroupRouter from './researchGroup.js';
-import lecturerRouter from './lecturer.js';
+import dosenRouter from './dosen.js';
 import facultyRouter from './faculty.js';
 import studyProgramRouter from './studyProgram.js';
-import studentRouter from './student.js';
-import sktaRequestRouter from './sktaRequest.js';
-import sktaResponseRouter from './sktaResponse.js';
+import mahasiswaRouter from './mahasiswa.js';
+import permohonanSktaRouter from './permohonanSkta.js';
 import templateRouter from './templateUpload.js';
 import sidangPeriodRouter from './sidangPeriod.js';
 import sidangRegistrationPeriodRouter from './sidangRegsitrationPeriod.js';
@@ -25,15 +24,13 @@ import formulirPenerbitanSktaUploadRouter from './formulirPenerbitanSktaUpload.j
 const router = express.Router();
 
 router.use("/auth", authRouter);
-router.use("/academic-staff", academicStaffRouter);
+router.use("/admin", adminRouter);
 router.use("/research-groups", researchGroupRouter);
-router.use("/lecturers", lecturerRouter);
+router.use("/dosen", dosenRouter);
 router.use("/faculties", facultyRouter);
 router.use("/study-programs", studyProgramRouter);
-router.use("/students", studentRouter);
-router.use("/skta-requests", sktaRequestRouter);
-router.use("/api/skta-responses", sktaResponseRouter); // Wait, in old index it was router.use("/skta-responses", require("./sktaResponse"))
-router.use("/skta-responses", sktaResponseRouter);
+router.use("/mahasiswa", mahasiswaRouter);
+router.use("/permohonan-skta", permohonanSktaRouter);
 router.use("/templates", templateRouter);
 router.use("/sidang-periods", sidangPeriodRouter);
 router.use("/sidang-registration-periods", sidangRegistrationPeriodRouter);

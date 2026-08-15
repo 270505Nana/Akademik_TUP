@@ -1,8 +1,6 @@
-const bcrypt = require("bcrypt");
+import prisma from '../../src/config/prisma.js';
 
-const prisma = require("../client");
-
-async function seedResearchGroup() {
+export async function seedResearchGroup() {
   console.log("- Seeding research group...");
 
   const researchGroups = [
@@ -33,5 +31,3 @@ async function seedResearchGroup() {
 
   console.log("- Research group seeded successful");
 }
-
-module.exports = { seedResearchGroup };

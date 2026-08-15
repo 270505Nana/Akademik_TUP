@@ -47,7 +47,7 @@ const checkYudisiumEditable = async (registrationId) => {
 const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   const yudisiumRegistrations = await prisma.yudisiumRegistration.findMany({
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -99,7 +99,7 @@ const getYudisiumRegistrationById = asyncHandler(async (req, res) => {
       id: parseInt(id),
     },
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -140,16 +140,16 @@ const getYudisiumRegistrationById = asyncHandler(async (req, res) => {
   });
 });
 
-// Get Yudisium Registration by Student ID
-const getYudisiumRegistrationByStudentId = asyncHandler(async (req, res) => {
-  const { studentId } = req.params;
+// Get Yudisium Registration by Mahasiswa ID
+const getYudisiumRegistrationByMahasiswaId = asyncHandler(async (req, res) => {
+  const { mahasiswaId } = req.params;
 
   const yudisiumRegistration = await prisma.yudisiumRegistration.findFirst({
     where: {
-      studentId: parseInt(studentId),
+      mahasiswaId: parseInt(mahasiswaId),
     },
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -206,7 +206,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     cumlaudeScheme,
     jalurNonYudisium,
     eviden_cumlaude,
-    studentId,
+    mahasiswaId,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
     yudisiumPeriodId,
@@ -214,9 +214,9 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
   } = req.body;
 
   // Validate references if provided
-  if (studentId) {
-    const studentExists = await prisma.student.findUnique({
-      where: { id: parseInt(studentId) },
+  if (mahasiswaId) {
+    const studentExists = await prisma.mahasiswa.findUnique({
+      where: { id: parseInt(mahasiswaId) },
     });
     if (!studentExists) {
       res.status(404);
@@ -225,7 +225,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
   }
 
   if (dosenPembimbing1Id) {
-    const dosenExists = await prisma.lecturer.findUnique({
+    const dosenExists = await prisma.dosen.findUnique({
       where: { id: parseInt(dosenPembimbing1Id) },
     });
     if (!dosenExists) {
@@ -235,7 +235,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
   }
 
   if (dosenPembimbing2Id) {
-    const dosenExists = await prisma.lecturer.findUnique({
+    const dosenExists = await prisma.dosen.findUnique({
       where: { id: parseInt(dosenPembimbing2Id) },
     });
     if (!dosenExists) {
@@ -274,7 +274,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
       jalurNonYudisium !== undefined ? jalurNonYudisium : undefined,
     eviden_cumlaude:
       eviden_cumlaude !== undefined ? eviden_cumlaude : undefined,
-    studentId: studentId !== undefined ? parseInt(studentId) : undefined,
+    mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : undefined,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined
         ? parseInt(dosenPembimbing1Id)
@@ -299,14 +299,14 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
       where: { id: parseInt(id) },
       data: upsertData,
       include: {
-        student: { select: { id: true, nim: true, name: true } },
+        mahasiswa: { select: { id: true, nim: true, name: true } },
         dosenPembimbing1: { select: { id: true, nip: true, name: true } },
         dosenPembimbing2: { select: { id: true, nip: true, name: true } },
       },
     });
-  } else if (studentId) {
+  } else if (mahasiswaId) {
     const existing = await prisma.yudisiumRegistration.findFirst({
-      where: { studentId: parseInt(studentId) },
+      where: { mahasiswaId: parseInt(mahasiswaId) },
       orderBy: { createdAt: "desc" },
     });
 
@@ -321,7 +321,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
         where: { id: existing.id },
         data: upsertData,
         include: {
-          student: { select: { id: true, nim: true, name: true } },
+          mahasiswa: { select: { id: true, nim: true, name: true } },
           dosenPembimbing1: { select: { id: true, nip: true, name: true } },
           dosenPembimbing2: { select: { id: true, nip: true, name: true } },
         },
@@ -337,7 +337,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
       // Check if student is already registered in this period
       const existingInPeriod = await prisma.yudisiumRegistration.findFirst({
         where: {
-          studentId: parseInt(studentId),
+          mahasiswaId: parseInt(mahasiswaId),
           yudisiumRegistrationPeriodId: targetPeriodId,
           deletedAt: null,
         },
@@ -351,7 +351,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
       yudisiumRegistration = await prisma.yudisiumRegistration.create({
         data: upsertData,
         include: {
-          student: { select: { id: true, nim: true, name: true } },
+          mahasiswa: { select: { id: true, nim: true, name: true } },
           dosenPembimbing1: { select: { id: true, nip: true, name: true } },
           dosenPembimbing2: { select: { id: true, nip: true, name: true } },
         },
@@ -368,7 +368,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     yudisiumRegistration = await prisma.yudisiumRegistration.create({
       data: upsertData,
       include: {
-        student: { select: { id: true, nim: true, name: true } },
+        mahasiswa: { select: { id: true, nim: true, name: true } },
         dosenPembimbing1: { select: { id: true, nip: true, name: true } },
         dosenPembimbing2: { select: { id: true, nip: true, name: true } },
       },
@@ -394,7 +394,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     cumlaudeScheme,
     jalurNonYudisium,
     eviden_cumlaude,
-    studentId,
+    mahasiswaId,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
     yudisiumPeriodId,
@@ -436,7 +436,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
       jalurNonYudisium !== undefined ? jalurNonYudisium : undefined,
     eviden_cumlaude:
       eviden_cumlaude !== undefined ? eviden_cumlaude : undefined,
-    studentId: studentId !== undefined ? parseInt(studentId) : undefined,
+    mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : undefined,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined
         ? parseInt(dosenPembimbing1Id)
@@ -483,7 +483,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     "thesisTitleId",
     "thesisTitleEn",
     "isConfirmed",
-    "studentId",
+    "mahasiswaId",
     "dosenPembimbing1Id",
     "dosenPembimbing2Id",
   ];
@@ -516,9 +516,9 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     );
   }
 
-  if (mergedData.studentId) {
-    const s = await prisma.student.findUnique({
-      where: { id: mergedData.studentId },
+  if (mergedData.mahasiswaId) {
+    const s = await prisma.mahasiswa.findUnique({
+      where: { id: mergedData.mahasiswaId },
     });
     if (!s) {
       res.status(404);
@@ -526,7 +526,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     }
   }
   if (mergedData.dosenPembimbing1Id) {
-    const d1 = await prisma.lecturer.findUnique({
+    const d1 = await prisma.dosen.findUnique({
       where: { id: mergedData.dosenPembimbing1Id },
     });
     if (!d1) {
@@ -535,7 +535,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     }
   }
   if (mergedData.dosenPembimbing2Id) {
-    const d2 = await prisma.lecturer.findUnique({
+    const d2 = await prisma.dosen.findUnique({
       where: { id: mergedData.dosenPembimbing2Id },
     });
     if (!d2) {
@@ -563,7 +563,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     where: { id: parseInt(id) },
     data: updateData,
     include: {
-      student: { select: { id: true, nim: true, name: true } },
+      mahasiswa: { select: { id: true, nim: true, name: true } },
       dosenPembimbing1: { select: { id: true, nip: true, name: true } },
       dosenPembimbing2: { select: { id: true, nip: true, name: true } },
     },
@@ -717,7 +717,7 @@ const downloadYudisiumRegistrationFile = asyncHandler(async (req, res) => {
 
 export { listYudisiumRegistrations,
   getYudisiumRegistrationById,
-  getYudisiumRegistrationByStudentId,
+  getYudisiumRegistrationByMahasiswaId,
   saveYudisiumRegistration,
   submitYudisiumRegistration,
   deleteYudisiumRegistration,

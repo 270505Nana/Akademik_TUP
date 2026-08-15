@@ -9,7 +9,7 @@ import { listSidangRegistrationPeriods,
   deleteSidangRegistrationPeriod, } from '../../controllers/sidangRegistrationPeriodController.js';
 import { createSidangRegistrationPeriodValidator,
   updateSidangRegistrationPeriodValidator, } from '../../validators/sidangRegistrationPeriodValidator.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -109,7 +109,7 @@ router.get("/:id", verifyToken, getSidangRegistrationPeriodById);
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   createSidangRegistrationPeriodValidator,
   validate,
   createSidangRegistrationPeriod,
@@ -166,7 +166,7 @@ router.post(
 router.patch(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   updateSidangRegistrationPeriodValidator,
   validate,
   updateSidangRegistrationPeriod,
@@ -200,7 +200,7 @@ router.patch(
 router.delete(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   deleteSidangRegistrationPeriod,
 );
 

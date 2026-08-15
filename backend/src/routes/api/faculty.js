@@ -69,7 +69,7 @@ router.get("/", verifyToken, listFaculties);
 router.post(
   "/",
   verifyToken,
-  authorize("ACADEMIC_STAFF"),
+  authorize("ADMIN"),
   createFacultyValidator,
   validate,
   createFaculty,
@@ -129,7 +129,7 @@ router.get("/:id", verifyToken, findFacultyById);
 router.put(
   "/:id",
   verifyToken,
-  authorize("ACADEMIC_STAFF"),
+  authorize("ADMIN"),
   updateFacultyValidator,
   validate,
   updateFaculty,
@@ -155,7 +155,7 @@ router.put(
  *       404:
  *         description: Faculty not found
  */
-router.delete("/:id", verifyToken, authorize("ACADEMIC_STAFF"), deleteFaculty);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
 
 /**
  * @swagger
@@ -180,7 +180,7 @@ router.delete("/:id", verifyToken, authorize("ACADEMIC_STAFF"), deleteFaculty);
 router.patch(
   "/:id/toggle-publish",
   verifyToken,
-  authorize("ACADEMIC_STAFF"),
+  authorize("ADMIN"),
   toggleFacultyPublish,
 );
 

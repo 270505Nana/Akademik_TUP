@@ -291,7 +291,7 @@ const RegistrasiSidang = () => {
   }, [logout, showAlert]);
 
   useEffect(() => {
-    if (user?.role === 'ACADEMIC_STAFF') fetchAll();
+    if (user?.role === 'ADMIN') fetchAll();
   }, [user]);
 
   const getStatus = useCallback((reg) => {

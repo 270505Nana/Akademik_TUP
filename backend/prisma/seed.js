@@ -1,25 +1,21 @@
-const prisma = require("./client");
+import prisma from '../src/config/prisma.js';
 
-const { seedAcademicStaff } = require("./seeders/academicStaffSeeder");
-const { seedResearchGroup } = require("./seeders/researchGroupSeeder");
-const { seedLecturer } = require("./seeders/lecturerSeeder");
-const {
-  seedFacultyStudyProgram,
-} = require("./seeders/facultyStudyProgramSeeder");
-const { seedStudent } = require("./seeders/studentSeeder");
-// const { seedTemplateUpload } = require("./seeders/templateUploadSeeder");
+import { seedAdmin } from './seeders/adminSeeder.js';
+import { seedResearchGroup } from './seeders/researchGroupSeeder.js';
+import { seedDosen } from './seeders/dosenSeeder.js';
+import { seedFacultyStudyProgram } from './seeders/facultyStudyProgramSeeder.js';
+import { seedMahasiswa } from './seeders/mahasiswaSeeder.js';
 
 async function main() {
   console.log("- Starting seeding...");
 
-  await seedAcademicStaff();
+  await seedAdmin();
 
   await seedResearchGroup();
-  await seedLecturer();
+  await seedDosen();
 
   await seedFacultyStudyProgram();
-  await seedStudent();
-  // await seedTemplateUpload();
+  await seedMahasiswa();
 
   console.log("- Seeding finished");
 }

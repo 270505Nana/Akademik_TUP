@@ -1,0 +1,454 @@
+import asyncHandler from 'express-async-handler';
+import prisma from '../prisma/client.js';
+import fs from 'fs';
+import path from 'path';
+
+const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
+
+const removeUploadedFiles = (files) => {
+  if (!files) return;
+
+  if (Array.isArray(files)) {
+    files.forEach((file) => {
+      if (file?.path) {
+        fs.unlink(file.path, () => {});
+      }
+    });
+    return;
+  }
+
+  Object.values(files).forEach((value) => {
+    removeUploadedFiles(value);
+  });
+};
+
+// Helper untuk menyelaraskan model baru PermohonanSkta dengan format lama yang diharapkan Frontend
+const mapPermohonanToFrontend = (item, req) => {
+  if (!item) return null;
+  return {
+    ...item,
+    proposalTitleId: item.judulProposalIndonesia,
+    proposalTitleEn: item.judulProposalInggris,
+    studentId: item.mahasiswaId,
+    student: item.mahasiswa
+      ? {
+          id: item.mahasiswa.id,
+          studentId: item.mahasiswa.id,
+          name: item.mahasiswa.user?.name || '',
+          nim: item.mahasiswa.nim || '',
+          studyProgramId: item.mahasiswa.studyProgramId,
+          studyProgramNama: item.mahasiswa.studyProgram?.name || '',
+        }
+      : null,
+    dosenPembimbing1Id: item.dosenPembimbing1Id,
+    dosenPembimbing2Id: item.dosenPembimbing2Id,
+    sktaRequestUploads: item.evidenceUploadPath
+      ? [
+          {
+            id: item.id,
+            name: `Evidence_${item.mahasiswa?.nim || 'SKTA'}_${item.mahasiswa?.user?.name || 'Mhs'}`,
+            filename: path.basename(item.evidenceUploadPath),
+            path: item.evidenceUploadPath,
+            mahasiswaId: item.mahasiswaId,
+            downloadUrl: `${req.protocol}://${req.get("host")}/api/permohonan-skta/${item.id}/download/evidence`,
+          },
+        ]
+      : [],
+    sktaResponseUploads: item.sktaUploadPath
+      ? [
+          {
+            id: item.id,
+            name: `SKTA_${item.id}`,
+            filename: path.basename(item.sktaUploadPath),
+            path: item.sktaUploadPath,
+            mahasiswaId: item.mahasiswaId,
+            downloadUrl: `${req.protocol}://${req.get("host")}/api/permohonan-skta/${item.id}/download/skta`,
+          },
+        ]
+      : [],
+    evidenceDownloadUrl: item.evidenceUploadPath
+      ? `${req.protocol}://${req.get("host")}/api/permohonan-skta/${item.id}/download/evidence`
+      : null,
+    sktaDownloadUrl: item.sktaUploadPath
+      ? `${req.protocol}://${req.get("host")}/api/permohonan-skta/${item.id}/download/skta`
+      : null,
+  };
+};
+
+// [Route] Mendapatkan Semua Permohonan SKTA
+const listPermohonanSkta = asyncHandler(async (req, res) => {
+  const data = await prisma.permohonanSkta.findMany({
+    include: {
+      mahasiswa: {
+        include: {
+          studyProgram: true,
+          user: true,
+        },
+      },
+      dosenPembimbing1: true,
+      dosenPembimbing2: true,
+      researchGroup: true,
+      admin: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  const enriched = data.map((item) => mapPermohonanToFrontend(item, req));
+  res.json({ data: enriched });
+});
+
+// [Route] Membuat Permohonan SKTA Baru
+const createPermohonanSkta = asyncHandler(async (req, res) => {
+  try {
+    const category = req.query.category || "Permohonan Baru";
+    const {
+      studentId,
+      mahasiswaId,
+      proposalTitleId,
+      judulProposalIndonesia,
+      proposalTitleEn,
+      judulProposalInggris,
+      dosenPembimbing1Id,
+      dosenPembimbing2Id,
+    } = req.body;
+
+    const mhsId = studentId || mahasiswaId;
+    const judulIndo = proposalTitleId || judulProposalIndonesia;
+    const judulEng = proposalTitleEn || judulProposalInggris;
+
+    if (!mhsId || !judulIndo || !judulEng || !dosenPembimbing1Id || !dosenPembimbing2Id) {
+      res.status(400);
+      throw new Error("Semua field wajib diisi");
+    }
+
+    const evidenceFile = getUploadedFile(req.files, "evidence");
+    if (!evidenceFile) {
+      res.status(400);
+      throw new Error("Berkas evidence wajib diunggah");
+    }
+
+    // Cek apakah ada data mahasiswa
+    const student = await prisma.mahasiswa.findFirst({
+      where: { id: mhsId },
+    });
+    if (!student) {
+      res.status(404);
+      throw new Error("Mahasiswa tidak ditemukan");
+    }
+
+    // Cek apakah mahasiswa sudah punya pengajuan baru/aktif (jika mengajukan permohonan baru)
+    if (category === "Permohonan Baru") {
+      const existing = await prisma.permohonanSkta.findFirst({
+        where: {
+          mahasiswaId: mhsId,
+          category: "Permohonan Baru",
+          deletedAt: null,
+        },
+      });
+      if (existing) {
+        res.status(409);
+        throw new Error(
+          "Mahasiswa sudah memiliki pengajuan SK. Untuk pembaruan SK, gunakan kategori Perpanjangan atau Perubahan."
+        );
+      }
+    }
+
+    // Ambil researchGroupId otomatis dari Dosen Pembimbing 1
+    const dosenPembimbing1 = await prisma.dosen.findUnique({
+      where: { id: dosenPembimbing1Id },
+    });
+    if (!dosenPembimbing1) {
+      res.status(404);
+      throw new Error("Dosen pembimbing 1 tidak ditemukan");
+    }
+    const researchGroupId = dosenPembimbing1.researchGroupId;
+
+    const data = await prisma.permohonanSkta.create({
+      data: {
+        category,
+        mahasiswaId: mhsId,
+        judulProposalIndonesia: judulIndo,
+        judulProposalInggris: judulEng,
+        dosenPembimbing1Id,
+        dosenPembimbing2Id,
+        researchGroupId,
+        evidenceUploadPath: evidenceFile.path,
+      },
+    });
+
+    res.status(201).json({
+      message: "Permohonan SKTA berhasil diajukan",
+      data: mapPermohonanToFrontend(data, req),
+    });
+  } catch (error) {
+    removeUploadedFiles(req.files || req.file);
+    throw error;
+  }
+});
+
+// [Route] Mengedit Permohonan SKTA
+const updatePermohonanSkta = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const permohonan = await prisma.permohonanSkta.findUnique({ where: { id } });
+    if (!permohonan) {
+      res.status(404);
+      throw new Error("Permohonan SKTA tidak ditemukan");
+    }
+
+    const {
+      proposalTitleId,
+      judulProposalIndonesia,
+      proposalTitleEn,
+      judulProposalInggris,
+      dosenPembimbing1Id,
+      dosenPembimbing2Id,
+    } = req.body;
+
+    const judulIndo = proposalTitleId || judulProposalIndonesia;
+    const judulEng = proposalTitleEn || judulProposalInggris;
+
+    const evidenceFile = getUploadedFile(req.files, "evidence");
+
+    const updateData = {
+      judulProposalIndonesia: (judulProposalIndonesia || proposalTitleId || "").trim(),
+      judulProposalInggris: (judulProposalInggris || proposalTitleEn || "").trim(),
+      message: null, // Clear rejection message upon student resubmission
+      isEdit: null,  // Clear revision deadline upon student resubmission
+    };
+
+    if (dosenPembimbing1Id) {
+      updateData.dosenPembimbing1Id = dosenPembimbing1Id;
+      // Update researchGroupId otomatis jika dospem 1 berubah
+      const dosenPembimbing1 = await prisma.dosen.findUnique({
+        where: { id: dosenPembimbing1Id },
+      });
+      if (dosenPembimbing1) {
+        updateData.researchGroupId = dosenPembimbing1.researchGroupId;
+      }
+    }
+    if (dosenPembimbing2Id) updateData.dosenPembimbing2Id = dosenPembimbing2Id;
+
+    if (evidenceFile) {
+      if (permohonan.evidenceUploadPath && fs.existsSync(permohonan.evidenceUploadPath)) {
+        fs.unlink(permohonan.evidenceUploadPath, () => {});
+      }
+      updateData.evidenceUploadPath = evidenceFile.path;
+    }
+
+    const data = await prisma.permohonanSkta.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.json({
+      message: "Permohonan SKTA berhasil diubah",
+      data: mapPermohonanToFrontend(data, req),
+    });
+  } catch (error) {
+    removeUploadedFiles(req.files || req.file);
+    throw error;
+  }
+});
+
+// [Route] Mendapatkan Permohonan SKTA berdasarkan ID Permohonan
+const getPermohonanSktaById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const data = await prisma.permohonanSkta.findUnique({
+    where: { id },
+    include: {
+      mahasiswa: {
+        include: {
+          studyProgram: true,
+          user: true,
+        },
+      },
+      dosenPembimbing1: true,
+      dosenPembimbing2: true,
+      researchGroup: true,
+      admin: true,
+    },
+  });
+
+  if (!data) {
+    res.status(404);
+    throw new Error("Permohonan SKTA tidak ditemukan");
+  }
+
+  res.json({ data: mapPermohonanToFrontend(data, req) });
+});
+
+// [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa
+const getLatestPermohonanSktaByStudentId = asyncHandler(async (req, res) => {
+  const { mahasiswaId } = req.params;
+  const data = await prisma.permohonanSkta.findFirst({
+    where: { mahasiswaId },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    include: {
+      mahasiswa: {
+        include: {
+          studyProgram: true,
+          user: true,
+        },
+      },
+      dosenPembimbing1: true,
+      dosenPembimbing2: true,
+      researchGroup: true,
+      admin: true,
+    },
+  });
+
+  if (!data) {
+    res.status(404);
+    throw new Error("Data permohonan SKTA untuk mahasiswa ini tidak ditemukan");
+  }
+
+  res.json({ data: mapPermohonanToFrontend(data, req) });
+});
+
+// [Route] Unduh Berkas SKTA
+const downloadSkta = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const permohonan = await prisma.permohonanSkta.findUnique({
+    where: { id },
+  });
+
+  if (!permohonan || !permohonan.sktaUploadPath) {
+    res.status(404);
+    throw new Error("Berkas SKTA belum diterbitkan atau tidak ditemukan");
+  }
+
+  const filePath = path.resolve(process.cwd(), permohonan.sktaUploadPath);
+  if (!fs.existsSync(filePath)) {
+    res.status(404);
+    throw new Error("Berkas fisik SKTA tidak ditemukan di server");
+  }
+
+  res.download(filePath, path.basename(filePath));
+});
+
+// [Route] Unduh Berkas Evidence
+const downloadEvidence = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const permohonan = await prisma.permohonanSkta.findUnique({
+    where: { id },
+  });
+
+  if (!permohonan || !permohonan.evidenceUploadPath) {
+    res.status(404);
+    throw new Error("Berkas evidence tidak ditemukan");
+  }
+
+  const filePath = path.resolve(process.cwd(), permohonan.evidenceUploadPath);
+  if (!fs.existsSync(filePath)) {
+    res.status(404);
+    throw new Error("Berkas fisik evidence tidak ditemukan di server");
+  }
+
+  res.download(filePath, path.basename(filePath));
+});
+
+// [Route] Menyetujui Permohonan SKTA (Approve)
+const approvePermohonanSkta = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const permohonan = await prisma.permohonanSkta.findUnique({ where: { id } });
+    if (!permohonan) {
+      res.status(404);
+      throw new Error("Permohonan SKTA tidak ditemukan");
+    }
+
+    const {
+      hasUploadedFinalProposal,
+      hasTakenLanguageTest,
+      expDate,
+      adminId,
+    } = req.body;
+
+    const sktaFile = getUploadedFile(req.files, "skta");
+
+    // Cek admin
+    const adminExist = await prisma.admin.findUnique({ where: { id: adminId } });
+    if (!adminExist) {
+      res.status(404);
+      throw new Error("Admin/Staf Akademik tidak ditemukan");
+    }
+
+    const updateData = {
+      hasUploadedFinalProposal: hasUploadedFinalProposal === "true" || hasUploadedFinalProposal === true,
+      hasTakenLanguageTest: hasTakenLanguageTest === "true" || hasTakenLanguageTest === true,
+      expDate: expDate ? new Date(expDate) : null,
+      adminId,
+      message: null, // Hapus pesan penolakan sebelumnya jika ada
+    };
+
+    if (sktaFile) {
+      if (permohonan.sktaUploadPath && fs.existsSync(permohonan.sktaUploadPath)) {
+        fs.unlink(permohonan.sktaUploadPath, () => {});
+      }
+      updateData.sktaUploadPath = sktaFile.path;
+    }
+
+    const data = await prisma.permohonanSkta.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.json({
+      message: "Permohonan SKTA berhasil disetujui",
+      data: mapPermohonanToFrontend(data, req),
+    });
+  } catch (error) {
+    removeUploadedFiles(req.files || req.file);
+    throw error;
+  }
+});
+
+// [Route] Menolak Permohonan SKTA (Reject)
+const rejectPermohonanSkta = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const permohonan = await prisma.permohonanSkta.findUnique({ where: { id } });
+  if (!permohonan) {
+    res.status(404);
+    throw new Error("Permohonan SKTA tidak ditemukan");
+  }
+
+  const { message, adminId } = req.body;
+
+  // Cek admin
+  const adminExist = await prisma.admin.findUnique({ where: { id: adminId } });
+  if (!adminExist) {
+    res.status(404);
+    throw new Error("Admin/Staf Akademik tidak ditemukan");
+  }
+
+  const data = await prisma.permohonanSkta.update({
+     where: { id },
+     data: {
+       message,
+       adminId,
+       isEdit: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Memberikan izin edit selama 7 hari ke depan
+     },
+  });
+
+  res.json({
+    message: "Permohonan SKTA berhasil ditolak",
+    data: mapPermohonanToFrontend(data, req),
+  });
+});
+
+export {
+  listPermohonanSkta,
+  createPermohonanSkta,
+  updatePermohonanSkta,
+  getPermohonanSktaById,
+  getLatestPermohonanSktaByStudentId,
+  downloadSkta,
+  downloadEvidence,
+  approvePermohonanSkta,
+  rejectPermohonanSkta,
+};

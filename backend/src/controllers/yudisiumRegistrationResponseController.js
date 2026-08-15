@@ -6,7 +6,7 @@ const listYudisiumRegistrationResponses = asyncHandler(async (req, res) => {
   const responses = await prisma.yudisiumRegistrationResponse.findMany({
     where: { deletedAt: null },
     include: {
-      academicStaff: {
+      admin: {
         select: {
           id: true,
           name: true,
@@ -17,7 +17,7 @@ const listYudisiumRegistrationResponses = asyncHandler(async (req, res) => {
           id: true,
           thesisTitleId: true,
           thesisTitleEn: true,
-          student: {
+          mahasiswa: {
             select: {
               id: true,
               nim: true,
@@ -47,7 +47,7 @@ const getYudisiumRegistrationResponseById = asyncHandler(async (req, res) => {
       deletedAt: null,
     },
     include: {
-      academicStaff: {
+      admin: {
         select: {
           id: true,
           name: true,
@@ -58,7 +58,7 @@ const getYudisiumRegistrationResponseById = asyncHandler(async (req, res) => {
           id: true,
           thesisTitleId: true,
           thesisTitleEn: true,
-          student: {
+          mahasiswa: {
             select: {
               id: true,
               nim: true,
@@ -91,7 +91,7 @@ const getYudisiumRegistrationResponseByYudisiumRegistrationId = asyncHandler(
         deletedAt: null,
       },
       include: {
-        academicStaff: {
+        admin: {
           select: {
             id: true,
             name: true,
@@ -102,7 +102,7 @@ const getYudisiumRegistrationResponseByYudisiumRegistrationId = asyncHandler(
             id: true,
             thesisTitleId: true,
             thesisTitleEn: true,
-            student: {
+            mahasiswa: {
               select: {
                 id: true,
                 nim: true,
@@ -127,7 +127,7 @@ const getYudisiumRegistrationResponseByYudisiumRegistrationId = asyncHandler(
 
 // Create Yudisium Registration Response
 const createYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
-  const { yudisiumRegistrationId, academicStaffId, message, isEdit } = req.body;
+  const { yudisiumRegistrationId, adminId, message, isEdit } = req.body;
 
   const yudisiumRegistrationExists =
     await prisma.yudisiumRegistration.findUnique({
@@ -139,8 +139,8 @@ const createYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran yudisium tidak ditemukan");
   }
 
-  const academicStaffExists = await prisma.academicStaff.findUnique({
-    where: { id: academicStaffId },
+  const academicStaffExists = await prisma.admin.findUnique({
+    where: { id: adminId },
   });
 
   if (!academicStaffExists) {
@@ -151,12 +151,12 @@ const createYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
   const newResponse = await prisma.yudisiumRegistrationResponse.create({
     data: {
       yudisiumRegistrationId,
-      academicStaffId,
+      adminId,
       message: message || null,
       isEdit: isEdit ? new Date(isEdit) : null,
     },
     include: {
-      academicStaff: {
+      admin: {
         select: {
           id: true,
           name: true,
@@ -167,7 +167,7 @@ const createYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
           id: true,
           thesisTitleId: true,
           thesisTitleEn: true,
-          student: {
+          mahasiswa: {
             select: {
               id: true,
               nim: true,
@@ -195,7 +195,7 @@ const createYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
 // Update Yudisium Registration Response
 const updateYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { message, isEdit, academicStaffId, yudisiumRegistrationId } = req.body;
+  const { message, isEdit, adminId, yudisiumRegistrationId } = req.body;
 
   const responseExists = await prisma.yudisiumRegistrationResponse.findFirst({
     where: {
@@ -220,9 +220,9 @@ const updateYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
     }
   }
 
-  if (academicStaffId) {
-    const academicStaffExists = await prisma.academicStaff.findUnique({
-      where: { id: academicStaffId },
+  if (adminId) {
+    const academicStaffExists = await prisma.admin.findUnique({
+      where: { id: adminId },
     });
     if (!academicStaffExists) {
       res.status(404);
@@ -234,8 +234,8 @@ const updateYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
   if (message !== undefined) updateData.message = message;
   if (isEdit !== undefined)
     updateData.isEdit = isEdit ? new Date(isEdit) : null;
-  if (academicStaffId !== undefined)
-    updateData.academicStaffId = academicStaffId;
+  if (adminId !== undefined)
+    updateData.adminId = adminId;
   if (yudisiumRegistrationId !== undefined)
     updateData.yudisiumRegistrationId = yudisiumRegistrationId;
 
@@ -243,7 +243,7 @@ const updateYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
     where: { id: parseInt(id) },
     data: updateData,
     include: {
-      academicStaff: {
+      admin: {
         select: {
           id: true,
           name: true,
@@ -254,7 +254,7 @@ const updateYudisiumRegistrationResponse = asyncHandler(async (req, res) => {
           id: true,
           thesisTitleId: true,
           thesisTitleEn: true,
-          student: {
+          mahasiswa: {
             select: {
               id: true,
               nim: true,

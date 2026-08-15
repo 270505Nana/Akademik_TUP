@@ -28,6 +28,8 @@ const VerifikasiModal = ({
   const [downloadError,  setDownloadError]  = useState(null);
   const fileInputRef = useRef();
 
+  const [activeTab, setActiveTab] = useState('approve'); // 'approve' | 'reject'
+
   useEffect(() => {
     if (!existingResponse) return;
     setChecks({
@@ -41,6 +43,12 @@ const VerifikasiModal = ({
     setIsEdit(
       existingResponse.isEdit ? existingResponse.isEdit.split('T')[0] : ''
     );
+    // Set active tab based on existing state
+    if (existingResponse.message) {
+      setActiveTab('reject');
+    } else {
+      setActiveTab('approve');
+    }
   }, [existingResponse]);
 
   const toggleCheck = (key) => {
@@ -63,7 +71,7 @@ const VerifikasiModal = ({
     setDownloadingSK(true);
     setDownloadError(null);
     try {
-      const blob = await downloadSK(uploadId);
+      const blob = await downloadSK(selectedPermohonan.id); // download by permohonan ID
       const url  = window.URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
@@ -79,7 +87,11 @@ const VerifikasiModal = ({
     }
   };
 
-  const handleSubmit = () =>
+  const handleSubmit = () => {
+    if (activeTab === 'reject' && !catatan.trim()) {
+      alert('Catatan/Alasan penolakan wajib diisi.');
+      return;
+    }
     onSave({
       selectedPermohonan,
       checks,
@@ -88,10 +100,12 @@ const VerifikasiModal = ({
       existingResponse,
       batasPerbaikan,
       isEdit,
+      actionType: activeTab,
     });
+  };
 
   const studentName    = selectedPermohonan?.student?.name || 'Mahasiswa';
-  const existingSkFile = existingResponse?.skUploads?.[0];
+  const existingSkFile = existingResponse?.sktaUploadPath;
 
   return (
     <div className="dm-overlay" onClick={onClose}>
@@ -103,69 +117,178 @@ const VerifikasiModal = ({
         onClick={e => e.stopPropagation()}
       >
         <div className="dm-header">
-          <h3 className="dm-header-title">Proses Penerbitan SK — {studentName}</h3>
-          {/* <button className="dm-close-btn" onClick={onClose}><X size={18} /></button> */}
+          <h3 className="dm-header-title">Verifikasi Permohonan SKTA — {studentName}</h3>
         </div>
 
         <div className="dm-body">
-
-
-          <div className="dm-section">
-            <div className="dm-section-label">Checklist Kelengkapan Dokumen</div>
-            <div className="dm-checklist">
-              {[
-                { key: 'proposal', label: 'Sudah upload final proposal' },
-                { key: 'bahasa',   label: 'Sudah melakukan test bahasa'  },
-              ].map(({ key, label }) => (
-                <div
-                  key={key}
-                  className={`dm-check-item ${checks[key] ? 'checked' : ''} ${isReadOnly ? 'dm-check-readonly' : ''}`}
-                  onClick={() => toggleCheck(key)}
-                  style={isReadOnly ? { cursor: 'default', opacity: 0.85 } : {}}
-                >
-                  <span className="dm-check-icon">
-                    {checks[key] ? <CheckCircle2 size={17} /> : <Circle size={17} />}
-                  </span>
-                  <span className="dm-check-label">{label}</span>
-                </div>
-              ))}
+          {/* TABS FOR APPROVE / REJECT */}
+          {!isReadOnly && (
+            <div style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', marginBottom: 20 }}>
+              <button
+                type="button"
+                style={{
+                  flex: 1,
+                  padding: '12px 0',
+                  textAlign: 'center',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  border: 'none',
+                  background: 'none',
+                  borderBottom: activeTab === 'approve' ? '3px solid #16A34A' : 'none',
+                  color: activeTab === 'approve' ? '#16A34A' : '#6B7280',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onClick={() => setActiveTab('approve')}
+              >
+                Setujui (Approve)
+              </button>
+              <button
+                type="button"
+                style={{
+                  flex: 1,
+                  padding: '12px 0',
+                  textAlign: 'center',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  border: 'none',
+                  background: 'none',
+                  borderBottom: activeTab === 'reject' ? '3px solid #DC2626' : 'none',
+                  color: activeTab === 'reject' ? '#DC2626' : '#6B7280',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onClick={() => setActiveTab('reject')}
+              >
+                Tolak (Reject)
+              </button>
             </div>
-          </div>
+          )}
 
-          {/* Exp Date SKTA */}
-          <div className="dm-section">
-            <div className="dm-section-label">Exp Date SKTA</div>
-            {isReadOnly ? (
-              <div className="dm-readonly-field">
-                {batasPerbaikan
-                  ? new Date(batasPerbaikan).toLocaleDateString('id-ID', {
-                      day: '2-digit', month: 'long', year: 'numeric',
-                    })
-                  : '-'}
+          {/* APPROVE FLOW */}
+          {(isReadOnly || activeTab === 'approve') && (
+            <>
+              <div className="dm-section">
+                <div className="dm-section-label">Checklist Kelengkapan Dokumen</div>
+                <div className="dm-checklist">
+                  {[
+                    { key: 'proposal', label: 'Sudah upload final proposal' },
+                    { key: 'bahasa',   label: 'Sudah melakukan test bahasa'  },
+                  ].map(({ key, label }) => (
+                    <div
+                      key={key}
+                      className={`dm-check-item ${checks[key] ? 'checked' : ''} ${isReadOnly ? 'dm-check-readonly' : ''}`}
+                      onClick={() => toggleCheck(key)}
+                      style={isReadOnly ? { cursor: 'default', opacity: 0.85 } : {}}
+                    >
+                      <span className="dm-check-icon">
+                        {checks[key] ? <CheckCircle2 size={17} /> : <Circle size={17} />}
+                      </span>
+                      <span className="dm-check-label">{label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ) : (
-              <input
-                type="date"
-                className="dm-input"
-                value={batasPerbaikan}
-                onChange={e => setBatasPerbaikan(e.target.value)}
-              />
-            )}
-          </div>
 
-          {/* Batas Perbaikan (isEdit) */}
-          <div className="dm-section">
-            <div className="dm-section-label">Batas Perbaikan</div>
-            {isReadOnly ? (
-              <div className="dm-readonly-field">
-                {isEdit
-                  ? new Date(isEdit).toLocaleDateString('id-ID', {
-                      day: '2-digit', month: 'long', year: 'numeric',
-                    })
-                  : '-'}
+              {/* Exp Date SKTA */}
+              <div className="dm-section">
+                <div className="dm-section-label">Tanggal Kedaluwarsa SKTA (Exp Date)</div>
+                {isReadOnly ? (
+                  <div className="dm-readonly-field">
+                    {batasPerbaikan
+                      ? new Date(batasPerbaikan).toLocaleDateString('id-ID', {
+                          day: '2-digit', month: 'long', year: 'numeric',
+                        })
+                      : '-'}
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    className="dm-input"
+                    value={batasPerbaikan}
+                    onChange={e => setBatasPerbaikan(e.target.value)}
+                  />
+                )}
               </div>
-            ) : (
-              <>
+
+              {!isReadOnly && (
+                <>
+                  {/* Alur Penerbitan */}
+                  <div className="dm-section">
+                    <div className="dm-section-label">Alur Penerbitan</div>
+                    <ol className="dm-alur-list">
+                      {ALUR_STEPS.map((step, i) => (
+                        <li key={i} className="dm-alur-item">
+                          <span className="dm-alur-num">{i + 1}</span>
+                          <span className="dm-alur-text">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  {/* Upload SK */}
+                  <div className="dm-section">
+                    <div className="dm-section-label">Upload File SK Final</div>
+                    {existingResponse?.sktaUploadPath && !uploadedFile && (
+                      <div className="dm-file-exists-info">
+                        <CheckCircle2 size={14} />
+                        File SK sudah diupload sebelumnya. Upload file baru untuk mengganti.
+                      </div>
+                    )}
+                    <div
+                      className={`dm-upload-area ${isDragging ? 'dragging' : ''} ${uploadedFile ? 'has-file' : ''}`}
+                      onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current.click()}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        style={{ display: 'none' }}
+                        accept=".pdf"
+                        onChange={e => { if (e.target.files[0]) setUploadedFile(e.target.files[0]); }}
+                      />
+                      {uploadedFile ? (
+                        <>
+                          <div className="dm-upload-icon uploaded"><FileText size={22} /></div>
+                          <p className="dm-upload-filename">{uploadedFile.name}</p>
+                          <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
+                            Klik untuk ganti file
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="dm-upload-icon"><Upload size={22} /></div>
+                          <p className="dm-upload-main">Drag & Drop atau klik untuk pilih file</p>
+                          <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>Format: PDF</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {/* REJECT FLOW */}
+          {(!isReadOnly && activeTab === 'reject') && (
+            <>
+              {/* Catatan Perbaikan */}
+              <div className="dm-section">
+                <div className="dm-section-label">Alasan Penolakan / Catatan untuk Mahasiswa *</div>
+                <textarea
+                  className="dm-textarea"
+                  placeholder="Tuliskan alasan penolakan secara jelas agar mahasiswa dapat memperbaiki dokumen..."
+                  value={catatan}
+                  onChange={e => setCatatan(e.target.value)}
+                  rows={5}
+                />
+              </div>
+
+              {/* Batas Perbaikan (isEdit) */}
+              <div className="dm-section">
+                <div className="dm-section-label">Batas Waktu Perbaikan</div>
                 <input
                   type="date"
                   className="dm-input"
@@ -173,87 +296,16 @@ const VerifikasiModal = ({
                   onChange={e => setIsEdit(e.target.value)}
                 />
                 <p style={{ fontSize: 11, color: '#6B7280', marginTop: 6 }}>
-                  Isi jika mahasiswa perlu mengirim ulang dokumen evidence.
-                  Kosongkan jika tidak perlu perbaikan.
+                  Berikan tenggat waktu bagi mahasiswa untuk merevisi berkas mereka.
                 </p>
-              </>
-            )}
-          </div>
-
-          {!isReadOnly && (
-            <>
-              {/* Alur Penerbitan */}
-              <div className="dm-section">
-                <div className="dm-section-label">Alur Penerbitan</div>
-                <ol className="dm-alur-list">
-                  {ALUR_STEPS.map((step, i) => (
-                    <li key={i} className="dm-alur-item">
-                      <span className="dm-alur-num">{i + 1}</span>
-                      <span className="dm-alur-text">{step}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              {/* Catatan */}
-              <div className="dm-section">
-                <div className="dm-section-label">Catatan untuk Mahasiswa</div>
-                <textarea
-                  className="dm-textarea"
-                  placeholder="Tuliskan catatan perbaikan atau informasi lainnya..."
-                  value={catatan}
-                  onChange={e => setCatatan(e.target.value)}
-                  rows={4}
-                />
-              </div>
-
-              {/* Upload SK */}
-              <div className="dm-section">
-                <div className="dm-section-label">Upload File SK Final</div>
-                {existingResponse?.skUploads?.length > 0 && !uploadedFile && (
-                  <div className="dm-file-exists-info">
-                    <CheckCircle2 size={14} />
-                    File SK sudah diupload sebelumnya. Upload file baru untuk mengganti.
-                  </div>
-                )}
-                <div
-                  className={`dm-upload-area ${isDragging ? 'dragging' : ''} ${uploadedFile ? 'has-file' : ''}`}
-                  onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    style={{ display: 'none' }}
-                    accept=".pdf"
-                    onChange={e => { if (e.target.files[0]) setUploadedFile(e.target.files[0]); }}
-                  />
-                  {uploadedFile ? (
-                    <>
-                      <div className="dm-upload-icon uploaded"><FileText size={22} /></div>
-                      <p className="dm-upload-filename">{uploadedFile.name}</p>
-                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
-                        Klik untuk ganti file
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="dm-upload-icon"><Upload size={22} /></div>
-                      <p className="dm-upload-main">Drag & Drop atau klik untuk pilih file</p>
-                      <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>Format: PDF</p>
-                    </>
-                  )}
-                </div>
               </div>
             </>
           )}
 
-          {/* Download SK —  mode readOnly (sudah terbit) & edit */}
+          {/* Download SK (jika sudah diterbitkan sebelumnya) */}
           {existingSkFile && (
             <div className="dm-section">
-              <div className="dm-section-label">File SK Final</div>
+              <div className="dm-section-label">File SK Final Saat Ini</div>
               {downloadError && (
                 <p style={{ fontSize: 12, color: '#EF4444', marginBottom: 8, marginTop: 0 }}>
                   ⚠ {downloadError}
@@ -273,7 +325,6 @@ const VerifikasiModal = ({
               <style>{'.dm-btn-download-skta { display:inline-flex; align-items:center; gap:8px; } @keyframes spin { to { transform: rotate(360deg); } }'}</style>
             </div>
           )}
-
         </div>
 
         {/* Footer */}
@@ -283,7 +334,16 @@ const VerifikasiModal = ({
           ) : (
             <>
               <button className="dm-btn-batal"  onClick={onClose}>Batal</button>
-              <button className="dm-btn-simpan" onClick={handleSubmit}>Simpan & Kirim</button>
+              <button
+                className="dm-btn-simpan"
+                onClick={handleSubmit}
+                style={{
+                  background: activeTab === 'reject' ? '#DC2626' : '#16A34A',
+                  borderColor: activeTab === 'reject' ? '#DC2626' : '#16A34A',
+                }}
+              >
+                {activeTab === 'reject' ? 'Tolak Pengajuan' : 'Setujui & Kirim'}
+              </button>
             </>
           )}
         </div>

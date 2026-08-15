@@ -10,7 +10,7 @@ const getEmailDomain = (email) => email.toLowerCase().split("@")[1];
 
 // Register
 const register = asyncHandler(async (req, res) => {
-  const { username, email, password, phone, role } = req.body;
+  const { name, email, password, phone, role } = req.body;
   const emailDomain = getEmailDomain(email);
   const normalizedRole = typeof role === "string" ? role.trim() : role;
 
@@ -25,9 +25,9 @@ const register = asyncHandler(async (req, res) => {
   }
 
   if (emailDomain === STUDENT_EMAIL_DOMAIN) {
-    if (normalizedRole && normalizedRole !== "STUDENT") {
+    if (normalizedRole && normalizedRole !== "MAHASISWA") {
       res.status(400);
-      throw new Error("Role harus STUDENT untuk domain email mahasiswa");
+      throw new Error("Role harus MAHASISWA untuk domain email mahasiswa");
     }
   }
 
@@ -39,10 +39,10 @@ const register = asyncHandler(async (req, res) => {
       );
     }
 
-    if (!["LECTURER", "ACADEMIC_STAFF"].includes(normalizedRole)) {
+    if (!["DOSEN", "ADMIN"].includes(normalizedRole)) {
       res.status(400);
       throw new Error(
-        "Role harus LECTURER atau ACADEMIC_STAFF untuk domain email telkomuniversity.ac.id",
+        "Role harus DOSEN atau ADMIN untuk domain email telkomuniversity.ac.id",
       );
     }
   }
@@ -65,11 +65,11 @@ const register = asyncHandler(async (req, res) => {
 
   const data = await prisma.user.create({
     data: {
-      username,
+      name,
       email,
       password: hashedPassword,
       phone,
-      role: normalizedRole ?? "STUDENT",
+      role: normalizedRole ?? "MAHASISWA",
     },
     omit: { password: true },
   });

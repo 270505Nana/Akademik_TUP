@@ -9,7 +9,7 @@ const createYudisiumRegistrationResponseValidator = [
     .withMessage("ID pendaftaran yudisium harus berupa integer")
     .toInt(),
 
-  body("academicStaffId")
+  body("adminId")
     .notEmpty()
     .withMessage("ID staf akademik wajib diisi")
     .bail()
@@ -39,7 +39,7 @@ const updateYudisiumRegistrationResponseValidator = [
     .isISO8601()
     .withMessage("isEdit harus berupa tanggal yang valid (format ISO 8601)"),
 
-  body("academicStaffId")
+  body("adminId")
     .optional()
     .isInt()
     .withMessage("ID staf akademik harus berupa integer")

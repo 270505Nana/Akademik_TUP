@@ -24,12 +24,12 @@ const sktaResponseBodyValidator = [
     .isISO8601()
     .withMessage("expDate harus berupa tanggal yang valid")
     .toDate(),
-  body("academicStaffId")
+  body("adminId")
     .notEmpty()
-    .withMessage("academicStaffId wajib diisi")
+    .withMessage("adminId wajib diisi")
     .bail()
     .isInt()
-    .withMessage("academicStaffId harus berupa integer")
+    .withMessage("adminId harus berupa integer")
     .toInt(),
   body("sktaRequestId")
     .notEmpty()

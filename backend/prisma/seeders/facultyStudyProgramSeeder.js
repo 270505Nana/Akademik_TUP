@@ -1,8 +1,6 @@
-const bcrypt = require("bcrypt");
+import prisma from '../../src/config/prisma.js';
 
-const prisma = require("../client");
-
-async function seedFacultyStudyProgram() {
+export async function seedFacultyStudyProgram() {
   console.log("- Seeding faculty & study program...");
 
   const faculties = [
@@ -82,5 +80,3 @@ async function seedFacultyStudyProgram() {
 
   console.log("- Faculty & study program seeded successful");
 }
-
-module.exports = { seedFacultyStudyProgram };

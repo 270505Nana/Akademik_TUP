@@ -23,8 +23,8 @@ const EvidenceModal = ({ item, onClose }) => {
     if (!d1Id && !d2Id) return;
 
     getLecturers().then(list => {
-      if (d1Id) setDosen1(list.find(d => d.id === Number(d1Id)) ?? null);
-      if (d2Id) setDosen2(list.find(d => d.id === Number(d2Id)) ?? null);
+      if (d1Id) setDosen1(list.find(d => String(d.id) === String(d1Id)) ?? null);
+      if (d2Id) setDosen2(list.find(d => String(d.id) === String(d2Id)) ?? null);
     }).catch(() => {});
   }, [sktaRequest?.dosenPembimbing1Id, sktaRequest?.dosenPembimbing2Id]);
 
@@ -32,8 +32,8 @@ const EvidenceModal = ({ item, onClose }) => {
 
   const formatDosen = (d) => {
     if (!d) return '-';
-    const kode = d.lecturerCode ?? d.kode ?? '';
-    const nama = d.name ?? d.nama ?? '';
+    const kode = d.kodeDosen ?? d.lecturerCode ?? d.kode ?? '';
+    const nama = d.user?.name ?? d.name ?? d.nama ?? '';
     return kode && nama ? `${kode} — ${nama}` : nama || kode || '-';
   };
 

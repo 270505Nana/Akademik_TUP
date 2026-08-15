@@ -44,9 +44,9 @@ const LengkapiData = () => {
         const data = await getLecturers();
         const mapped = data.map((d) => ({
           id:   d.id,
-          kode: d.lecturerCode ?? d.kode,
-          nama: d.name         ?? d.nama,
-          nip:  d.nip,
+          kode: d.kodeDosen    ?? d.lecturerCode ?? d.kode ?? '',
+          nama: d.user?.name   ?? d.name         ?? d.nama ?? '',
+          nip:  d.nip          ?? '',
         }));
         setLecturers(mapped);
       } catch (err) {
@@ -79,14 +79,23 @@ const LengkapiData = () => {
     const draft = localStorage.getItem('student_form_draft');
     if (draft) {
       const parsed = JSON.parse(draft);
-      setFormData(parsed);
+      setFormData(prev => ({
+        ...prev,
+        ...parsed,
+        namaLengkap: parsed.namaLengkap || user?.name || ''
+      }));
       setSearchQuery({
         dosenWali: parsed.dosenWaliKode
           ? `${parsed.dosenWaliKode} - ${parsed.dosenWaliNama}`
           : '',
       });
+    } else if (user?.name) {
+      setFormData(prev => ({
+        ...prev,
+        namaLengkap: user.name
+      }));
     }
-  }, []);
+  }, [user]);
 
   // Autosave draft ke localStorage
   useEffect(() => {
@@ -104,7 +113,7 @@ const LengkapiData = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === 'studyProgramId') {
-      const selected = studyPrograms.find(p => p.id === Number(value));
+      const selected = studyPrograms.find(p => String(p.id) === String(value));
       setFormData(prev => ({
         ...prev,
         studyProgramId:   value,
@@ -159,8 +168,8 @@ const LengkapiData = () => {
       name:           formData.namaLengkap,
       className:      formData.kelas,
       year:           Number(formData.angkatan),
-      studyProgramId: Number(formData.studyProgramId),
-      dosenWaliId:    Number(formData.dosenWaliId),
+      studyProgramId: formData.studyProgramId,
+      dosenWaliId:    formData.dosenWaliId,
       sks:            null,
       ipk:            null,
       tak:            null,

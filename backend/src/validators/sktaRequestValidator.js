@@ -20,10 +20,10 @@ const validateRequiredPdfFile = (fieldName) =>
 const createSktaRequestValidator = [
   body("proposalTitleId").notEmpty().withMessage("proposalTitleId wajib diisi"),
   body("proposalTitleEn").notEmpty().withMessage("proposalTitleEn wajib diisi"),
-  body("studentId")
+  body("mahasiswaId")
     .notEmpty()
     .isInt()
-    .withMessage("studentId wajib diisi")
+    .withMessage("mahasiswaId wajib diisi")
     .toInt(),
   body("dosenPembimbing1Id")
     .notEmpty()

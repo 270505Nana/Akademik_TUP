@@ -82,7 +82,7 @@ const checkSidangEditable = async (registrationId) => {
 const listSidangRegistrations = asyncHandler(async (req, res) => {
   const sidangRegistrations = await prisma.sidangRegistration.findMany({
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -140,7 +140,7 @@ const getSidangRegistrationById = asyncHandler(async (req, res) => {
       id: parseInt(id),
     },
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -188,16 +188,16 @@ const getSidangRegistrationById = asyncHandler(async (req, res) => {
   });
 });
 
-// Get Sidang Registration by Student ID
-const getSidangRegistrationByStudentId = asyncHandler(async (req, res) => {
-  const { studentId } = req.params;
+// Get Sidang Registration by Mahasiswa ID
+const getSidangRegistrationByMahasiswaId = asyncHandler(async (req, res) => {
+  const { mahasiswaId } = req.params;
 
   const sidangRegistration = await prisma.sidangRegistration.findFirst({
     where: {
-      studentId: parseInt(studentId),
+      mahasiswaId: parseInt(mahasiswaId),
     },
     include: {
-      student: {
+      mahasiswa: {
         select: {
           id: true,
           nim: true,
@@ -261,15 +261,15 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     sktaExpDate,
     thesisTitleId,
     thesisTitleEn,
-    studentId,
+    mahasiswaId,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
   } = req.body;
 
   // Validate references if provided
-  if (studentId) {
-    const studentExists = await prisma.student.findUnique({
-      where: { id: parseInt(studentId) },
+  if (mahasiswaId) {
+    const studentExists = await prisma.mahasiswa.findUnique({
+      where: { id: parseInt(mahasiswaId) },
     });
     if (!studentExists) {
       res.status(404);
@@ -278,7 +278,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   if (dosenPembimbing1Id) {
-    const dosenExists = await prisma.lecturer.findUnique({
+    const dosenExists = await prisma.dosen.findUnique({
       where: { id: parseInt(dosenPembimbing1Id) },
     });
     if (!dosenExists) {
@@ -288,7 +288,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   if (dosenPembimbing2Id) {
-    const dosenExists = await prisma.lecturer.findUnique({
+    const dosenExists = await prisma.dosen.findUnique({
       where: { id: parseInt(dosenPembimbing2Id) },
     });
     if (!dosenExists) {
@@ -325,7 +325,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
     thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
     thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
-    studentId: studentId !== undefined ? parseInt(studentId) : undefined,
+    mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : undefined,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined
         ? parseInt(dosenPembimbing1Id)
@@ -345,15 +345,15 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
       where: { id: parseInt(id) },
       data: upsertData,
       include: {
-        student: { select: { id: true, nim: true, name: true } },
+        mahasiswa: { select: { id: true, nim: true, name: true } },
         dosenPembimbing1: { select: { id: true, nip: true, name: true } },
         dosenPembimbing2: { select: { id: true, nip: true, name: true } },
       },
     });
-  } else if (studentId) {
+  } else if (mahasiswaId) {
     // Look for existing draft
     const existing = await prisma.sidangRegistration.findFirst({
-      where: { studentId: parseInt(studentId) },
+      where: { mahasiswaId: parseInt(mahasiswaId) },
       orderBy: { createdAt: "desc" },
     });
 
@@ -368,7 +368,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
         where: { id: existing.id },
         data: upsertData,
         include: {
-          student: { select: { id: true, nim: true, name: true } },
+          mahasiswa: { select: { id: true, nim: true, name: true } },
           dosenPembimbing1: { select: { id: true, nip: true, name: true } },
           dosenPembimbing2: { select: { id: true, nip: true, name: true } },
         },
@@ -383,7 +383,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
       // Check if student is already registered in this active period
       const existingInPeriod = await prisma.sidangRegistration.findFirst({
         where: {
-          studentId: parseInt(studentId),
+          mahasiswaId: parseInt(mahasiswaId),
           sidangRegistrationPeriodId: activePeriod.id,
           deletedAt: null,
         },
@@ -399,7 +399,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
       sidangRegistration = await prisma.sidangRegistration.create({
         data: upsertData,
         include: {
-          student: { select: { id: true, nim: true, name: true } },
+          mahasiswa: { select: { id: true, nim: true, name: true } },
           dosenPembimbing1: { select: { id: true, nip: true, name: true } },
           dosenPembimbing2: { select: { id: true, nip: true, name: true } },
         },
@@ -417,7 +417,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     sidangRegistration = await prisma.sidangRegistration.create({
       data: upsertData,
       include: {
-        student: { select: { id: true, nim: true, name: true } },
+        mahasiswa: { select: { id: true, nim: true, name: true } },
         dosenPembimbing1: { select: { id: true, nip: true, name: true } },
         dosenPembimbing2: { select: { id: true, nip: true, name: true } },
       },
@@ -443,7 +443,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     sktaExpDate,
     thesisTitleId,
     thesisTitleEn,
-    studentId,
+    mahasiswaId,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
   } = req.body;
@@ -482,7 +482,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
     thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
     thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
-    studentId: studentId !== undefined ? parseInt(studentId) : undefined,
+    mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : undefined,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined
         ? parseInt(dosenPembimbing1Id)
@@ -524,7 +524,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     "sktaExpDate",
     "thesisTitleId",
     "thesisTitleEn",
-    "studentId",
+    "mahasiswaId",
     "dosenPembimbing1Id",
     "dosenPembimbing2Id",
   ];
@@ -571,9 +571,9 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   // Validasi referensi eksis
-  if (mergedData.studentId) {
-    const s = await prisma.student.findUnique({
-      where: { id: mergedData.studentId },
+  if (mergedData.mahasiswaId) {
+    const s = await prisma.mahasiswa.findUnique({
+      where: { id: mergedData.mahasiswaId },
     });
     if (!s) {
       res.status(404);
@@ -581,7 +581,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     }
   }
   if (mergedData.dosenPembimbing1Id) {
-    const d1 = await prisma.lecturer.findUnique({
+    const d1 = await prisma.dosen.findUnique({
       where: { id: mergedData.dosenPembimbing1Id },
     });
     if (!d1) {
@@ -590,7 +590,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     }
   }
   if (mergedData.dosenPembimbing2Id) {
-    const d2 = await prisma.lecturer.findUnique({
+    const d2 = await prisma.dosen.findUnique({
       where: { id: mergedData.dosenPembimbing2Id },
     });
     if (!d2) {
@@ -618,7 +618,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     where: { id: parseInt(id) },
     data: updateData,
     include: {
-      student: { select: { id: true, nim: true, name: true } },
+      mahasiswa: { select: { id: true, nim: true, name: true } },
       dosenPembimbing1: { select: { id: true, nip: true, name: true } },
       dosenPembimbing2: { select: { id: true, nip: true, name: true } },
     },
@@ -777,7 +777,7 @@ const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
 
 export { listSidangRegistrations,
   getSidangRegistrationById,
-  getSidangRegistrationByStudentId,
+  getSidangRegistrationByMahasiswaId,
   saveSidangRegistration,
   submitSidangRegistration,
   deleteSidangRegistration,

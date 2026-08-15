@@ -11,7 +11,7 @@ import { listTranskripUploads,
 import { verifyToken } from '../../middlewares/auth.js';
 import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 import { createTranskripUploadValidator,
   updateTranskripUploadValidator, } from '../../validators/transkripUploadValidator.js';
@@ -88,13 +88,13 @@ router.get("/:id", verifyToken, getTranskripUploadById);
  *             type: object
  *             required:
  *               - name
- *               - studentId
+ *               - mahasiswaId
  *               - transkripFile
  *             properties:
  *               name:
  *                 type: string
  *                 example: Transkrip Nilai Akademik
- *               studentId:
+ *               mahasiswaId:
  *                 type: integer
  *                 description: Required student ID (only academic staff can upload).
  *                 example: 1
@@ -110,16 +110,16 @@ router.get("/:id", verifyToken, getTranskripUploadById);
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token or Access denied (Academic Staff only)
+ *         description: Invalid token or Access denied (Admin only)
  *       404:
- *         description: Student not found
+ *         description: Mahasiswa not found
  *       500:
  *         description: Internal server error
  */
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   upload("transkrip").single("transkripFile"),
   createTranskripUploadValidator,
   validate,
@@ -151,7 +151,7 @@ router.post(
  *               name:
  *                 type: string
  *                 example: Updated Transkrip Name
- *               studentId:
+ *               mahasiswaId:
  *                 type: integer
  *                 description: Target student ID if updating owner.
  *                 example: 1
@@ -167,16 +167,16 @@ router.post(
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied or invalid token (Academic Staff only)
+ *         description: Access denied or invalid token (Admin only)
  *       404:
- *         description: Transkrip upload or Student not found
+ *         description: Transkrip upload or Mahasiswa not found
  *       500:
  *         description: Internal server error
  */
 router.patch(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   upload("transkrip").single("transkripFile"),
   updateTranskripUploadValidator,
   validate,
@@ -204,13 +204,13 @@ router.patch(
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied or invalid token (Academic Staff only)
+ *         description: Access denied or invalid token (Admin only)
  *       404:
  *         description: Transkrip upload not found
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAcademicStaff, deleteTranskripUpload);
+router.delete("/:id", verifyToken, isAdmin, deleteTranskripUpload);
 
 /**
  * @swagger

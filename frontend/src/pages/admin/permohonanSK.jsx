@@ -13,7 +13,8 @@ import {
   getAllSktaRequests,
   getSktaResponseByRequestId,
   getSktaResponseUploadByStudentId,
-  createOrUpdateSktaResponse,
+  approvePermohonanSK,
+  rejectPermohonanSK,
   getStudyPrograms,
   getStudyProgramById,
   getSKTARequest,
@@ -104,13 +105,8 @@ const PermohonanSK = () => {
             ? processed.sort((a, b) => b.id - a.id)[0]   
             : withResponses.sort((a, b) => b.id - a.id)[0]; 
 
-          const studyProgramId = chosen.student?.studyProgramId;
-          let prodiName = '-';
-          if (studyProgramId) {
-            const prodi = await getStudyProgramById(studyProgramId).catch(() => null);
-            prodiName = prodi?.name ?? '-';
-          }
-          const tanggal = chosen.sktaRequestUploads?.[0]?.createdAt ?? null;
+          const prodiName = chosen.student?.studyProgramNama ?? '-';
+          const tanggal = chosen.createdAt ?? null;
 
           return { ...chosen, skUploads, prodiName, tanggal };
         })
@@ -126,7 +122,7 @@ const PermohonanSK = () => {
   };
 
   useEffect(() => {
-    if (user?.role === 'ACADEMIC_STAFF') fetchRequests();
+    if (user?.role === 'ADMIN') fetchRequests();
   }, [user]); 
 
   const getStatus = r => determineStatus(r.sktaResponse, r.skUploads, r);
@@ -194,21 +190,25 @@ const PermohonanSK = () => {
   };
 
   const handleSaveVerifikasi = async (payload) => {
-    if (!user?.id) return showAlert('error', 'Error', 'Academic Staff ID tidak ditemukan');
+    if (!user?.id) return showAlert('error', 'Error', 'Staf Akademik ID tidak ditemukan');
     try {
-      const fd = new FormData();
-      fd.append('hasUploadedFinalProposal', String(payload.checks.proposal));
-      fd.append('hasTakenLanguageTest',     String(payload.checks.bahasa));
-      fd.append('message',         payload.catatan || '');
-      fd.append('academicStaffId', String(user.id));
-      fd.append('sktaRequestId',   String(payload.selectedPermohonan.id));
-      if (payload.batasPerbaikan)       fd.append('expDate',  payload.batasPerbaikan);
-      if (payload.uploadedFile)         fd.append('sktaFile', payload.uploadedFile);
-      if (payload.existingResponse?.id) fd.append('id', String(payload.existingResponse.id));
-      if (payload.isEdit)               fd.append('isEdit', payload.isEdit);
-
-      await createOrUpdateSktaResponse(fd);
-      showAlert('success', 'Berhasil', `SK untuk ${payload.selectedPermohonan.student?.name} berhasil diperbarui.`);
+      const permohonanId = payload.selectedPermohonan.id;
+      if (payload.actionType === 'reject') {
+        await rejectPermohonanSK(permohonanId, {
+          message: payload.catatan,
+          adminId: user.id,
+        });
+        showAlert('success', 'Berhasil', `Pengajuan untuk ${payload.selectedPermohonan.student?.name} berhasil ditolak.`);
+      } else {
+        await approvePermohonanSK(permohonanId, {
+          hasUploadedFinalProposal: payload.checks.proposal,
+          hasTakenLanguageTest: payload.checks.bahasa,
+          expDate: payload.batasPerbaikan,
+          adminId: user.id,
+          sktaFile: payload.uploadedFile,
+        });
+        showAlert('success', 'Berhasil', `SK untuk ${payload.selectedPermohonan.student?.name} berhasil disetujui.`);
+      }
       handleCloseVerifikasi();
       await fetchRequests();
     } catch (err) {

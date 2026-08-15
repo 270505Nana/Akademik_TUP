@@ -11,7 +11,7 @@ import { listFormulirPenerbitanSktaUploads,
 import { verifyToken } from '../../middlewares/auth.js';
 import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
-import { isAcademicStaff } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 import { createFormulirPenerbitanSktaUploadValidator,
   updateFormulirPenerbitanSktaUploadValidator, } from '../../validators/formulirPenerbitanSktaUploadValidator.js';
@@ -88,13 +88,13 @@ router.get("/:id", verifyToken, getFormulirPenerbitanSktaUploadById);
  *             type: object
  *             required:
  *               - name
- *               - studentId
+ *               - mahasiswaId
  *               - formulirFile
  *             properties:
  *               name:
  *                 type: string
  *                 example: Formulir Penerbitan SKTA Resmi
- *               studentId:
+ *               mahasiswaId:
  *                 type: integer
  *                 description: Target student ID (only academic staff can upload)
  *                 example: 1
@@ -110,16 +110,16 @@ router.get("/:id", verifyToken, getFormulirPenerbitanSktaUploadById);
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Academic Staff only)
+ *         description: Access denied (Admin only)
  *       404:
- *         description: Student not found
+ *         description: Mahasiswa not found
  *       500:
  *         description: Internal server error
  */
 router.post(
   "/",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   upload("formulir-penerbitan").single("formulirFile"),
   createFormulirPenerbitanSktaUploadValidator,
   validate,
@@ -151,7 +151,7 @@ router.post(
  *               name:
  *                 type: string
  *                 example: Updated Document Name
- *               studentId:
+ *               mahasiswaId:
  *                 type: integer
  *                 description: Target student ID if updating ownership
  *                 example: 1
@@ -167,16 +167,16 @@ router.post(
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Academic Staff only)
+ *         description: Access denied (Admin only)
  *       404:
- *         description: Document or Student not found
+ *         description: Document or Mahasiswa not found
  *       500:
  *         description: Internal server error
  */
 router.patch(
   "/:id",
   verifyToken,
-  isAcademicStaff,
+  isAdmin,
   upload("formulir-penerbitan").single("formulirFile"),
   updateFormulirPenerbitanSktaUploadValidator,
   validate,
@@ -204,13 +204,13 @@ router.patch(
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Academic Staff only)
+ *         description: Access denied (Admin only)
  *       404:
  *         description: Document not found
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAcademicStaff, deleteFormulirPenerbitanSktaUpload);
+router.delete("/:id", verifyToken, isAdmin, deleteFormulirPenerbitanSktaUpload);
 
 /**
  * @swagger

@@ -6,7 +6,7 @@ const listSidangRegistrationResponses = asyncHandler(async (req, res) => {
   const responses = await prisma.sidangRegistrationResponse.findMany({
     where: { deletedAt: null },
     include: {
-      academicStaff: {
+      admin: {
         select: {
           id: true,
           name: true,
@@ -17,7 +17,7 @@ const listSidangRegistrationResponses = asyncHandler(async (req, res) => {
           id: true,
           thesisTitleId: true,
           thesisTitleEn: true,
-          student: {
+          mahasiswa: {
             select: {
               id: true,
               nim: true,
@@ -63,7 +63,7 @@ const getSidangRegistrationResponseById = asyncHandler(async (req, res) => {
       deletedAt: null,
     },
     include: {
-      academicStaff: {
+      admin: {
         select: {
           id: true,
           name: true,
@@ -74,7 +74,7 @@ const getSidangRegistrationResponseById = asyncHandler(async (req, res) => {
           id: true,
           thesisTitleId: true,
           thesisTitleEn: true,
-          student: {
+          mahasiswa: {
             select: {
               id: true,
               nim: true,
@@ -119,7 +119,7 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
         deletedAt: null,
       },
       include: {
-        academicStaff: {
+        admin: {
           select: {
             id: true,
             name: true,
@@ -130,7 +130,7 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
             id: true,
             thesisTitleId: true,
             thesisTitleEn: true,
-            student: {
+            mahasiswa: {
               select: {
                 id: true,
                 nim: true,
@@ -167,7 +167,7 @@ const getSidangRegistrationResponseBySidangRegistrationId = asyncHandler(
 
 // Create Sidang Registration Response
 const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
-  const { sidangRegistrationId, academicStaffId, message, isEdit, sidangPeriodId, sidangRegistrationUploadIds } = req.body;
+  const { sidangRegistrationId, adminId, message, isEdit, sidangPeriodId, sidangRegistrationUploadIds } = req.body;
 
   // Validate sidang registration exists
   const sidangRegistrationExists = await prisma.sidangRegistration.findUnique({
@@ -180,8 +180,8 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
   }
 
   // Validate academic staff exists
-  const academicStaffExists = await prisma.academicStaff.findUnique({
-    where: { id: academicStaffId },
+  const academicStaffExists = await prisma.admin.findUnique({
+    where: { id: adminId },
   });
 
   if (!academicStaffExists) {
@@ -221,12 +221,12 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
   const newResponse = await prisma.sidangRegistrationResponse.create({
     data: {
       sidangRegistrationId,
-      academicStaffId,
+      adminId,
       message: message || null,
       isEdit: isEdit ? new Date(isEdit) : null,
     },
     include: {
-      academicStaff: {
+      admin: {
         select: {
           id: true,
           name: true,
@@ -237,7 +237,7 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
           id: true,
           thesisTitleId: true,
           thesisTitleEn: true,
-          student: {
+          mahasiswa: {
             select: {
               id: true,
               nim: true,
@@ -284,7 +284,7 @@ const createSidangRegistrationResponse = asyncHandler(async (req, res) => {
 // Update Sidang Registration Response
 const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { message, isEdit, academicStaffId, sidangRegistrationId, sidangRegistrationUploadIds, sidangPeriodId } = req.body;
+  const { message, isEdit, adminId, sidangRegistrationId, sidangRegistrationUploadIds, sidangPeriodId } = req.body;
 
   // Check if response exists
   const responseExists = await prisma.sidangRegistrationResponse.findFirst({
@@ -312,9 +312,9 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
     }
   }
 
-  if (academicStaffId) {
-    const academicStaffExists = await prisma.academicStaff.findUnique({
-      where: { id: academicStaffId },
+  if (adminId) {
+    const academicStaffExists = await prisma.admin.findUnique({
+      where: { id: adminId },
     });
     if (!academicStaffExists) {
       res.status(404);
@@ -346,8 +346,8 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
   if (message !== undefined) updateData.message = message;
   if (isEdit !== undefined)
     updateData.isEdit = isEdit ? new Date(isEdit) : null;
-  if (academicStaffId !== undefined)
-    updateData.academicStaffId = academicStaffId;
+  if (adminId !== undefined)
+    updateData.adminId = adminId;
   if (sidangRegistrationId !== undefined)
     updateData.sidangRegistrationId = sidangRegistrationId;
 
@@ -355,7 +355,7 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
     where: { id: parseInt(id) },
     data: updateData,
     include: {
-      academicStaff: {
+      admin: {
         select: {
           id: true,
           name: true,
@@ -366,7 +366,7 @@ const updateSidangRegistrationResponse = asyncHandler(async (req, res) => {
           id: true,
           thesisTitleId: true,
           thesisTitleEn: true,
-          student: {
+          mahasiswa: {
             select: {
               id: true,
               nim: true,
