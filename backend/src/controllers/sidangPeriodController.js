@@ -1,10 +1,18 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
+import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../utils/validationHelper.js';
 
 // Daftar Semua Periode Sidang
 const listSidangPeriods = asyncHandler(async (req, res) => {
+  const { category } = req.query;
+
+  const whereClause = { deletedAt: null };
+  if (category) {
+    whereClause.category = category;
+  }
+
   const sidangPeriods = await prisma.sidangPeriod.findMany({
-    where: { deletedAt: null },
+    where: whereClause,
     orderBy: {
       createdAt: "desc",
     },
@@ -21,7 +29,7 @@ const getSidangPeriodById = asyncHandler(async (req, res) => {
 
   const sidangPeriod = await prisma.sidangPeriod.findFirst({
     where: {
-      id: parseInt(id),
+      id,
       deletedAt: null,
     },
   });
@@ -38,32 +46,114 @@ const getSidangPeriodById = asyncHandler(async (req, res) => {
 
 // Buat Sidang Period Baru
 const createSidangPeriod = asyncHandler(async (req, res) => {
-  const { name, startDate, endDate, isOpen } = req.body;
+  const { name, category, period, startDate, endDate, isOpen } = req.body;
+  const errors = {};
 
-  const sidangPeriod = await prisma.sidangPeriod.create({
+  if (isNil(name)) {
+    errors.name = "Nama wajib diisi";
+  } else if (typeof name !== 'string') {
+    errors.name = "Nama harus berupa string";
+  }
+
+  if (isNil(category)) {
+    errors.category = "Category wajib diisi";
+  } else if (typeof category !== 'string') {
+    errors.category = "Category harus berupa string";
+  }
+
+  if (isNil(period)) {
+    errors.period = "Period wajib diisi";
+  } else if (typeof period !== 'string') {
+    errors.period = "Period harus berupa string";
+  }
+  
+  if (isNil(startDate)) {
+    errors.startDate = "Tanggal mulai wajib diisi";
+  } else if (!isValidISO8601(startDate)) {
+    errors.startDate = "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
+  }
+  
+  if (isNil(endDate)) {
+    errors.endDate = "Tanggal selesai wajib diisi";
+  } else if (!isValidISO8601(endDate)) {
+    errors.endDate = "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)";
+  } else if (startDate && new Date(endDate) < new Date(startDate)) {
+    errors.endDate = "Tanggal selesai tidak boleh sebelum tanggal mulai";
+  }
+  
+  if (!isNil(isOpen)) {
+    const p = parseBoolean(isOpen);
+    if (p === null) {
+      errors.isOpen = "isOpen harus berupa boolean";
+    }
+  }
+  
+  if (Object.keys(errors).length > 0) {
+    return sendValidationError(res, errors, req);
+  }
+
+  const newSidangPeriod = await prisma.sidangPeriod.create({
     data: {
       name,
+      category,
+      period,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      isOpen: isOpen !== undefined ? isOpen : false,
+      isOpen: isOpen !== undefined ? parseBoolean(isOpen) : false,
     },
   });
 
   res.status(201).json({
     message: "Sidang period created successfully",
-    data: sidangPeriod,
+    data: newSidangPeriod,
   });
 });
 
 // Update Sidang Period
 const updateSidangPeriod = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, startDate, endDate, isOpen } = req.body;
+  const { name, category, period, startDate, endDate, isOpen } = req.body;
+  const errors = {};
+
+  if (!isNil(name) && typeof name !== 'string') {
+    errors.name = "Nama harus berupa string";
+  }
+
+  if (!isNil(category) && typeof category !== 'string') {
+    errors.category = "Category harus berupa string";
+  }
+
+  if (!isNil(period) && typeof period !== 'string') {
+    errors.period = "Period harus berupa string";
+  }
+  
+  if (!isNil(startDate)) {
+    if (!isValidISO8601(startDate)) {
+      errors.startDate = "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
+    }
+  }
+  
+  if (!isNil(endDate)) {
+    if (!isValidISO8601(endDate)) {
+      errors.endDate = "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)";
+    }
+  }
+  
+  if (!isNil(isOpen)) {
+    const p = parseBoolean(isOpen);
+    if (p === null) {
+      errors.isOpen = "isOpen harus berupa boolean";
+    }
+  }
+  
+  if (Object.keys(errors).length > 0) {
+    return sendValidationError(res, errors, req);
+  }
 
   // Cek apakah sidang period ada
   const sidangPeriodExists = await prisma.sidangPeriod.findFirst({
     where: {
-      id: parseInt(id),
+      id,
       deletedAt: null,
     },
   });
@@ -73,21 +163,31 @@ const updateSidangPeriod = asyncHandler(async (req, res) => {
     throw new Error("Periode sidang tidak ditemukan");
   }
 
-  const sidangPeriod = await prisma.sidangPeriod.update({
+  if (!isNil(endDate) && !errors.endDate) {
+    const startToCompare = req.body.startDate || sidangPeriodExists.startDate;
+    if (new Date(endDate) < new Date(startToCompare)) {
+      errors.endDate = "Tanggal selesai tidak boleh sebelum tanggal mulai";
+      return sendValidationError(res, errors, req);
+    }
+  }
+  
+  const updatedSidangPeriod = await prisma.sidangPeriod.update({
     where: {
-      id: parseInt(id),
+      id,
     },
     data: {
-      ...(name && { name }),
+      ...(name !== undefined && { name }),
+      ...(category !== undefined && { category }),
+      ...(period !== undefined && { period }),
       ...(startDate && { startDate: new Date(startDate) }),
       ...(endDate && { endDate: new Date(endDate) }),
-      ...(isOpen !== undefined && { isOpen }),
+      ...(isOpen !== undefined && { isOpen: parseBoolean(isOpen) }),
     },
   });
 
   res.json({
     message: "Sidang period updated successfully",
-    data: sidangPeriod,
+    data: updatedSidangPeriod,
   });
 });
 
@@ -98,7 +198,7 @@ const deleteSidangPeriod = asyncHandler(async (req, res) => {
   // Cek apakah sidang period ada
   const sidangPeriodExists = await prisma.sidangPeriod.findUnique({
     where: {
-      id: parseInt(id),
+      id,
     },
   });
 
@@ -108,7 +208,7 @@ const deleteSidangPeriod = asyncHandler(async (req, res) => {
   }
 
   await prisma.sidangPeriod.update({
-    where: { id: parseInt(id) },
+    where: { id },
     data: { deletedAt: new Date() },
   });
 
@@ -117,8 +217,10 @@ const deleteSidangPeriod = asyncHandler(async (req, res) => {
   });
 });
 
-export { listSidangPeriods,
+export {
+  listSidangPeriods,
   getSidangPeriodById,
   createSidangPeriod,
   updateSidangPeriod,
-  deleteSidangPeriod, };
+  deleteSidangPeriod,
+};

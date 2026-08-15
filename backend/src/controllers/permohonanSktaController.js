@@ -1,7 +1,8 @@
 import asyncHandler from 'express-async-handler';
-import prisma from '../prisma/client.js';
+import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
@@ -29,11 +30,9 @@ const mapPermohonanToFrontend = (item, req) => {
     ...item,
     proposalTitleId: item.judulProposalIndonesia,
     proposalTitleEn: item.judulProposalInggris,
-    studentId: item.mahasiswaId,
     student: item.mahasiswa
       ? {
           id: item.mahasiswa.id,
-          studentId: item.mahasiswa.id,
           name: item.mahasiswa.user?.name || '',
           nim: item.mahasiswa.nim || '',
           studyProgramId: item.mahasiswa.studyProgramId,
@@ -104,7 +103,6 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
   try {
     const category = req.query.category || "Permohonan Baru";
     const {
-      studentId,
       mahasiswaId,
       proposalTitleId,
       judulProposalIndonesia,
@@ -114,7 +112,7 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
       dosenPembimbing2Id,
     } = req.body;
 
-    const mhsId = studentId || mahasiswaId;
+    const mhsId = mahasiswaId;
     const judulIndo = proposalTitleId || judulProposalIndonesia;
     const judulEng = proposalTitleEn || judulProposalInggris;
 
@@ -281,7 +279,7 @@ const getPermohonanSktaById = asyncHandler(async (req, res) => {
 });
 
 // [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa
-const getLatestPermohonanSktaByStudentId = asyncHandler(async (req, res) => {
+const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
   const { mahasiswaId } = req.params;
   const data = await prisma.permohonanSkta.findFirst({
     where: { mahasiswaId },
@@ -441,14 +439,143 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   });
 });
 
+// [Route] Generate Dokumen Validasi SKTA
+const generateDokumenValidasiSkta = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const permohonan = await prisma.permohonanSkta.findUnique({
+    where: { id },
+    include: {
+      mahasiswa: true,
+    },
+  });
+
+  if (!permohonan) {
+    res.status(404);
+    throw new Error("Permohonan SKTA tidak ditemukan");
+  }
+
+  const mahasiswaId = permohonan.mahasiswaId;
+  const category = "Dokumen Validasi Skta";
+
+  // Pengecekan apakah ada berkas dengan mahasiswaId dan category yang sama
+  const existingBerkas = await prisma.berkasMahasiswa.findFirst({
+    where: {
+      mahasiswaId,
+      category,
+      deletedAt: null,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const buildDownloadUrl = (req, berkasId) => {
+    if (!berkasId) return null;
+    return `${req.protocol}://${req.get("host")}/api/permohonan-skta/download/validasi/${berkasId}`;
+  };
+
+  if (existingBerkas) {
+    return res.json({
+      message: "Berkas validasi SKTA berhasil ditemukan (existing)",
+      data: {
+        ...existingBerkas,
+        downloadUrl: buildDownloadUrl(req, existingBerkas.id),
+      },
+    });
+  }
+
+  // Jika tidak ada, generate data berkas baru
+  const uploadPath = "uploads/berkas-mahasiswa";
+  if (!fs.existsSync(uploadPath)) {
+    fs.mkdirSync(uploadPath, { recursive: true });
+  }
+
+  const filename = `${uuidv4()}.pdf`;
+  const filepath = path.join(uploadPath, filename);
+
+  // Buffer PDF minimal yang valid
+  const minimalPDFBuffer = Buffer.from(
+    '%PDF-1.4\n' +
+    '1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
+    '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+    '3 0 obj<</Type/Page/Parent 2 0 R/Resources<<>>/MediaBox[0 0 595 842]/Contents 4 0 R>>endobj\n' +
+    '4 0 obj<</Length 49>>stream\n' +
+    'BT\n' +
+    '/F1 12 Tf\n' +
+    '72 712 Td\n' +
+    '(Dokumen Validasi SKTA Mahasiswa) Tj\n' +
+    'ET\n' +
+    'endstream\n' +
+    'endobj\n' +
+    'xref\n' +
+    '0 5\n' +
+    '0000000000 65535 f\n' +
+    '0000000009 00000 n\n' +
+    '0000000052 00000 n\n' +
+    '0000000101 00000 n\n' +
+    '0000000196 00000 n\n' +
+    'trailer<</Size 5/Root 1 0 R>>\n' +
+    'startxref\n' +
+    '296\n' +
+    '%%EOF'
+  );
+
+  fs.writeFileSync(filepath, minimalPDFBuffer);
+
+  const nim = permohonan.mahasiswa?.nim || mahasiswaId;
+  const name = `Dokumen_Validasi_SKTA_${nim}.pdf`;
+
+  const createdUpload = await prisma.berkasMahasiswa.create({
+    data: {
+      id: uuidv4(),
+      name,
+      category,
+      filepath,
+      mahasiswaId,
+    },
+  });
+
+  res.status(201).json({
+    message: "Berkas validasi SKTA berhasil di-generate",
+    data: {
+      ...createdUpload,
+      downloadUrl: buildDownloadUrl(req, createdUpload.id),
+    },
+  });
+});
+
+// [Route] Download Dokumen Validasi SKTA
+const downloadValidasi = asyncHandler(async (req, res) => {
+  const { berkasId } = req.params;
+
+  const upload = await prisma.berkasMahasiswa.findFirst({
+    where: { id: berkasId, deletedAt: null },
+  });
+
+  if (!upload) {
+    res.status(404);
+    throw new Error("File dokumen tidak ditemukan");
+  }
+
+  const filePath = path.resolve(process.cwd(), upload.filepath);
+
+  if (!fs.existsSync(filePath)) {
+    res.status(404);
+    throw new Error("File fisik tidak ditemukan di server");
+  }
+
+  res.download(filePath, upload.name);
+});
+
 export {
   listPermohonanSkta,
   createPermohonanSkta,
   updatePermohonanSkta,
   getPermohonanSktaById,
-  getLatestPermohonanSktaByStudentId,
+  getLatestPermohonanSktaByMahasiswaId,
   downloadSkta,
   downloadEvidence,
   approvePermohonanSkta,
   rejectPermohonanSkta,
+  generateDokumenValidasiSkta,
+  downloadValidasi,
 };

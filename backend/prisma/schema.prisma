@@ -99,7 +99,7 @@ model Faculty {
   id            String         @id @default(uuid())
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
-  deletedAt     DateTime?              @map("deleted_at")
+  deletedAt     DateTime?      @map("deleted_at")
   name          String
   isActive      Boolean        @default(true) @map("is_active")
   studyPrograms StudyProgram[]
@@ -111,7 +111,7 @@ model StudyProgram {
   id        String      @id @default(uuid())
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
-  deletedAt DateTime?              @map("deleted_at")
+  deletedAt DateTime?   @map("deleted_at")
   name      String
   isActive  Boolean     @default(true) @map("is_active")
   faculty   Faculty     @relation(fields: [facultyId], references: [id])
@@ -190,7 +190,7 @@ model PermohonanSkta {
   hasUploadedFinalProposal Boolean?      @map("has_uploaded_final_proposal")
   hasTakenLanguageTest     Boolean?      @map("has_taken_language_test")
   sktaUploadPath           String?       @map("skta_upload_path")
-  expDate                  DateTime?     @db.Date @map("exp_date")
+  expDate                  DateTime?     @map("exp_date") @db.Date
   // Tolak Permohonan
   message                  String?
   isEdit                   DateTime?     @map("is_edit")
@@ -277,6 +277,7 @@ model SidangPeriod {
   createdAt                 DateTime             @default(now()) @map("created_at")
   updatedAt                 DateTime             @updatedAt @map("updated_at")
   deletedAt                 DateTime?            @map("deleted_at")
+  name                      String
   category                  String // tipe aktivitas: pendaftaran sidang / sidang
   period                    String // nama periode: 2026/2027
   startDate                 DateTime             @map("start_date")
@@ -393,10 +394,11 @@ model YudisiumPeriod {
   createdAt                   DateTime               @default(now()) @map("created_at")
   updatedAt                   DateTime               @updatedAt @map("updated_at")
   deletedAt                   DateTime?              @map("deleted_at")
+  name                        String
   category                    String // tipe aktivitas: pendaftaran yudisium / yudisium
   period                      String // nama periode: 2026/2027
   startDate                   DateTime               @map("start_date")
-  endDate                   DateTime               @map("end_date")
+  endDate                     DateTime               @map("end_date")
   isOpen                      Boolean                @default(false) @map("is_open")
   yudisiumRegistrationPeriods YudisiumRegistration[] @relation("YudisiumRegistrationPeriod")
   yudisiumPeriods             YudisiumRegistration[] @relation("YudisiumPeriod")
@@ -447,7 +449,7 @@ model YudisiumRegistration {
   skemaSidang                  String?                      @map("skema_sidang") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
   pengajuanCumlaude            String?                      @map("pengajuan_cumlaude")
   skemaCumlaude                String?                      @map("skema_cumlaude")
-  evidenCumlaude               String?                      @db.Text @map("eviden_cumlaude")
+  evidenCumlaude               String?                      @map("eviden_cumlaude") @db.Text
   dosenPembimbing1             Dosen?                       @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
   dosenPembimbing1Id           String?                      @map("dosen_pembimbing_1_id") // di form yang baru tidak menyertakan Dospem 1
   dosenPembimbing2             Dosen?                       @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
@@ -518,13 +520,12 @@ model BerkasMahasiswa {
   id          String    @id @default(uuid())
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime?          @map("deleted_at")
+  deletedAt   DateTime? @map("deleted_at")
   name        String // Nama Berkas
   category    String // SKL, Transkrip, Dokumen Validasi Skta, Formulir Penerbitan Skta
   filepath    String
-  isValid     Boolean?           @map("is_valid")
   mahasiswa   Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
-  mahasiswaId String             @map("mahasiswa_id")
+  mahasiswaId String    @map("mahasiswa_id")
 
   @@map("berkas_mahasiswa")
 }

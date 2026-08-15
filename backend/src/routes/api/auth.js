@@ -6,10 +6,7 @@ import { register, login, user } from '../../controllers/authController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
 
-import { validate } from '../../middlewares/validate.js';
 
-import { registerValidator,
-  loginValidator, } from '../../validators/authValidator.js';
 
 /**
  * @swagger
@@ -56,7 +53,7 @@ import { registerValidator,
  *       500:
  *         description: Internal server error
  */
-router.post("/register", registerValidator, validate, register);
+router.post("/register", register);
 
 /**
  * @swagger
@@ -82,7 +79,7 @@ router.post("/register", registerValidator, validate, register);
  *       401:
  *         description: Invalid email or password
  */
-router.post("/login", loginValidator, validate, login);
+router.post("/login", login);
 
 /**
  * @swagger

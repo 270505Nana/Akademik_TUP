@@ -1,15 +1,12 @@
 import express from 'express';
 const router = express.Router();
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { listYudisiumRegistrationResponses,
   getYudisiumRegistrationResponseById,
   getYudisiumRegistrationResponseByYudisiumRegistrationId,
   createYudisiumRegistrationResponse,
   updateYudisiumRegistrationResponse,
   deleteYudisiumRegistrationResponse, } from '../../controllers/yudisiumRegistrationResponseController.js';
-import { createYudisiumRegistrationResponseValidator,
-  updateYudisiumRegistrationResponseValidator, } from '../../validators/yudisiumRegistrationResponseValidator.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -146,8 +143,6 @@ router.post(
   "/",
   verifyToken,
   isAdmin,
-  createYudisiumRegistrationResponseValidator,
-  validate,
   createYudisiumRegistrationResponse,
 );
 
@@ -202,8 +197,6 @@ router.put(
   "/:id",
   verifyToken,
   isAdmin,
-  updateYudisiumRegistrationResponseValidator,
-  validate,
   updateYudisiumRegistrationResponse,
 );
 

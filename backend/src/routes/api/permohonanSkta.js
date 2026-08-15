@@ -6,11 +6,13 @@ import {
   createPermohonanSkta,
   updatePermohonanSkta,
   getPermohonanSktaById,
-  getLatestPermohonanSktaByStudentId,
   downloadSkta,
   downloadEvidence,
   approvePermohonanSkta,
   rejectPermohonanSkta,
+  generateDokumenValidasiSkta,
+  getLatestPermohonanSktaByMahasiswaId,
+  downloadValidasi,
 } from '../../controllers/permohonanSktaController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
@@ -108,7 +110,7 @@ router.post(
  * @swagger
  * /api/permohonan-skta/mahasiswa/{mahasiswaId}:
  *   get:
- *     summary: Get latest Permohonan SKTA by student ID
+ *     summary: Get latest Permohonan SKTA by mahasiswa ID
  *     tags: [Permohonan SKTA]
  *     security:
  *       - bearerAuth: []
@@ -118,14 +120,14 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
- *         description: Student ID (UUID)
+ *         description: Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: Latest Permohonan SKTA data retrieved successfully
  *       404:
  *         description: Permohonan SKTA data not found
  */
-router.get("/mahasiswa/:mahasiswaId", verifyToken, getLatestPermohonanSktaByStudentId);
+router.get("/mahasiswa/:mahasiswaId", verifyToken, getLatestPermohonanSktaByMahasiswaId);
 
 /**
  * @swagger
@@ -153,7 +155,7 @@ router.get("/:id", verifyToken, getPermohonanSktaById);
 /**
  * @swagger
  * /api/permohonan-skta/{id}:
- *   patch:
+ *   put:
  *     summary: Update Permohonan SKTA details
  *     tags: [Permohonan SKTA]
  *     security:
@@ -190,14 +192,6 @@ router.get("/:id", verifyToken, getPermohonanSktaById);
  *       404:
  *         description: Permohonan SKTA not found
  */
-router.patch(
-  "/:id",
-  verifyToken,
-  isMahasiswa,
-  upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
-  updatePermohonanSkta
-);
-
 router.put(
   "/:id",
   verifyToken,
@@ -253,7 +247,7 @@ router.get("/:id/download/evidence", verifyToken, downloadEvidence);
 /**
  * @swagger
  * /api/permohonan-skta/{id}/approve:
- *   patch:
+ *   put:
  *     summary: Approve Permohonan SKTA and issue SKTA file
  *     tags: [Permohonan SKTA]
  *     security:
@@ -289,7 +283,7 @@ router.get("/:id/download/evidence", verifyToken, downloadEvidence);
  *       200:
  *         description: Permohonan SKTA approved successfully
  */
-router.patch(
+router.put(
   "/:id/approve",
   verifyToken,
   isAdmin,
@@ -300,7 +294,7 @@ router.patch(
 /**
  * @swagger
  * /api/permohonan-skta/{id}/reject:
- *   patch:
+ *   put:
  *     summary: Reject Permohonan SKTA
  *     tags: [Permohonan SKTA]
  *     security:
@@ -329,11 +323,56 @@ router.patch(
  *       200:
  *         description: Permohonan SKTA rejected successfully
  */
-router.patch(
+router.put(
   "/:id/reject",
   verifyToken,
   isAdmin,
   rejectPermohonanSkta
 );
+
+/**
+ * @swagger
+ * /api/permohonan-skta/{id}/generate/dokumen-validasi-skta:
+ *   get:
+ *     summary: Generate or retrieve existing Dokumen Validasi SKTA
+ *     tags: [Permohonan SKTA]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Retrieve existing Dokumen Validasi SKTA
+ *       201:
+ *         description: Successfully generated new placeholder Dokumen Validasi SKTA
+ */
+router.get(
+  "/:id/generate/dokumen-validasi-skta",
+  verifyToken,
+  isAdmin,
+  generateDokumenValidasiSkta
+);
+
+/**
+ * @swagger
+ * /api/permohonan-skta/download/validasi/{berkasId}:
+ *   get:
+ *     summary: Download generated Dokumen Validasi SKTA file
+ *     tags: [Permohonan SKTA]
+ *     parameters:
+ *       - in: path
+ *         name: berkasId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: File downloaded successfully
+ */
+router.get("/download/validasi/:berkasId", downloadValidasi);
 
 export default router;

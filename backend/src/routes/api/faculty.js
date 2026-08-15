@@ -12,9 +12,7 @@ import { listFaculties,
 import { verifyToken } from '../../middlewares/auth.js';
 import { authorize } from '../../middlewares/authorize.js';
 
-import { validate } from '../../middlewares/validate.js';
-import { createFacultyValidator,
-  updateFacultyValidator, } from '../../validators/facultyValidator.js';
+
 
 /**
  * @swagger
@@ -70,8 +68,6 @@ router.post(
   "/",
   verifyToken,
   authorize("ADMIN"),
-  createFacultyValidator,
-  validate,
   createFaculty,
 );
 
@@ -130,8 +126,6 @@ router.put(
   "/:id",
   verifyToken,
   authorize("ADMIN"),
-  updateFacultyValidator,
-  validate,
   updateFaculty,
 );
 
@@ -160,7 +154,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
 /**
  * @swagger
  * /api/faculties/{id}/toggle-publish:
- *   patch:
+ *   post:
  *     summary: Toggle faculty publish status (hide/show)
  *     tags: [Faculty]
  *     security:
@@ -177,7 +171,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
  *       404:
  *         description: Faculty not found
  */
-router.patch(
+router.post(
   "/:id/toggle-publish",
   verifyToken,
   authorize("ADMIN"),

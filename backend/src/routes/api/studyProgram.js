@@ -12,9 +12,7 @@ import { listStudyPrograms,
 import { verifyToken } from '../../middlewares/auth.js';
 import { authorize } from '../../middlewares/authorize.js';
 
-import { validate } from '../../middlewares/validate.js';
-import { createStudyProgramValidator,
-  updateStudyProgramValidator, } from '../../validators/studyProgramValidator.js';
+
 
 /**
  * @swagger
@@ -72,8 +70,6 @@ router.post(
   "/",
   verifyToken,
   authorize("ADMIN"),
-  createStudyProgramValidator,
-  validate,
   createStudyProgram,
 );
 
@@ -134,8 +130,6 @@ router.put(
   "/:id",
   verifyToken,
   authorize("ADMIN"),
-  updateStudyProgramValidator,
-  validate,
   updateStudyProgram,
 );
 
@@ -169,7 +163,7 @@ router.delete(
 /**
  * @swagger
  * /api/study-programs/{id}/toggle-publish:
- *   patch:
+ *   post:
  *     summary: Toggle study program publish status (hide/show)
  *     tags: [Study Program]
  *     security:
@@ -186,7 +180,7 @@ router.delete(
  *       404:
  *         description: Study program not found
  */
-router.patch(
+router.post(
   "/:id/toggle-publish",
   verifyToken,
   authorize("ADMIN"),

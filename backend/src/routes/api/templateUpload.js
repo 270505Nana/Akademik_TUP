@@ -10,11 +10,7 @@ import { listTemplateUploads,
   downloadTemplateUpload, } from '../../controllers/templateUploadController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
-
-import { createTemplateUploadValidator,
-  updateTemplateUploadValidator, } from '../../validators/templateUploadValidator.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -90,8 +86,6 @@ router.post(
   verifyToken,
   isAdmin,
   upload("templates").single("templateFile"),
-  createTemplateUploadValidator,
-  validate,
   createTemplateUpload,
 );
 
@@ -178,8 +172,6 @@ router.patch(
   verifyToken,
   isAdmin,
   upload("templates").single("templateFile"),
-  updateTemplateUploadValidator,
-  validate,
   updateTemplateUpload,
 );
 

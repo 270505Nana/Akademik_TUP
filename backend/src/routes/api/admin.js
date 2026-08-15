@@ -8,9 +8,6 @@ import { listAdmins,
 
 import { verifyToken } from '../../middlewares/auth.js';
 
-import { validate } from '../../middlewares/validate.js';
-
-import { upsertAdminValidator, } from '../../validators/adminValidator.js';
 import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -82,8 +79,6 @@ router.put(
   "/:userId",
   verifyToken,
   isAdmin,
-  upsertAdminValidator,
-  validate,
   upsertAdmin,
 );
 

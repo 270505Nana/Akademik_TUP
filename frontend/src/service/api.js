@@ -137,7 +137,7 @@ export const resubmitSKTARequest = async ({
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   if (evidence) formData.append("evidence", evidence);
 
-  const response = await api.patch(
+  const response = await api.put(
     `/api/permohonan-skta/${sktaRequestId}`,
     formData,
     {
@@ -226,7 +226,7 @@ export const approvePermohonanSK = async (id, {
   formData.append("adminId", String(adminId));
   if (sktaFile) formData.append("skta", sktaFile);
 
-  const response = await api.patch(`/api/permohonan-skta/${id}/approve`, formData, {
+  const response = await api.put(`/api/permohonan-skta/${id}/approve`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
@@ -236,7 +236,7 @@ export const rejectPermohonanSK = async (id, {
   message,
   adminId,
 }) => {
-  const response = await api.patch(`/api/permohonan-skta/${id}/reject`, {
+  const response = await api.put(`/api/permohonan-skta/${id}/reject`, {
     message,
     adminId,
   });
@@ -317,22 +317,23 @@ export const downloadSK = async (permohonanId) => {
  */
 
 export const uploadDokumenValidasi = async (studentId, pdfBlob, namaFile) => {
-// buat debug
-  console.log('pdfBlob type:', pdfBlob?.type);
-  console.log('pdfBlob size:', pdfBlob?.size);
-  console.log('studentId:', studentId);
-
   const formData = new FormData();
-  formData.append('studentId',   String(studentId));
+  formData.append('mahasiswaId', String(studentId));
   formData.append('name',        namaFile || `Dokumen_Validasi_SKTA_${studentId}`);
-  formData.append('dokumenFile', pdfBlob, `validasi-skta-${studentId}.pdf`);
+  formData.append('category',    'Dokumen Validasi Skta');
+  formData.append('berkas',      pdfBlob, `validasi-skta-${studentId}.pdf`);
 
   const response = await api.post(
-    '/api/dokumen-validasi-skta',
+    '/api/berkas-mahasiswa',
     formData,
     { headers: { 'Content-Type': 'multipart/form-data' } }
   );
 
+  return response.data?.data ?? response.data;
+};
+
+export const generateDokumenValidasiSkta = async (permohonanId) => {
+  const response = await api.get(`/api/permohonan-skta/${permohonanId}/generate/dokumen-validasi-skta`);
   return response.data?.data ?? response.data;
 };
 
@@ -512,7 +513,7 @@ export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
   const end    = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
  
-  const response = await api.patch(`/api/sidang-periods/${id}`, {
+  const response = await api.put(`/api/sidang-periods/${id}`, {
     name,
     startDate, 
     endDate,   
@@ -543,7 +544,7 @@ export const updateYudisiumPeriod = async (id, { name, startDate, endDate }) => 
   const end    = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
  
-  const response = await api.patch(`/api/yudisium-periods/${id}`, {
+  const response = await api.put(`/api/yudisium-periods/${id}`, {
     name,
     startDate, 
     endDate,   

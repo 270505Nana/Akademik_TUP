@@ -1,7 +1,6 @@
 import express from 'express';
 const router = express.Router();
 import { verifyToken } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js';
 import { upload } from '../../middlewares/upload.js';
 import { listYudisiumRegistrations,
   getYudisiumRegistrationById,
@@ -12,8 +11,6 @@ import { listYudisiumRegistrations,
   uploadYudisiumRegistrationFile,
   getYudisiumRegistrationFiles,
   downloadYudisiumRegistrationFile, } from '../../controllers/yudisiumRegistrationController.js';
-import { saveYudisiumRegistrationValidator,
-  submitYudisiumRegistrationValidator, } from '../../validators/yudisiumRegistrationValidator.js';
 import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -101,7 +98,7 @@ router.get(
 
 /**
  * @swagger
- * /api/yudisium-registrations/save:
+ * /api/yudisium-registrations/:
  *   post:
  *     summary: Save draft yudisium registration
  *     tags: [Yudisium Registration]
@@ -128,11 +125,9 @@ router.get(
  *         description: Internal server error
  */
 router.post(
-  "/save",
+  "/",
   verifyToken,
   isMahasiswa,
-  saveYudisiumRegistrationValidator,
-  validate,
   saveYudisiumRegistration,
 );
 
@@ -168,8 +163,6 @@ router.post(
   "/submit",
   verifyToken,
   isMahasiswa,
-  submitYudisiumRegistrationValidator,
-  validate,
   submitYudisiumRegistration,
 );
 
