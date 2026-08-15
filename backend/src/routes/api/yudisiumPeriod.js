@@ -130,7 +130,7 @@ router.post(
 /**
  * @swagger
  * /api/yudisium-periods/{id}:
- *   patch:
+ *   put:
  *     summary: Update yudisium period
  *     tags: [Yudisium Period]
  *     security:
@@ -181,7 +181,7 @@ router.post(
  *       403:
  *         description: Invalid token
  */
-router.patch(
+router.put(
   "/:id",
   verifyToken,
   isAdmin,

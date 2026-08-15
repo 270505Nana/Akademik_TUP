@@ -130,7 +130,7 @@ router.post(
 /**
  * @swagger
  * /api/sidang-periods/{id}:
- *   patch:
+ *   put:
  *     summary: Update sidang period
  *     tags: [Sidang Period]
  *     security:
@@ -181,7 +181,7 @@ router.post(
  *       403:
  *         description: Invalid token
  */
-router.patch(
+router.put(
   "/:id",
   verifyToken,
   isAdmin,

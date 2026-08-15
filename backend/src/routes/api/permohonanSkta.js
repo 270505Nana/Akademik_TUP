@@ -155,7 +155,7 @@ router.get("/:id", verifyToken, getPermohonanSktaById);
 /**
  * @swagger
  * /api/permohonan-skta/{id}:
- *   patch:
+ *   put:
  *     summary: Update Permohonan SKTA details
  *     tags: [Permohonan SKTA]
  *     security:
@@ -192,14 +192,6 @@ router.get("/:id", verifyToken, getPermohonanSktaById);
  *       404:
  *         description: Permohonan SKTA not found
  */
-router.patch(
-  "/:id",
-  verifyToken,
-  isMahasiswa,
-  upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
-  updatePermohonanSkta
-);
-
 router.put(
   "/:id",
   verifyToken,
@@ -255,7 +247,7 @@ router.get("/:id/download/evidence", verifyToken, downloadEvidence);
 /**
  * @swagger
  * /api/permohonan-skta/{id}/approve:
- *   patch:
+ *   put:
  *     summary: Approve Permohonan SKTA and issue SKTA file
  *     tags: [Permohonan SKTA]
  *     security:
@@ -291,7 +283,7 @@ router.get("/:id/download/evidence", verifyToken, downloadEvidence);
  *       200:
  *         description: Permohonan SKTA approved successfully
  */
-router.patch(
+router.put(
   "/:id/approve",
   verifyToken,
   isAdmin,
@@ -302,7 +294,7 @@ router.patch(
 /**
  * @swagger
  * /api/permohonan-skta/{id}/reject:
- *   patch:
+ *   put:
  *     summary: Reject Permohonan SKTA
  *     tags: [Permohonan SKTA]
  *     security:
@@ -331,7 +323,7 @@ router.patch(
  *       200:
  *         description: Permohonan SKTA rejected successfully
  */
-router.patch(
+router.put(
   "/:id/reject",
   verifyToken,
   isAdmin,
