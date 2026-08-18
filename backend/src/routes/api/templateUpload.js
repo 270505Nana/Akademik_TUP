@@ -2,12 +2,15 @@ import express from 'express';
 
 const router = express.Router();
 
-import { listTemplateUploads,
+import { 
+  listTemplateUploads,
   createTemplateUpload,
-  findTemplateUploadBySlug,
+  findTemplateUploadById,
   updateTemplateUpload,
   deleteTemplateUpload,
-  downloadTemplateUpload, } from '../../controllers/templateUploadController.js';
+  downloadTemplateUpload,
+  previewTemplateUpload, 
+} from '../../controllers/templateUploadController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
@@ -28,6 +31,12 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *     tags: [Template Upload]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category (e.g. Yudisium, Sidang, etc.)
  *     responses:
  *       200:
  *         description: Template upload data retrieved successfully
@@ -56,15 +65,17 @@ router.get("/", verifyToken, listTemplateUploads);
  *             type: object
  *             required:
  *               - name
- *               - slug
+ *               - category
  *               - templateFile
  *             properties:
  *               name:
  *                 type: string
  *                 example: Template Surat TA
- *               slug:
+ *               category:
  *                 type: string
- *                 example: formulir-penerbitan-skta
+ *                 example: Kategori dokumen (Yudisium, Sidang, dll)
+ *               isPublish:
+ *                 type: boolean
  *               templateFile:
  *                 type: string
  *                 format: binary
@@ -91,19 +102,19 @@ router.post(
 
 /**
  * @swagger
- * /api/templates/{slug}:
+ * /api/templates/{id}:
  *   get:
- *     summary: Get template upload by slug
+ *     summary: Get template upload by ID
  *     tags: [Template Upload]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: slug
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Template upload slug
+ *         description: Template upload ID
  *     responses:
  *       200:
  *         description: Template upload data retrieved successfully
@@ -116,7 +127,43 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get("/:slug", verifyToken, findTemplateUploadBySlug);
+router.get("/:id", verifyToken, findTemplateUploadById);
+
+/**
+ * @swagger
+ * /api/templates/download/{id}:
+ *   get:
+ *     summary: Download template
+ *     tags: [Template Upload]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: File downloaded successfully
+ */
+router.get("/download/:id", downloadTemplateUpload);
+
+/**
+ * @swagger
+ * /api/templates/preview/{id}:
+ *   get:
+ *     summary: Preview template upload by id
+ *     tags: [Template Upload]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Template upload preview retrieved successfully
+ */
+router.get("/preview/:id", previewTemplateUpload);
 
 /**
  * @swagger
@@ -131,7 +178,7 @@ router.get("/:slug", verifyToken, findTemplateUploadBySlug);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *         description: Template upload ID
  *     requestBody:
  *       required: true
@@ -139,16 +186,15 @@ router.get("/:slug", verifyToken, findTemplateUploadBySlug);
  *         multipart/form-data:
  *           schema:
  *             type: object
- *             required:
- *               - name
- *               - slug
  *             properties:
  *               name:
  *                 type: string
  *                 example: Template Surat TA Revisi
- *               slug:
+ *               category:
  *                 type: string
- *                 example: formulir-penerbitan-skta-revisi
+ *                 example: Yudisium
+ *               isPublish:
+ *                 type: boolean
  *               templateFile:
  *                 type: string
  *                 format: binary
@@ -188,7 +234,7 @@ router.patch(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *         description: Template upload ID
  *     responses:
  *       200:
