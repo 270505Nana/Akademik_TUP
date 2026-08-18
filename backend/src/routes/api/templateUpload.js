@@ -5,7 +5,7 @@ const router = express.Router();
 import { 
   listTemplateUploads,
   createTemplateUpload,
-  findTemplateUploadById,
+  findTemplateUploadByCode,
   updateTemplateUpload,
   deleteTemplateUpload,
   downloadTemplateUpload,
@@ -65,12 +65,16 @@ router.get("/", verifyToken, listTemplateUploads);
  *             type: object
  *             required:
  *               - name
+ *               - code
  *               - category
  *               - templateFile
  *             properties:
  *               name:
  *                 type: string
  *                 example: Template Surat TA
+ *               code:
+ *                 type: string
+ *                 example: evidence-dosen-pembimbing
  *               category:
  *                 type: string
  *                 example: Kategori dokumen (Yudisium, Sidang, dll)
@@ -102,19 +106,19 @@ router.post(
 
 /**
  * @swagger
- * /api/templates/{id}:
+ * /api/templates/{code}:
  *   get:
- *     summary: Get template upload by ID
+ *     summary: Get template upload by Code
  *     tags: [Template Upload]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: code
  *         required: true
  *         schema:
  *           type: string
- *         description: Template upload ID
+ *         description: Template upload Code
  *     responses:
  *       200:
  *         description: Template upload data retrieved successfully
@@ -127,17 +131,17 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get("/:id", verifyToken, findTemplateUploadById);
+router.get("/:code", verifyToken, findTemplateUploadByCode);
 
 /**
  * @swagger
- * /api/templates/download/{id}:
+ * /api/templates/download/{code}:
  *   get:
  *     summary: Download template
  *     tags: [Template Upload]
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: code
  *         required: true
  *         schema:
  *           type: string
@@ -145,17 +149,17 @@ router.get("/:id", verifyToken, findTemplateUploadById);
  *       200:
  *         description: File downloaded successfully
  */
-router.get("/download/:id", downloadTemplateUpload);
+router.get("/download/:code", downloadTemplateUpload);
 
 /**
  * @swagger
- * /api/templates/preview/{id}:
+ * /api/templates/preview/{code}:
  *   get:
- *     summary: Preview template upload by id
+ *     summary: Preview template upload by code
  *     tags: [Template Upload]
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: code
  *         required: true
  *         schema:
  *           type: string
@@ -163,7 +167,7 @@ router.get("/download/:id", downloadTemplateUpload);
  *       200:
  *         description: Template upload preview retrieved successfully
  */
-router.get("/preview/:id", previewTemplateUpload);
+router.get("/preview/:code", previewTemplateUpload);
 
 /**
  * @swagger
@@ -190,6 +194,9 @@ router.get("/preview/:id", previewTemplateUpload);
  *               name:
  *                 type: string
  *                 example: Template Surat TA Revisi
+ *               code:
+ *                 type: string
+ *                 example: evidence-dosen-pembimbing
  *               category:
  *                 type: string
  *                 example: Yudisium

@@ -28,6 +28,7 @@ const mapPermohonanToFrontend = (item, req) => {
   if (!item) return null;
   return {
     ...item,
+    studentId: item.mahasiswaId,
     proposalTitleId: item.judulProposalIndonesia,
     proposalTitleEn: item.judulProposalInggris,
     student: item.mahasiswa

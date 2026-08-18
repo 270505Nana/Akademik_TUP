@@ -96,6 +96,7 @@ export const submitSKTARequest = async ({
   proposalTitleId,
   proposalTitleEn,
   studentId,
+  mahasiswaId,
   dosenPembimbing1Id,
   dosenPembimbing2Id,
   evidence,
@@ -104,7 +105,7 @@ export const submitSKTARequest = async ({
   const formData = new FormData();
   formData.append("proposalTitleId", proposalTitleId);
   formData.append("proposalTitleEn", proposalTitleEn);
-  formData.append("studentId", String(studentId));
+  formData.append("mahasiswaId", String(mahasiswaId || studentId));
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   formData.append("evidence", evidence);
@@ -123,6 +124,7 @@ export const submitSKTARequest = async ({
 export const resubmitSKTARequest = async ({
   sktaRequestId,
   studentId,
+  mahasiswaId,
   proposalTitleId,
   proposalTitleEn,
   dosenPembimbing1Id,
@@ -130,7 +132,8 @@ export const resubmitSKTARequest = async ({
   evidence,
 }) => {
   const formData = new FormData();
-  if (studentId) formData.append("studentId", String(studentId));
+  const targetMahasiswaId = mahasiswaId || studentId;
+  if (targetMahasiswaId) formData.append("mahasiswaId", String(targetMahasiswaId));
   formData.append("proposalTitleId", proposalTitleId);
   formData.append("proposalTitleEn", proposalTitleEn);
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
@@ -351,7 +354,12 @@ export const getSidangRegistrationByStudentId = async (studentId) => {
 };
 
 export const saveSidangRegistration = async (payload) => {
-  const response = await api.post("/api/sidang-registrations/save", payload);
+  const newPayload = { ...payload };
+  if (newPayload.studentId) {
+    newPayload.mahasiswaId = newPayload.studentId;
+    delete newPayload.studentId;
+  }
+  const response = await api.post("/api/sidang-registrations/save", newPayload);
   return response.data?.data ?? response.data;
 };
 
@@ -372,7 +380,12 @@ export const uploadSidangRegistrationFile = async (registrationId, payload) => {
 };
 
 export const submitSidangRegistration = async (payload) => {
-  const response = await api.post("/api/sidang-registrations/submit", payload);
+  const newPayload = { ...payload };
+  if (newPayload.studentId) {
+    newPayload.mahasiswaId = newPayload.studentId;
+    delete newPayload.studentId;
+  }
+  const response = await api.post("/api/sidang-registrations/submit", newPayload);
   return response.data?.data ?? response.data;
 };
 
@@ -436,13 +449,23 @@ export const getSidangRegistrationResponseById = async (id) => {
 };
 
 export const createSidangRegistrationResponse = async (payload) => {
-  const response = await api.post('/api/sidang-registration-responses', payload);
+  const newPayload = { ...payload };
+  if (newPayload.academicStaffId) {
+    newPayload.adminId = newPayload.academicStaffId;
+    delete newPayload.academicStaffId;
+  }
+  const response = await api.post('/api/sidang-registration-responses', newPayload);
   return response.data?.data ?? response.data;
 };
 
 // PUT /api/sidang-registration-responses/{id} : Update response
 export const updateSidangRegistrationResponse = async (id, payload) => {
-  const response = await api.put(`/api/sidang-registration-responses/${id}`, payload);
+  const newPayload = { ...payload };
+  if (newPayload.academicStaffId) {
+    newPayload.adminId = newPayload.academicStaffId;
+    delete newPayload.academicStaffId;
+  }
+  const response = await api.put(`/api/sidang-registration-responses/${id}`, newPayload);
   return response.data?.data ?? response.data;
 };
 
@@ -554,21 +577,21 @@ export const updateYudisiumPeriod = async (id, { name, startDate, endDate }) => 
 };
 
 // ------------------------------------------- TEMPLATE -------------------------------------------
-export const getTemplate = async (slug) => {
-  const response = await api.get(`/api/templates/${slug}`);
+export const getTemplate = async (code) => {
+  const response = await api.get(`/api/templates/${code}`);
   return response.data?.data ?? response.data;
 };
 
 // Buat preview filenya, soalnya yg api swagger itu dia langsung ke download ak maunya ada preview
-// export const getTemplateBlob = async (slug) => {
-//   const response = await api.get(`/api/templates/${slug}`, {
+// export const getTemplateBlob = async (code) => {
+//   const response = await api.get(`/api/templates/${code}`, {
 //     responseType: 'blob',
 //   });
 //   return response.data; 
 // };
 
-export const downloadTemplate = async (slug) => {
-  const meta = await getTemplate(slug);
+export const downloadTemplate = async (code) => {
+  const meta = await getTemplate(code);
   const downloadUrl = meta?.url;
   if (!downloadUrl) throw new Error('Download URL tidak ditemukan dalam response.');
 
@@ -576,7 +599,7 @@ export const downloadTemplate = async (slug) => {
   const response = await api.get(downloadUrl, { responseType: 'blob' });
   return {
     blob: response.data,
-    name: meta?.name || meta?.filename || `template-${slug}`,
+    name: meta?.name || (meta?.filepath ? meta.filepath.split(/[/\\]/).pop() : null) || `template-${code}`,
   };
 };
 export default api;

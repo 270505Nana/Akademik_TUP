@@ -20,13 +20,13 @@ import CustomAlert from '../../components/common/CustomAlert';
 import TemplateEvidenceModal from '../../components/common/TemplateEvidenceModal';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
 
-const DownloadTemplateButton = ({ slug }) => {
+const DownloadTemplateButton = ({ code }) => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const { blob, name } = await downloadTemplate(slug);
+      const { blob, name } = await downloadTemplate(code);
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
       a.href     = url;
@@ -877,7 +877,7 @@ const PengajuanSK = () => {
               Lihat Template Evidence
             </button> */}
 
-             <DownloadTemplateButton slug="evidence-dosen-pembimbing" />
+             <DownloadTemplateButton code="evidence-dosen-pembimbing" />
           </div>
 
           {isBelumTerbit && (
@@ -961,10 +961,9 @@ const PengajuanSK = () => {
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </footer>
 
-      {/* Modal Template Evidence */}
       {showTemplateModal && (
         <TemplateEvidenceModal
-          slug="evidence-dosen-pembimbing"
+          code="evidence-dosen-pembimbing"
           onClose={() => setShowTemplateModal(false)}
         />
       )}

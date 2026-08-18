@@ -79,36 +79,21 @@ const PermohonanSK = () => {
     try {
       const res      = await getAllSktaRequests();
       const dataList = res?.data ?? res ?? [];
-      const groupByStudent = new Map();
-      dataList.forEach(item => {
-        const sid = item.studentId;
-        if (!groupByStudent.has(sid)) groupByStudent.set(sid, []);
-        groupByStudent.get(sid).push(item);
-      });
 
       const enriched = await Promise.all(
-        Array.from(groupByStudent.entries()).map(async ([, requests]) => {
+        dataList.map(async (item) => {
           const uploadsRaw = await getSktaResponseUploadByStudentId(
-            requests[0].studentId
+            item.mahasiswaId || item.studentId || item.student?.id
           ).catch(() => null);
           const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
 
-          const withResponses = await Promise.all(
-            requests.map(async (req) => {
-              const raw = await getSktaResponseByRequestId(req.id).catch(() => null);
-              return { ...req, sktaResponse: unwrapResponse(raw) };
-            })
-          );
+          const raw = await getSktaResponseByRequestId(item.id).catch(() => null);
+          const sktaResponse = unwrapResponse(raw);
 
-          const processed = withResponses.filter(r => r.sktaResponse !== null);
-          const chosen    = processed.length > 0
-            ? processed.sort((a, b) => b.id - a.id)[0]   
-            : withResponses.sort((a, b) => b.id - a.id)[0]; 
+          const prodiName = item.student?.studyProgramNama ?? '-';
+          const tanggal = item.createdAt ?? null;
 
-          const prodiName = chosen.student?.studyProgramNama ?? '-';
-          const tanggal = chosen.createdAt ?? null;
-
-          return { ...chosen, skUploads, prodiName, tanggal };
+          return { ...item, sktaResponse, skUploads, prodiName, tanggal };
         })
       );
 
@@ -150,7 +135,7 @@ const PermohonanSK = () => {
 
   //  PREVIEW EVIDENCE LENGKAP 
   const handlePreviewEvidence = async (item) => {
-    const studentId = item.studentId;
+    const studentId = item.mahasiswaId || item.studentId || item.student?.id;
     if (!studentId) return showAlert('error', 'Error', 'Student ID tidak ditemukan');
 
     try {
@@ -177,7 +162,7 @@ const PermohonanSK = () => {
     setExistingResponse(null);
     const [raw, uploadsRaw] = await Promise.all([
       getSktaResponseByRequestId(item.id).catch(() => null),
-      getSktaResponseUploadByStudentId(item.studentId).catch(() => null),
+      getSktaResponseUploadByStudentId(item.mahasiswaId || item.studentId || item.student?.id).catch(() => null),
     ]);
     const unwrapped = unwrapResponse(raw);
     const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
@@ -299,7 +284,7 @@ const PermohonanSK = () => {
                           <tr key={item.id}>
                             <td className="text-center">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
                             <td>
-                              <div className="sk-mhs-name">{student.name || `Mahasiswa ID ${item.studentId}`}</div>
+                              <div className="sk-mhs-name">{student.name || `Mahasiswa ID ${item.mahasiswaId || item.studentId || item.student?.id}`}</div>
                               <div className="sk-mhs-nim">{student.nim || '-'}</div>
                             </td>
                             <td><span className="sk-prodi-text">{item.prodiName}</span></td>

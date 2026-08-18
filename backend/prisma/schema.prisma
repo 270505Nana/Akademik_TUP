@@ -160,6 +160,7 @@ model DokumenPersyaratanBerkas {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   name      String // Nama Berkas
+  code      String    @unique
   category  String // Sidang Reguler / Non Sidang Publikasi Jurnal / Non Sidang Proceeding International / Yudisium
   filepath  String
   isPublish Boolean   @default(true) @map("is_publish")

@@ -16,21 +16,21 @@ const sanitizeFilename = (value) =>
     .replace(/[\\/:*?"<>|]/g, "-")
     .replace(/\s+/g, " ");
 
-const buildDownloadUrl = (req, id) => {
-  if (!id) return null; 
-    return `${req.protocol}://${req.get("host")}/templates/download/${id}`;
+const buildDownloadUrl = (req, code) => {
+  if (!code) return null; 
+    return `${req.protocol}://${req.get("host")}/templates/download/${code}`;
 };
 
-const buildPreviewUrl = (req, id) => {
-  if (!id) return null; 
-    return `${req.protocol}://${req.get("host")}/templates/preview/${id}`;
+const buildPreviewUrl = (req, code) => {
+  if (!code) return null; 
+    return `${req.protocol}://${req.get("host")}/templates/preview/${code}`;
 };
 
 const withFileUrl = (req, data) => ({
   ...data,
-  url: buildDownloadUrl(req, data.id),
-  download: buildDownloadUrl(req, data.id),
-  preview: buildPreviewUrl(req, data.id),
+  url: buildDownloadUrl(req, data.code),
+  download: buildDownloadUrl(req, data.code),
+  preview: buildPreviewUrl(req, data.code),
 });
 
 // Get all template uploads
@@ -50,11 +50,12 @@ const listTemplateUploads = asyncHandler(async (req, res) => {
 // Create template upload
 const createTemplateUpload = asyncHandler(async (req, res) => {
   try {
-    const { name, category, isPublish } = req.body;
+    const { name, code, category, isPublish } = req.body;
     const file = req.file;
 
     const errors = [];
     if (isNil(name)) errors.push({ field: 'name', message: 'name wajib diisi' });
+    if (isNil(code)) errors.push({ field: 'code', message: 'code wajib diisi' });
     if (isNil(category)) errors.push({ field: 'category', message: 'category wajib diisi' });
     if (!file) {
       errors.push({ field: 'templateFile', message: 'templateFile wajib diunggah' });
@@ -62,11 +63,21 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
       errors.push({ field: 'templateFile', message: 'Tipe file tidak valid' });
     }
 
+    if (code) {
+      const codeExists = await prisma.dokumenPersyaratanBerkas.findUnique({
+        where: { code },
+      });
+      if (codeExists) {
+        errors.push({ field: 'code', message: 'code sudah digunakan' });
+      }
+    }
+
     if (errors.length > 0) return sendValidationError(res, errors, req);
 
     const createdTemplateUpload = await prisma.dokumenPersyaratanBerkas.create({
       data: {
         name,
+        code,
         category,
         isPublish: isPublish === 'true' || isPublish === true,
         filepath: file.path,
@@ -85,12 +96,12 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
   }
 });
 
-// Get template upload by ID
-const findTemplateUploadById = asyncHandler(async (req, res) => {
-  const id = req.params.id;
+// Get template upload by Code
+const findTemplateUploadByCode = asyncHandler(async (req, res) => {
+  const code = req.params.code;
 
   const templateUpload = await prisma.dokumenPersyaratanBerkas.findFirst({
-    where: { id, deletedAt: null },
+    where: { code, deletedAt: null },
   });
   if (!templateUpload) {
     res.status(404);
@@ -102,16 +113,14 @@ const findTemplateUploadById = asyncHandler(async (req, res) => {
   res.json({ data });
 });
 
-// Update template upload
+// Update template upload by ID (using PATCH)
 const updateTemplateUpload = asyncHandler(async (req, res) => {
   try {
     const id = req.params.id;
-    const { name, category, isPublish } = req.body;
+    const { name, code, category, isPublish } = req.body;
     const file = req.file;
 
     const errors = [];
-   // if (isNil(name)) errors.push({ field: 'name', message: 'name wajib diisi' });
-  //  if (isNil(category)) errors.push({ field: 'category', message: 'category wajib diisi' });
     if (file && !allowedMimeTypes.includes(file.mimetype)) {
       errors.push({ field: 'templateFile', message: 'Tipe file tidak valid' });
     }
@@ -130,10 +139,24 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
       throw new Error("Unggahan template tidak ditemukan");
     }
 
+    if (code && code !== templateUpload.code) {
+      const codeExists = await prisma.dokumenPersyaratanBerkas.findUnique({
+        where: { code },
+      });
+      if (codeExists) {
+        if (file?.path) {
+          fs.unlink(file.path, () => {});
+        }
+        errors.push({ field: 'code', message: 'code sudah digunakan' });
+        return sendValidationError(res, errors, req);
+      }
+    }
+
     const updatedTemplateUpload = await prisma.dokumenPersyaratanBerkas.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
+        ...(code !== undefined && { code }),
         ...(category !== undefined && { category }),
         ...(isPublish !== undefined && { isPublish: isPublish === 'true' || isPublish === true }),
         ...(file ? { filepath: file.path }
@@ -158,7 +181,7 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
   }
 });
 
-// Delete template upload
+// Delete template upload by ID
 const deleteTemplateUpload = asyncHandler(async (req, res) => {
   const id = req.params.id;
 
@@ -181,12 +204,12 @@ const deleteTemplateUpload = asyncHandler(async (req, res) => {
   res.json({ message: "Template upload deleted successfully" });
 });
 
-// Download template
+// Download template by Code
 const downloadTemplateUpload = asyncHandler(async (req, res) => {
-  const id = req.params.id;
+  const code = req.params.code;
 
   const template = await prisma.dokumenPersyaratanBerkas.findUnique({
-    where: { id },
+    where: { code },
   });
 
   if (!template) {
@@ -201,12 +224,12 @@ const downloadTemplateUpload = asyncHandler(async (req, res) => {
   res.download(filePath, downloadName);
 });
 
-// Preview template (serve inline, e.g. for PDF)
+// Preview template (serve inline, e.g. for PDF) by Code
 const previewTemplateUpload = asyncHandler(async (req, res) => {
-  const id = req.params.id;
+  const code = req.params.code;
 
   const template = await prisma.dokumenPersyaratanBerkas.findUnique({
-    where: { id },
+    where: { code },
   });
 
   if (!template) {
@@ -242,7 +265,7 @@ const previewTemplateUpload = asyncHandler(async (req, res) => {
 export { 
   listTemplateUploads,
   createTemplateUpload,
-  findTemplateUploadById,
+  findTemplateUploadByCode,
   updateTemplateUpload,
   deleteTemplateUpload,
   downloadTemplateUpload,
