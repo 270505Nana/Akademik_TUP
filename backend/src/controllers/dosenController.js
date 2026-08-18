@@ -16,12 +16,15 @@ const listDosens = asyncHandler(async (req, res) => {
     },
   });
 
-  const mapped = dosens.map((d) => ({
-    ...d,
-    name: d.user?.name,
-    email: d.user?.email,
-    phone: d.user?.phone,
-  }));
+  const mapped = dosens.map((d) => {
+    const { user, ...rest } = d;
+    return {
+      ...rest,
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || null,
+    };
+  });
 
   res.json({
     data: mapped,
@@ -32,7 +35,7 @@ const listDosens = asyncHandler(async (req, res) => {
 const upsertDosen = asyncHandler(async (req, res) => {
   const userId = req.params.userId; // String UUID
 
-  const user = await prisma.user.findFirst({ where: { id: userId } });
+  const user = await prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
   if (!user) {
     res.status(404);
     throw new Error("Pengguna tidak ditemukan");
@@ -112,12 +115,14 @@ const findDosenByUserId = asyncHandler(async (req, res) => {
     throw new Error("Data dosen tidak ditemukan");
   }
 
+  const { user, ...rest } = dosen;
+
   res.json({
     data: {
-      ...dosen,
-      name: dosen.user?.name,
-      email: dosen.user?.email,
-      phone: dosen.user?.phone,
+      ...rest,
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || null,
     },
   });
 });

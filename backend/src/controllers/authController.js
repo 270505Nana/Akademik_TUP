@@ -96,7 +96,6 @@ const register = asyncHandler(async (req, res) => {
       phone,
       role: normalizedRole ?? "MAHASISWA",
     },
-    omit: { password: true },
   });
 
   const token = jwt.sign(
@@ -131,9 +130,9 @@ const login = asyncHandler(async (req, res) => {
 
   const user = await prisma.user.findUnique({
     where: { email },
-    // omit: { password: true },
+    omit: { password: false, deletedAt: false },
   });
-  if (!user) {
+  if (!user || user.deletedAt) {
     res.status(401);
     throw new Error("Email atau kata sandi salah");
   }
@@ -150,7 +149,7 @@ const login = asyncHandler(async (req, res) => {
     { expiresIn: "1d" },
   );
 
-  const { password: _, ...data } = user;
+  const { password: _, deletedAt: __, ...data } = user;
 
   res.json({
     message: "Login successful",
@@ -163,10 +162,10 @@ const login = asyncHandler(async (req, res) => {
 const user = asyncHandler(async (req, res) => {
   const data = await prisma.user.findUnique({
     where: { id: req.user.id },
-    omit: { password: true },
+    omit: { deletedAt: false },
   });
 
-  if (!data) {
+  if (!data || data.deletedAt) {
     res.status(404);
     throw new Error("Pengguna tidak ditemukan");
   }

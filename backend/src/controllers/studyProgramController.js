@@ -28,8 +28,6 @@ const createStudyProgram = asyncHandler(async (req, res) => {
   }
   if (isNil(facultyId)) {
     errors.push({ field: 'facultyId', message: 'ID fakultas wajib diisi' });
-  } else if (isNaN(parseInt(facultyId))) {
-    errors.push({ field: 'facultyId', message: 'ID fakultas harus berupa integer' });
   }
   if (errors.length > 0) return sendValidationError(res, errors, req);
 
@@ -47,7 +45,7 @@ const createStudyProgram = asyncHandler(async (req, res) => {
     data: {
       name,
       facultyId,
-      isPublish: true,
+      isActive: true,
     },
     include: { faculty: true },
   });
@@ -60,7 +58,7 @@ const createStudyProgram = asyncHandler(async (req, res) => {
 
 // Cari Program Studi By ID
 const findStudyProgramById = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
 
   const studyProgram = await prisma.studyProgram.findUnique({
     where: { id },
@@ -77,7 +75,7 @@ const findStudyProgramById = asyncHandler(async (req, res) => {
 
 // Update Program Studi
 const updateStudyProgram = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
   const { name, facultyId } = req.body;
 
   const errors = [];
@@ -93,8 +91,6 @@ const updateStudyProgram = asyncHandler(async (req, res) => {
   if (req.body.facultyId !== undefined) {
     if (isNil(facultyId)) {
       errors.push({ field: 'facultyId', message: 'ID fakultas tidak boleh kosong' });
-    } else if (isNaN(parseInt(facultyId))) {
-      errors.push({ field: 'facultyId', message: 'ID fakultas harus berupa integer' });
     }
   }
   if (errors.length > 0) return sendValidationError(res, errors, req);
@@ -137,7 +133,7 @@ const updateStudyProgram = asyncHandler(async (req, res) => {
 
 // Soft Delete Program Studi
 const deleteStudyProgram = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
 
   const studyProgram = await prisma.studyProgram.findUnique({
     where: { id },
@@ -162,7 +158,7 @@ const deleteStudyProgram = asyncHandler(async (req, res) => {
 
 // Toggle Publish Status (Hide/Show)
 const toggleStudyProgramPublish = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
 
   const studyProgram = await prisma.studyProgram.findUnique({
     where: { id },
@@ -175,13 +171,13 @@ const toggleStudyProgramPublish = asyncHandler(async (req, res) => {
 
   const updatedStudyProgram = await prisma.studyProgram.update({
     where: { id },
-    data: { isPublish: !studyProgram.isPublish },
+    data: { isActive: !studyProgram.isActive },
     include: { faculty: true },
   });
 
   res.json({
     message: `Study program ${
-      updatedStudyProgram.isPublish ? "published" : "hidden"
+      updatedStudyProgram.isActive ? "published" : "hidden"
     } successfully`,
     data: updatedStudyProgram,
   });

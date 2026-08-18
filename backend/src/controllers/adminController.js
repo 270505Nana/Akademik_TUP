@@ -16,12 +16,15 @@ const listAdmins = asyncHandler(async (req, res) => {
     },
   });
 
-  const mapped = admins.map((adm) => ({
-    ...adm,
-    name: adm.user?.name,
-    email: adm.user?.email,
-    phone: adm.user?.phone,
-  }));
+  const mapped = admins.map((adm) => {
+    const { user, ...rest } = adm;
+    return {
+      ...rest,
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || null,
+    };
+  });
 
   res.json({
     data: mapped,
@@ -32,7 +35,7 @@ const listAdmins = asyncHandler(async (req, res) => {
 const upsertAdmin = asyncHandler(async (req, res) => {
   const userId = req.params.userId; // String UUID
 
-  const user = await prisma.user.findFirst({ where: { id: userId } });
+  const user = await prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
   if (!user) {
     res.status(404);
     throw new Error("Pengguna tidak ditemukan");
@@ -95,12 +98,14 @@ const findAdminByUserId = asyncHandler(async (req, res) => {
     throw new Error("Data admin tidak ditemukan");
   }
 
+  const { user, ...rest } = admin;
+
   res.json({
     data: {
-      ...admin,
-      name: admin.user?.name,
-      email: admin.user?.email,
-      phone: admin.user?.phone,
+      ...rest,
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || null,
     },
   });
 });

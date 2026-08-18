@@ -81,10 +81,23 @@ export const saveStudentData = async (userId, payload) => {
 
 // ------------------------------------------- MAHASISWA SIDE SK-------------------------------------------
 // Cek request SK milik mahasiswa sendiri
+// Helper to map backend's prisma fields to expected frontend legacy properties
+const mapBackendSKTAToFrontend = (data) => {
+  if (!data) return null;
+  return {
+    ...data,
+    studentId: data.mahasiswaId,
+    proposalTitleId: data.judulProposalIndonesia,
+    proposalTitleEn: data.judulProposalInggris,
+    student: data.mahasiswa,
+  };
+};
+
 export const getSKTARequest = async (studentId) => {
   try {
     const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
-    return response.data?.data ?? response.data;
+    const data = response.data?.data ?? response.data;
+    return mapBackendSKTAToFrontend(data);
   } catch (err) {
     if (err.response?.status === 404) return null;
     throw err;
@@ -180,7 +193,11 @@ export const getAcademicStaffData = async (userId) => {
 export const getAllSktaRequests = async (params = {}) => {
   try {
     const response = await api.get("/api/permohonan-skta", { params });
-    return response.data?.data ?? response.data;
+    const data = response.data?.data ?? response.data;
+    if (Array.isArray(data)) {
+      return data.map(mapBackendSKTAToFrontend);
+    }
+    return data;
   } catch (err) {
     console.error("Error fetching all SKTA requests:", err);
     throw err;
@@ -189,14 +206,16 @@ export const getAllSktaRequests = async (params = {}) => {
 
 export const getSktaRequestById = async (id) => {
   const response = await api.get(`/api/permohonan-skta/${id}`);
-  return response.data?.data ?? response.data;
+  const data = response.data?.data ?? response.data;
+  return mapBackendSKTAToFrontend(data);
 };
 
 // Response Admin
 export const getSktaResponseByRequestId = async (sktaRequestId) => {
   try {
     const response = await api.get(`/api/permohonan-skta/${sktaRequestId}`);
-    return response.data?.data ?? response.data;
+    const data = response.data?.data ?? response.data;
+    return mapBackendSKTAToFrontend(data);
   } catch (err) {
     if (err.response?.status === 404) return null;
     throw err;
@@ -207,7 +226,20 @@ export const getSktaResponseUploadByStudentId = async (studentId) => {
   try {
     const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
     const data = response.data?.data ?? response.data;
-    return data?.sktaResponseUploads || [];
+    if (!data || !data.sktaUploadPath) return [];
+
+    const filename = data.sktaUploadPath.split(/[/\\]/).pop();
+
+    return [
+      {
+        id: data.id,
+        name: `SKTA_${data.id}`,
+        filename,
+        path: data.sktaUploadPath,
+        mahasiswaId: data.mahasiswaId,
+        downloadUrl: data.sktaDownloadUrl,
+      }
+    ];
   } catch (err) {
     if (err.response?.status === 404) return [];
     throw err;
@@ -295,7 +327,20 @@ export const getEvidenceUploadsByStudentId = async (studentId) => {
   try {
     const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
     const data = response.data?.data ?? response.data;
-    return data?.sktaRequestUploads || [];
+    if (!data || !data.evidenceUploadPath) return [];
+
+    const filename = data.evidenceUploadPath.split(/[/\\]/).pop();
+
+    return [
+      {
+        id: data.id,
+        name: `Evidence_${data.mahasiswa?.nim || 'SKTA'}_${data.mahasiswa?.name || 'Mhs'}`,
+        filename,
+        path: data.evidenceUploadPath,
+        mahasiswaId: data.mahasiswaId,
+        downloadUrl: data.evidenceDownloadUrl,
+      }
+    ];
   } catch (err) {
     if (err.response?.status === 404) return [];
     throw err;
