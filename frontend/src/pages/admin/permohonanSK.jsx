@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Download, Eye, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Search, Download, Eye, ChevronLeft, ChevronRight, Menu, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import SidebarAdmin    from '../../components/sidebar/SidebarAdmin';
@@ -36,7 +36,7 @@ const StatusBadge = ({ status }) => {
   return <span className={`sk-badge ${cls}`}>{label}</span>;
 };
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 100;
 
 const PermohonanSK = () => {
   const { user, logout } = useAuth();
@@ -45,6 +45,8 @@ const PermohonanSK = () => {
   const [search,             setSearch]             = useState('');
   const [searchDebounced,    setSearchDebounced]    = useState('');
   const [filterProdi,        setFilterProdi]        = useState('');
+  const [prodiDropdownOpen,  setProdiDropdownOpen]  = useState(false);
+  const prodiDropdownRef    = useRef(null);
   const [filterStatus,       setFilterStatus]       = useState('');
   const [currentPage,        setCurrentPage]        = useState(1);
   const [requests,           setRequests]           = useState([]);
@@ -106,7 +108,13 @@ const PermohonanSK = () => {
             : withResponses.sort((a, b) => b.id - a.id)[0]; 
 
           const prodiName = chosen.student?.studyProgramNama ?? '-';
-          const tanggal = chosen.createdAt ?? null;
+          const tanggal =
+            chosen.sktaRequestUploads?.[0]?.createdAt ??
+            skUploads?.[0]?.createdAt ??
+            chosen.sktaResponse?.createdAt ??
+            chosen.createdAt ??
+            chosen.updatedAt ??
+            null;
 
           return { ...chosen, skUploads, prodiName, tanggal };
         })
@@ -148,13 +156,24 @@ const PermohonanSK = () => {
 
   useEffect(() => setCurrentPage(1), [searchDebounced, filterProdi, filterStatus]);
 
-  //  PREVIEW EVIDENCE LENGKAP 
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (prodiDropdownRef.current && !prodiDropdownRef.current.contains(e.target)) {
+        setProdiDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+
   const handlePreviewEvidence = async (item) => {
     const studentId = item.studentId;
     if (!studentId) return showAlert('error', 'Error', 'Student ID tidak ditemukan');
 
     try {
-      // Ambil data lengkap pengajuan SK
+ 
       const sktaRequest = await getSKTARequest(studentId);
       const evidenceUploads = await getEvidenceUploadsByStudentId(studentId);
 
@@ -228,8 +247,10 @@ const PermohonanSK = () => {
           <span className="mobile-menu-title">SIMTA</span>
         </div>
 
-        <div className="page-wrapper" style={{ minWidth: 0, width: '100%', overflowX: 'auto' }}>
-          <div className="top-bar-red"><h1>Layanan SK TA</h1></div>
+        <div className="page-wrapper" style={{ minWidth: 0, width: '100%', overflowX: 'auto', margin: 0, padding: 0 }}>
+          <div className="top-bar-red" style={{ overflow: 'hidden', margin: 0 }}>
+            <h1 style={{ margin: 0 }}>Layanan SK TA</h1>
+          </div>
 
           <div className="content-container">
             <h2 className="page-title">Permohonan SK TA</h2>
@@ -241,30 +262,71 @@ const PermohonanSK = () => {
                     <span className="sk-search-icon"><Search size={15} /></span>
                     <input type="text" className="sk-search-input" placeholder="Cari Nama atau NIM..." value={search} onChange={e => setSearch(e.target.value)} />
                   </div>
-                  <select className="sk-filter-select" value={filterProdi} onChange={e => setFilterProdi(e.target.value)}>
-                    <option value="">Semua Prodi</option>
-                    {prodiList.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                  </select>
-                  <button className="btn-export-sk" onClick={() => showAlert('success', 'Export', 'Data sedang disiapkan...')}>
-                    <Download size={15} /> Expor SK TA MHS
-                  </button>
                 </div>
 
-                <div className="sk-status-tabs">
-                  {[
-                    { key: '', label: 'Semua' },
-                    { key: 'dalam-proses', label: 'Dalam Proses' },
-                    { key: 'mengirim-revisi', label: 'Mengirim Revisi' },
-                    { key: 'belum-terbit', label: 'Belum Terbit' },
-                    { key: 'sudah-terbit', label: 'Sudah Terbit' },
-                  ].map(({ key, label }) => {
-                    const count = key === '' ? requests.length : requests.filter(r => getStatus(r) === key).length;
-                    return (
-                      <button key={key} className={`sk-status-tab ${filterStatus === key ? 'active' : ''}`} onClick={() => setFilterStatus(key)}>
-                        {label} <span className="sk-tab-count">({count})</span>
+                <div className="sk-toolbar-row">
+                  <div className="sk-status-tabs">
+                    {[
+                      { key: '', label: 'Semua' },
+                      { key: 'dalam-proses', label: 'Dalam Proses' },
+                      { key: 'mengirim-revisi', label: 'Mengirim Revisi' },
+                      { key: 'belum-terbit', label: 'Belum Terbit' },
+                      { key: 'sudah-terbit', label: 'Sudah Terbit' },
+                    ].map(({ key, label }) => {
+                      const count = key === '' ? requests.length : requests.filter(r => getStatus(r) === key).length;
+                      return (
+                        <button key={key} className={`sk-status-tab ${filterStatus === key ? 'active' : ''}`} onClick={() => setFilterStatus(key)}>
+                          {label} <span className="sk-tab-count">({count})</span>
+                        </button>
+                      );
+                    })}
+                    <div className="sk-prodi-dropdown" ref={prodiDropdownRef} style={{ marginLeft: 6 }}>
+                      <button
+                        type="button"
+                        className={`sk-prodi-dropdown-trigger ${filterProdi ? 'active' : ''}`}
+                        onClick={() => setProdiDropdownOpen(o => !o)}
+                      >
+                        <span>{filterProdi || 'Semua Prodi'}</span>
+                        <ChevronDown size={14} style={{ transform: prodiDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
                       </button>
-                    );
-                  })}
+
+                      <AnimatePresence>
+                        {prodiDropdownOpen && (
+                          <motion.div
+                            className="sk-prodi-dropdown-panel"
+                            initial={{ opacity: 0, y: -6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.15 }}
+                          >
+                            <div
+                              className={`sk-prodi-dropdown-option ${!filterProdi ? 'selected' : ''}`}
+                              onClick={() => { setFilterProdi(''); setProdiDropdownOpen(false); }}
+                            >
+                              <span>Semua Prodi</span>
+                              {!filterProdi && <Check size={14} />}
+                            </div>
+                            {prodiList.map(p => (
+                              <div
+                                key={p.id}
+                                className={`sk-prodi-dropdown-option ${filterProdi === p.name ? 'selected' : ''}`}
+                                onClick={() => { setFilterProdi(p.name); setProdiDropdownOpen(false); }}
+                              >
+                                <span>{p.name}</span>
+                                {filterProdi === p.name && <Check size={14} />}
+                              </div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  <div className="sk-toolbar-actions">
+                    <button className="btn-export-sk sm" onClick={() => showAlert('success', 'Export', 'Data sedang disiapkan...')}>
+                      <Download size={14} /> Expor SK TA MHS
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -279,15 +341,14 @@ const PermohonanSK = () => {
                       <th>PRODI</th>
                       <th style={{ textAlign: 'center' }}>EVIDENCE</th>
                       <th style={{ textAlign: 'center' }}>STATUS BERKAS</th>
-                      <th>TANGGAL</th>
                       <th style={{ textAlign: 'center' }}>AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={7} className="text-center py-12">Memuat data...</td></tr>
+                      <tr><td colSpan={6} className="text-center py-12">Memuat data...</td></tr>
                     ) : paginated.length === 0 ? (
-                      <tr><td colSpan={7} className="text-center py-12">Tidak ada data sesuai filter</td></tr>
+                      <tr><td colSpan={6} className="text-center py-12">Tidak ada data sesuai filter</td></tr>
                     ) : (
                       paginated.map((item, idx) => {
                         const student = item.student || {};
@@ -311,18 +372,15 @@ const PermohonanSK = () => {
                             <td style={{ textAlign: 'center' }}>
                               <StatusBadge status={status} />
                             </td>
-                            <td className="sk-date-text">
-                              {item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID') : '-'}
-                            </td>
                             <td className="text-center action-buttons">
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, minWidth: 120 }}>
+                              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'center', gap: 6 }}>
                                 {/* Verifikasi / Terverifikasi / Tinjau Revisi */}
-                                <button className="btn-verifikasi-sk" style={{ width: '100%' }} onClick={() => handleOpenVerifikasi(item)}>
+                                <button className="btn-verifikasi-sk" onClick={() => handleOpenVerifikasi(item)}>
                                   {actionLabel}
                                 </button>
                                 <button
                                   className="btn-export-sk"
-                                  style={{ width: '100%', opacity: status === 'sudah-terbit' ? 1 : 0, pointerEvents: status === 'sudah-terbit' ? 'auto' : 'none' }}
+                                  style={{ opacity: status === 'sudah-terbit' ? 1 : 0, pointerEvents: status === 'sudah-terbit' ? 'auto' : 'none' }}
                                   onClick={() => setFormulirItem(item)}
                                 >
                                   Export
@@ -394,7 +452,6 @@ const PermohonanSK = () => {
       </AnimatePresence>
 
       <style>{`
-        /* ── Layout root: sidebar + konten tidak terpotong meski di-zoom ── */
         .sk-page-root {
           display: flex;
           min-height: 100vh;
@@ -402,15 +459,16 @@ const PermohonanSK = () => {
         }
         .sk-main-content {
           flex: 1;
-          min-width: 0;          /* kunci: cegah flex child overflow */
+          min-width: 0;       
           overflow-x: hidden;
           display: flex;
           flex-direction: column;
         }
-        /* sidebar.css biasanya set #sidebar width 260px — pastikan main-content tidak overlap */
+        /* #sidebar (sidebar.css) lebarnya 240px via --sidebar-width, fixed position — main content wajib punya margin-left senilai itu supaya tidak ketutup sidebar */
         #sidebar ~ .sk-main-content,
         .sk-main-content {
-          margin-left: 260px;
+          margin-left: 240px;
+          padding: 0;
           transition: margin-left 0.3s ease;
         }
         @media (max-width: 991.98px) {
@@ -423,43 +481,119 @@ const PermohonanSK = () => {
           width: 100%;
           margin-left: 0 !important;  /* override aturperiode.css margin-left var */
         }
-
-        /* ── Tabel: tidak overflow sidebar ── */
-        .sk-table-wrap { overflow-x: auto; }
-        .sk-table { min-width: 700px; }
+        .sk-main-content .page-wrapper,
+        .sk-main-content .top-bar-red {
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+        }
 
         /* ── Action buttons: selalu sama lebar ── */
         .action-buttons { vertical-align: middle; }
-        .btn-verifikasi-sk {
-          display: block; width: 100%;
-          padding: 6px 12px; border-radius: 6px; font-size: 11px;
-          font-weight: 700; border: 1px solid #CBD5E1;
-          background: #fff; color: #374151; cursor: pointer;
+
+        html, body, #root {
+          width: 100% !important;
+          max-width: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .sk-page-root { width: 100%; }
+        .sk-main-content,
+        .sk-main-content .page-wrapper,
+        .sk-main-content .content-container,
+        .sk-main-content .top-bar-red,
+        .sk-main-content .card-main {
+          width: 100% !important;
+          max-width: none !important;
+          box-sizing: border-box;
+          overflow: visible !important;
+        }
+        .sk-main-content .card-body,
+        .sk-toolbar-row,
+        .sk-status-tabs {
+          overflow: visible !important;
+        }
+
+        .sk-status-tabs { align-items: center; overflow: visible; }
+        .sk-prodi-dropdown-panel { max-width: min(240px, calc(100vw - 32px)); }
+
+        .sk-prodi-dropdown {
+          position: relative;
+          flex-shrink: 0;
+        }
+        .sk-prodi-dropdown-trigger {
+          display: inline-flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          min-width: 140px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          border: 1.5px solid #E2E8F0;
+          background: #fff;
+          font-size: 12px;
+          font-weight: 600;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.15s;
           white-space: nowrap;
         }
-        .btn-verifikasi-sk:hover { background: #F8FAFC; }
-
-        /* Badge */
-        .sk-badge.mengirim-revisi { background: #EFF6FF; color: #1D4ED8; border: 1.5px solid #BFDBFE; }
-
-        /* Download & Evidence buttons */
-        .btn-download-sk, .btn-evidence {
-          display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-          padding: 6px 12px; border-radius: 6px; font-size: 11px;
-          font-weight: 700; border: none; cursor: pointer; white-space: nowrap;
+        .sk-prodi-dropdown-trigger:hover {
+          border-color: #CBD5E1;
+          background: #F8FAFC;
         }
-        .btn-download-sk { background: #059669; color: #fff; width: 100%; }
-        .btn-download-sk:hover { background: #047857; }
-        .btn-evidence { background: #3B82F6; color: #fff; }
-        .btn-evidence:hover { background: #2563EB; }
-        .btn-export-sk {
-          display: block; width: 100%;
-          padding: 6px 12px; border-radius: 6px; font-size: 11px;
-          font-weight: 700; border: 1px solid #CBD5E1;
-          background: #fff; color: #374151; cursor: pointer;
-          white-space: nowrap; text-align: center;
+        .sk-prodi-dropdown-trigger.active {
+          border-color: #C0182A;
+          color: #C0182A;
+          background: #FFF1F2;
         }
-        .btn-export-sk:hover { background: #F8FAFC; }
+        .sk-prodi-dropdown-trigger span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .sk-prodi-dropdown-panel {
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 0;
+          right: auto;
+          z-index: 40;
+          width: max-content;
+          min-width: 180px;
+          max-width: 240px;
+          max-height: 260px;
+          overflow-y: auto;
+          background: #fff;
+          border: 1px solid #E2E8F0;
+          border-radius: 10px;
+          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+          padding: 5px;
+        }
+        .sk-prodi-dropdown-option {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 7px 10px;
+          border-radius: 7px;
+          font-size: 12px;
+          font-weight: 500;
+          color: #334155;
+          cursor: pointer;
+          transition: background 0.12s;
+          line-height: 1.35;
+        }
+        .sk-prodi-dropdown-option:hover {
+          background: #F8FAFC;
+        }
+        .sk-prodi-dropdown-option.selected {
+          background: #FFF1F2;
+          color: #C0182A;
+          font-weight: 700;
+        }
+        .sk-prodi-dropdown-option svg {
+          flex-shrink: 0;
+          color: #C0182A;
+        }
       `}</style>
 
       <AnimatePresence>
