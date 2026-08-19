@@ -247,10 +247,10 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
       setIsLoading(true);
       setError(null);
       try {
-        const studentId = item?.mahasiswaId || item?.studentId || item?.student?.id;
-        if (!studentId) throw new Error('studentId tidak ditemukan');
+        const mahasiswaId = item?.mahasiswaId || item?.mahasiswaId || item?.student?.id;
+        if (!mahasiswaId) throw new Error('mahasiswaId tidak ditemukan');
 
-        const uploadKey = `${studentId}_Dokumen Validasi Skta`;
+        const uploadKey = `${mahasiswaId}_Dokumen Validasi Skta`;
         let uploadPromise = activeUploadPromises.get(uploadKey);
 
         if (!uploadPromise) {
@@ -267,16 +267,16 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
         console.error('[FormulirSKModal] initQR error:', err);
         setError(err.message || 'Gagal memproses dokumen validasi.');
       } finally {
-        const studentId = item?.mahasiswaId || item?.studentId || item?.student?.id;
-        if (studentId) {
-          const uploadKey = `${studentId}_Dokumen Validasi Skta`;
+        const mahasiswaId = item?.mahasiswaId || item?.mahasiswaId || item?.student?.id;
+        if (mahasiswaId) {
+          const uploadKey = `${mahasiswaId}_Dokumen Validasi Skta`;
           activeUploadPromises.delete(uploadKey);
         }
         setIsLoading(false);
       }
     };
     initQR();
-  }, [item?.mahasiswaId, item?.studentId, item?.student?.id]);
+  }, [item?.mahasiswaId, item?.mahasiswaId, item?.student?.id]);
 
   // QR canvas render → ambil dataURL
   useEffect(() => {

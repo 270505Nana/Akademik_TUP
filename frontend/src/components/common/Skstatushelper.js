@@ -43,7 +43,7 @@ export const determineStatus = (sktaResponse, skUploads = []) => {
   const hasApprovedFields =
     (sktaResponse.hasUploadedFinalProposal === true) &&
     (sktaResponse.hasTakenLanguageTest === true) &&
-    (sktaResponse.sktaUploadPath || (Array.isArray(skUploads) && skUploads.length > 0)) &&
+    !!sktaResponse.sktaUploadPath &&
     sktaResponse.expDate;
 
   if (hasApprovedFields) return STATUS_SK.SUDAH_TERBIT;
@@ -68,6 +68,7 @@ export const determineSkStatus = (sktaResponse, skUploads = []) => {
 
   if (baseStatus === STATUS_SK.SUDAH_TERBIT && sktaResponse?.expDate) {
     const exp = new Date(sktaResponse.expDate);
+    exp.setHours(23, 59, 59, 999);
     if (exp < new Date()) return STATUS_SK.EXPIRED;
   }
 

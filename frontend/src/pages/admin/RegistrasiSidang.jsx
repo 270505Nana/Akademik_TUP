@@ -6,7 +6,7 @@ import SidebarAdmin          from '../../components/sidebar/SidebarAdmin';
 import CustomAlert           from '../../components/common/CustomAlert';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth }           from '../../context/AuthContext';
-import {getAllSidangRegistrations,getSidangRegistrationResponse,getSidangPeriods,} from '../../service/api';
+import {getAllSidangRegistrations,getSidangPeriods,} from '../../service/api';
 import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../../components/admin/sidang/RegistrasiSidang.css';
 
@@ -218,7 +218,6 @@ const RegistrasiSidang = () => {
 
   // Data
   const [registrations, setRegistrations] = useState([]);
-  const [responseMap,   setResponseMap]   = useState({});
   const [periodMap,     setPeriodMap]     = useState({});
   const [prodiMap,      setProdiMap]      = useState({});
 
@@ -254,19 +253,8 @@ const RegistrasiSidang = () => {
       const list    = await getAllSidangRegistrations();
       const allList = list ?? [];
 
-      // Fetch response untuk SEMUA registrasi 
-
-      const respArr = await Promise.all(
-        allList.map(r => getSidangRegistrationResponse(r.id).catch(() => null))
-      );
-
-      // Build responseMap: { [registrationId]: response }
-      const rMap = {};
-      allList.forEach((r, i) => { if (respArr[i]) rMap[r.id] = respArr[i]; });
-      setResponseMap(rMap);
-
-      const visible = allList.filter((r, i) => {
-        const hasResponse = !!respArr[i];
+      const visible = allList.filter((r) => {
+        const hasResponse = !!(r.message || r.isEdit || r.sidangPeriodId);
         return !r.isDraft || hasResponse;
       });
 
@@ -277,7 +265,7 @@ const RegistrasiSidang = () => {
       const prMap = {};
       visible.forEach(r => {
         const name = r.student?.studyProgram?.name ?? null;
-        if (name) prMap[r.studentId] = name;
+        if (name) prMap[r.mahasiswaId] = name;
       });
       setProdiMap(prMap);
 
@@ -295,15 +283,14 @@ const RegistrasiSidang = () => {
   }, [user]);
 
   const getStatus = useCallback((reg) => {
-    const response = responseMap[reg.id] ?? null;
     const periodId = reg.sidangPeriodId ?? null;
     const period   = periodId ? (periodMap[periodId] ?? null) : null;
-    return determineSidangStatus(reg, response, period);
-  }, [responseMap, periodMap]);
+    return determineSidangStatus(reg, null, period);
+  }, [periodMap]);
 
   const getProdiName = useCallback((reg) => {
     if (reg.student?.studyProgram?.name) return reg.student.studyProgram.name;
-    return prodiMap[reg.studentId] ?? '-';
+    return prodiMap[reg.mahasiswaId] ?? '-';
   }, [prodiMap]);
 
   const prodiOptions = PRODI_LIST;
@@ -507,7 +494,7 @@ const RegistrasiSidang = () => {
                               {(currentPage - 1) * PAGE_SIZE + idx + 1}
                             </td>
                             <td>
-                              <div className="vs-mhs-name">{reg.student?.name || `Mahasiswa #${reg.studentId}`}</div>
+                              <div className="vs-mhs-name">{reg.student?.name || `Mahasiswa #${reg.mahasiswaId}`}</div>
                               <div className="vs-mhs-nim">{reg.student?.nim  || '-'}</div>
                             </td>
                             <td>

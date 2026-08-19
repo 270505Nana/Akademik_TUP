@@ -10,7 +10,7 @@ import { useStudent } from "../../context/StudentContext";
 import Step1 from "../../components/mahasiswa/sidang/Step1Sidang";
 import Step2 from "../../components/mahasiswa/sidang/Step2Sidang";
 import CustomAlert from "../../components/common/CustomAlert";
-import {getLecturers,getSidangRegistrationByStudentId,getSidangRegistrationResponse,getSktaResponseUploadByStudentId,saveSidangRegistration,submitSidangRegistration,} from "../../service/api";
+import {getLecturers,getSidangRegistrationByMahasiswaId,getSktaResponseUploadByMahasiswaId,saveSidangRegistration,submitSidangRegistration,} from "../../service/api";
 import {STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from "../../components/admin/sidang/Sidangstatushelper";
 
 const STEP1_REQUIRED = [
@@ -126,7 +126,7 @@ function PendaftaranSidangContent() {
   const [sidangAdminResponse,   setSidangAdminResponse]   = useState(null);
   const [formAlert,             setFormAlert]             = useState(null);
 
-  const studentId = profile?.id || student?.studentId || user?.id;
+  const mahasiswaId = student?.mahasiswaId || profile?.id || user?.id;
 
   const isStep1Locked = Boolean(registrationMeta?.submittedAt);
 
@@ -170,7 +170,7 @@ function PendaftaranSidangContent() {
     sktaExpDate:        data.sktaExpDate || null,
     thesisTitleId:      data.thesisTitleId,
     thesisTitleEn:      data.thesisTitleEn,
-    studentId,
+    mahasiswaId,
     dosenPembimbing1Id: data.dosenPembimbing1Id ? Number(data.dosenPembimbing1Id) : null,
     dosenPembimbing2Id: data.dosenPembimbing2Id ? Number(data.dosenPembimbing2Id) : null,
   });
@@ -185,7 +185,7 @@ function PendaftaranSidangContent() {
       return;
     }
 
-    if (!studentId) {
+    if (!mahasiswaId) {
       setFormAlert({
         type: "error",
         msg: "Data mahasiswa tidak ditemukan. Silakan refresh halaman.",
@@ -294,11 +294,11 @@ function PendaftaranSidangContent() {
     setIsRegistrationLoading(true);
     try {
       // Response: { data: { id, isDraft, programType, ... } }
-      const response = await getSidangRegistrationByStudentId(id);
+      const response = await getSidangRegistrationByMahasiswaId(id);
       const existing = response?.data ?? response;
 
       if (!existing) {
-        const created = await saveSidangRegistration({ studentId: id });
+        const created = await saveSidangRegistration({ mahasiswaId: id });
         const newId = created?.data?.id ?? null;
         setRegistrationId(newId);
         applyRegistrationToForm(created?.data ?? created);
@@ -313,12 +313,7 @@ function PendaftaranSidangContent() {
         dispatch({ type: "RESTORE_SERVER_DOCUMENTS", uploads: existing.sidangRegistrationUploads });
       }
 
-      try {
-        const adminResponse = await getSidangRegistrationResponse(existing.id);
-        setSidangAdminResponse(adminResponse);
-      } catch {
-        setSidangAdminResponse(null);
-      }
+      setSidangAdminResponse(existing);
     } catch (e) {
       console.error("Gagal memuat data pendaftaran sidang:", e);
       setFormAlert({
@@ -330,31 +325,34 @@ function PendaftaranSidangContent() {
     }
   };
 
-  const extractUploads = (response) => {
-    if (!response) return [];
-    if (Array.isArray(response)) return response;
-    if (Array.isArray(response.data)) return response.data;
-    if (Array.isArray(response?.data?.data)) return response.data.data;
-    return [];
-  };
-
   async function checkSkta() {
-    if (!studentId) { setIsSktaChecking(false); return; }
+    if (!mahasiswaId) {
+      console.log("[DEBUG checkSkta] mahasiswaId tidak ditemukan");
+      setIsSktaChecking(false);
+      return;
+    }
+    console.log("[DEBUG checkSkta] Melakukan fetch untuk mahasiswaId:", mahasiswaId);
     try {
-      const response = await getSktaResponseUploadByStudentId(studentId);
-      const uploads = extractUploads(response);
-      const hasSkta = uploads.length > 0;
+      const response = await getSktaResponseUploadByMahasiswaId(mahasiswaId);
+      console.log("[DEBUG checkSkta] Respon API:", response);
+      const hasSkta = Array.isArray(response)
+        ? response.length > 0
+        : (!!response?.sktaDownloadUrl || !!response?.sktaUploadPath);
+      console.log("[DEBUG checkSkta] hasSkta:", hasSkta);
       setSkta(hasSkta);
-      if (hasSkta) await initRegistration(studentId);
+      if (hasSkta) await initRegistration(mahasiswaId);
     } catch (e) {
-      if (e.response?.status === 404) return;
+      if (e.response?.status === 404) {
+        console.log("[DEBUG checkSkta] API mengembalikan 404");
+        return;
+      }
       console.error("Error fetching SKTA:", e);
     } finally {
       setIsSktaChecking(false);
     }
   }
 
-  useEffect(() => { setIsSktaChecking(true); checkSkta(); }, [studentId]);
+  useEffect(() => { setIsSktaChecking(true); checkSkta(); }, [mahasiswaId]);
 
   useEffect(() => {
     let isMounted = true;

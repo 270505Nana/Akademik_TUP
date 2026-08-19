@@ -6,7 +6,7 @@ import SimtaLogo from "../../assets/logo-simta.png";
 import Telulogo  from "../../assets/logo-telkom.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import { getLecturers, getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, submitSKTARequest, resubmitSKTARequest, downloadTemplate } from '../../service/api';
+import { getLecturers, getSKTARequest, getSKTAResponse, getSktaResponseUploadByMahasiswaId, submitSKTARequest, resubmitSKTARequest, downloadTemplate } from '../../service/api';
 import {
   determineSkStatus,
   isSkEditable,
@@ -71,7 +71,7 @@ const PageLoader = () => (
 );
 
 const SkStatusBanner = ({ status, sktaResponse, requestData, skUploads = [] }) => {
-  const skFileUrl = getSkFileUrl(skUploads);
+  const skFileUrl = sktaResponse?.sktaDownloadUrl || null;
 
   const configs = {
     [STATUS_SK.DALAM_PROSES]: {
@@ -184,7 +184,7 @@ const friendlyErrorMessage = (field, rawMessage) => {
   }
   if (field === 'evidence' && msg.includes('size'))  return 'Ukuran file evidence melebihi batas maksimal 3MB.';
   if (field === 'evidence' && msg.includes('wajib')) return 'Dokumen evidence wajib diunggah.';
-  if (field === 'studentId') return null;
+  if (field === 'mahasiswaId') return null;
   if (field === 'proposalTitleId' || field === 'proposalTitleEn') return 'Judul Tugas Akhir wajib diisi dengan benar.';
   if (field === 'dosenPembimbing1Id' || field === 'dosenPembimbing2Id') return 'Dosen Pembimbing wajib dipilih.';
   return rawMessage;
@@ -268,29 +268,20 @@ const PengajuanSK = () => {
 
   useEffect(() => {
     const checkSKTAStatus = async () => {
-      const studentId = student?.studentId;
-      if (!studentId) { navigate('/lengkapi-data', { replace: true }); return; }
+      const mahasiswaId = student?.mahasiswaId;
+      if (!mahasiswaId) { navigate('/lengkapi-data', { replace: true }); return; }
 
       try {
-        const existingRequest = await getSKTARequest(studentId);
+        const existingRequest = await getSKTARequest(mahasiswaId);
         if (!existingRequest) { setPageStatus('form'); return; }
 
         setRequestData(existingRequest);
         const reqId = existingRequest.id;
         updateSktaRequestId(reqId);
 
-        const [rawResponse, uploadsRaw] = await Promise.all([
-          getSKTAResponse(reqId),
-          getSktaResponseUploadByStudentId(studentId).catch(() => null),
-        ]);
+        setSktaResponse(existingRequest);
 
-        const unwrapped = unwrapResponse(rawResponse);
-        const uploads   = uploadsRaw?.data ?? uploadsRaw ?? [];
-
-        setSktaResponse(unwrapped);
-        setSkUploads(uploads);
-
-        const baseStatus     = determineSkStatus(unwrapped, uploads);
+        const baseStatus     = determineSkStatus(existingRequest);
         const alreadyRevised = isAlreadyRevised(reqId, existingRequest.updatedAt);
         const effectiveStatus = (baseStatus === STATUS_SK.BELUM_TERBIT && alreadyRevised)
           ? STATUS_SK.DALAM_PROSES
@@ -298,7 +289,7 @@ const PengajuanSK = () => {
 
         setSkStatus(effectiveStatus);
 
-        if (isSkEditable(effectiveStatus, unwrapped)) {
+        if (isSkEditable(effectiveStatus, existingRequest)) {
           setIsExpired(effectiveStatus === STATUS_SK.EXPIRED);
           setFormData(prev => ({
             ...prev,
@@ -384,8 +375,8 @@ const PengajuanSK = () => {
       return;
     }
 
-    const studentId = student?.studentId;
-    if (!studentId) {
+    const mahasiswaId = student?.mahasiswaId;
+    if (!mahasiswaId) {
       setSubmitError({ title: 'Data tidak ditemukan', message: 'Data mahasiswa tidak ditemukan. Silakan lengkapi profil terlebih dahulu.' });
       return;
     }
@@ -397,7 +388,7 @@ const PengajuanSK = () => {
       if (isSkEditable(skStatus, sktaResponse) && activeRequestId) {
         const result = await resubmitSKTARequest({
           sktaRequestId:      activeRequestId,
-          studentId,
+          mahasiswaId,
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
           dosenPembimbing1Id: formData.kode1.value,
@@ -434,7 +425,7 @@ const PengajuanSK = () => {
         const result = await submitSKTARequest({
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
-          studentId,
+          mahasiswaId,
           dosenPembimbing1Id: formData.kode1.value,
           dosenPembimbing2Id: formData.kode2.value,
           evidence:           actualFile,
