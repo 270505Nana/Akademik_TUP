@@ -42,9 +42,169 @@ const NON_SIDANG_SLUGS = {
   ],
 };
 
+const mapMahasiswa = (mahasiswa) => {
+  if (!mahasiswa) return null;
+  return {
+    id: mahasiswa.id,
+    nim: mahasiswa.nim || '',
+    kelasAsal: mahasiswa.kelasAsal || '',
+    tahunAngkatan: mahasiswa.tahunAngkatan,
+    sks: mahasiswa.sks,
+    ipk: mahasiswa.ipk,
+    tak: mahasiswa.tak,
+    studyProgramId: mahasiswa.studyProgramId,
+    dosenWaliId: mahasiswa.dosenWaliId,
+    name: mahasiswa.user?.name || '',
+    email: mahasiswa.user?.email || '',
+    phone: mahasiswa.user?.phone || null,
+    studyProgram: mahasiswa.studyProgram
+      ? {
+          id: mahasiswa.studyProgram.id,
+          name: mahasiswa.studyProgram.name,
+          isActive: mahasiswa.studyProgram.isActive,
+          facultyId: mahasiswa.studyProgram.facultyId,
+        }
+      : null,
+  };
+};
+
+const mapDosen = (dosen) => {
+  if (!dosen) return null;
+  return {
+    id: dosen.id,
+    nip: dosen.nip,
+    nidn: dosen.nidn,
+    kodeDosen: dosen.kodeDosen,
+    researchGroupId: dosen.researchGroupId,
+    userId: dosen.userId,
+    name: dosen.user?.name || '',
+    email: dosen.user?.email || '',
+    phone: dosen.user?.phone || null,
+  };
+};
+
+const mapAdmin = (admin) => {
+  if (!admin) return null;
+  return {
+    id: admin.id,
+    userId: admin.userId,
+    name: admin.user?.name || '',
+    email: admin.user?.email || '',
+    phone: admin.user?.phone || null,
+  };
+};
+
+const mapSidangRegistrationToFrontend = (item, req) => {
+  if (!item) return null;
+  return {
+    id: item.id,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    isDraft: item.isDraft,
+    mahasiswaId: item.mahasiswaId,
+    program: item.program,
+    dosenWaliId: item.dosenWaliId,
+    sks: item.sks,
+    ipk: item.ipk,
+    tak: item.tak,
+    sktaExpDate: item.sktaExpDate,
+    judulTugasAkhirIndonesia: item.judulTugasAkhirIndonesia,
+    judulTugasAkhirInggris: item.judulTugasAkhirInggris,
+    dosenPembimbing1Id: item.dosenPembimbing1Id,
+    dosenPembimbing2Id: item.dosenPembimbing2Id,
+    researchGroupId: item.researchGroupId,
+    skemaSidang: item.skemaSidang,
+    jalurNonSidang: item.jalurNonSidang || [],
+    submittedAt: item.submittedAt,
+    sidangRegistrationPeriodId: item.sidangRegistrationPeriodId,
+    sidangPeriodId: item.sidangPeriodId,
+    message: item.message,
+    isEdit: item.isEdit,
+    adminId: item.adminId,
+    mahasiswa: mapMahasiswa(item.mahasiswa),
+    dosenWali: mapDosen(item.dosenWali),
+    dosenPembimbing1: mapDosen(item.dosenPembimbing1),
+    dosenPembimbing2: mapDosen(item.dosenPembimbing2),
+    researchGroup: item.researchGroup
+      ? {
+          id: item.researchGroup.id,
+          name: item.researchGroup.name,
+          isActive: item.researchGroup.isActive,
+        }
+      : null,
+    admin: mapAdmin(item.admin),
+    sidangRegistrationPeriod: item.sidangRegistrationPeriod
+      ? {
+          id: item.sidangRegistrationPeriod.id,
+          name: item.sidangRegistrationPeriod.name,
+          category: item.sidangRegistrationPeriod.category,
+          period: item.sidangRegistrationPeriod.period,
+          startDate: item.sidangRegistrationPeriod.startDate,
+          endDate: item.sidangRegistrationPeriod.endDate,
+          isOpen: item.sidangRegistrationPeriod.isOpen,
+        }
+      : null,
+    sidangPeriod: item.sidangPeriod
+      ? {
+          id: item.sidangPeriod.id,
+          name: item.sidangPeriod.name,
+          category: item.sidangPeriod.category,
+          period: item.sidangPeriod.period,
+          startDate: item.sidangPeriod.startDate,
+          endDate: item.sidangPeriod.endDate,
+          isOpen: item.sidangPeriod.isOpen,
+        }
+      : null,
+    sidangRegistrationUploads: item.sidangRegistrationUploads
+      ? item.sidangRegistrationUploads.map((upload) => ({
+          id: upload.id,
+          name: upload.name,
+          category: upload.category,
+          filepath: upload.filepath,
+          isValid: upload.isValid,
+          sidangRegistrationId: upload.sidangRegistrationId,
+          downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
+        }))
+      : [],
+  };
+};
+
+const sidangInclude = {
+  mahasiswa: {
+    include: {
+      studyProgram: true,
+      user: true,
+    },
+  },
+  dosenWali: {
+    include: {
+      user: true,
+    },
+  },
+  dosenPembimbing1: {
+    include: {
+      user: true,
+    },
+  },
+  dosenPembimbing2: {
+    include: {
+      user: true,
+    },
+  },
+  researchGroup: true,
+  admin: {
+    include: {
+      user: true,
+    },
+  },
+  sidangRegistrationPeriod: true,
+  sidangPeriod: true,
+  sidangRegistrationUploads: true,
+};
+
 const checkSidangEditable = async (registrationId) => {
   const registration = await prisma.sidangRegistration.findUnique({
-    where: { id: parseInt(registrationId) },
+    where: { id: registrationId },
   });
 
   if (!registration) {
@@ -52,25 +212,15 @@ const checkSidangEditable = async (registrationId) => {
   }
 
   if (!registration.isDraft) {
-    const latestResponse = await prisma.sidangRegistrationResponse.findFirst({
-      where: { sidangRegistrationId: registration.id, deletedAt: null },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const hasActiveEditPermission = latestResponse && latestResponse.isEdit && new Date(latestResponse.isEdit) > new Date();
+    const hasActiveEditPermission = registration.isEdit && new Date(registration.isEdit) > new Date();
 
     if (!hasActiveEditPermission) {
       return { exists: true, editable: false, reason: "Pendaftaran sudah dikirim dan tidak memiliki izin edit yang aktif." };
     }
   }
 
-  const latestResponse = await prisma.sidangRegistrationResponse.findFirst({
-    where: { sidangRegistrationId: registration.id, deletedAt: null },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (latestResponse && latestResponse.isEdit) {
-    const isEditExpired = new Date(latestResponse.isEdit) < new Date();
+  if (registration.isEdit) {
+    const isEditExpired = new Date(registration.isEdit) < new Date();
     if (isEditExpired) {
       return { exists: true, editable: false, reason: "Batas waktu izin edit dari admin telah kedaluwarsa." };
     }
@@ -82,50 +232,13 @@ const checkSidangEditable = async (registrationId) => {
 // Sidang Registration List
 const listSidangRegistrations = asyncHandler(async (req, res) => {
   const sidangRegistrations = await prisma.sidangRegistration.findMany({
-    include: {
-      mahasiswa: {
-        select: {
-          id: true,
-          nim: true,
-          name: true,
-          studyProgramId: true,
-          studyProgram: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-      dosenPembimbing1: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      dosenPembimbing2: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      // sidangRegistrationUploads: true,
-    },
+    include: sidangInclude,
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  // Append downloadUrls
-  const data = sidangRegistrations.map((reg) => ({
-    ...reg,
-    // sidangRegistrationUploads: reg.sidangRegistrationUploads.map((upload) => ({
-    //   ...upload,
-    //   downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
-    // })),
-  }));
+  const data = sidangRegistrations.map((reg) => mapSidangRegistrationToFrontend(reg, req));
 
   res.json({
     data,
@@ -138,39 +251,9 @@ const getSidangRegistrationById = asyncHandler(async (req, res) => {
 
   const sidangRegistration = await prisma.sidangRegistration.findUnique({
     where: {
-      id: parseInt(id),
+      id,
     },
-    include: {
-      mahasiswa: {
-        select: {
-          id: true,
-          nim: true,
-          name: true,
-          studyProgramId: true,
-          studyProgram: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-      dosenPembimbing1: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      dosenPembimbing2: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      sidangRegistrationUploads: true,
-    },
+    include: sidangInclude,
   });
 
   if (!sidangRegistration) {
@@ -178,14 +261,8 @@ const getSidangRegistrationById = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
-  sidangRegistration.sidangRegistrationUploads =
-    sidangRegistration.sidangRegistrationUploads.map((upload) => ({
-      ...upload,
-      downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
-    }));
-
   res.json({
-    data: sidangRegistration,
+    data: mapSidangRegistrationToFrontend(sidangRegistration, req),
   });
 });
 
@@ -195,39 +272,9 @@ const getSidangRegistrationByMahasiswaId = asyncHandler(async (req, res) => {
 
   const sidangRegistration = await prisma.sidangRegistration.findFirst({
     where: {
-      mahasiswaId: parseInt(mahasiswaId),
+      mahasiswaId,
     },
-    include: {
-      mahasiswa: {
-        select: {
-          id: true,
-          nim: true,
-          name: true,
-          studyProgramId: true,
-          studyProgram: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-      dosenPembimbing1: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      dosenPembimbing2: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      sidangRegistrationUploads: true,
-    },
+    include: sidangInclude,
     orderBy: {
       createdAt: "desc",
     },
@@ -238,14 +285,8 @@ const getSidangRegistrationByMahasiswaId = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
-  sidangRegistration.sidangRegistrationUploads =
-    sidangRegistration.sidangRegistrationUploads.map((upload) => ({
-      ...upload,
-      downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
-    }));
-
   res.json({
-    data: sidangRegistration,
+    data: mapSidangRegistrationToFrontend(sidangRegistration, req),
   });
 });
 
@@ -269,8 +310,8 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
 
   const errors = [];
   
-  if (!isNil(id) && isNaN(parseInt(id))) {
-    errors.push({ field: "id", message: "ID harus berupa integer" });
+  if (!isNil(id) && typeof id !== "string") {
+    errors.push({ field: "id", message: "ID harus berupa string" });
   }
   
   if (!isNil(programType) && typeof programType !== "string") {
@@ -305,16 +346,16 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) harus berupa string" });
   }
 
-  if (!isNil(mahasiswaId) && isNaN(parseInt(mahasiswaId))) {
-    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa integer" });
+  if (!isNil(mahasiswaId) && typeof mahasiswaId !== "string") {
+    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa string" });
   }
 
-  if (!isNil(dosenPembimbing1Id) && isNaN(parseInt(dosenPembimbing1Id))) {
-    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa integer" });
+  if (!isNil(dosenPembimbing1Id) && typeof dosenPembimbing1Id !== "string") {
+    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa string" });
   }
 
-  if (!isNil(dosenPembimbing2Id) && isNaN(parseInt(dosenPembimbing2Id))) {
-    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa integer" });
+  if (!isNil(dosenPembimbing2Id) && typeof dosenPembimbing2Id !== "string") {
+    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa string" });
   }
 
   if (errors.length > 0) {
@@ -324,7 +365,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
   // Validate references if provided
   if (mahasiswaId) {
     const studentExists = await prisma.mahasiswa.findUnique({
-      where: { id: parseInt(mahasiswaId) },
+      where: { id: mahasiswaId },
     });
     if (!studentExists) {
       res.status(404);
@@ -334,7 +375,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
 
   if (dosenPembimbing1Id) {
     const dosenExists = await prisma.dosen.findUnique({
-      where: { id: parseInt(dosenPembimbing1Id) },
+      where: { id: dosenPembimbing1Id },
     });
     if (!dosenExists) {
       res.status(404);
@@ -344,7 +385,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
 
   if (dosenPembimbing2Id) {
     const dosenExists = await prisma.dosen.findUnique({
-      where: { id: parseInt(dosenPembimbing2Id) },
+      where: { id: dosenPembimbing2Id },
     });
     if (!dosenExists) {
       res.status(404);
@@ -374,20 +415,20 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     programType: programType !== undefined ? programType : undefined,
     sidangScheme: sidangScheme !== undefined ? sidangScheme : undefined,
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
-    sks: sks !== undefined ? sks : undefined,
-    ipk: ipk !== undefined ? ipk : undefined,
-    tak: tak !== undefined ? tak : undefined,
+    sks: sks !== undefined ? parseInt(sks) : undefined,
+    ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
+    tak: tak !== undefined ? parseInt(tak) : undefined,
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
     thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
     thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
-    mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : undefined,
+    mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined
-        ? parseInt(dosenPembimbing1Id)
+        ? dosenPembimbing1Id
         : undefined,
     dosenPembimbing2Id:
       dosenPembimbing2Id !== undefined
-        ? parseInt(dosenPembimbing2Id)
+        ? dosenPembimbing2Id
         : undefined,
     isDraft: true,
   };
@@ -397,18 +438,14 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
   if (id) {
     // Update existing
     sidangRegistration = await prisma.sidangRegistration.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: upsertData,
-      include: {
-        mahasiswa: { select: { id: true, nim: true, name: true } },
-        dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-        dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-      },
+      include: sidangInclude,
     });
   } else if (mahasiswaId) {
     // Look for existing draft
     const existing = await prisma.sidangRegistration.findFirst({
-      where: { mahasiswaId: parseInt(mahasiswaId) },
+      where: { mahasiswaId },
       orderBy: { createdAt: "desc" },
     });
 
@@ -422,11 +459,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
       sidangRegistration = await prisma.sidangRegistration.update({
         where: { id: existing.id },
         data: upsertData,
-        include: {
-          mahasiswa: { select: { id: true, nim: true, name: true } },
-          dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-          dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-        },
+        include: sidangInclude,
       });
     } else {
       // Creating a new registration: Must have an active open period
@@ -438,7 +471,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
       // Check if student is already registered in this active period
       const existingInPeriod = await prisma.sidangRegistration.findFirst({
         where: {
-          mahasiswaId: parseInt(mahasiswaId),
+          mahasiswaId,
           sidangRegistrationPeriodId: activePeriod.id,
           deletedAt: null,
         },
@@ -453,11 +486,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
 
       sidangRegistration = await prisma.sidangRegistration.create({
         data: upsertData,
-        include: {
-          mahasiswa: { select: { id: true, nim: true, name: true } },
-          dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-          dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-        },
+        include: sidangInclude,
       });
     }
   } else {
@@ -471,17 +500,13 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
 
     sidangRegistration = await prisma.sidangRegistration.create({
       data: upsertData,
-      include: {
-        mahasiswa: { select: { id: true, nim: true, name: true } },
-        dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-        dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-      },
+      include: sidangInclude,
     });
   }
 
   res.status(200).json({
     message: "Sidang registration saved as draft successfully",
-    data: sidangRegistration,
+    data: mapSidangRegistrationToFrontend(sidangRegistration, req),
   });
 });
 
@@ -507,8 +532,8 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   
   if (isNil(id)) {
     errors.push({ field: "id", message: "ID wajib diisi untuk submit" });
-  } else if (isNaN(parseInt(id))) {
-    errors.push({ field: "id", message: "ID harus berupa integer" });
+  } else if (typeof id !== "string") {
+    errors.push({ field: "id", message: "ID harus berupa string" });
   }
 
   if (isNil(programType)) {
@@ -559,20 +584,20 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
 
   if (isNil(mahasiswaId)) {
     errors.push({ field: "mahasiswaId", message: "ID mahasiswa wajib diisi" });
-  } else if (isNaN(parseInt(mahasiswaId))) {
-    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa integer" });
+  } else if (typeof mahasiswaId !== "string") {
+    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa string" });
   }
 
   if (isNil(dosenPembimbing1Id)) {
     errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 wajib diisi" });
-  } else if (isNaN(parseInt(dosenPembimbing1Id))) {
-    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa integer" });
+  } else if (typeof dosenPembimbing1Id !== "string") {
+    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa string" });
   }
 
   if (isNil(dosenPembimbing2Id)) {
     errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 wajib diisi" });
-  } else if (isNaN(parseInt(dosenPembimbing2Id))) {
-    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa integer" });
+  } else if (typeof dosenPembimbing2Id !== "string") {
+    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa string" });
   }
 
   if (errors.length > 0) {
@@ -580,7 +605,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   const existingRegistration = await prisma.sidangRegistration.findUnique({
-    where: { id: parseInt(id) },
+    where: { id },
     include: {
       sidangRegistrationUploads: true,
     },
@@ -602,21 +627,23 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     programType: programType !== undefined ? programType : undefined,
     sidangScheme: sidangScheme !== undefined ? sidangScheme : undefined,
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
-    sks: sks !== undefined ? sks : undefined,
-    ipk: ipk !== undefined ? ipk : undefined,
-    tak: tak !== undefined ? tak : undefined,
+    sks: sks !== undefined ? parseInt(sks) : undefined,
+    ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
+    tak: tak !== undefined ? parseInt(tak) : undefined,
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
     thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
     thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
-    mahasiswaId: mahasiswaId !== undefined ? parseInt(mahasiswaId) : undefined,
+    mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined
-        ? parseInt(dosenPembimbing1Id)
+        ? dosenPembimbing1Id
         : undefined,
     dosenPembimbing2Id:
       dosenPembimbing2Id !== undefined
-        ? parseInt(dosenPembimbing2Id)
+        ? dosenPembimbing2Id
         : undefined,
+    isEdit: null,
+    message: null,
   };
 
   const activePeriod = await prisma.sidangPeriod.findFirst({
@@ -667,15 +694,15 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   // 2. Validasi Uploaded Files
-  const uploadedSlugs = existingRegistration.sidangRegistrationUploads.map(
-    (upload) => upload.slug,
+  const uploadedCategories = (existingRegistration.sidangRegistrationUploads || []).map(
+    (upload) => upload.category,
   );
 
   const missingFiles = [];
 
   // Wajib
   for (const slug of REQUIRED_SLUGS) {
-    if (!uploadedSlugs.includes(slug)) missingFiles.push(slug);
+    if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
   }
 
   // Jalur Non Sidang
@@ -683,7 +710,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     for (const jalur of mergedData.jalurNonSidang) {
       if (NON_SIDANG_SLUGS[jalur]) {
         for (const slug of NON_SIDANG_SLUGS[jalur]) {
-          if (!uploadedSlugs.includes(slug)) missingFiles.push(slug);
+          if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
         }
       }
     }
@@ -728,31 +755,15 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   updateData.isDraft = false; // Finalize submit
   updateData.submittedAt = new Date(); // Record student submission time
 
-  // Clear isEdit permission on response
-  await prisma.sidangRegistrationResponse.updateMany({
-    where: {
-      sidangRegistrationId: parseInt(id),
-      isEdit: { not: null },
-      deletedAt: null,
-    },
-    data: {
-      isEdit: null,
-    },
-  });
-
   const updatedSidangRegistration = await prisma.sidangRegistration.update({
-    where: { id: parseInt(id) },
+    where: { id },
     data: updateData,
-    include: {
-      mahasiswa: { select: { id: true, nim: true, name: true } },
-      dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-      dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-    },
+    include: sidangInclude,
   });
 
   res.status(200).json({
     message: "Sidang registration submitted successfully",
-    data: updatedSidangRegistration,
+    data: mapSidangRegistrationToFrontend(updatedSidangRegistration, req),
   });
 });
 
@@ -761,7 +772,7 @@ const deleteSidangRegistration = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const sidangRegistrationExists = await prisma.sidangRegistration.findUnique({
-    where: { id: parseInt(id) },
+    where: { id },
   });
 
   if (!sidangRegistrationExists) {
@@ -770,7 +781,7 @@ const deleteSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   const deletedSidangRegistration = await prisma.sidangRegistration.update({
-    where: { id: parseInt(id) },
+    where: { id },
     data: {
       deletedAt: new Date(),
     },
@@ -785,7 +796,8 @@ const deleteSidangRegistration = asyncHandler(async (req, res) => {
 // Upload Dokumen Persyaratan Sidang
 const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { slug, name } = req.body;
+  const { slug, category, name } = req.body;
+  const fileCategory = category || slug;
   const file = req.files?.file?.[0] || req.file;
 
   if (!file) {
@@ -793,10 +805,10 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
     throw new Error("Tidak ada file yang diunggah");
   }
 
-  if (!slug || !name) {
+  if (!fileCategory || !name) {
     if (file.path) fs.unlink(file.path, () => {});
     res.status(400);
-    throw new Error("Slug dan nama wajib diisi");
+    throw new Error("Kategori (slug) dan nama berkas wajib diisi");
   }
 
   const editCheck = await checkSidangEditable(id);
@@ -814,49 +826,53 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
 
   const existingUpload = await prisma.sidangRegistrationUpload.findFirst({
     where: {
-      sidangRegistrationId: parseInt(id),
-      slug: slug,
+      sidangRegistrationId: id,
+      category: fileCategory,
     },
   });
 
   let uploadRecord;
 
   if (existingUpload) {
-    if (existingUpload.path && fs.existsSync(existingUpload.path)) {
-      fs.unlinkSync(existingUpload.path);
+    if (existingUpload.filepath && fs.existsSync(existingUpload.filepath)) {
+      fs.unlink(existingUpload.filepath, () => {});
     }
 
     uploadRecord = await prisma.sidangRegistrationUpload.update({
       where: { id: existingUpload.id },
       data: {
         name,
-        filename: file.filename,
-        path: file.path,
-        isValid: false,
+        filepath: file.path,
+        isValid: null,
       },
     });
   } else {
     uploadRecord = await prisma.sidangRegistrationUpload.create({
       data: {
         name,
-        slug,
-        filename: file.filename,
-        path: file.path,
-        sidangRegistrationId: parseInt(id),
-        isValid: false,
+        category: fileCategory,
+        filepath: file.path,
+        sidangRegistrationId: id,
+        isValid: null,
       },
     });
   }
 
-  uploadRecord.downloadUrl = `${req.protocol}://${req.get(
-    "host",
-  )}/api/sidang-registrations/uploads/${uploadRecord.id}/download`;
+  const responseData = {
+    id: uploadRecord.id,
+    name: uploadRecord.name,
+    category: uploadRecord.category,
+    filepath: uploadRecord.filepath,
+    isValid: uploadRecord.isValid,
+    sidangRegistrationId: uploadRecord.sidangRegistrationId,
+    downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${uploadRecord.id}/download`,
+  };
 
   res.status(200).json({
     message: existingUpload
       ? "File updated successfully"
       : "File uploaded successfully",
-    data: uploadRecord,
+    data: responseData,
   });
 });
 
@@ -865,11 +881,16 @@ const getSidangRegistrationFiles = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const uploads = await prisma.sidangRegistrationUpload.findMany({
-    where: { sidangRegistrationId: parseInt(id) },
+    where: { sidangRegistrationId: id },
   });
 
   const data = uploads.map((upload) => ({
-    ...upload,
+    id: upload.id,
+    name: upload.name,
+    category: upload.category,
+    filepath: upload.filepath,
+    isValid: upload.isValid,
+    sidangRegistrationId: upload.sidangRegistrationId,
     downloadUrl: `${req.protocol}://${req.get(
       "host",
     )}/api/sidang-registrations/uploads/${upload.id}/download`,
@@ -880,7 +901,7 @@ const getSidangRegistrationFiles = asyncHandler(async (req, res) => {
 
 // Download Sidang Registration Upload
 const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
-  const uploadId = parseInt(req.params.uploadId);
+  const uploadId = req.params.uploadId;
 
   const upload = await prisma.sidangRegistrationUpload.findFirst({
     where: { id: uploadId },
@@ -891,17 +912,172 @@ const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
     throw new Error("Unggahan tidak ditemukan");
   }
 
-  const filePath = path.resolve(process.cwd(), upload.path);
+  const filePath = path.resolve(process.cwd(), upload.filepath);
 
   if (!fs.existsSync(filePath)) {
     res.status(404);
     throw new Error("File tidak ditemukan");
   }
 
-  res.download(filePath, upload.filename);
+  res.download(filePath, path.basename(upload.filepath));
 });
 
-export { listSidangRegistrations,
+// Approve Sidang Registration (Admin Response)
+const approveSidangRegistration = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { adminId, sidangPeriodId, sidangRegistrationUploadIds } = req.body;
+
+  const errors = [];
+  if (isNil(adminId)) {
+    errors.push({ field: "adminId", message: "ID staf akademik wajib diisi" });
+  }
+  if (isNil(sidangPeriodId)) {
+    errors.push({ field: "sidangPeriodId", message: "ID periode sidang wajib diisi" });
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
+
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!registration) {
+    res.status(404);
+    throw new Error("Pendaftaran sidang tidak ditemukan");
+  }
+
+  const admin = await prisma.admin.findUnique({
+    where: { id: adminId },
+  });
+
+  if (!admin) {
+    res.status(404);
+    throw new Error("Staf akademik tidak ditemukan");
+  }
+
+  const period = await prisma.sidangPeriod.findUnique({
+    where: { id: sidangPeriodId },
+  });
+
+  if (!period) {
+    res.status(404);
+    throw new Error("Periode sidang tidak ditemukan");
+  }
+
+  if (Array.isArray(sidangRegistrationUploadIds)) {
+    await prisma.sidangRegistrationUpload.updateMany({
+      where: {
+        sidangRegistrationId: id,
+        id: { in: sidangRegistrationUploadIds },
+      },
+      data: { isValid: true },
+    });
+
+    await prisma.sidangRegistrationUpload.updateMany({
+      where: {
+        sidangRegistrationId: id,
+        id: { notIn: sidangRegistrationUploadIds },
+      },
+      data: { isValid: false },
+    });
+  }
+
+  const updatedRegistration = await prisma.sidangRegistration.update({
+    where: { id },
+    data: {
+      adminId,
+      sidangPeriodId,
+      message: null,
+      isEdit: null,
+    },
+    include: sidangInclude,
+  });
+
+  res.json({
+    message: "Pendaftaran sidang berhasil disetujui",
+    data: mapSidangRegistrationToFrontend(updatedRegistration, req),
+  });
+});
+
+// Reject/Request Revision for Sidang Registration (Admin Response)
+const rejectSidangRegistration = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { adminId, message, isEdit, sidangRegistrationUploadIds } = req.body;
+
+  const errors = [];
+  if (isNil(adminId)) {
+    errors.push({ field: "adminId", message: "ID staf akademik wajib diisi" });
+  }
+  if (isNil(message)) {
+    errors.push({ field: "message", message: "Pesan penolakan wajib diisi" });
+  }
+  if (!isNil(isEdit) && !isValidISO8601(isEdit)) {
+    errors.push({ field: "isEdit", message: "isEdit harus berupa tanggal yang valid (format ISO 8601)" });
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
+
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!registration) {
+    res.status(404);
+    throw new Error("Pendaftaran sidang tidak ditemukan");
+  }
+
+  const admin = await prisma.admin.findUnique({
+    where: { id: adminId },
+  });
+
+  if (!admin) {
+    res.status(404);
+    throw new Error("Staf akademik tidak ditemukan");
+  }
+
+  if (Array.isArray(sidangRegistrationUploadIds)) {
+    await prisma.sidangRegistrationUpload.updateMany({
+      where: {
+        sidangRegistrationId: id,
+        id: { in: sidangRegistrationUploadIds },
+      },
+      data: { isValid: true },
+    });
+
+    await prisma.sidangRegistrationUpload.updateMany({
+      where: {
+        sidangRegistrationId: id,
+        id: { notIn: sidangRegistrationUploadIds },
+      },
+      data: { isValid: false },
+    });
+  }
+
+  const updatedRegistration = await prisma.sidangRegistration.update({
+    where: { id },
+    data: {
+      adminId,
+      message,
+      isEdit: isEdit ? new Date(isEdit) : null,
+      sidangPeriodId: null,
+      isDraft: isEdit ? true : false,
+      submittedAt: isEdit ? null : undefined,
+    },
+    include: sidangInclude,
+  });
+
+  res.json({
+    message: "Pendaftaran sidang berhasil ditolak / diminta revisi",
+    data: mapSidangRegistrationToFrontend(updatedRegistration, req),
+  });
+});
+
+export {
+  listSidangRegistrations,
   getSidangRegistrationById,
   getSidangRegistrationByMahasiswaId,
   saveSidangRegistration,
@@ -909,4 +1085,7 @@ export { listSidangRegistrations,
   deleteSidangRegistration,
   uploadSidangRegistrationFile,
   getSidangRegistrationFiles,
-  downloadSidangRegistrationFile, };
+  downloadSidangRegistrationFile,
+  approveSidangRegistration,
+  rejectSidangRegistration,
+};

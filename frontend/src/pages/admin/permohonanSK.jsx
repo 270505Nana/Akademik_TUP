@@ -12,13 +12,13 @@ import { determineStatus, unwrapResponse } from '../../components/admin/permohon
 import {
   getAllSktaRequests,
   getSktaResponseByRequestId,
-  getSktaResponseUploadByStudentId,
+  getSktaResponseUploadByMahasiswaId,
   approvePermohonanSK,
   rejectPermohonanSK,
   getStudyPrograms,
   getStudyProgramById,
   getSKTARequest,
-  getEvidenceUploadsByStudentId,
+  getEvidenceUploadsByMahasiswaId,
 } from '../../service/api';
 import { useAuth } from '../../context/AuthContext';
 import '../../components/admin/css/permohonanSK.css';
@@ -97,26 +97,11 @@ const PermohonanSK = () => {
           const uploadsRaw = await getSktaResponseUploadByStudentId(sid).catch(() => null);
           const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
 
-          const withResponses = await Promise.all(
-            requests.map(async (req) => {
-              const raw = await getSktaResponseByRequestId(req.id).catch(() => null);
-              return { ...req, sktaResponse: unwrapResponse(raw) };
-            })
-          );
+          const raw = await getSktaResponseByRequestId(item.id).catch(() => null);
+          const sktaResponse = unwrapResponse(raw);
 
-          const processed = withResponses.filter(r => r.sktaResponse !== null);
-          const chosen    = processed.length > 0
-            ? processed.sort((a, b) => b.id - a.id)[0]   
-            : withResponses.sort((a, b) => b.id - a.id)[0]; 
-
-          const prodiName = chosen.student?.studyProgramNama ?? '-';
-          const tanggal =
-            chosen.sktaRequestUploads?.[0]?.createdAt ??
-            skUploads?.[0]?.createdAt ??
-            chosen.sktaResponse?.createdAt ??
-            chosen.createdAt ??
-            chosen.updatedAt ??
-            null;
+          const prodiName = item.student?.studyProgramNama ?? '-';
+          const tanggal = item.createdAt ?? null;
 
           // Stamp `studentId` ternormalisasi kembali ke object gabungan supaya
           // semua pemakaian `item.studentId` di komponen ini tetap berfungsi.
@@ -215,8 +200,8 @@ const PermohonanSK = () => {
 
     try {
       // Ambil data lengkap pengajuan SK
-      const sktaRequest = await getSKTARequest(studentId);
-      const evidenceUploads = await getEvidenceUploadsByStudentId(studentId);
+      const sktaRequest = await getSKTARequest(mahasiswaId);
+      const evidenceUploads = await getEvidenceUploadsByMahasiswaId(mahasiswaId);
 
       setEvidenceItem({
         ...item,

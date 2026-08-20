@@ -2,7 +2,8 @@ import express from 'express';
 const router = express.Router();
 import { verifyToken } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
-import { listYudisiumRegistrations,
+import {
+  listYudisiumRegistrations,
   getYudisiumRegistrationById,
   getYudisiumRegistrationByMahasiswaId,
   saveYudisiumRegistration,
@@ -10,7 +11,10 @@ import { listYudisiumRegistrations,
   deleteYudisiumRegistration,
   uploadYudisiumRegistrationFile,
   getYudisiumRegistrationFiles,
-  downloadYudisiumRegistrationFile, } from '../../controllers/yudisiumRegistrationController.js';
+  downloadYudisiumRegistrationFile,
+  approveYudisiumRegistration,
+  rejectYudisiumRegistration,
+} from '../../controllers/yudisiumRegistrationController.js';
 import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -51,8 +55,8 @@ router.get("/", verifyToken, listYudisiumRegistrations);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Yudisium registration ID
+ *           type: string
+ *         description: Yudisium registration ID (UUID)
  *     responses:
  *       200:
  *         description: Yudisium registration data retrieved successfully
@@ -78,8 +82,8 @@ router.get("/:id", verifyToken, getYudisiumRegistrationById);
  *         name: mahasiswaId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Mahasiswa ID
+ *           type: string
+ *         description: Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: Yudisium registration data retrieved successfully
@@ -110,6 +114,39 @@ router.get(
  *         application/json:
  *           schema:
  *             type: object
+ *             properties:
+ *               id:
+ *                 type: string
+ *               programType:
+ *                 type: string
+ *               tak:
+ *                 type: integer
+ *               thesisTitleId:
+ *                 type: string
+ *               thesisTitleEn:
+ *                 type: string
+ *               isConfirmed:
+ *                 type: boolean
+ *               sidangScheme:
+ *                 type: string
+ *               cumlaudeScheme:
+ *                 type: string
+ *               jalurNonYudisium:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               eviden_cumlaude:
+ *                 type: string
+ *               mahasiswaId:
+ *                 type: string
+ *               dosenPembimbing1Id:
+ *                 type: string
+ *               dosenPembimbing2Id:
+ *                 type: string
+ *               yudisiumPeriodId:
+ *                 type: string
+ *               yudisiumRegistrationPeriodId:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Yudisium registration saved as draft successfully
@@ -145,6 +182,39 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             properties:
+ *               id:
+ *                 type: string
+ *               programType:
+ *                 type: string
+ *               tak:
+ *                 type: integer
+ *               thesisTitleId:
+ *                 type: string
+ *               thesisTitleEn:
+ *                 type: string
+ *               isConfirmed:
+ *                 type: boolean
+ *               sidangScheme:
+ *                 type: string
+ *               cumlaudeScheme:
+ *                 type: string
+ *               jalurNonYudisium:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               eviden_cumlaude:
+ *                 type: string
+ *               mahasiswaId:
+ *                 type: string
+ *               dosenPembimbing1Id:
+ *                 type: string
+ *               dosenPembimbing2Id:
+ *                 type: string
+ *               yudisiumPeriodId:
+ *                 type: string
+ *               yudisiumRegistrationPeriodId:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Yudisium registration submitted successfully
@@ -179,8 +249,8 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Yudisium registration ID
+ *           type: string
+ *         description: Yudisium registration ID (UUID)
  *     responses:
  *       200:
  *         description: Yudisium registration deleted successfully
@@ -208,8 +278,8 @@ router.delete("/:id", verifyToken, isAdmin, deleteYudisiumRegistration);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Yudisium registration ID
+ *           type: string
+ *         description: Yudisium registration ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -264,8 +334,8 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Yudisium registration ID
+ *           type: string
+ *         description: Yudisium registration ID (UUID)
  *     responses:
  *       200:
  *         description: Uploaded files retrieved successfully
@@ -291,8 +361,8 @@ router.get("/:id/uploads", verifyToken, getYudisiumRegistrationFiles);
  *         name: uploadId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Upload ID
+ *           type: string
+ *         description: Upload ID (UUID)
  *     responses:
  *       200:
  *         description: File download
@@ -308,5 +378,98 @@ router.get(
   verifyToken,
   downloadYudisiumRegistrationFile,
 );
+
+/**
+ * @swagger
+ * /api/yudisium-registrations/{id}/approve:
+ *   put:
+ *     summary: Approve yudisium registration
+ *     tags: [Yudisium Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Yudisium registration ID (UUID)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - adminId
+ *               - yudisiumPeriodId
+ *             properties:
+ *               adminId:
+ *                 type: string
+ *               yudisiumPeriodId:
+ *                 type: string
+ *               yudisiumRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Yudisium registration approved successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       404:
+ *         description: Registration, admin or period not found
+ */
+router.put("/:id/approve", verifyToken, isAdmin, approveYudisiumRegistration);
+
+/**
+ * @swagger
+ * /api/yudisium-registrations/{id}/reject:
+ *   put:
+ *     summary: Reject / request revision for yudisium registration
+ *     tags: [Yudisium Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Yudisium registration ID (UUID)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - adminId
+ *               - message
+ *             properties:
+ *               adminId:
+ *                 type: string
+ *               message:
+ *                 type: string
+ *               isEdit:
+ *                 type: string
+ *                 format: date-time
+ *               yudisiumRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Yudisium registration rejected / revision requested successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       404:
+ *         description: Registration or admin not found
+ */
+router.put("/:id/reject", verifyToken, isAdmin, rejectYudisiumRegistration);
 
 export default router;

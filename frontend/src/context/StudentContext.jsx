@@ -78,7 +78,7 @@ export const StudentProvider = ({ children }) => {
       );
 
       const mapped = {
-        studentId: studentData.id ?? null,
+        mahasiswaId: studentData.id ?? null,
         namaLengkap: studentData.name ?? "",
         nim: studentData.nim ?? "",
         kelas: studentData.className ?? "",

@@ -179,7 +179,7 @@ const LengkapiData = () => {
     try {
       const result = await saveStudentData(user.id, payload);
       const studentDbId = result?.data?.id ?? result?.id ?? null;
-      updateStudent({ ...formData, studentId: studentDbId });
+      updateStudent({ ...formData, mahasiswaId: studentDbId });
       localStorage.removeItem('student_form_draft');
       navigate('/mahasiswa/dashboard');
     } catch (err) {

@@ -10,10 +10,10 @@ router.get("/", function (req, res, next) {
   res.render("index", { title: "Express" });
 });
 
-// Download Templetes
-router.get("/templates/download/:slug", downloadTemplateUpload);
+// Download Templates
+router.get("/templates/download/:code", downloadTemplateUpload);
 
 // Preview Templates
-router.get("/templates/preview/:slug", previewTemplateUpload);
+router.get("/templates/preview/:code", previewTemplateUpload);
 
 export default router;

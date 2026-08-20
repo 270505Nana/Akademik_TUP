@@ -8,11 +8,16 @@ const adapter = new PrismaPg(pool);
 
 const hideTimestamps = { createdAt: true, updatedAt: true, deletedAt: true };
 const hidedeletedAt = { deletedAt: true };
+const hideUpdateDelete = { updatedAt: true, deletedAt: true };
 
 const prisma = new PrismaClient({
   adapter,
   log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
   omit: {
+    user: {
+      password: true,
+      deletedAt: true,
+    },
     researchGroup: hideTimestamps,
     faculty: hideTimestamps,
     studyProgram: hideTimestamps,
@@ -20,7 +25,7 @@ const prisma = new PrismaClient({
     admin: hidedeletedAt,
     dosen: hideTimestamps,
     mahasiswa: hideTimestamps,
-    permohonanSkta: hideTimestamps,
+    permohonanSkta: hideUpdateDelete,
   },
 });
 

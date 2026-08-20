@@ -6,12 +6,11 @@ import SimtaLogo from "../../assets/logo-simta.png";
 import Telulogo  from "../../assets/logo-telkom.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import { getLecturers, getSKTARequest, submitSKTARequest, resubmitSKTARequest, downloadTemplate } from '../../service/api';
+import { getLecturers, getSKTARequest, submitSKTARequest, resubmitSKTARequest, downloadTemplate, downloadSK } from '../../service/api';
 import {
   determineSkStatus,
   getSubmissionMode,
   isMainPageCategory,
-  getSkFileUrl,
   STATUS_SK,
   SKTA_CATEGORY,
 } from '../../components/common/Skstatushelper';
@@ -19,13 +18,13 @@ import CustomAlert from '../../components/common/CustomAlert';
 import TemplateEvidenceModal from '../../components/common/TemplateEvidenceModal';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
 
-const DownloadTemplateButton = ({ slug }) => {
+const DownloadTemplateButton = ({ code }) => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const { blob, name } = await downloadTemplate(slug);
+      const { blob, name } = await downloadTemplate(code);
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
       a.href     = url;
@@ -70,7 +69,28 @@ const PageLoader = () => (
 );
 
 const SkStatusBanner = ({ status, permohonan }) => {
-  const skFileUrl = getSkFileUrl(permohonan);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!permohonan?.id) return;
+    setDownloading(true);
+    try {
+      const blob = await downloadSK(permohonan.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SK_TA_${permohonan.id}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Gagal unduh SK:', err);
+      alert('Gagal mengunduh SK. Silakan coba lagi.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const configs = {
     [STATUS_SK.DALAM_PROSES]: {
@@ -140,12 +160,13 @@ const SkStatusBanner = ({ status, permohonan }) => {
             <button
               style={{
                 marginTop: 14, padding: '8px 20px', borderRadius: 9999,
-                fontSize: 12, fontWeight: 700, background: '#16A34A',
-                color: '#fff', border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, background: downloading ? '#9CA3AF' : '#16A34A',
+                color: '#fff', border: 'none', cursor: downloading ? 'not-allowed' : 'pointer',
               }}
-              onClick={() => skFileUrl && window.open(skFileUrl, '_blank')}
+              disabled={downloading}
+              onClick={handleDownload}
             >
-              Unduh SK
+              {downloading ? 'Mengunduh...' : 'Unduh SK'}
             </button>
           )}
         </div>
@@ -182,7 +203,7 @@ const friendlyErrorMessage = (field, rawMessage) => {
   }
   if (field === 'evidence' && msg.includes('size'))  return 'Ukuran file evidence melebihi batas maksimal 3MB.';
   if (field === 'evidence' && msg.includes('wajib')) return 'Dokumen evidence wajib diunggah.';
-  if (field === 'studentId') return null;
+  if (field === 'mahasiswaId') return null;
   if (field === 'proposalTitleId' || field === 'proposalTitleEn') return 'Judul Tugas Akhir wajib diisi dengan benar.';
   if (field === 'dosenPembimbing1Id' || field === 'dosenPembimbing2Id') return 'Dosen Pembimbing wajib dipilih.';
   return rawMessage;
@@ -262,11 +283,11 @@ const PengajuanSK = () => {
 
   useEffect(() => {
     const checkSKTAStatus = async () => {
-      const studentId = student?.studentId;
-      if (!studentId) { navigate('/lengkapi-data', { replace: true }); return; }
+      const mahasiswaId = student?.mahasiswaId;
+      if (!mahasiswaId) { navigate('/lengkapi-data', { replace: true }); return; }
 
       try {
-        const latest = await getSKTARequest(studentId);
+        const latest = await getSKTARequest(mahasiswaId);
 
         if (!latest) {
           // Belum pernah punya permohonan sama sekali → boleh ajukan Permohonan Baru
@@ -298,7 +319,6 @@ const PengajuanSK = () => {
                 kk => String(kk.researchGroupId) === String(matchedKode1.researchGroupId)
               )
             : null;
-
           setFormData(prev => ({
             ...prev,
             judulIndo:    latest.proposalTitleId ?? '',
@@ -402,8 +422,8 @@ const PengajuanSK = () => {
       return;
     }
 
-    const studentId = student?.studentId;
-    if (!studentId) {
+    const mahasiswaId = student?.mahasiswaId;
+    if (!mahasiswaId) {
       setSubmitError({ title: 'Data tidak ditemukan', message: 'Data mahasiswa tidak ditemukan. Silakan lengkapi profil terlebih dahulu.' });
       return;
     }
@@ -416,7 +436,7 @@ const PengajuanSK = () => {
         const activeRequestId = sktaRequestId ?? permohonan?.id;
         await resubmitSKTARequest({
           sktaRequestId:      activeRequestId,
-          studentId,
+          mahasiswaId,
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
           dosenPembimbing1Id: formData.kode1.value,
@@ -434,7 +454,7 @@ const PengajuanSK = () => {
         const result = await submitSKTARequest({
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
-          studentId,
+          mahasiswaId,
           dosenPembimbing1Id: formData.kode1.value,
           dosenPembimbing2Id: formData.kode2.value,
           evidence:           actualFile,
@@ -878,7 +898,7 @@ const PengajuanSK = () => {
               Lihat Template Evidence
             </button> */}
 
-             <DownloadTemplateButton slug="evidence-dosen-pembimbing" />
+             <DownloadTemplateButton code="evidence-dosen-pembimbing" />
           </div>
 
           {isBelumTerbit && (
@@ -962,10 +982,9 @@ const PengajuanSK = () => {
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </footer>
 
-      {/* Modal Template Evidence */}
       {showTemplateModal && (
         <TemplateEvidenceModal
-          slug="evidence-dosen-pembimbing"
+          code="evidence-dosen-pembimbing"
           onClose={() => setShowTemplateModal(false)}
         />
       )}

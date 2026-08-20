@@ -3,7 +3,7 @@ import { X, Download, Loader, AlertCircle, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
 import { downloadTemplate } from '../../service/api'; 
 
-const TemplateEvidenceModal = ({ slug, title = 'Preview Template', onClose }) => {
+const TemplateEvidenceModal = ({ code, title = 'Preview Template', onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
   const [preview, setPreview] = useState(null);
@@ -15,7 +15,7 @@ const TemplateEvidenceModal = ({ slug, title = 'Preview Template', onClose }) =>
       setLoading(true);
       setError(null);
       try {
-        const { blob, name } = await downloadTemplate(slug);
+        const { blob, name } = await downloadTemplate(code);
         const lowerName = (name || '').toLowerCase();
         const isPdf = lowerName.endsWith('.pdf') || blob.type.includes('pdf');
         const isPng = lowerName.endsWith('.png') || blob.type === 'image/png';
@@ -28,7 +28,7 @@ const TemplateEvidenceModal = ({ slug, title = 'Preview Template', onClose }) =>
         if (isMounted) {
           setPreview({
             url:  objectUrl,
-            name: name || `template-${slug}`,
+            name: name || `template-${code}`,
             type: isPdf ? 'pdf' : (isPng || isJpg) ? 'image' : 'unsupported',
           });
         }
@@ -45,7 +45,7 @@ const TemplateEvidenceModal = ({ slug, title = 'Preview Template', onClose }) =>
       isMounted = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [slug]);
+  }, [code]);
 
   const handleDownload = () => {
     if (!preview?.url) return;

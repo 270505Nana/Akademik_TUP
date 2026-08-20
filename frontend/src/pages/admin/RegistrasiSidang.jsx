@@ -6,7 +6,7 @@ import SidebarAdmin          from '../../components/sidebar/SidebarAdmin';
 import CustomAlert           from '../../components/common/CustomAlert';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth }           from '../../context/AuthContext';
-import {getAllSidangRegistrations,getSidangRegistrationResponse,getSidangPeriods,} from '../../service/api';
+import {getAllSidangRegistrations,getSidangPeriods,} from '../../service/api';
 import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../../components/admin/sidang/RegistrasiSidang.css';
 
@@ -218,7 +218,6 @@ const RegistrasiSidang = () => {
 
   // Data
   const [registrations, setRegistrations] = useState([]);
-  const [responseMap,   setResponseMap]   = useState({});
   const [periodMap,     setPeriodMap]     = useState({});
   const [prodiMap,      setProdiMap]      = useState({});
 
@@ -254,19 +253,8 @@ const RegistrasiSidang = () => {
       const list    = await getAllSidangRegistrations();
       const allList = list ?? [];
 
-      // Fetch response untuk SEMUA registrasi 
-
-      const respArr = await Promise.all(
-        allList.map(r => getSidangRegistrationResponse(r.id).catch(() => null))
-      );
-
-      // Build responseMap: { [registrationId]: response }
-      const rMap = {};
-      allList.forEach((r, i) => { if (respArr[i]) rMap[r.id] = respArr[i]; });
-      setResponseMap(rMap);
-
-      const visible = allList.filter((r, i) => {
-        const hasResponse = !!respArr[i];
+      const visible = allList.filter((r) => {
+        const hasResponse = !!(r.message || r.isEdit || r.sidangPeriodId);
         return !r.isDraft || hasResponse;
       });
 
@@ -276,8 +264,9 @@ const RegistrasiSidang = () => {
       setPeriodMap(prdMap);
       const prMap = {};
       visible.forEach(r => {
-        const name = r.student?.studyProgram?.name ?? null;
-        if (name) prMap[r.studentId] = name;
+        const m = r.mahasiswa || r.student;
+        const name = m?.studyProgram?.name ?? null;
+        if (name) prMap[r.mahasiswaId] = name;
       });
       setProdiMap(prMap);
 
@@ -295,15 +284,15 @@ const RegistrasiSidang = () => {
   }, [user]);
 
   const getStatus = useCallback((reg) => {
-    const response = responseMap[reg.id] ?? null;
     const periodId = reg.sidangPeriodId ?? null;
     const period   = periodId ? (periodMap[periodId] ?? null) : null;
-    return determineSidangStatus(reg, response, period);
-  }, [responseMap, periodMap]);
+    return determineSidangStatus(reg, null, period);
+  }, [periodMap]);
 
   const getProdiName = useCallback((reg) => {
-    if (reg.student?.studyProgram?.name) return reg.student.studyProgram.name;
-    return prodiMap[reg.studentId] ?? '-';
+    const m = reg.mahasiswa || reg.student;
+    if (m?.studyProgram?.name) return m.studyProgram.name;
+    return prodiMap[reg.mahasiswaId] ?? '-';
   }, [prodiMap]);
 
   const prodiOptions = PRODI_LIST;
@@ -333,8 +322,9 @@ const RegistrasiSidang = () => {
     return registrations
       .filter(r => {
         if (!searchDebounced) return true;
-        const name = (r.student?.name || '').toLowerCase();
-        const nim  = (r.student?.nim  || '').toLowerCase();
+        const m = r.mahasiswa || r.student;
+        const name = (m?.name || '').toLowerCase();
+        const nim  = (m?.nim  || '').toLowerCase();
         return name.includes(searchDebounced) || nim.includes(searchDebounced);
       })
       .filter(r => {
@@ -347,8 +337,10 @@ const RegistrasiSidang = () => {
       })
       .sort((a, b) => {
         if (sort.field === 'name') {
-          const na = (a.student?.name || '').toLowerCase();
-          const nb = (b.student?.name || '').toLowerCase();
+          const ma = a.mahasiswa || a.student;
+          const mb = b.mahasiswa || b.student;
+          const na = (ma?.name || '').toLowerCase();
+          const nb = (mb?.name || '').toLowerCase();
           const cmp = na.localeCompare(nb, 'id');
           return sort.dir === 'asc' ? cmp : -cmp;
         }
@@ -495,6 +487,7 @@ const RegistrasiSidang = () => {
                         const isVerified = status === STATUS_SIDANG.SIAP_SIDANG
                                         || status === STATUS_SIDANG.PENDAFTARAN_DITERIMA;
 
+                        const m = reg.mahasiswa || reg.student;
                         return (
                           <motion.tr
                             key={reg.id}
@@ -507,8 +500,8 @@ const RegistrasiSidang = () => {
                               {(currentPage - 1) * PAGE_SIZE + idx + 1}
                             </td>
                             <td>
-                              <div className="vs-mhs-name">{reg.student?.name || `Mahasiswa #${reg.studentId}`}</div>
-                              <div className="vs-mhs-nim">{reg.student?.nim  || '-'}</div>
+                              <div className="vs-mhs-name">{m?.name || `Mahasiswa #${reg.mahasiswaId}`}</div>
+                              <div className="vs-mhs-nim">{m?.nim  || '-'}</div>
                             </td>
                             <td>
                               <span className="vs-prodi-text">{prodiName}</span>

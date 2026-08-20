@@ -16,12 +16,15 @@ const listMahasiswa = asyncHandler(async (req, res) => {
     },
   });
 
-  const mapped = mahasiswa.map((m) => ({
-    ...m,
-    name: m.user?.name,
-    email: m.user?.email,
-    phone: m.user?.phone,
-  }));
+  const mapped = mahasiswa.map((m) => {
+    const { user, ...rest } = m;
+    return {
+      ...rest,
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || null,
+    };
+  });
 
   res.json({
     data: mapped,
@@ -32,7 +35,7 @@ const listMahasiswa = asyncHandler(async (req, res) => {
 const upsertMahasiswa = asyncHandler(async (req, res) => {
   const userId = req.params.userId; // String UUID
 
-  const user = await prisma.user.findFirst({ where: { id: userId } });
+  const user = await prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
   if (!user) {
     res.status(404);
     throw new Error("Pengguna tidak ditemukan");
@@ -142,12 +145,14 @@ const findMahasiswaByUserId = asyncHandler(async (req, res) => {
     throw new Error("Data mahasiswa tidak ditemukan");
   }
 
+  const { user, ...rest } = mahasiswa;
+
   res.json({
     data: {
-      ...mahasiswa,
-      name: mahasiswa.user?.name,
-      email: mahasiswa.user?.email,
-      phone: mahasiswa.user?.phone,
+      ...rest,
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || null,
     },
   });
 });
@@ -174,12 +179,14 @@ const findMahasiswaById = asyncHandler(async (req, res) => {
     throw new Error("Data mahasiswa tidak ditemukan");
   }
 
+  const { user, ...rest } = mahasiswa;
+
   res.json({
     data: {
-      ...mahasiswa,
-      name: mahasiswa.user?.name,
-      email: mahasiswa.user?.email,
-      phone: mahasiswa.user?.phone,
+      ...rest,
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || null,
     },
   });
 });

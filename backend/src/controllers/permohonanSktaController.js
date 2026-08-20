@@ -27,44 +27,90 @@ const removeUploadedFiles = (files) => {
 const mapPermohonanToFrontend = (item, req) => {
   if (!item) return null;
   return {
-    ...item,
-    proposalTitleId: item.judulProposalIndonesia,
-    proposalTitleEn: item.judulProposalInggris,
-    student: item.mahasiswa
-      ? {
-          id: item.mahasiswa.id,
-          name: item.mahasiswa.user?.name || '',
-          nim: item.mahasiswa.nim || '',
-          studyProgramId: item.mahasiswa.studyProgramId,
-          studyProgramNama: item.mahasiswa.studyProgram?.name || '',
-        }
-      : null,
+    id: item.id,
+    createdAt: item.createdAt,
+    category: item.category,
+    mahasiswaId: item.mahasiswaId,
+    judulProposalIndonesia: item.judulProposalIndonesia,
+    judulProposalInggris: item.judulProposalInggris,
     dosenPembimbing1Id: item.dosenPembimbing1Id,
     dosenPembimbing2Id: item.dosenPembimbing2Id,
-    sktaRequestUploads: item.evidenceUploadPath
-      ? [
-          {
-            id: item.id,
-            name: `Evidence_${item.mahasiswa?.nim || 'SKTA'}_${item.mahasiswa?.user?.name || 'Mhs'}`,
-            filename: path.basename(item.evidenceUploadPath),
-            path: item.evidenceUploadPath,
-            mahasiswaId: item.mahasiswaId,
-            downloadUrl: `${req.protocol}://${req.get("host")}/api/permohonan-skta/${item.id}/download/evidence`,
-          },
-        ]
-      : [],
-    sktaResponseUploads: item.sktaUploadPath
-      ? [
-          {
-            id: item.id,
-            name: `SKTA_${item.id}`,
-            filename: path.basename(item.sktaUploadPath),
-            path: item.sktaUploadPath,
-            mahasiswaId: item.mahasiswaId,
-            downloadUrl: `${req.protocol}://${req.get("host")}/api/permohonan-skta/${item.id}/download/skta`,
-          },
-        ]
-      : [],
+    researchGroupId: item.researchGroupId,
+    adminId: item.adminId,
+    hasUploadedFinalProposal: item.hasUploadedFinalProposal,
+    hasTakenLanguageTest: item.hasTakenLanguageTest,
+    expDate: item.expDate,
+    wasRejectedBefore: item.wasRejectedBefore ?? false,
+    message: item.message,
+    isEdit: item.isEdit,
+    evidenceUploadPath: item.evidenceUploadPath,
+    sktaUploadPath: item.sktaUploadPath,
+    mahasiswa: item.mahasiswa
+      ? {
+          id: item.mahasiswa.id,
+          nim: item.mahasiswa.nim || '',
+          kelasAsal: item.mahasiswa.kelasAsal || '',
+          tahunAngkatan: item.mahasiswa.tahunAngkatan,
+          sks: item.mahasiswa.sks,
+          ipk: item.mahasiswa.ipk,
+          tak: item.mahasiswa.tak,
+          studyProgramId: item.mahasiswa.studyProgramId,
+          dosenWaliId: item.mahasiswa.dosenWaliId,
+          name: item.mahasiswa.user?.name || '',
+          email: item.mahasiswa.user?.email || '',
+          phone: item.mahasiswa.user?.phone || null,
+          studyProgram: item.mahasiswa.studyProgram
+            ? {
+                id: item.mahasiswa.studyProgram.id,
+                name: item.mahasiswa.studyProgram.name,
+                isActive: item.mahasiswa.studyProgram.isActive,
+                facultyId: item.mahasiswa.studyProgram.facultyId,
+              }
+            : null,
+        }
+      : null,
+    dosenPembimbing1: item.dosenPembimbing1
+      ? {
+          id: item.dosenPembimbing1.id,
+          nip: item.dosenPembimbing1.nip,
+          nidn: item.dosenPembimbing1.nidn,
+          kodeDosen: item.dosenPembimbing1.kodeDosen,
+          researchGroupId: item.dosenPembimbing1.researchGroupId,
+          userId: item.dosenPembimbing1.userId,
+          name: item.dosenPembimbing1.user?.name || '',
+          email: item.dosenPembimbing1.user?.email || '',
+          phone: item.dosenPembimbing1.user?.phone || null,
+        }
+      : null,
+    dosenPembimbing2: item.dosenPembimbing2
+      ? {
+          id: item.dosenPembimbing2.id,
+          nip: item.dosenPembimbing2.nip,
+          nidn: item.dosenPembimbing2.nidn,
+          kodeDosen: item.dosenPembimbing2.kodeDosen,
+          researchGroupId: item.dosenPembimbing2.researchGroupId,
+          userId: item.dosenPembimbing2.userId,
+          name: item.dosenPembimbing2.user?.name || '',
+          email: item.dosenPembimbing2.user?.email || '',
+          phone: item.dosenPembimbing2.user?.phone || null,
+        }
+      : null,
+    researchGroup: item.researchGroup
+      ? {
+          id: item.researchGroup.id,
+          name: item.researchGroup.name,
+          isActive: item.researchGroup.isActive,
+        }
+      : null,
+    admin: item.admin
+      ? {
+          id: item.admin.id,
+          userId: item.admin.userId,
+          name: item.admin.user?.name || '',
+          email: item.admin.user?.email || '',
+          phone: item.admin.user?.phone || null,
+        }
+      : null,
     evidenceDownloadUrl: item.evidenceUploadPath
       ? `${req.protocol}://${req.get("host")}/api/permohonan-skta/${item.id}/download/evidence`
       : null,
@@ -84,8 +130,24 @@ const listPermohonanSkta = asyncHandler(async (req, res) => {
           user: true,
         },
       },
-      dosenPembimbing1: true,
-      dosenPembimbing2: true,
+      dosenPembimbing1: {
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      dosenPembimbing2: {
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
       researchGroup: true,
       admin: true,
     },
@@ -174,6 +236,34 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
         researchGroupId,
         evidenceUploadPath: evidenceFile.path,
       },
+      include: {
+        mahasiswa: {
+          include: {
+            studyProgram: true,
+            user: true,
+          },
+        },
+        dosenPembimbing1: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        dosenPembimbing2: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        researchGroup: true,
+        admin: true,
+      },
     });
 
     res.status(201).json({
@@ -239,6 +329,34 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
     const data = await prisma.permohonanSkta.update({
       where: { id },
       data: updateData,
+      include: {
+        mahasiswa: {
+          include: {
+            studyProgram: true,
+            user: true,
+          },
+        },
+        dosenPembimbing1: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        dosenPembimbing2: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        researchGroup: true,
+        admin: true,
+      },
     });
 
     res.json({
@@ -263,8 +381,24 @@ const getPermohonanSktaById = asyncHandler(async (req, res) => {
           user: true,
         },
       },
-      dosenPembimbing1: true,
-      dosenPembimbing2: true,
+      dosenPembimbing1: {
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      dosenPembimbing2: {
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
       researchGroup: true,
       admin: true,
     },
@@ -293,8 +427,24 @@ const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
           user: true,
         },
       },
-      dosenPembimbing1: true,
-      dosenPembimbing2: true,
+      dosenPembimbing1: {
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      dosenPembimbing2: {
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
       researchGroup: true,
       admin: true,
     },
@@ -427,6 +577,7 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   const data = await prisma.permohonanSkta.update({
      where: { id },
      data: {
+       wasRejectedBefore: true,
        message,
        adminId,
        isEdit: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Memberikan izin edit selama 7 hari ke depan
