@@ -7,8 +7,8 @@ import illustration from "../../assets/karakter-dashboard.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
-import {getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, getSidangPeriods, getYudisiumPeriods, getSidangRegistrationByStudentId, getSidangRegistrationResponse, downloadSK } from '../../service/api';
-import {determineSkStatus,unwrapResponse,STATUS_SK,} from '../../components/common/Skstatushelper';
+import {getSKTARequest, getSidangPeriods, getYudisiumPeriods, getSidangRegistrationByStudentId, getSidangRegistrationResponse, downloadSK } from '../../service/api';
+import {determineSkStatus, STATUS_SK,} from '../../components/common/Skstatushelper';
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus} from '../../components/admin/sidang/Sidangstatushelper';
 
 const normalizeRegistration = (raw) => {
@@ -245,17 +245,13 @@ const DashboardMahasiswa = () => {
     if (!studentId) { setLoadingSk(false); return; }
     setLoadingSk(true);
     try {
+      // 1 call doang — getSKTARequest() sekarang balikin object PermohonanSkta
+      // gabungan penuh (request + response tergabung), gak perlu fetch terpisah lagi.
       const request = await getSKTARequest(studentId);
-      if (!request) { setSkStatus(null); setLoadingSk(false); return; }
+      if (!request) { setSkStatus(null); setSkUploads([]); setSktaRequest(null); setLoadingSk(false); return; }
       setSktaRequest(request);
-      const [rawResponse, uploadsRaw] = await Promise.all([
-        getSKTAResponse(request.id).catch(() => null),
-        getSktaResponseUploadByStudentId(studentId).catch(() => null),
-      ]);
-      const unwrapped = unwrapResponse(rawResponse);
-      const uploads   = uploadsRaw?.data ?? uploadsRaw ?? [];
-      setSkUploads(uploads);
-      setSkStatus(determineSkStatus(unwrapped, uploads));
+      setSkUploads(request.sktaResponseUploads ?? []);
+      setSkStatus(determineSkStatus(request));
     } catch (err) {
       console.error('Gagal fetch SK status:', err);
       setSkStatus(null);
@@ -568,7 +564,7 @@ const DashboardMahasiswa = () => {
                             </BtnRed>
                           ) : skStatus === STATUS_SK.EXPIRED ? (
                             <BtnRed onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
-                              &gt; Perbarui SK
+                              &gt; Perpanjangan SK
                             </BtnRed>
                           ) : skStatus === STATUS_SK.SUDAH_TERBIT ? (
                             <>
