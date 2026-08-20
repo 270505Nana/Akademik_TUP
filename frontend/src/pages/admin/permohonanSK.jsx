@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Download, Eye, ChevronLeft, ChevronRight, Menu, ChevronDown, Check } from 'lucide-react';
+import { Search, Download, Eye, ChevronLeft, ChevronRight, Menu, ChevronDown, Check, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
 import SidebarAdmin    from '../../components/sidebar/SidebarAdmin';
 import CustomAlert     from '../../components/common/CustomAlert';
 import EvidenceModal   from '../../components/admin/permohonanSK/EvidenceModal';
@@ -8,10 +9,21 @@ import VerifikasiModal from '../../components/admin/permohonanSK/VerifikasiModal
 import FormulirSKModal from '../../components/admin/permohonanSK/FormulirskModal';
 import { determineStatus, unwrapResponse } from '../../components/admin/permohonanSK/skHelpers';
 
-import {getAllSktaRequests,getSktaResponseByRequestId,getSktaResponseUploadByStudentId,approvePermohonanSK, rejectPermohonanSK,getStudyPrograms,getStudyProgramById,getSKTARequest,getEvidenceUploadsByStudentId,} from '../../service/api';
+import {
+  getAllSktaRequests,
+  getSktaResponseByRequestId,
+  getSktaResponseUploadByStudentId,
+  approvePermohonanSK,
+  rejectPermohonanSK,
+  getStudyPrograms,
+  getStudyProgramById,
+  getSKTARequest,
+  getEvidenceUploadsByStudentId,
+} from '../../service/api';
 import { useAuth } from '../../context/AuthContext';
 import '../../components/admin/css/permohonanSK.css';
 
+/*  Status Badge  */
 const STATUS_CONFIG = {
   'sudah-terbit'    : { label: 'Sudah Terbit',    cls: 'sudah-terbit'    },
   'belum-terbit'    : { label: 'Belum Terbit',    cls: 'belum-terbit'    },
@@ -35,6 +47,8 @@ const PermohonanSK = () => {
   const [filterProdi,        setFilterProdi]        = useState('');
   const [prodiDropdownOpen,  setProdiDropdownOpen]  = useState(false);
   const prodiDropdownRef    = useRef(null);
+  // Sort kolom: field = 'name' | 'prodi' | 'status' | null (null = urutan default/status priority)
+  const [sort, setSort]     = useState({ field: null, dir: 'asc' });
   const [filterStatus,       setFilterStatus]       = useState('');
   const [currentPage,        setCurrentPage]        = useState(1);
   const [requests,           setRequests]           = useState([]);
@@ -123,6 +137,25 @@ const PermohonanSK = () => {
 
   const getStatus = r => determineStatus(r.sktaResponse, r.skUploads, r);
 
+  // Urutan prioritas status berkas (ASC).
+  // TODO (menunggu perubahan response BE): saat status "Revisi Diperbaharui" sudah tersedia,
+  // urutan ASC yang diminta = Dalam Proses -> Belum Terbit -> Revisi Diperbaharui -> Sudah Terbit.
+  // Untuk sementara "Mengirim Revisi" diletakkan setelah "Belum Terbit" sampai status barunya siap.
+  const STATUS_SORT_PRIORITY = {
+    'dalam-proses'   : 1,
+    'belum-terbit'   : 2,
+    'mengirim-revisi': 3,
+    'sudah-terbit'   : 4,
+  };
+
+  const handleSort = (field) => {
+    setSort(prev => {
+      if (prev.field !== field) return { field, dir: 'asc' };   // kolom baru → mulai ASC
+      if (prev.dir === 'asc')   return { field, dir: 'desc' };  // klik ke-2 → DESC
+      return { field: null, dir: 'asc' };                        // klik ke-3 → netral (kembali ke urutan default)
+    });
+  };
+
   const filteredSorted = useMemo(() => (
     [...requests]
       .filter(r => {
@@ -134,16 +167,35 @@ const PermohonanSK = () => {
       .filter(r => !filterProdi  || r.prodiName === filterProdi)
       .filter(r => !filterStatus || getStatus(r) === filterStatus)
       .sort((a, b) => {
+        if (sort.field === 'name') {
+          const na = (a.student?.name || '').toLowerCase();
+          const nb = (b.student?.name || '').toLowerCase();
+          const cmp = na.localeCompare(nb, 'id');
+          return sort.dir === 'asc' ? cmp : -cmp;
+        }
+        if (sort.field === 'prodi') {
+          const pa = (a.prodiName || '').toLowerCase();
+          const pb = (b.prodiName || '').toLowerCase();
+          const cmp = pa.localeCompare(pb, 'id');
+          return sort.dir === 'asc' ? cmp : -cmp;
+        }
+        if (sort.field === 'status') {
+          const pa = STATUS_SORT_PRIORITY[getStatus(a)] || 99;
+          const pb = STATUS_SORT_PRIORITY[getStatus(b)] || 99;
+          return sort.dir === 'asc' ? pa - pb : pb - pa;
+        }
+        // Default: urutan prioritas status (tanpa klik header)
         const order = { 'mengirim-revisi': 1, 'dalam-proses': 2, 'belum-terbit': 3, 'sudah-terbit': 4 };
         return (order[getStatus(a)] || 99) - (order[getStatus(b)] || 99);
       })
-  ), [requests, searchDebounced, filterProdi, filterStatus]);
+  ), [requests, searchDebounced, filterProdi, filterStatus, sort]);
 
   const totalPages = Math.ceil(filteredSorted.length / PAGE_SIZE) || 1;
   const paginated  = filteredSorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   useEffect(() => setCurrentPage(1), [searchDebounced, filterProdi, filterStatus]);
 
+  //  Tutup dropdown prodi saat klik di luar 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (prodiDropdownRef.current && !prodiDropdownRef.current.contains(e.target)) {
@@ -324,10 +376,43 @@ const PermohonanSK = () => {
                   <thead>
                     <tr>
                       <th style={{ width: 48 }}>NO</th>
-                      <th>MAHASISWA</th>
-                      <th>PRODI</th>
+                      <th
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('name')}
+                        title="Urutkan: A-Z → Z-A → default"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          MAHASISWA
+                          {sort.field === 'name'
+                            ? (sort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)
+                            : <ArrowUpDown size={11} color="#CBD5E1" />}
+                        </span>
+                      </th>
+                      <th
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('prodi')}
+                        title="Urutkan: A-Z → Z-A → default"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          PRODI
+                          {sort.field === 'prodi'
+                            ? (sort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)
+                            : <ArrowUpDown size={11} color="#CBD5E1" />}
+                        </span>
+                      </th>
                       <th style={{ textAlign: 'center' }}>EVIDENCE</th>
-                      <th style={{ textAlign: 'center' }}>STATUS BERKAS</th>
+                      <th
+                        style={{ textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('status')}
+                        title="Urutkan status: Dalam Proses → Belum Terbit → Mengirim Revisi → Sudah Terbit"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          STATUS BERKAS
+                          {sort.field === 'status'
+                            ? (sort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)
+                            : <ArrowUpDown size={11} color="#CBD5E1" />}
+                        </span>
+                      </th>
                       <th style={{ textAlign: 'center' }}>AKSI</th>
                     </tr>
                   </thead>
@@ -439,6 +524,7 @@ const PermohonanSK = () => {
       </AnimatePresence>
 
       <style>{`
+        /* ── Layout root: sidebar + konten tidak terpotong meski di-zoom ── */
         .sk-page-root {
           display: flex;
           min-height: 100vh;
@@ -446,12 +532,12 @@ const PermohonanSK = () => {
         }
         .sk-main-content {
           flex: 1;
-          min-width: 0;         
+          min-width: 0;          /* kunci: cegah flex child overflow */
           overflow-x: hidden;
           display: flex;
           flex-direction: column;
         }
-
+        /* #sidebar (sidebar.css) lebarnya 240px via --sidebar-width, fixed position — main content wajib punya margin-left senilai itu supaya tidak ketutup sidebar */
         #sidebar ~ .sk-main-content,
         .sk-main-content {
           margin-left: 240px;
@@ -466,17 +552,28 @@ const PermohonanSK = () => {
           flex: 1;
           min-width: 0;
           width: 100%;
-          margin-left: 0 !important; 
+          margin-left: 0 !important;  /* override aturperiode.css margin-left var */
         }
 
+        /* ── Tempelkan konten ke bagian atas page-wrapper — hilangkan padding/margin bawaan layout global, TANPA menyentuh margin-left sk-main-content di atas ── */
         .sk-main-content .page-wrapper,
         .sk-main-content .top-bar-red {
           margin-top: 0 !important;
           padding-top: 0 !important;
         }
 
+        /* ── Action buttons: selalu sama lebar ── */
         .action-buttons { vertical-align: middle; }
 
+        /* ══════════════════════════════════════════════════════════
+           RESPONSIVE FULL-WIDTH
+           Beberapa boilerplate Vite/React memberi #root max-width +
+           margin:auto (agar konten default ke-center). Itu bikin
+           halaman "berhenti" di lebar tertentu dan sisa ruang di
+           kanan jadi kosong saat browser di-zoom out / layar lebar.
+           Paksa semua wrapper di jalur ini full width supaya topbar
+           merah & konten selalu mengisi sisa ruang di samping sidebar.
+           ══════════════════════════════════════════════════════════ */
         html, body, #root {
           width: 100% !important;
           max-width: none !important;
@@ -500,9 +597,16 @@ const PermohonanSK = () => {
           overflow: visible !important;
         }
 
+        /* ══════════════════════════════════════════════════════════
+           TOOLBAR ROW: status tabs + dropdown prodi tidak boleh
+           terpisah ke baris baru — biarkan wrap bareng tab terakhir
+           ══════════════════════════════════════════════════════════ */
         .sk-status-tabs { align-items: center; overflow: visible; }
         .sk-prodi-dropdown-panel { max-width: min(240px, calc(100vw - 32px)); }
 
+        /* ══════════════════════════════════════════════════════════
+           CUSTOM DROPDOWN PRODI — selalu buka ke bawah, styling rapi
+           ══════════════════════════════════════════════════════════ */
         .sk-prodi-dropdown {
           position: relative;
           flex-shrink: 0;
