@@ -584,7 +584,7 @@ export const getTemplate = async (code) => {
 
 export const downloadTemplate = async (code) => {
   const meta = await getTemplate(code);
-  const downloadUrl = meta?.url;
+  const downloadUrl = meta?.downloadUrl || meta?.url;
   if (!downloadUrl) throw new Error('Download URL tidak ditemukan dalam response.');
 
   // Fetch blob via axios agar Bearer token ikut

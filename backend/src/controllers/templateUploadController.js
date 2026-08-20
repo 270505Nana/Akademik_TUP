@@ -18,20 +18,32 @@ const sanitizeFilename = (value) =>
 
 const buildDownloadUrl = (req, code) => {
   if (!code) return null; 
-    return `${req.protocol}://${req.get("host")}/templates/download/${code}`;
+  return `${req.protocol}://${req.get("host")}/api/templates/download/${code}`;
 };
 
 const buildPreviewUrl = (req, code) => {
   if (!code) return null; 
-    return `${req.protocol}://${req.get("host")}/templates/preview/${code}`;
+  return `${req.protocol}://${req.get("host")}/api/templates/preview/${code}`;
 };
 
-const withFileUrl = (req, data) => ({
-  ...data,
-  url: buildDownloadUrl(req, data.code),
-  download: buildDownloadUrl(req, data.code),
-  preview: buildPreviewUrl(req, data.code),
-});
+const withFileUrl = (req, data) => {
+  if (!data) return null;
+  const downloadUrl = buildDownloadUrl(req, data.code);
+  const previewUrl = buildPreviewUrl(req, data.code);
+  return {
+    id: data.id,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+    name: data.name,
+    code: data.code,
+    category: data.category,
+    filepath: data.filepath,
+    isPublish: data.isPublish,
+    downloadUrl,
+    previewUrl,
+    url: downloadUrl,
+  };
+};
 
 // Get all template uploads
 const listTemplateUploads = asyncHandler(async (req, res) => {
@@ -39,7 +51,7 @@ const listTemplateUploads = asyncHandler(async (req, res) => {
   const templateUploads = await prisma.dokumenPersyaratanBerkas.findMany({
     where: { 
       deletedAt: null,
-      ...(category && { category}),
+      ...(category && { category }),
     },
     orderBy: { createdAt: "desc" },
   });
@@ -181,25 +193,22 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
   }
 });
 
-// Delete template upload by ID
+// Delete template upload by ID (soft delete)
 const deleteTemplateUpload = asyncHandler(async (req, res) => {
   const id = req.params.id;
 
   const templateUpload = await prisma.dokumenPersyaratanBerkas.findFirst({
-    where: { id },
+    where: { id, deletedAt: null },
   });
   if (!templateUpload) {
     res.status(404);
     throw new Error("Unggahan template tidak ditemukan");
   }
 
-  await prisma.dokumenPersyaratanBerkas.delete({
+  await prisma.dokumenPersyaratanBerkas.update({
     where: { id },
+    data: { deletedAt: new Date() },
   });
-
-  if (templateUpload.filepath && fs.existsSync(templateUpload.filepath)) {
-    fs.unlink(templateUpload.filepath, () => {});
-  }
 
   res.json({ message: "Template upload deleted successfully" });
 });

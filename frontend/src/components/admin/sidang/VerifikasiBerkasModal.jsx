@@ -111,7 +111,7 @@ const InfoCard = ({ label, value, icon: Icon, highlight }) => (
 //  Step 1: Data Diri & Akademik 
 
 const Step1 = ({ registration, prodiName }) => {
-  const s = registration?.student || {};
+  const s = registration?.mahasiswa || registration?.student || {};
   const r = registration || {};
   const dosenInfo = [r.dosenPembimbing1?.name, r.dosenPembimbing2?.name]
     .filter(Boolean).join(' & ') || '-';
@@ -561,8 +561,9 @@ const VerifikasiBerkasModal = ({
   const [loadingUploads,    setLoadingUploads]    = useState(false);
   const [fileError,         setFileError]         = useState(null);
 
-  // prodiName diambil langsung dari registration prop (BE sudah include student.studyProgram.name)
-  const prodiName = registration?.student?.studyProgram?.name ?? '-';
+  // prodiName diambil langsung dari registration prop (BE sudah include mahasiswa.studyProgram.name)
+  const m = registration?.mahasiswa || registration?.student;
+  const prodiName = m?.studyProgram?.name ?? '-';
   const periods   = Object.values(periodMap ?? {});
 
   //  Fetch uploads 
@@ -709,8 +710,8 @@ const VerifikasiBerkasModal = ({
     }
   };
 
-  const studentName = registration?.student?.name || 'Mahasiswa';
-  const nim         = registration?.student?.nim  || '';
+  const studentName = m?.name || 'Mahasiswa';
+  const nim         = m?.nim  || '';
 
   //  Render 
   return (

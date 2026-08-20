@@ -7,6 +7,157 @@ import { sendValidationError, isNil, parseBoolean, isValidISO8601 } from '../uti
 // Constants for File Validation
 const REQUIRED_SLUGS = [];
 
+
+const mapMahasiswa = (mahasiswa) => {
+  if (!mahasiswa) return null;
+  return {
+    id: mahasiswa.id,
+    nim: mahasiswa.nim || '',
+    kelasAsal: mahasiswa.kelasAsal || '',
+    tahunAngkatan: mahasiswa.tahunAngkatan,
+    sks: mahasiswa.sks,
+    ipk: mahasiswa.ipk,
+    tak: mahasiswa.tak,
+    studyProgramId: mahasiswa.studyProgramId,
+    dosenWaliId: mahasiswa.dosenWaliId,
+    name: mahasiswa.user?.name || '',
+    email: mahasiswa.user?.email || '',
+    phone: mahasiswa.user?.phone || null,
+    studyProgram: mahasiswa.studyProgram
+      ? {
+          id: mahasiswa.studyProgram.id,
+          name: mahasiswa.studyProgram.name,
+          isActive: mahasiswa.studyProgram.isActive,
+          facultyId: mahasiswa.studyProgram.facultyId,
+        }
+      : null,
+  };
+};
+
+const mapDosen = (dosen) => {
+  if (!dosen) return null;
+  return {
+    id: dosen.id,
+    nip: dosen.nip,
+    nidn: dosen.nidn,
+    kodeDosen: dosen.kodeDosen,
+    researchGroupId: dosen.researchGroupId,
+    userId: dosen.userId,
+    name: dosen.user?.name || '',
+    email: dosen.user?.email || '',
+    phone: dosen.user?.phone || null,
+  };
+};
+
+const mapAdmin = (admin) => {
+  if (!admin) return null;
+  return {
+    id: admin.id,
+    userId: admin.userId,
+    name: admin.user?.name || '',
+    email: admin.user?.email || '',
+    phone: admin.user?.phone || null,
+  };
+};
+
+const mapYudisiumRegistrationToFrontend = (item, req) => {
+  if (!item) return null;
+  return {
+    id: item.id,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    isDraft: item.isDraft,
+    mahasiswaId: item.mahasiswaId,
+    program: item.program,
+    dosenWaliId: item.dosenWaliId,
+    judulTugasAkhirIndonesia: item.judulTugasAkhirIndonesia,
+    judulTugasAkhirInggris: item.judulTugasAkhirInggris,
+    tak: item.tak,
+    skemaSidang: item.skemaSidang,
+    pengajuanCumlaude: item.pengajuanCumlaude,
+    skemaCumlaude: item.skemaCumlaude,
+    evidenCumlaude: item.evidenCumlaude,
+    dosenPembimbing1Id: item.dosenPembimbing1Id,
+    dosenPembimbing2Id: item.dosenPembimbing2Id,
+    submittedAt: item.submittedAt,
+    yudisiumRegistrationPeriodId: item.yudisiumRegistrationPeriodId,
+    yudisiumPeriodId: item.yudisiumPeriodId,
+    message: item.message,
+    isEdit: item.isEdit,
+    adminId: item.adminId,
+    mahasiswa: mapMahasiswa(item.mahasiswa),
+    dosenWali: mapDosen(item.dosenWali),
+    dosenPembimbing1: mapDosen(item.dosenPembimbing1),
+    dosenPembimbing2: mapDosen(item.dosenPembimbing2),
+    admin: mapAdmin(item.admin),
+    yudisiumRegistrationPeriod: item.yudisiumRegistrationPeriod
+      ? {
+          id: item.yudisiumRegistrationPeriod.id,
+          name: item.yudisiumRegistrationPeriod.name,
+          category: item.yudisiumRegistrationPeriod.category,
+          period: item.yudisiumRegistrationPeriod.period,
+          startDate: item.yudisiumRegistrationPeriod.startDate,
+          endDate: item.yudisiumRegistrationPeriod.endDate,
+          isOpen: item.yudisiumRegistrationPeriod.isOpen,
+        }
+      : null,
+    yudisiumPeriod: item.yudisiumPeriod
+      ? {
+          id: item.yudisiumPeriod.id,
+          name: item.yudisiumPeriod.name,
+          category: item.yudisiumPeriod.category,
+          period: item.yudisiumPeriod.period,
+          startDate: item.yudisiumPeriod.startDate,
+          endDate: item.yudisiumPeriod.endDate,
+          isOpen: item.yudisiumPeriod.isOpen,
+        }
+      : null,
+    yudisiumRegistrationUploads: item.yudisiumRegistrationUploads
+      ? item.yudisiumRegistrationUploads.map((upload) => ({
+          id: upload.id,
+          name: upload.name,
+          category: upload.category,
+          filepath: upload.filepath,
+          isValid: upload.isValid,
+          yudisiumRegistrationId: upload.yudisiumRegistrationId,
+          downloadUrl: `${req.protocol}://${req.get("host")}/api/yudisium-registrations/uploads/${upload.id}/download`,
+        }))
+      : [],
+  };
+};
+
+const yudisiumInclude = {
+  mahasiswa: {
+    include: {
+      studyProgram: true,
+      user: true,
+    },
+  },
+  dosenWali: {
+    include: {
+      user: true,
+    },
+  },
+  dosenPembimbing1: {
+    include: {
+      user: true,
+    },
+  },
+  dosenPembimbing2: {
+    include: {
+      user: true,
+    },
+  },
+  admin: {
+    include: {
+      user: true,
+    },
+  },
+  yudisiumRegistrationPeriod: true,
+  yudisiumPeriod: true,
+  yudisiumRegistrationUploads: true,
+};
+
 const checkYudisiumEditable = async (registrationId) => {
   const registration = await prisma.yudisiumRegistration.findUnique({
     where: { id: registrationId },
@@ -37,44 +188,13 @@ const checkYudisiumEditable = async (registrationId) => {
 // Yudisium Registration List
 const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   const yudisiumRegistrations = await prisma.yudisiumRegistration.findMany({
-    include: {
-      mahasiswa: {
-        select: {
-          id: true,
-          nim: true,
-          name: true,
-        },
-      },
-      dosenPembimbing1: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      dosenPembimbing2: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      yudisiumRegistrationUploads: true,
-    },
+    include: yudisiumInclude,
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  const data = yudisiumRegistrations.map((reg) => ({
-    ...reg,
-    yudisiumRegistrationUploads: reg.yudisiumRegistrationUploads.map(
-      (upload) => ({
-        ...upload,
-        downloadUrl: `${req.protocol}://${req.get("host")}/api/yudisium-registrations/uploads/${upload.id}/download`,
-      }),
-    ),
-  }));
+  const data = yudisiumRegistrations.map((reg) => mapYudisiumRegistrationToFrontend(reg, req));
 
   res.json({
     data,
@@ -89,30 +209,7 @@ const getYudisiumRegistrationById = asyncHandler(async (req, res) => {
     where: {
       id,
     },
-    include: {
-      mahasiswa: {
-        select: {
-          id: true,
-          nim: true,
-          name: true,
-        },
-      },
-      dosenPembimbing1: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      dosenPembimbing2: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      yudisiumRegistrationUploads: true,
-    },
+    include: yudisiumInclude,
   });
 
   if (!yudisiumRegistration) {
@@ -120,14 +217,8 @@ const getYudisiumRegistrationById = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran yudisium tidak ditemukan");
   }
 
-  yudisiumRegistration.yudisiumRegistrationUploads =
-    yudisiumRegistration.yudisiumRegistrationUploads.map((upload) => ({
-      ...upload,
-      downloadUrl: `${req.protocol}://${req.get("host")}/api/yudisium-registrations/uploads/${upload.id}/download`,
-    }));
-
   res.json({
-    data: yudisiumRegistration,
+    data: mapYudisiumRegistrationToFrontend(yudisiumRegistration, req),
   });
 });
 
@@ -139,30 +230,7 @@ const getYudisiumRegistrationByMahasiswaId = asyncHandler(async (req, res) => {
     where: {
       mahasiswaId,
     },
-    include: {
-      mahasiswa: {
-        select: {
-          id: true,
-          nim: true,
-          name: true,
-        },
-      },
-      dosenPembimbing1: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      dosenPembimbing2: {
-        select: {
-          id: true,
-          nip: true,
-          name: true,
-        },
-      },
-      yudisiumRegistrationUploads: true,
-    },
+    include: yudisiumInclude,
     orderBy: {
       createdAt: "desc",
     },
@@ -173,14 +241,8 @@ const getYudisiumRegistrationByMahasiswaId = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran yudisium tidak ditemukan");
   }
 
-  yudisiumRegistration.yudisiumRegistrationUploads =
-    yudisiumRegistration.yudisiumRegistrationUploads.map((upload) => ({
-      ...upload,
-      downloadUrl: `${req.protocol}://${req.get("host")}/api/yudisium-registrations/uploads/${upload.id}/download`,
-    }));
-
   res.json({
-    data: yudisiumRegistration,
+    data: mapYudisiumRegistrationToFrontend(yudisiumRegistration, req),
   });
 });
 
@@ -356,11 +418,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     yudisiumRegistration = await prisma.yudisiumRegistration.update({
       where: { id },
       data: upsertData,
-      include: {
-        mahasiswa: { select: { id: true, nim: true, name: true } },
-        dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-        dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-      },
+      include: yudisiumInclude,
     });
   } else if (mahasiswaId) {
     const existing = await prisma.yudisiumRegistration.findFirst({
@@ -378,11 +436,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
       yudisiumRegistration = await prisma.yudisiumRegistration.update({
         where: { id: existing.id },
         data: upsertData,
-        include: {
-          mahasiswa: { select: { id: true, nim: true, name: true } },
-          dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-          dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-        },
+        include: yudisiumInclude,
       });
     } else {
       // Check active period
@@ -408,11 +462,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
 
       yudisiumRegistration = await prisma.yudisiumRegistration.create({
         data: upsertData,
-        include: {
-          mahasiswa: { select: { id: true, nim: true, name: true } },
-          dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-          dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-        },
+        include: yudisiumInclude,
       });
     }
   } else {
@@ -425,17 +475,13 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
 
     yudisiumRegistration = await prisma.yudisiumRegistration.create({
       data: upsertData,
-      include: {
-        mahasiswa: { select: { id: true, nim: true, name: true } },
-        dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-        dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-      },
+      include: yudisiumInclude,
     });
   }
 
   res.status(200).json({
     message: "Yudisium registration saved as draft successfully",
-    data: yudisiumRegistration,
+    data: mapYudisiumRegistrationToFrontend(yudisiumRegistration, req),
   });
 });
 
@@ -635,14 +681,14 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     );
   }
 
-  const uploadedSlugs = existingRegistration.yudisiumRegistrationUploads.map(
-    (upload) => upload.slug,
+  const uploadedCategories = (existingRegistration.yudisiumRegistrationUploads || []).map(
+    (upload) => upload.category,
   );
 
   const missingFiles = [];
 
   for (const slug of REQUIRED_SLUGS) {
-    if (!uploadedSlugs.includes(slug)) missingFiles.push(slug);
+    if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
   }
 
   if (missingFiles.length > 0) {
@@ -686,16 +732,12 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   const updatedYudisiumRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: updateData,
-    include: {
-      mahasiswa: { select: { id: true, nim: true, name: true } },
-      dosenPembimbing1: { select: { id: true, nip: true, name: true } },
-      dosenPembimbing2: { select: { id: true, nip: true, name: true } },
-    },
+    include: yudisiumInclude,
   });
 
   res.status(200).json({
     message: "Yudisium registration submitted successfully",
-    data: updatedYudisiumRegistration,
+    data: mapYudisiumRegistrationToFrontend(updatedYudisiumRegistration, req),
   });
 });
 
@@ -729,7 +771,8 @@ const deleteYudisiumRegistration = asyncHandler(async (req, res) => {
 // Upload Dokumen Persyaratan Yudisium
 const uploadYudisiumRegistrationFile = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { slug, name } = req.body;
+  const { slug, category, name } = req.body;
+  const fileCategory = category || slug;
   const file = req.files?.file?.[0] || req.file;
 
   if (!file) {
@@ -737,10 +780,10 @@ const uploadYudisiumRegistrationFile = asyncHandler(async (req, res) => {
     throw new Error("Tidak ada file yang diunggah");
   }
 
-  if (!slug || !name) {
+  if (!fileCategory || !name) {
     if (file.path) fs.unlink(file.path, () => {});
     res.status(400);
-    throw new Error("Slug dan nama wajib diisi");
+    throw new Error("Kategori (slug) dan nama berkas wajib diisi");
   }
 
   const editCheck = await checkYudisiumEditable(id);
@@ -759,44 +802,52 @@ const uploadYudisiumRegistrationFile = asyncHandler(async (req, res) => {
   const existingUpload = await prisma.yudisiumRegistrationUpload.findFirst({
     where: {
       yudisiumRegistrationId: id,
-      slug: slug,
+      category: fileCategory,
     },
   });
 
   let uploadRecord;
 
   if (existingUpload) {
-    if (existingUpload.path && fs.existsSync(existingUpload.path)) {
-      fs.unlinkSync(existingUpload.path);
+    if (existingUpload.filepath && fs.existsSync(existingUpload.filepath)) {
+      fs.unlink(existingUpload.filepath, () => {});
     }
 
     uploadRecord = await prisma.yudisiumRegistrationUpload.update({
       where: { id: existingUpload.id },
       data: {
         name,
-        filename: file.filename,
-        path: file.path,
+        filepath: file.path,
+        isValid: null,
       },
     });
   } else {
     uploadRecord = await prisma.yudisiumRegistrationUpload.create({
       data: {
         name,
-        slug,
-        filename: file.filename,
-        path: file.path,
+        category: fileCategory,
+        filepath: file.path,
         yudisiumRegistrationId: id,
+        isValid: null,
       },
     });
   }
 
-  uploadRecord.downloadUrl = `${req.protocol}://${req.get("host")}/api/yudisium-registrations/uploads/${uploadRecord.id}/download`;
+  const responseData = {
+    id: uploadRecord.id,
+    name: uploadRecord.name,
+    category: uploadRecord.category,
+    filepath: uploadRecord.filepath,
+    isValid: uploadRecord.isValid,
+    yudisiumRegistrationId: uploadRecord.yudisiumRegistrationId,
+    downloadUrl: `${req.protocol}://${req.get("host")}/api/yudisium-registrations/uploads/${uploadRecord.id}/download`,
+  };
 
   res.status(200).json({
     message: existingUpload
       ? "File updated successfully"
       : "File uploaded successfully",
-    data: uploadRecord,
+    data: responseData,
   });
 });
 
@@ -809,8 +860,15 @@ const getYudisiumRegistrationFiles = asyncHandler(async (req, res) => {
   });
 
   const data = uploads.map((upload) => ({
-    ...upload,
-    downloadUrl: `${req.protocol}://${req.get("host")}/api/yudisium-registrations/uploads/${upload.id}/download`,
+    id: upload.id,
+    name: upload.name,
+    category: upload.category,
+    filepath: upload.filepath,
+    isValid: upload.isValid,
+    yudisiumRegistrationId: upload.yudisiumRegistrationId,
+    downloadUrl: `${req.protocol}://${req.get(
+      "host",
+    )}/api/yudisium-registrations/uploads/${upload.id}/download`,
   }));
 
   res.json({ data });
@@ -829,14 +887,14 @@ const downloadYudisiumRegistrationFile = asyncHandler(async (req, res) => {
     throw new Error("Unggahan tidak ditemukan");
   }
 
-  const filePath = path.resolve(process.cwd(), upload.path);
+  const filePath = path.resolve(process.cwd(), upload.filepath);
 
   if (!fs.existsSync(filePath)) {
     res.status(404);
     throw new Error("File tidak ditemukan");
   }
 
-  res.download(filePath, upload.filename);
+  res.download(filePath, path.basename(upload.filepath));
 });
 
 // Approve Yudisium Registration (Admin Response)
@@ -909,20 +967,12 @@ const approveYudisiumRegistration = asyncHandler(async (req, res) => {
       message: null,
       isEdit: null,
     },
-    include: {
-      mahasiswa: {
-        select: {
-          id: true,
-          nim: true,
-          name: true,
-        },
-      },
-    },
+    include: yudisiumInclude,
   });
 
   res.json({
     message: "Pendaftaran yudisium berhasil disetujui",
-    data: updatedRegistration,
+    data: mapYudisiumRegistrationToFrontend(updatedRegistration, req),
   });
 });
 
@@ -992,20 +1042,12 @@ const rejectYudisiumRegistration = asyncHandler(async (req, res) => {
       isDraft: isEdit ? true : false,
       submittedAt: isEdit ? null : undefined,
     },
-    include: {
-      mahasiswa: {
-        select: {
-          id: true,
-          nim: true,
-          name: true,
-        },
-      },
-    },
+    include: yudisiumInclude,
   });
 
   res.json({
     message: "Pendaftaran yudisium berhasil ditolak / diminta revisi",
-    data: updatedRegistration,
+    data: mapYudisiumRegistrationToFrontend(updatedRegistration, req),
   });
 });
 
