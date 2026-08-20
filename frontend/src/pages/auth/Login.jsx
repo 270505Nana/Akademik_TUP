@@ -6,6 +6,7 @@ import {
   BsPersonFill,
   BsLockFill,
   BsArrowRightCircleFill,
+  BsArrowLeft,
   BsQuestionCircle,
   BsEyeFill,
   BsEyeSlashFill,
@@ -177,6 +178,12 @@ const LoginPage = () => {
         <div className="blob blob-bottom-left" />
 
         <div className="form-card">
+          {/* Navigasi kembali ke Portal Informasi dari halaman Login */}
+          <Link to="/" className="back-to-portal">
+            <BsArrowLeft />
+            Kembali ke Portal Informasi
+          </Link>
+
           <div className="form-logo">
             <img src={logoTelkom} alt="Logo Telkom" className="form-logo-img" />
           </div>
