@@ -106,6 +106,7 @@ const VerifikasiModal = ({
 
   const studentName    = selectedPermohonan?.student?.name || 'Mahasiswa';
   const existingSkFile = existingResponse?.sktaUploadPath;
+  const isExpired       = !!(existingResponse?.expDate && new Date(existingResponse.expDate) < new Date());
 
   return (
     <div className="dm-overlay" onClick={onClose}>
@@ -117,7 +118,19 @@ const VerifikasiModal = ({
         onClick={e => e.stopPropagation()}
       >
         <div className="dm-header">
-          <h3 className="dm-header-title">Verifikasi Permohonan SKTA — {studentName}</h3>
+          <h3 className="dm-header-title" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            Verifikasi Permohonan SKTA — {studentName}
+            {isExpired && (
+              <span style={{
+                fontSize: 11, fontWeight: 800, padding: '3px 10px',
+                borderRadius: 9999, background: '#FEE2E2', color: '#B91C1C',
+                border: '1.5px solid #FCA5A5', textTransform: 'uppercase',
+                letterSpacing: 0.5, whiteSpace: 'nowrap',
+              }}>
+                Expired
+              </span>
+            )}
+          </h3>
         </div>
 
         <div className="dm-body">
