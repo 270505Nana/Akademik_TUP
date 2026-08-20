@@ -6,15 +6,14 @@ import SimtaLogo from "../../assets/logo-simta.png";
 import Telulogo  from "../../assets/logo-telkom.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import { getLecturers, getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, submitSKTARequest, resubmitSKTARequest, downloadTemplate } from '../../service/api';
+import { getLecturers, getSKTARequest, submitSKTARequest, resubmitSKTARequest, downloadTemplate } from '../../service/api';
 import {
   determineSkStatus,
-  isSkEditable,
+  getSubmissionMode,
+  isMainPageCategory,
   getSkFileUrl,
   STATUS_SK,
-  unwrapResponse,
-  markRevisedWithTimestamp,
-  isAlreadyRevised,
+  SKTA_CATEGORY,
 } from '../../components/common/Skstatushelper';
 import CustomAlert from '../../components/common/CustomAlert';
 import TemplateEvidenceModal from '../../components/common/TemplateEvidenceModal';
@@ -70,8 +69,8 @@ const PageLoader = () => (
   </div>
 );
 
-const SkStatusBanner = ({ status, sktaResponse, requestData, skUploads = [] }) => {
-  const skFileUrl = getSkFileUrl(skUploads);
+const SkStatusBanner = ({ status, permohonan }) => {
+  const skFileUrl = getSkFileUrl(permohonan);
 
   const configs = {
     [STATUS_SK.DALAM_PROSES]: {
@@ -83,8 +82,8 @@ const SkStatusBanner = ({ status, sktaResponse, requestData, skUploads = [] }) =
     [STATUS_SK.BELUM_TERBIT]: {
       bg: '#FFFBEB', border: '#FDE68A', icon: <AlertCircle size={20} color="#D97706" />,
       title: 'Pengajuan SK Memerlukan Perbaikan Dokumen',
-      desc: sktaResponse?.message
-        ? `Tim akademik memberikan catatan: "${sktaResponse.message}". Silakan perbaiki pengajuan kamu melalui formulir di bawah ini dan kirim ulang.`
+      desc: permohonan?.message
+        ? `Tim akademik memberikan catatan: "${permohonan.message}". Silakan perbaiki pengajuan kamu melalui formulir di bawah ini dan kirim ulang.`
         : 'Pengajuan SK kamu perlu diperbaiki. Tim akademik telah meninjau dokumenmu dan meminta perbaikan. Silakan perbarui data pengajuan melalui formulir di bawah ini, lalu kirim ulang.',
       badgeBg: '#FEF3C7', badgeColor: '#92400E', badgeText: 'Perlu Perbaikan',
     },
@@ -126,13 +125,13 @@ const SkStatusBanner = ({ status, sktaResponse, requestData, skUploads = [] }) =
           <p style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.7, margin: 0 }}>
             {cfg.desc}
           </p>
-          {requestData && (
+          {permohonan && (
             <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(255,255,255,0.7)', borderRadius: 8, fontSize: 12, color: '#6B7280' }}>
-              <div><strong>Judul (ID):</strong> {requestData.proposalTitleId}</div>
-              <div style={{ marginTop: 4 }}><strong>Judul (EN):</strong> {requestData.proposalTitleEn}</div>
-              {sktaResponse?.expDate && (
+              <div><strong>Judul (ID):</strong> {permohonan.proposalTitleId}</div>
+              <div style={{ marginTop: 4 }}><strong>Judul (EN):</strong> {permohonan.proposalTitleEn}</div>
+              {permohonan?.expDate && (
                 <div style={{ marginTop: 4 }}>
-                  <strong>Expired:</strong> {new Date(sktaResponse.expDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  <strong>Expired:</strong> {new Date(permohonan.expDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </div>
               )}
             </div>
@@ -166,14 +165,13 @@ const kelompokKeilmuan = [
   { id: 'kk8', researchGroupId: 8, label: 'SOFTWARE ENGINEERING AND MULTIMEDIA' },
 ];
 
-const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, isExpired, isBelumTerbit }) => {
+const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, submissionMode }) => {
   if (!judulIndo.trim())    return 'Judul Tugas Akhir (Bahasa Indonesia) wajib diisi.';
   if (!judulInggris.trim()) return 'Judul Tugas Akhir (Bahasa Inggris) wajib diisi.';
   if (!kode1)               return 'Dosen Pembimbing 1 wajib dipilih.';
   if (!kode2)               return 'Dosen Pembimbing 2 wajib dipilih.';
   if (kode1.value === kode2.value) return 'Dosen Pembimbing 1 dan 2 tidak boleh sama.';
-  if (isBelumTerbit && !actualFile) return 'Dokumen evidence wajib diunggah ulang untuk perbaikan.';
-  if (!isExpired && !isBelumTerbit && !actualFile) return 'Dokumen evidence wajib diunggah.';
+  if (submissionMode !== 'patch-revisi' && !actualFile) return 'Dokumen evidence wajib diunggah.';
   return null;
 };
 
@@ -224,11 +222,9 @@ const PengajuanSK = () => {
   const { student, isStudentLoading, sktaRequestId, updateSktaRequestId } = useStudent();
 
   const [pageStatus,      setPageStatus]      = useState('loading');
-  const [requestData,     setRequestData]     = useState(null);
-  const [sktaResponse,    setSktaResponse]    = useState(null);
-  const [skUploads,       setSkUploads]       = useState([]);
+  const [permohonan,      setPermohonan]      = useState(null);   // row permohonanSkta TERBARU milik mahasiswa (atau null)
   const [skStatus,        setSkStatus]        = useState(null);
-  const [isExpired,       setIsExpired]       = useState(false);
+  const [submissionMode,  setSubmissionMode]  = useState('create-baru'); // 'create-baru' | 'create-perpanjangan' | 'patch-revisi' | 'blocked'
   const [lecturerOptions, setLecturerOptions] = useState([]);
   const [loadingDosen,    setLoadingDosen]    = useState(true);
   const [formData, setFormData] = useState({
@@ -241,8 +237,6 @@ const PengajuanSK = () => {
   const [actualFile,   setActualFile]   = useState(null);
   const [fileError,    setFileError]    = useState(null);
   const [submitError,  setSubmitError]  = useState(null);
-
-  // ← STATE untuk modal template evidence
   const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   useEffect(() => {
@@ -272,52 +266,67 @@ const PengajuanSK = () => {
       if (!studentId) { navigate('/lengkapi-data', { replace: true }); return; }
 
       try {
-        const existingRequest = await getSKTARequest(studentId);
-        if (!existingRequest) { setPageStatus('form'); return; }
+        const latest = await getSKTARequest(studentId);
 
-        setRequestData(existingRequest);
-        const reqId = existingRequest.id;
-        updateSktaRequestId(reqId);
+        if (!latest) {
+          // Belum pernah punya permohonan sama sekali → boleh ajukan Permohonan Baru
+          setPermohonan(null);
+          setSubmissionMode('create-baru');
+          setSkStatus(null);
+          setPageStatus('form');
+          return;
+        }
 
-        const [rawResponse, uploadsRaw] = await Promise.all([
-          getSKTAResponse(reqId),
-          getSktaResponseUploadByStudentId(studentId).catch(() => null),
-        ]);
+        setPermohonan(latest);
+        updateSktaRequestId(latest.id);
 
-        const unwrapped = unwrapResponse(rawResponse);
-        const uploads   = uploadsRaw?.data ?? uploadsRaw ?? [];
+        const status = determineSkStatus(latest);
+        const mode   = getSubmissionMode(latest);
 
-        setSktaResponse(unwrapped);
-        setSkUploads(uploads);
+        setSkStatus(status);
+        setSubmissionMode(mode);
 
-        const baseStatus     = determineSkStatus(unwrapped, uploads);
-        const alreadyRevised = isAlreadyRevised(reqId, existingRequest.updatedAt);
-        const effectiveStatus = (baseStatus === STATUS_SK.BELUM_TERBIT && alreadyRevised)
-          ? STATUS_SK.DALAM_PROSES
-          : baseStatus;
+        if (mode === 'create-perpanjangan' || mode === 'patch-revisi') {
+          const matchedKode1 = lecturerOptions.find(
+            opt => String(opt.value) === String(latest.dosenPembimbing1Id)
+          );
+          const matchedKode2 = lecturerOptions.find(
+            opt => String(opt.value) === String(latest.dosenPembimbing2Id)
+          );
+          const matchedKK = matchedKode1?.researchGroupId != null
+            ? kelompokKeilmuan.find(
+                kk => String(kk.researchGroupId) === String(matchedKode1.researchGroupId)
+              )
+            : null;
 
-        setSkStatus(effectiveStatus);
-
-        if (isSkEditable(effectiveStatus, unwrapped)) {
-          setIsExpired(effectiveStatus === STATUS_SK.EXPIRED);
           setFormData(prev => ({
             ...prev,
-            judulIndo:    existingRequest.proposalTitleId ?? '',
-            judulInggris: existingRequest.proposalTitleEn ?? '',
+            judulIndo:    latest.proposalTitleId ?? '',
+            judulInggris: latest.proposalTitleEn ?? '',
+            kode1:    matchedKode1 ?? null,
+            dosen1:   matchedKode1?.nama ?? '',
+            kode2:    matchedKode2 ?? null,
+            dosen2:   matchedKode2?.nama ?? '',
+            kelompok: matchedKK?.label ?? '',
           }));
           setPageStatus('form');
         } else {
+          // 'blocked': DALAM_PROSES, atau SUDAH_TERBIT yang masih aktif (belum expired)
           setPageStatus('status_only');
         }
 
       } catch (err) {
         console.error('Gagal cek status SKTA:', err);
+        setSubmitError({
+          title: 'Gagal memuat data',
+          message: 'Terjadi kesalahan saat memuat status pengajuan SK kamu. Silakan refresh halaman.',
+        });
         setPageStatus('form');
       }
     };
 
     if (!loadingDosen && !isStudentLoading) checkSKTAStatus();
-  }, [loadingDosen, isStudentLoading, student, navigate]);
+  }, [loadingDosen, isStudentLoading, student, navigate, lecturerOptions]);
 
   const namaDisplay  = student?.namaLengkap      || user?.username || '';
   const nimDisplay   = student?.nim              || '';
@@ -329,8 +338,10 @@ const PengajuanSK = () => {
     setFormData(prev => {
       const updated = { ...prev, [field]: val, [namaField]: val?.nama || '' };
       if (field === 'kode1') {
-        if (val?.researchGroupId) {
-          const matched = kelompokKeilmuan.find(kk => kk.researchGroupId === val.researchGroupId);
+        if (val?.researchGroupId != null) {
+          const matched = kelompokKeilmuan.find(
+            kk => String(kk.researchGroupId) === String(val.researchGroupId)
+          );
           updated.kelompok = matched?.label || '';
         } else {
           updated.kelompok = '';
@@ -364,19 +375,26 @@ const PengajuanSK = () => {
       });
     }
   };
-
-  const isBelumTerbit = skStatus === STATUS_SK.BELUM_TERBIT && !isExpired;
+  const isExpired    = submissionMode === 'create-perpanjangan';
+  const isBelumTerbit = submissionMode === 'patch-revisi';
 
   const handleSubmit = async () => {
     setSubmitError(null);
+    if (submissionMode === 'blocked') {
+      setSubmitError({
+        title: 'Tidak dapat mengajukan',
+        message: 'Kamu sudah memiliki pengajuan SK yang masih aktif/diproses. Tidak bisa mengajukan lebih dari 1 kali.',
+      });
+      return;
+    }
+
     const validationError = validate({
       judulIndo:    formData.judulIndo,
       judulInggris: formData.judulInggris,
       kode1:        formData.kode1,
       kode2:        formData.kode2,
       actualFile,
-      isExpired,
-      isBelumTerbit,
+      submissionMode,
     });
     if (validationError) {
       setSubmitError({ title: 'Periksa kembali formulirmu', message: validationError });
@@ -390,12 +408,13 @@ const PengajuanSK = () => {
       return;
     }
 
-    const activeRequestId = sktaRequestId ?? requestData?.id;
     setPageStatus('submitting');
 
     try {
-      if (isSkEditable(skStatus, sktaResponse) && activeRequestId) {
-        const result = await resubmitSKTARequest({
+      if (submissionMode === 'patch-revisi') {
+        // PATCH ke row yang sama — admin sudah kasih izin edit (isEdit) buat request ini
+        const activeRequestId = sktaRequestId ?? permohonan?.id;
+        await resubmitSKTARequest({
           sktaRequestId:      activeRequestId,
           studentId,
           proposalTitleId:    formData.judulIndo.trim(),
@@ -404,32 +423,13 @@ const PengajuanSK = () => {
           dosenPembimbing2Id: formData.kode2.value,
           evidence:           actualFile,
         });
+        setPageStatus('revision_sent');
 
-        if (isBelumTerbit) {
-          const serverUpdatedAt =
-            result?.data?.updatedAt ??
-            result?.updatedAt ??
-            new Date().toISOString();
-          markRevisedWithTimestamp(activeRequestId, serverUpdatedAt);
-          setPageStatus('revision_sent');
-        } else {
-          setPageStatus('success');
-        }
       } else {
-        let category = "Permohonan Baru";
-        if (isExpired) {
-          category = "Perpanjangan SK";
-        } else if (requestData) {
-          const titleChanged = formData.judulIndo.trim() !== requestData.proposalTitleId;
-          const dospemChanged = formData.kode1?.value !== requestData.dosenPembimbing1Id || formData.kode2?.value !== requestData.dosenPembimbing2Id;
-          if (titleChanged && dospemChanged) {
-            category = "Perubahan Judul dan Dosen Pembimbing";
-          } else if (titleChanged) {
-            category = "Perubahan Judul";
-          } else if (dospemChanged) {
-            category = "Perubahan Dosen Pembimbing";
-          }
-        }
+        // 'create-baru' atau 'create-perpanjangan' → POST row baru
+        const category = submissionMode === 'create-perpanjangan'
+          ? SKTA_CATEGORY.PERPANJANGAN_SK
+          : SKTA_CATEGORY.PERMOHONAN_BARU;
 
         const result = await submitSKTARequest({
           proposalTitleId:    formData.judulIndo.trim(),
@@ -546,11 +546,11 @@ const PengajuanSK = () => {
             <CheckCircle size={40} color="#10B981" />
           </div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 12 }}>
-            {isExpired ? 'Pembaruan SK Berhasil Dikirim!' : 'Pengajuan SK Berhasil Dikirim!'}
+            {isExpired ? 'Perpanjangan SK Berhasil Dikirim!' : 'Pengajuan SK Berhasil Dikirim!'}
           </h2>
           <p style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.7, marginBottom: 32 }}>
             {isExpired
-              ? 'Permohonan pembaruan SK Pembimbing Tugas Akhir kamu sudah kami terima. Proses verifikasi membutuhkan waktu maksimal 3×24 jam kerja.'
+              ? 'Permohonan perpanjangan SK Pembimbing Tugas Akhir kamu sudah kami terima sebagai pengajuan baru. Proses verifikasi membutuhkan waktu maksimal 3×24 jam kerja.'
               : 'Permohonan penerbitan SK Pembimbing Tugas Akhir kamu sudah kami terima. Proses verifikasi membutuhkan waktu maksimal 3×24 jam kerja. Pantau status pengajuan di dashboard.'}
           </p>
           <button
@@ -569,16 +569,27 @@ const PengajuanSK = () => {
   }
 
   if (pageStatus === 'status_only') {
+    const categoryMismatch = !isMainPageCategory(permohonan);
+
     return (
       <div className="sk-page-container">
         <Header onBack={() => navigate('/mahasiswa/dashboard')} />
         <div style={{ padding: '40px 24px', maxWidth: 680, margin: '0 auto' }}>
-          <SkStatusBanner
-            status={skStatus}
-            sktaResponse={sktaResponse}
-            requestData={requestData}
-            skUploads={skUploads}
-          />
+          {categoryMismatch ? (
+            // Row terbaru mahasiswa itu kategori "Perubahan ..." (bukan tanggung jawab
+            // halaman ini) — jangan nampilin SkStatusBanner (isinya soal SK, bisa nyesatin).
+            <div style={{
+              background: '#F9FAFB', border: '1px solid #E5E7EB',
+              borderRadius: 12, padding: '20px 24px', marginBottom: 32,
+            }}>
+              <p style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.7, margin: 0 }}>
+                Kamu memiliki pengajuan perubahan data SK (<strong>{permohonan?.category}</strong>) yang sedang berjalan.
+                Silakan pantau status pengajuan tersebut melalui halaman Perubahan SK, bukan di halaman ini.
+              </p>
+            </div>
+          ) : (
+            <SkStatusBanner status={skStatus} permohonan={permohonan} />
+          )}
           <div style={{ textAlign: 'center' }}>
             <button
               onClick={() => navigate('/mahasiswa/dashboard')}
@@ -604,24 +615,14 @@ const PengajuanSK = () => {
       <div className="sk-content-wrapper">
 
         {isExpired && (
-          <SkStatusBanner
-            status={STATUS_SK.EXPIRED}
-            sktaResponse={sktaResponse}
-            requestData={requestData}
-            skUploads={skUploads}
-          />
+          <SkStatusBanner status={STATUS_SK.EXPIRED} permohonan={permohonan} />
         )}
 
-        {skStatus === STATUS_SK.BELUM_TERBIT && !isExpired && (
-          <SkStatusBanner
-            status={STATUS_SK.BELUM_TERBIT}
-            sktaResponse={sktaResponse}
-            requestData={requestData}
-            skUploads={skUploads}
-          />
+        {isBelumTerbit && (
+          <SkStatusBanner status={STATUS_SK.BELUM_TERBIT} permohonan={permohonan} />
         )}
 
-        {skStatus === STATUS_SK.BELUM_TERBIT && sktaResponse?.isEdit && (
+        {isBelumTerbit && permohonan?.isEdit && (
           <div style={{
             background: '#FFF7ED', border: '1px solid #FED7AA',
             borderRadius: 10, padding: '12px 18px', marginBottom: 24,
@@ -630,7 +631,7 @@ const PengajuanSK = () => {
           }}>
             <span style={{ fontWeight: 700 }}>⏰ Batas perbaikan dokumen:</span>
             <span>
-              {new Date(sktaResponse.isEdit).toLocaleDateString('id-ID', {
+              {new Date(permohonan.isEdit).toLocaleDateString('id-ID', {
                 day: 'numeric', month: 'long', year: 'numeric',
               })}
             </span>
@@ -643,7 +644,7 @@ const PengajuanSK = () => {
             <div className="info-text">
               <h4 style={{ fontSize: '16px', color: '#B91C1C', marginBottom: '12px', fontWeight: 800 }}>
                 {isExpired
-                  ? 'Pembaruan SK Pembimbing Tugas Akhir'
+                  ? 'Perpanjangan SK Pembimbing Tugas Akhir'
                   : isBelumTerbit
                     ? 'Perbaikan Dokumen SK Pembimbing Tugas Akhir'
                     : 'Permohonan Penerbitan SK Pembimbing Tugas Akhir'}
@@ -680,7 +681,7 @@ const PengajuanSK = () => {
 
         <div className="sk-title-wrapper" style={{ margin: '40px 0 50px 0' }}>
           <h1 className="sk-main-title" style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            {isExpired ? 'Pembaruan SK' : isBelumTerbit ? 'Perbaikan Revisi SK' : 'Permohonan'}
+            {isExpired ? 'Perpanjangan SK' : isBelumTerbit ? 'Perbaikan Revisi SK' : 'Permohonan'}
             <span>Penerbitan SK Pembimbing Tugas Akhir</span>
           </h1>
         </div>
@@ -857,7 +858,7 @@ const PengajuanSK = () => {
             Dokumen Evidence Sudah Di Approve Pengajuan Pembimbing Oleh Ketua KK Di iGracias
           </h2>
 
-          {/* ← DIUBAH: dari link menjadi button */}
+          
           <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 13 }}>Berkas Lampiran Bukti Dosbing Sudah Diacc KK :</span>
             {/* <button
@@ -882,17 +883,17 @@ const PengajuanSK = () => {
 
           {isBelumTerbit && (
             <p style={{ fontSize: 12, color: '#D97706', marginBottom: 16, fontStyle: 'italic', fontWeight: 600 }}>
-              * Karena pengajuan kamu perlu diperbaiki, dokumen evidence baru wajib diunggah ulang.
+              * Dokumen evidence bersifat opsional untuk revisi. Kosongkan jika tidak ada perubahan — evidence lama akan tetap dipakai.
             </p>
           )}
           {isExpired && (
-            <p style={{ fontSize: 12, color: '#7C3AED', marginBottom: 16, fontStyle: 'italic' }}>
-              * Untuk pembaruan SK, upload dokumen baru jika ada perubahan. Jika tidak ada perubahan dokumen, kosongkan saja.
+            <p style={{ fontSize: 12, color: '#7C3AED', marginBottom: 16, fontStyle: 'italic', fontWeight: 600 }}>
+              * Untuk perpanjangan SK, dokumen evidence tetap wajib diunggah ulang (walau tidak ada perubahan).
             </p>
           )}
           <div className="form-grid">
             <div className="form-group">
-              <label>Unggah Dokumen Prasyarat {isExpired ? '' : '*'}</label>
+              <label>Unggah Dokumen Prasyarat {isBelumTerbit ? '' : '*'}</label>
               <div className="upload-area" onClick={() => fileInputRef.current.click()}>
                 <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf" />
                 <div className="upload-icon-circle"><UploadCloud size={48} /></div>
@@ -928,9 +929,9 @@ const PengajuanSK = () => {
                 {!selectedFile && !fileError && (
                   <div className="empty-file-state" style={{ padding: '20px', border: '1px dashed #E5E7EB', borderRadius: '8px', textAlign: 'center', color: '#9CA3AF', fontSize: '12px' }}>
                     {isExpired
-                      ? 'Kosongkan jika tidak ada perubahan dokumen'
+                      ? 'Wajib upload dokumen evidence untuk perpanjangan SK'
                       : isBelumTerbit
-                        ? 'Wajib upload ulang dokumen evidence yang sudah diperbaiki'
+                        ? 'Opsional — kosongkan jika evidence lama masih berlaku'
                         : 'Belum ada file yang dipilih'}
                   </div>
                 )}
@@ -951,7 +952,7 @@ const PengajuanSK = () => {
           {pageStatus === 'submitting' ? (
             <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Mengirim Pengajuan...</>
           ) : isExpired ? (
-            'Kirim Pembaruan SK'
+            'Kirim Perpanjangan SK'
           ) : isBelumTerbit ? (
             'Kirim Revisi Dokumen'
           ) : (

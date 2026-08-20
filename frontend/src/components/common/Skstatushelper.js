@@ -1,13 +1,18 @@
-// Set status ADMIN permohonansk & MHS pengajuanSK
-
 export const STATUS_SK = {
-  DALAM_PROSES : 'dalam-proses',  // Admin belum memproses sama sekali
-  BELUM_TERBIT : 'belum-terbit',  // Salah satu syarat belum terpenuhi
-  SUDAH_TERBIT : 'sudah-terbit',  // Semua syarat terpenuhi
+  DALAM_PROSES : 'dalam-proses',  // Admin belum memproses / belum ambil keputusan
+  BELUM_TERBIT : 'belum-terbit',  // Admin reject, ada message + isEdit (deadline revisi)
+  SUDAH_TERBIT : 'sudah-terbit',  // Semua syarat terpenuhi, file SK sudah ada
   EXPIRED      : 'expired',       // SK sudah terbit tapi expDate lewat
 };
 
-// VerifikasiModal admin 
+export const SKTA_CATEGORY = {
+  PERMOHONAN_BARU             : 'Permohonan Baru',
+  PERPANJANGAN_SK             : 'Perpanjangan SK',
+  PERUBAHAN_JUDUL             : 'Perubahan Judul',
+  PERUBAHAN_DOSEN_PEMBIMBING  : 'Perubahan Dosen Pembimbing',
+  PERUBAHAN_JUDUL_DAN_DOSEN   : 'Perubahan Judul dan Dosen Pembimbing',
+};
+
 export const ALUR_STEPS = [
   'Data diproses di I-Gracias untuk pengecekan nomor SK',
   'Unduh SK dari I-Gracias',
@@ -24,107 +29,79 @@ export const unwrapResponse = (raw) => {
 };
 
 /**
- * determineStatus 
  *
- * - 'dalam-proses' : sktaResponse null → admin belum memproses
- * - 'belum-terbit' : salah satu boolean masih false, atau file SK belum ada
- * - 'sudah-terbit' : hasTakenLanguageTest === true
- *                    DAN hasUploadedFinalProposal === true
- *                    DAN skUploads.length > 0 (file SK sudah diupload admin)
+ * - 'dalam-proses' : belum ada keputusan admin (belum reject, belum approve)
+ * - 'belum-terbit' : admin sudah reject (ada `message`)
+ * - 'sudah-terbit' : hasTakenLanguageTest && hasUploadedFinalProposal && file SK ada
+ * - 'expired'      : sudah-terbit tapi expDate sudah lewat
  *
- * @param {object|null} sktaResponse 
- * @param {Array}       skUploads    
+ * @param {object|null} permohonan  hasil dari getSKTARequest() / unwrapResponse()
  * @returns {string}
  */
-export const determineStatus = (sktaResponse, skUploads = []) => {
-  if (!sktaResponse) return STATUS_SK.DALAM_PROSES;
+export const determineStatus = (permohonan) => {
+  if (!permohonan) return STATUS_SK.DALAM_PROSES;
 
-  // Cek apakah data persetujuan ada isinya
-  const hasApprovedFields =
-    (sktaResponse.hasUploadedFinalProposal === true) &&
-    (sktaResponse.hasTakenLanguageTest === true) &&
-    (sktaResponse.sktaUploadPath || (Array.isArray(skUploads) && skUploads.length > 0)) &&
-    sktaResponse.expDate;
+  const hasLang     = permohonan.hasTakenLanguageTest     === true;
+  const hasProposal = permohonan.hasUploadedFinalProposal === true;
+  const hasFile     = !!permohonan.sktaUploadPath || !!permohonan.sktaDownloadUrl
+    || (Array.isArray(permohonan.sktaResponseUploads) && permohonan.sktaResponseUploads.length > 0);
 
-  if (hasApprovedFields) return STATUS_SK.SUDAH_TERBIT;
+  if (hasLang && hasProposal && hasFile) return STATUS_SK.SUDAH_TERBIT;
 
-  // Cek apakah data penolakan ada isinya
-  const hasRejectedFields = sktaResponse.message || sktaResponse.isEdit;
+  // Admin sudah menolak (rejectPermohonanSkta) → ada message dan/atau deadline isEdit
+  if (permohonan.message || permohonan.isEdit) return STATUS_SK.BELUM_TERBIT;
 
-  if (hasRejectedFields) return STATUS_SK.BELUM_TERBIT; // Ditolak / Perlu Perbaikan
-
-  // Jika tidak ada isi disetujui dan ditolak, berarti sedang diproses
   return STATUS_SK.DALAM_PROSES;
 };
 
 /**
+ * determineSkStatus
+ * Tambahan pengecekan expDate di atas determineStatus dasar.
  *
- * @param {object|null} sktaResponse 
- * @param {Array}       skUploads    
+ * @param {object|null} permohonan
  * @returns {string}
  */
-export const determineSkStatus = (sktaResponse, skUploads = []) => {
-  const baseStatus = determineStatus(sktaResponse, skUploads);
+export const determineSkStatus = (permohonan) => {
+  const baseStatus = determineStatus(permohonan);
 
-  if (baseStatus === STATUS_SK.SUDAH_TERBIT && sktaResponse?.expDate) {
-    const exp = new Date(sktaResponse.expDate);
+  if (baseStatus === STATUS_SK.SUDAH_TERBIT && permohonan?.expDate) {
+    const exp = new Date(permohonan.expDate);
     if (exp < new Date()) return STATUS_SK.EXPIRED;
   }
 
   return baseStatus;
 };
 
-/**
- * isSkEditable
- * - EXPIRED        → selalu bisa edit (perbarui SK kadaluarsa)
- * - BELUM_TERBIT   → hanya bisa edit jika admin udh set isEdit (ada deadline)
- */
-export const isSkEditable = (status, sktaResponse = null) => {
+export const isSkEditable = (status, permohonan = null) => {
   if (status === STATUS_SK.EXPIRED) return true;
-  if (status === STATUS_SK.BELUM_TERBIT) return !!sktaResponse?.isEdit;
+  if (status === STATUS_SK.BELUM_TERBIT) {
+    if (!permohonan?.isEdit) return false;
+    return new Date(permohonan.isEdit) > new Date();
+  }
   return false;
 };
 
+const MAIN_PAGE_CATEGORIES = [SKTA_CATEGORY.PERMOHONAN_BARU, SKTA_CATEGORY.PERPANJANGAN_SK];
 
-export const getSkFileUrl = (skUploads = []) => {
-  if (!Array.isArray(skUploads) || skUploads.length === 0) return null;
-  const upload = skUploads[0];
-  if (upload.downloadUrl) return upload.downloadUrl;
-  if (upload.id) {
-    const base = import.meta.env?.VITE_API_URL || '';
-    return `${base}/api/skta-responses/uploads/${upload.id}/download`;
+export const getSubmissionMode = (permohonan) => {
+  if (!permohonan) return 'create-baru';
+  if (!MAIN_PAGE_CATEGORIES.includes(permohonan.category)) return 'blocked';
+  const status = determineSkStatus(permohonan);
+  if (status === STATUS_SK.EXPIRED) return 'create-perpanjangan';
+  if (status === STATUS_SK.BELUM_TERBIT && isSkEditable(status, permohonan)) return 'patch-revisi';
+  return 'blocked';
+};
+
+export const getSkFileUrl = (permohonan) => {
+  if (!permohonan) return null;
+  if (permohonan.sktaDownloadUrl) return permohonan.sktaDownloadUrl;
+  if (Array.isArray(permohonan.sktaResponseUploads) && permohonan.sktaResponseUploads.length > 0) {
+    return permohonan.sktaResponseUploads[0].downloadUrl ?? null;
   }
   return null;
 };
 
-const LS_REVISED_UPDATED_AT = (reqId) => `skta_revised_updatedAt_${reqId}`;
-
-/**
- *
- * @param {string|number} reqId
- * @param {string}        updatedAt  
- */
-export const markRevisedWithTimestamp = (reqId, updatedAt) => {
-  localStorage.setItem(LS_REVISED_UPDATED_AT(reqId), updatedAt ?? new Date().toISOString());
-};
-
-export const clearRevisedFlag = (reqId) => {
-  localStorage.removeItem(LS_REVISED_UPDATED_AT(reqId));
-};
-
-// cek apakah dokumen udah di revisi/blm
-export const isAlreadyRevised = (reqId, serverUpdatedAt) => {
-  const storedUpdatedAt = localStorage.getItem(LS_REVISED_UPDATED_AT(reqId));
-  if (!storedUpdatedAt) return false;
-
-  // Cek timestamp: kl server punya updatedAt yang LEBIH BARU dari yang udh disimpan saat mahasiswa submit → berarti admin sudah mengubah data → hapus flag
-  const storedTime = new Date(storedUpdatedAt).getTime();
-  const serverTime = serverUpdatedAt ? new Date(serverUpdatedAt).getTime() : 0;
-
-  if (serverTime > storedTime) {
-    clearRevisedFlag(reqId);
-    return false;
-  }
-
-  return true;
+export const isMainPageCategory = (permohonan) => {
+  if (!permohonan) return true; 
+  return MAIN_PAGE_CATEGORIES.includes(permohonan.category);
 };
