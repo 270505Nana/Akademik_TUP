@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Download, Eye, ChevronLeft, ChevronRight, Menu, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
 import SidebarAdmin    from '../../components/sidebar/SidebarAdmin';
 import CustomAlert     from '../../components/common/CustomAlert';
 import EvidenceModal   from '../../components/admin/permohonanSK/EvidenceModal';
@@ -9,21 +8,10 @@ import VerifikasiModal from '../../components/admin/permohonanSK/VerifikasiModal
 import FormulirSKModal from '../../components/admin/permohonanSK/FormulirskModal';
 import { determineStatus, unwrapResponse } from '../../components/admin/permohonanSK/skHelpers';
 
-import {
-  getAllSktaRequests,
-  getSktaResponseByRequestId,
-  getSktaResponseUploadByStudentId,
-  approvePermohonanSK,
-  rejectPermohonanSK,
-  getStudyPrograms,
-  getStudyProgramById,
-  getSKTARequest,
-  getEvidenceUploadsByStudentId,
-} from '../../service/api';
+import {getAllSktaRequests,getSktaResponseByRequestId,getSktaResponseUploadByStudentId,approvePermohonanSK, rejectPermohonanSK,getStudyPrograms,getStudyProgramById,getSKTARequest,getEvidenceUploadsByStudentId,} from '../../service/api';
 import { useAuth } from '../../context/AuthContext';
 import '../../components/admin/css/permohonanSK.css';
 
-/*  Status Badge  */
 const STATUS_CONFIG = {
   'sudah-terbit'    : { label: 'Sudah Terbit',    cls: 'sudah-terbit'    },
   'belum-terbit'    : { label: 'Belum Terbit',    cls: 'belum-terbit'    },
@@ -156,7 +144,6 @@ const PermohonanSK = () => {
 
   useEffect(() => setCurrentPage(1), [searchDebounced, filterProdi, filterStatus]);
 
-
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (prodiDropdownRef.current && !prodiDropdownRef.current.contains(e.target)) {
@@ -167,13 +154,13 @@ const PermohonanSK = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-
+  //  PREVIEW EVIDENCE LENGKAP 
   const handlePreviewEvidence = async (item) => {
     const studentId = item.studentId;
     if (!studentId) return showAlert('error', 'Error', 'Student ID tidak ditemukan');
 
     try {
- 
+      // Ambil data lengkap pengajuan SK
       const sktaRequest = await getSKTARequest(studentId);
       const evidenceUploads = await getEvidenceUploadsByStudentId(studentId);
 
@@ -379,7 +366,7 @@ const PermohonanSK = () => {
                                   {actionLabel}
                                 </button>
                                 <button
-                                  className="btn-export-sk"
+                                  className="btn-export-sk sm"
                                   style={{ opacity: status === 'sudah-terbit' ? 1 : 0, pointerEvents: status === 'sudah-terbit' ? 'auto' : 'none' }}
                                   onClick={() => setFormulirItem(item)}
                                 >
@@ -459,12 +446,12 @@ const PermohonanSK = () => {
         }
         .sk-main-content {
           flex: 1;
-          min-width: 0;       
+          min-width: 0;         
           overflow-x: hidden;
           display: flex;
           flex-direction: column;
         }
-        /* #sidebar (sidebar.css) lebarnya 240px via --sidebar-width, fixed position — main content wajib punya margin-left senilai itu supaya tidak ketutup sidebar */
+
         #sidebar ~ .sk-main-content,
         .sk-main-content {
           margin-left: 240px;
@@ -479,15 +466,15 @@ const PermohonanSK = () => {
           flex: 1;
           min-width: 0;
           width: 100%;
-          margin-left: 0 !important;  /* override aturperiode.css margin-left var */
+          margin-left: 0 !important; 
         }
+
         .sk-main-content .page-wrapper,
         .sk-main-content .top-bar-red {
           margin-top: 0 !important;
           padding-top: 0 !important;
         }
 
-        /* ── Action buttons: selalu sama lebar ── */
         .action-buttons { vertical-align: middle; }
 
         html, body, #root {
