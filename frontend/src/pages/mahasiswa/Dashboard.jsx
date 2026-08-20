@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu, Calendar, GraduationCap, SquarePen, Loader } from 'lucide-react';
+import { Menu, GraduationCap, Loader } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SidebarMahasiswa from '../../components/sidebar/SidebarMahasiswa';
 import '../dashboard.css';
@@ -51,14 +51,52 @@ const getSidangKeteranganBadge = (status) => {
 
 const LOCKED_BADGE = { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Selesaikan Proses Registrasi Sebelumnya' };
 
-const formatDateRange = (start, end) => {
-  const fmt = (d) =>
-    new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  return `${fmt(start)} – ${fmt(end)}`;
+const isValidDate = (d) => {
+  if (!d) return false;
+  const date = new Date(d);
+  return !Number.isNaN(date.getTime());
 };
 
-const formatDateShort = (d) =>
-  new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDateLong = (d) => {
+  if (!isValidDate(d)) return null;
+  return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+const formatDateRange = (start, end) => {
+  const startLabel = formatDateLong(start);
+  const endLabel = formatDateLong(end);
+  if (startLabel && endLabel) return `${startLabel} – ${endLabel}`;
+  return startLabel || endLabel || null;
+};
+
+const formatDateShort = (d) => {
+  if (!isValidDate(d)) return null;
+  return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const formatMaksDate = (d) => {
+  const label = formatDateLong(d);
+  return label ? `Maks. ${label}` : null;
+};
+
+const formatPelaksanaanRange = (start, end) => {
+  if (isValidDate(start) && isValidDate(end)) {
+    const s = new Date(start);
+    const e = new Date(end);
+    if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+      const monthYear = e.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      return `${s.getDate()} - ${e.getDate()} ${monthYear}`;
+    }
+    return `${formatDateLong(start)} - ${formatDateLong(end)}`;
+  }
+  return formatDateLong(start) || formatDateLong(end);
+};
+
+const PERIOD_STATUS_BADGE = {
+  aktif     : { label: 'SEDANG BERLANGSUNG', bg: '#DCFCE7', color: '#166534' },
+  mendatang : { label: 'AKAN DATANG',        bg: '#DBEAFE', color: '#1E40AF' },
+  selesai   : { label: 'SELESAI',            bg: '#F3F4F6', color: '#6B7280' },
+};
 
 const pickRelevantPeriod = (list = []) => {
   if (!Array.isArray(list) || list.length === 0) return null;
@@ -74,51 +112,18 @@ const pickRelevantPeriod = (list = []) => {
 };
 
 
-const PeriodeCard = ({ icon, title, periode, isLoading }) => {
-  const stateConfig = {
-    aktif     : { badge: 'Aktif',     bg: '#22C55E', text: '#fff' },
-    mendatang : { badge: 'Mendatang', bg: '#3B82F6', text: '#fff' },
-    selesai   : { badge: 'Selesai',   bg: '#9CA3AF', text: '#fff' },
-  };
-  const cfg = periode ? (stateConfig[periode.state] || stateConfig.selesai) : null;
-
-  return (
-    <div className="CardAtas4">
-      <div className="CardAtas4-header">
-        <div className="CardAtas4-icon">{icon}</div>
-        {!isLoading && cfg && (
-          <span className="CardAtas4-badge" style={{ background: cfg.bg, color: cfg.text }}>
-            {cfg.badge}
-          </span>
-        )}
+const TimelineItem = ({ label, value, isLoading, accent }) => (
+  <div className="timeline-item-card">
+    <div className="timeline-item-label">{label}</div>
+    {isLoading ? (
+      <div className="timeline-skel timeline-skel-value" />
+    ) : (
+      <div className={`timeline-item-value${accent ? ' is-accent' : ''}${value ? '' : ' is-empty'}`}>
+        {value || 'Belum dijadwalkan'}
       </div>
-      <div className="CardAtas4-body">
-        <div className="CardAtas4-label">{title}</div>
-        {isLoading ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-            <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
-            <span style={{ fontSize: 12, color: '#9CA3AF' }}>Memuat...</span>
-          </div>
-        ) : periode ? (
-          <div
-            className="CardAtas4-value"
-            dangerouslySetInnerHTML={{
-              __html: `${periode.name}<br/><span class='text-sm font-normal text-gray-500'>${formatDateRange(periode.startDate, periode.endDate)}</span>`,
-            }}
-          />
-        ) : (
-          <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 6 }}>Tidak ada periode aktif</div>
-        )}
-      </div>
-      <div className="CardAtas4-footer">
-        <div className="CardAtas4-divider" />
-        <div className="CardAtas4-sub">
-          {periode ? `Berlaku hingga ${formatDateShort(periode.endDate)}` : '—'}
-        </div>
-      </div>
-    </div>
-  );
-};
+    )}
+  </div>
+);
 
 const skBadgeStyle = (status) => {
   const map = {
@@ -320,8 +325,14 @@ const DashboardMahasiswa = () => {
   const skTanggal = sktaRequest?.sktaRequestUploads?.[0]?.createdAt
     ? formatDateShort(sktaRequest.sktaRequestUploads[0].createdAt)
     : null;
-  const deadlineSidang = sidangPeriode
-    ? new Date(sidangPeriode.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  const deadlineSidang = formatDateLong(sidangPeriode?.endDate);
+
+  const headerPeriode =
+    sidangPeriode?.state === 'aktif' ? sidangPeriode
+    : yudisiumPeriode?.state === 'aktif' ? yudisiumPeriode
+    : sidangPeriode || yudisiumPeriode;
+  const periodStatusBadge = headerPeriode
+    ? (PERIOD_STATUS_BADGE[headerPeriode.state] || PERIOD_STATUS_BADGE.selesai)
     : null;
 
   const rowSidangLoading = loadingSk || loadingSidangReg;
@@ -341,42 +352,6 @@ const DashboardMahasiswa = () => {
         </header>
 
         <main className="page-body">
-
-          {/* Welcome Banner */}
-          <div className="section-card p-0 shadow-sm border-none overflow-hidden mb-6 bg-white">
-            <div className="grid xl:grid-cols-12 gap-0">
-              <div
-                className="xl:col-span-4 bg-[#FAFBFD] p-4 flex items-center justify-center border-r border-gray-100"
-                style={{ maxHeight: '280px', overflow: 'hidden' }}
-              >
-                <div className="relative w-full max-w-[240px]">
-                  <img
-                    src={illustration}
-                    alt="Dashboard Illustration"
-                    style={{ width: '100%', height: 'auto', maxHeight: '220px', objectFit: 'contain' }}
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              </div>
-              <div className="xl:col-span-8 p-8 md:p-10">
-                <h2 className="text-2xl font-extrabold text-[#C0182A] mb-4">
-                  Selamat Datang di SIMTA
-                </h2>
-                <div className="w-16 h-1 bg-primary mb-6 rounded-full" />
-                <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                  SIMTA (Sistem Informasi Manajemen Tugas Akhir) adalah platform utama bagi mahasiswa
-                  untuk mengelola seluruh rangkaian tugas akhir secara digital dan terintegrasi. Menu
-                  Status TA/PA Mahasiswa merupakan sub-menu dari kategori Daftar TA/PA yang berfungsi
-                  sebagai dasbor interaktif untuk memantau progres akademik kamu secara real-time.
-                </p>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Melalui menu ini, kamu dapat melihat dan menyelesaikan tahapan pengambilan TA/PA
-                  secara sistematis, mulai dari pengajuan proposal dokumen, pemilihan dosen pembimbing,
-                  hingga memantau validasi Surat Keputusan (SK).
-                </p>
-              </div>
-            </div>
-          </div>
 
           {/* Halo User */}
           <div className="section-card p-8 bg-white border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center mb-6">
@@ -432,55 +407,62 @@ const DashboardMahasiswa = () => {
           </div>
 
           {/* Periode Cards */}
-          <div className="mb-6">
-            <h4 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-6 border-l-4 border-primary pl-3">
-              Jadwal Periode Sidang Terkini
-            </h4>
-            <div className="stat-grid">
-              <PeriodeCard
-                icon={<Calendar size={28} color="#C0182A" />}
-                title="Pendaftaran Sidang"
-                periode={sidangPeriode}
-                isLoading={loadingPeriode}
-              />
-              <PeriodeCard
-                icon={<SquarePen size={28} color="#C0182A" />}
-                title="Pendaftaran Yudisium"
-                periode={yudisiumPeriode}
-                isLoading={loadingPeriode}
-              />
-              <div className="CardAtas4">
-                <div className="CardAtas4-header">
-                  <div className="CardAtas4-icon">
-                    <div style={{
-                      width: 28, height: 28, background: '#C0182A', borderRadius: '50%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontWeight: 900, fontStyle: 'italic', fontSize: 16,
-                    }}>L</div>
-                  </div>
+          <div className="timeline-periode-card mb-6">
+            <div className="timeline-periode-header">
+              <div>
+                <div className="timeline-periode-overline">
+                  TIMELINE PENDAFTARAN SIDANG TA & YUDISIUM
                 </div>
-                <div className="CardAtas4-body">
-                  <div className="CardAtas4-label">Pelaksanaan Sidang</div>
-                  <div className="CardAtas4-value">
-                    {loadingPeriode ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                        <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
-                        <span style={{ fontSize: 12, color: '#9CA3AF' }}>Memuat...</span>
-                      </div>
-                    ) : sidangPeriode ? (
-                      <div dangerouslySetInnerHTML={{
-                        __html: `Pelaksanaan Sidang<br/><span class='text-sm font-normal text-gray-500'>${formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate)}</span>`,
-                      }} />
-                    ) : (
-                      <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 6 }}>Belum dijadwalkan</div>
-                    )}
-                  </div>
-                </div>
-                <div className="CardAtas4-footer">
-                  <div className="CardAtas4-divider" />
-                  <div className="CardAtas4-sub">Jadwal dapat berubah sewaktu-waktu</div>
-                </div>
+                {loadingPeriode ? (
+                  <>
+                    <div className="timeline-skel timeline-skel-title" />
+                    <div className="timeline-skel timeline-skel-sub" />
+                  </>
+                ) : (
+                  <>
+                    <h4 className="timeline-periode-title">
+                      Periode Aktif: {headerPeriode?.name || 'Belum tersedia'}
+                    </h4>
+                    <p className="timeline-periode-subtitle">
+                      Jadwal penting untuk pelaksanaan sidang semester ini.
+                    </p>
+                  </>
+                )}
               </div>
+              {loadingPeriode ? (
+                <div className="timeline-skel timeline-skel-badge" />
+              ) : periodStatusBadge ? (
+                <span
+                  className="timeline-status-badge"
+                  style={{ background: periodStatusBadge.bg, color: periodStatusBadge.color }}
+                >
+                  {periodStatusBadge.label}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="timeline-periode-grid">
+              <TimelineItem
+                label="Pendaftaran Sidang"
+                value={formatMaksDate(sidangPeriode?.endDate)}
+                isLoading={loadingPeriode}
+                accent
+              />
+              <TimelineItem
+                label="Pelaksanaan"
+                value={formatPelaksanaanRange(sidangPeriode?.startDate, sidangPeriode?.endDate)}
+                isLoading={loadingPeriode}
+              />
+              <TimelineItem
+                label="Yudisium"
+                value={formatMaksDate(yudisiumPeriode?.endDate)}
+                isLoading={loadingPeriode}
+              />
+              <TimelineItem
+                label="Sidang Yudisium"
+                value={null}
+                isLoading={loadingPeriode}
+              />
             </div>
           </div>
 
@@ -580,7 +562,7 @@ const DashboardMahasiswa = () => {
                         <div className="flex flex-col items-center">
                           <span className="text-sm font-black text-gray-900">Pendaftaran Sidang</span>
                           <span className="text-[10px] text-gray-400">
-                            {sidangPeriode
+                            {sidangPeriode && formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate)
                               ? `Periode: ${formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate)}`
                               : 'Belum ada periode aktif'}
                           </span>
@@ -643,7 +625,7 @@ const DashboardMahasiswa = () => {
                         <div className="flex flex-col items-center">
                           <span className="text-sm font-black text-gray-900">Pendaftaran Yudisium</span>
                           <span className="text-[10px] text-gray-400">
-                            {yudisiumPeriode
+                            {yudisiumPeriode && formatDateRange(yudisiumPeriode.startDate, yudisiumPeriode.endDate)
                               ? `Periode: ${formatDateRange(yudisiumPeriode.startDate, yudisiumPeriode.endDate)}`
                               : 'Belum ada periode aktif'}
                           </span>

@@ -3,12 +3,18 @@ import { StudentProvider } from "./context/StudentContext";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import LandingPage         from "./pages/landing/LandingPage";
+import PusatInformasiTA    from "./pages/landing/PusatInformasiTA";
 import LoginPage           from "./pages/auth/Login";
 import RegisterPage        from "./pages/auth/Register";
 import LengkapiData        from "./pages/mahasiswa/LengkapiData";
 import DashboardMahasiswa  from "./pages/mahasiswa/dashboard";
 import DashboardAkademik   from "./pages/admin/dashboard";
 import DashboardDosen      from "./pages/dosen/dashboard";
+import JadwalNilaiSidang   from "./pages/dosen/JadwalNilaiSidang";
+import InputNilaiSidang    from "./pages/dosen/InputNilaiSidang";
+import MahasiswaBimbingan  from "./pages/dosen/MahasiswaBimbingan";
+import RegistrasiTATUP     from "./pages/dosen/RegistrasiTATUP";
 import PengajuanSK         from "./pages/mahasiswa/pengajuanSK";
 import PermohonanSK        from "./pages/admin/permohonanSK";
 import AturPeriodeSidang   from "./pages/admin/aturperiodesidang";
@@ -31,9 +37,8 @@ const App = () => {
     <AuthProvider>
       <StudentProvider>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-
-          
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/pusat-informasi" element={<PusatInformasiTA />} />
           <Route path="/login"    element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
@@ -89,6 +94,42 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["LECTURER"]}>
                 <DashboardDosen />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dosen/jadwal-nilai-sidang"
+            element={
+              <ProtectedRoute allowedRoles={["LECTURER"]}>
+                <JadwalNilaiSidang />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dosen/input-nilai/:id"
+            element={
+              <ProtectedRoute allowedRoles={["LECTURER"]}>
+                <InputNilaiSidang />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dosen/mahasiswa-bimbingan"
+            element={
+              <ProtectedRoute allowedRoles={["LECTURER"]}>
+                <MahasiswaBimbingan />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dosen/registrasi-ta-tup"
+            element={
+              <ProtectedRoute allowedRoles={["LECTURER"]}>
+                <RegistrasiTATUP />
               </ProtectedRoute>
             }
           />
