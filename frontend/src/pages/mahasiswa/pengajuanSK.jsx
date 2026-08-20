@@ -6,12 +6,11 @@ import SimtaLogo from "../../assets/logo-simta.png";
 import Telulogo  from "../../assets/logo-telkom.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import { getLecturers, getSKTARequest, submitSKTARequest, resubmitSKTARequest, downloadTemplate } from '../../service/api';
+import { getLecturers, getSKTARequest, submitSKTARequest, resubmitSKTARequest, downloadTemplate, downloadSK } from '../../service/api';
 import {
   determineSkStatus,
   getSubmissionMode,
   isMainPageCategory,
-  getSkFileUrl,
   STATUS_SK,
   SKTA_CATEGORY,
 } from '../../components/common/Skstatushelper';
@@ -70,7 +69,28 @@ const PageLoader = () => (
 );
 
 const SkStatusBanner = ({ status, permohonan }) => {
-  const skFileUrl = getSkFileUrl(permohonan);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!permohonan?.id) return;
+    setDownloading(true);
+    try {
+      const blob = await downloadSK(permohonan.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SK_TA_${permohonan.id}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Gagal unduh SK:', err);
+      alert('Gagal mengunduh SK. Silakan coba lagi.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const configs = {
     [STATUS_SK.DALAM_PROSES]: {
@@ -140,12 +160,13 @@ const SkStatusBanner = ({ status, permohonan }) => {
             <button
               style={{
                 marginTop: 14, padding: '8px 20px', borderRadius: 9999,
-                fontSize: 12, fontWeight: 700, background: '#16A34A',
-                color: '#fff', border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, background: downloading ? '#9CA3AF' : '#16A34A',
+                color: '#fff', border: 'none', cursor: downloading ? 'not-allowed' : 'pointer',
               }}
-              onClick={() => skFileUrl && window.open(skFileUrl, '_blank')}
+              disabled={downloading}
+              onClick={handleDownload}
             >
-              Unduh SK
+              {downloading ? 'Mengunduh...' : 'Unduh SK'}
             </button>
           )}
         </div>
