@@ -193,6 +193,7 @@ model PermohonanSkta {
   sktaUploadPath           String?       @map("skta_upload_path")
   expDate                  DateTime?     @map("exp_date") @db.Date
   // Tolak Permohonan
+  wasRejectedBefore        Boolean       @default(false) @map("was_rejected_before")
   message                  String?
   isEdit                   DateTime?     @map("is_edit")
   admin                    Admin?        @relation(fields: [adminId], references: [id])

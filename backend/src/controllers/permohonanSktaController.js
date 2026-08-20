@@ -40,6 +40,7 @@ const mapPermohonanToFrontend = (item, req) => {
     hasUploadedFinalProposal: item.hasUploadedFinalProposal,
     hasTakenLanguageTest: item.hasTakenLanguageTest,
     expDate: item.expDate,
+    wasRejectedBefore: item.wasRejectedBefore ?? false,
     message: item.message,
     isEdit: item.isEdit,
     evidenceUploadPath: item.evidenceUploadPath,
@@ -576,6 +577,7 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   const data = await prisma.permohonanSkta.update({
      where: { id },
      data: {
+       wasRejectedBefore: true,
        message,
        adminId,
        isEdit: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Memberikan izin edit selama 7 hari ke depan
