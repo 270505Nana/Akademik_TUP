@@ -117,36 +117,50 @@ router.get(
  *             properties:
  *               id:
  *                 type: string
- *               programType:
+ *                 description: Registration UUID (optional if updating existing draft)
+ *               program:
  *                 type: string
+ *                 example: Reguler
  *               tak:
  *                 type: integer
- *               thesisTitleId:
+ *                 example: 45
+ *               judulTugasAkhirIndonesia:
  *                 type: string
- *               thesisTitleEn:
+ *                 example: Implementasi Sistem Informasi Akademik
+ *               judulTugasAkhirInggris:
  *                 type: string
- *               isConfirmed:
- *                 type: boolean
- *               sidangScheme:
+ *                 example: Implementation of Academic Information System
+ *               skemaSidang:
  *                 type: string
- *               cumlaudeScheme:
+ *                 example: Sidang Reguler
+ *               pengajuanCumlaude:
  *                 type: string
- *               jalurNonYudisium:
- *                 type: array
- *                 items:
- *                   type: string
- *               eviden_cumlaude:
+ *                 example: Pengajuan Cumlaude
+ *               skemaCumlaude:
  *                 type: string
+ *                 example: Publikasi Jurnal
+ *               evidenCumlaude:
+ *                 type: string
+ *                 description: Masukan nama jurnal/conference pubilkasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional [jika lebih dari satu, pisahkan dengan ENTER]
+ *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
  *               mahasiswaId:
  *                 type: string
+ *                 description: Mahasiswa UUID
+ *               dosenWaliId:
+ *                 type: string
+ *                 description: Dosen Wali UUID
  *               dosenPembimbing1Id:
  *                 type: string
+ *                 description: Dosen Pembimbing 1 UUID
  *               dosenPembimbing2Id:
  *                 type: string
+ *                 description: Dosen Pembimbing 2 UUID
  *               yudisiumPeriodId:
  *                 type: string
+ *                 description: Yudisium Period UUID
  *               yudisiumRegistrationPeriodId:
  *                 type: string
+ *                 description: Yudisium Registration Period UUID
  *     responses:
  *       200:
  *         description: Yudisium registration saved as draft successfully
@@ -182,39 +196,60 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - id
+ *               - program
+ *               - tak
+ *               - judulTugasAkhirIndonesia
+ *               - judulTugasAkhirInggris
+ *               - mahasiswaId
  *             properties:
  *               id:
  *                 type: string
- *               programType:
+ *                 description: Registration UUID
+ *               program:
  *                 type: string
+ *                 example: Reguler
  *               tak:
  *                 type: integer
- *               thesisTitleId:
+ *                 example: 45
+ *               judulTugasAkhirIndonesia:
  *                 type: string
- *               thesisTitleEn:
+ *                 example: Implementasi Sistem Informasi Akademik
+ *               judulTugasAkhirInggris:
  *                 type: string
- *               isConfirmed:
- *                 type: boolean
- *               sidangScheme:
+ *                 example: Implementation of Academic Information System
+ *               skemaSidang:
  *                 type: string
- *               cumlaudeScheme:
+ *                 example: Sidang Reguler
+ *               pengajuanCumlaude:
  *                 type: string
- *               jalurNonYudisium:
- *                 type: array
- *                 items:
- *                   type: string
- *               eviden_cumlaude:
+ *                 example: Pengajuan Cumlaude
+ *               skemaCumlaude:
  *                 type: string
+ *                 example: Publikasi Jurnal
+ *               evidenCumlaude:
+ *                 type: string
+ *                 description: Masukan nama jurnal/conference pubilkasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional [jika lebih dari satu, pisahkan dengan ENTER]
+ *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
  *               mahasiswaId:
  *                 type: string
+ *                 description: Mahasiswa UUID
+ *               dosenWaliId:
+ *                 type: string
+ *                 description: Dosen Wali UUID
  *               dosenPembimbing1Id:
  *                 type: string
+ *                 description: Dosen Pembimbing 1 UUID
  *               dosenPembimbing2Id:
  *                 type: string
+ *                 description: Dosen Pembimbing 2 UUID
  *               yudisiumPeriodId:
  *                 type: string
+ *                 description: Yudisium Period UUID
  *               yudisiumRegistrationPeriodId:
  *                 type: string
+ *                 description: Yudisium Registration Period UUID
  *     responses:
  *       200:
  *         description: Yudisium registration submitted successfully
@@ -288,19 +323,21 @@ router.delete("/:id", verifyToken, isAdmin, deleteYudisiumRegistration);
  *             type: object
  *             required:
  *               - file
- *               - slug
+ *               - category
  *               - name
  *             properties:
  *               file:
  *                 type: string
  *                 format: binary
- *                 description: The file to upload
- *               slug:
+ *                 description: The file to upload (PDF)
+ *               category:
  *                 type: string
- *                 description: The unique identifier for this file type
+ *                 description: The category/slug of this requirement file
+ *                 example: BERKAS LEMBAR REVISI TA
  *               name:
  *                 type: string
  *                 description: Human readable name of the file
+ *                 example: Lembar Revisi Tugas Akhir
  *     responses:
  *       200:
  *         description: File uploaded/updated successfully

@@ -250,21 +250,34 @@ const getYudisiumRegistrationByMahasiswaId = asyncHandler(async (req, res) => {
 const saveYudisiumRegistration = asyncHandler(async (req, res) => {
   const {
     id,
-    programType,
     tak,
-    thesisTitleId,
-    thesisTitleEn,
-    isConfirmed,
-    sidangScheme,
-    cumlaudeScheme,
-    jalurNonYudisium,
-    eviden_cumlaude,
     mahasiswaId,
+    dosenWaliId,
+    doswalId,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
     yudisiumPeriodId,
     yudisiumRegistrationPeriodId,
   } = req.body;
+
+  const program = req.body.program !== undefined ? req.body.program : req.body.programType;
+  const judulTugasAkhirIndonesia = req.body.judulTugasAkhirIndonesia !== undefined ? req.body.judulTugasAkhirIndonesia : req.body.thesisTitleId;
+  const judulTugasAkhirInggris = req.body.judulTugasAkhirInggris !== undefined ? req.body.judulTugasAkhirInggris : req.body.thesisTitleEn;
+  const skemaSidang = req.body.skemaSidang !== undefined ? req.body.skemaSidang : req.body.sidangScheme;
+  const pengajuanCumlaude = req.body.pengajuanCumlaude !== undefined ? req.body.pengajuanCumlaude : req.body.jalurYudisium;
+  
+  let skemaCumlaude = req.body.skemaCumlaude !== undefined ? req.body.skemaCumlaude : req.body.cumlaudeScheme;
+  if (skemaCumlaude === undefined && req.body.skemaTambahan !== undefined) {
+    skemaCumlaude = Array.isArray(req.body.skemaTambahan) ? req.body.skemaTambahan.join(', ') : req.body.skemaTambahan;
+  } else if (Array.isArray(skemaCumlaude)) {
+    skemaCumlaude = skemaCumlaude.join(', ');
+  }
+
+  const evidenCumlaude = req.body.evidenCumlaude !== undefined 
+    ? req.body.evidenCumlaude 
+    : (req.body.eviden_cumlaude !== undefined ? req.body.eviden_cumlaude : req.body.evidenList);
+
+  const finalDosenWaliId = dosenWaliId !== undefined ? dosenWaliId : doswalId;
 
   const errors = [];
 
@@ -272,45 +285,44 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     errors.push({ field: "id", message: "ID harus berupa string" });
   }
 
-  if (!isNil(programType) && typeof programType !== "string") {
-    errors.push({ field: "programType", message: "Tipe program harus berupa string" });
+  if (!isNil(program) && typeof program !== "string") {
+    errors.push({ field: "program", message: "Program harus berupa string" });
   }
 
   if (!isNil(tak) && isNaN(parseInt(tak))) {
     errors.push({ field: "tak", message: "TAK harus berupa integer" });
   }
 
-  if (!isNil(thesisTitleId) && typeof thesisTitleId !== "string") {
-    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) harus berupa string" });
+  if (!isNil(judulTugasAkhirIndonesia) && typeof judulTugasAkhirIndonesia !== "string") {
+    errors.push({ field: "judulTugasAkhirIndonesia", message: "Judul TA (Indonesia) harus berupa string" });
   }
 
-  if (!isNil(thesisTitleEn) && typeof thesisTitleEn !== "string") {
-    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) harus berupa string" });
+  if (!isNil(judulTugasAkhirInggris) && typeof judulTugasAkhirInggris !== "string") {
+    errors.push({ field: "judulTugasAkhirInggris", message: "Judul TA (Inggris) harus berupa string" });
   }
 
-  const parsedIsConfirmed = parseBoolean(isConfirmed);
-  if (!isNil(isConfirmed) && parsedIsConfirmed === undefined) {
-    errors.push({ field: "isConfirmed", message: "Konfirmasi harus berupa boolean" });
+  if (!isNil(skemaSidang) && typeof skemaSidang !== "string") {
+    errors.push({ field: "skemaSidang", message: "Skema sidang harus berupa string jika diisi" });
   }
 
-  if (!isNil(sidangScheme) && typeof sidangScheme !== "string") {
-    errors.push({ field: "sidangScheme", message: "Skema sidang harus berupa string jika diisi" });
+  if (!isNil(pengajuanCumlaude) && typeof pengajuanCumlaude !== "string") {
+    errors.push({ field: "pengajuanCumlaude", message: "Pengajuan cumlaude harus berupa string jika diisi" });
   }
 
-  if (!isNil(cumlaudeScheme) && typeof cumlaudeScheme !== "string") {
-    errors.push({ field: "cumlaudeScheme", message: "Skema cumlaude harus berupa string jika diisi" });
+  if (!isNil(skemaCumlaude) && typeof skemaCumlaude !== "string") {
+    errors.push({ field: "skemaCumlaude", message: "Skema cumlaude harus berupa string jika diisi" });
   }
 
-  if (!isNil(jalurNonYudisium) && !Array.isArray(jalurNonYudisium)) {
-    errors.push({ field: "jalurNonYudisium", message: "Jalur non yudisium harus berupa array jika diisi" });
-  }
-
-  if (!isNil(eviden_cumlaude) && typeof eviden_cumlaude !== "string") {
-    errors.push({ field: "eviden_cumlaude", message: "Eviden cumlaude harus berupa string" });
+  if (!isNil(evidenCumlaude) && typeof evidenCumlaude !== "string") {
+    errors.push({ field: "evidenCumlaude", message: "Eviden cumlaude harus berupa string jika diisi" });
   }
 
   if (!isNil(mahasiswaId) && typeof mahasiswaId !== "string") {
     errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa string" });
+  }
+
+  if (!isNil(finalDosenWaliId) && typeof finalDosenWaliId !== "string") {
+    errors.push({ field: "dosenWaliId", message: "ID dosen wali harus berupa string" });
   }
 
   if (!isNil(dosenPembimbing1Id) && typeof dosenPembimbing1Id !== "string") {
@@ -341,6 +353,16 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     if (!studentExists) {
       res.status(404);
       throw new Error("Mahasiswa tidak ditemukan");
+    }
+  }
+
+  if (finalDosenWaliId) {
+    const doswalExists = await prisma.dosen.findUnique({
+      where: { id: finalDosenWaliId },
+    });
+    if (!doswalExists) {
+      res.status(404);
+      throw new Error("Dosen wali tidak ditemukan");
     }
   }
 
@@ -383,28 +405,19 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
   }
 
   const upsertData = {
-    programType: programType !== undefined ? programType : undefined,
+    program: program !== undefined ? program : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
-    thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
-    thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
-    isConfirmed: parsedIsConfirmed !== undefined ? parsedIsConfirmed : undefined,
-    sidangScheme: sidangScheme !== undefined ? sidangScheme : undefined,
-    cumlaudeScheme: cumlaudeScheme !== undefined ? cumlaudeScheme : undefined,
-    jalurNonYudisium:
-      jalurNonYudisium !== undefined ? jalurNonYudisium : undefined,
-    eviden_cumlaude:
-      eviden_cumlaude !== undefined ? eviden_cumlaude : undefined,
+    judulTugasAkhirIndonesia: judulTugasAkhirIndonesia !== undefined ? judulTugasAkhirIndonesia : undefined,
+    judulTugasAkhirInggris: judulTugasAkhirInggris !== undefined ? judulTugasAkhirInggris : undefined,
+    skemaSidang: skemaSidang !== undefined ? skemaSidang : undefined,
+    pengajuanCumlaude: pengajuanCumlaude !== undefined ? pengajuanCumlaude : undefined,
+    skemaCumlaude: skemaCumlaude !== undefined ? skemaCumlaude : undefined,
+    evidenCumlaude: evidenCumlaude !== undefined ? evidenCumlaude : undefined,
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
-    dosenPembimbing1Id:
-      dosenPembimbing1Id !== undefined
-        ? dosenPembimbing1Id
-        : undefined,
-    dosenPembimbing2Id:
-      dosenPembimbing2Id !== undefined
-        ? dosenPembimbing2Id
-        : undefined,
-    yudisiumPeriodId:
-      yudisiumPeriodId !== undefined ? yudisiumPeriodId : undefined,
+    dosenWaliId: finalDosenWaliId !== undefined ? finalDosenWaliId : undefined,
+    dosenPembimbing1Id: dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
+    dosenPembimbing2Id: dosenPembimbing2Id !== undefined ? dosenPembimbing2Id : undefined,
+    yudisiumPeriodId: yudisiumPeriodId !== undefined ? yudisiumPeriodId : undefined,
     yudisiumRegistrationPeriodId:
       yudisiumRegistrationPeriodId !== undefined
         ? yudisiumRegistrationPeriodId
@@ -422,7 +435,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     });
   } else if (mahasiswaId) {
     const existing = await prisma.yudisiumRegistration.findFirst({
-      where: { mahasiswaId },
+      where: { mahasiswaId, deletedAt: null },
       orderBy: { createdAt: "desc" },
     });
 
@@ -489,21 +502,34 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
 const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   const {
     id,
-    programType,
     tak,
-    thesisTitleId,
-    thesisTitleEn,
-    isConfirmed,
-    sidangScheme,
-    cumlaudeScheme,
-    jalurNonYudisium,
-    eviden_cumlaude,
     mahasiswaId,
+    dosenWaliId,
+    doswalId,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
     yudisiumPeriodId,
     yudisiumRegistrationPeriodId,
   } = req.body;
+
+  const program = req.body.program !== undefined ? req.body.program : req.body.programType;
+  const judulTugasAkhirIndonesia = req.body.judulTugasAkhirIndonesia !== undefined ? req.body.judulTugasAkhirIndonesia : req.body.thesisTitleId;
+  const judulTugasAkhirInggris = req.body.judulTugasAkhirInggris !== undefined ? req.body.judulTugasAkhirInggris : req.body.thesisTitleEn;
+  const skemaSidang = req.body.skemaSidang !== undefined ? req.body.skemaSidang : req.body.sidangScheme;
+  const pengajuanCumlaude = req.body.pengajuanCumlaude !== undefined ? req.body.pengajuanCumlaude : req.body.jalurYudisium;
+
+  let skemaCumlaude = req.body.skemaCumlaude !== undefined ? req.body.skemaCumlaude : req.body.cumlaudeScheme;
+  if (skemaCumlaude === undefined && req.body.skemaTambahan !== undefined) {
+    skemaCumlaude = Array.isArray(req.body.skemaTambahan) ? req.body.skemaTambahan.join(', ') : req.body.skemaTambahan;
+  } else if (Array.isArray(skemaCumlaude)) {
+    skemaCumlaude = skemaCumlaude.join(', ');
+  }
+
+  const evidenCumlaude = req.body.evidenCumlaude !== undefined 
+    ? req.body.evidenCumlaude 
+    : (req.body.eviden_cumlaude !== undefined ? req.body.eviden_cumlaude : req.body.evidenList);
+
+  const finalDosenWaliId = dosenWaliId !== undefined ? dosenWaliId : doswalId;
 
   const errors = [];
 
@@ -513,10 +539,10 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     errors.push({ field: "id", message: "ID harus berupa string" });
   }
 
-  if (isNil(programType)) {
-    errors.push({ field: "programType", message: "Tipe program wajib diisi" });
-  } else if (typeof programType !== "string") {
-    errors.push({ field: "programType", message: "Tipe program harus berupa string" });
+  if (isNil(program)) {
+    errors.push({ field: "program", message: "Program wajib diisi" });
+  } else if (typeof program !== "string") {
+    errors.push({ field: "program", message: "Program harus berupa string" });
   }
 
   if (isNil(tak)) {
@@ -525,23 +551,16 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     errors.push({ field: "tak", message: "TAK harus berupa integer" });
   }
 
-  if (isNil(thesisTitleId)) {
-    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) wajib diisi" });
-  } else if (typeof thesisTitleId !== "string") {
-    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) harus berupa string" });
+  if (isNil(judulTugasAkhirIndonesia)) {
+    errors.push({ field: "judulTugasAkhirIndonesia", message: "Judul TA (Indonesia) wajib diisi" });
+  } else if (typeof judulTugasAkhirIndonesia !== "string") {
+    errors.push({ field: "judulTugasAkhirIndonesia", message: "Judul TA (Indonesia) harus berupa string" });
   }
 
-  if (isNil(thesisTitleEn)) {
-    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) wajib diisi" });
-  } else if (typeof thesisTitleEn !== "string") {
-    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) harus berupa string" });
-  }
-
-  const parsedIsConfirmed = parseBoolean(isConfirmed);
-  if (isNil(isConfirmed)) {
-    errors.push({ field: "isConfirmed", message: "Konfirmasi wajib diisi" });
-  } else if (parsedIsConfirmed === undefined) {
-    errors.push({ field: "isConfirmed", message: "Konfirmasi harus berupa boolean" });
+  if (isNil(judulTugasAkhirInggris)) {
+    errors.push({ field: "judulTugasAkhirInggris", message: "Judul TA (Inggris) wajib diisi" });
+  } else if (typeof judulTugasAkhirInggris !== "string") {
+    errors.push({ field: "judulTugasAkhirInggris", message: "Judul TA (Inggris) harus berupa string" });
   }
 
   if (isNil(mahasiswaId)) {
@@ -550,32 +569,32 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa string" });
   }
 
-  if (isNil(dosenPembimbing1Id)) {
-    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 wajib diisi" });
-  } else if (typeof dosenPembimbing1Id !== "string") {
-    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa string" });
+  if (!isNil(finalDosenWaliId) && typeof finalDosenWaliId !== "string") {
+    errors.push({ field: "dosenWaliId", message: "ID dosen wali harus berupa string jika diisi" });
   }
 
-  if (isNil(dosenPembimbing2Id)) {
-    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 wajib diisi" });
-  } else if (typeof dosenPembimbing2Id !== "string") {
-    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa string" });
+  if (!isNil(dosenPembimbing1Id) && typeof dosenPembimbing1Id !== "string") {
+    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa string jika diisi" });
   }
 
-  if (!isNil(sidangScheme) && typeof sidangScheme !== "string") {
-    errors.push({ field: "sidangScheme", message: "Skema sidang harus berupa string jika diisi" });
+  if (!isNil(dosenPembimbing2Id) && typeof dosenPembimbing2Id !== "string") {
+    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa string jika diisi" });
   }
 
-  if (!isNil(cumlaudeScheme) && typeof cumlaudeScheme !== "string") {
-    errors.push({ field: "cumlaudeScheme", message: "Skema cumlaude harus berupa string jika diisi" });
+  if (!isNil(skemaSidang) && typeof skemaSidang !== "string") {
+    errors.push({ field: "skemaSidang", message: "Skema sidang harus berupa string jika diisi" });
   }
 
-  if (!isNil(jalurNonYudisium) && !Array.isArray(jalurNonYudisium)) {
-    errors.push({ field: "jalurNonYudisium", message: "Jalur non yudisium harus berupa array jika diisi" });
+  if (!isNil(pengajuanCumlaude) && typeof pengajuanCumlaude !== "string") {
+    errors.push({ field: "pengajuanCumlaude", message: "Pengajuan cumlaude harus berupa string jika diisi" });
   }
 
-  if (!isNil(eviden_cumlaude) && typeof eviden_cumlaude !== "string") {
-    errors.push({ field: "eviden_cumlaude", message: "Eviden cumlaude harus berupa string" });
+  if (!isNil(skemaCumlaude) && typeof skemaCumlaude !== "string") {
+    errors.push({ field: "skemaCumlaude", message: "Skema cumlaude harus berupa string jika diisi" });
+  }
+
+  if (!isNil(evidenCumlaude) && typeof evidenCumlaude !== "string") {
+    errors.push({ field: "evidenCumlaude", message: "Eviden cumlaude harus berupa string jika diisi" });
   }
 
   if (!isNil(yudisiumPeriodId) && typeof yudisiumPeriodId !== "string") {
@@ -609,28 +628,19 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   }
 
   const updateData = {
-    programType: programType !== undefined ? programType : undefined,
+    program: program !== undefined ? program : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
-    thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
-    thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
-    isConfirmed: parsedIsConfirmed !== undefined ? parsedIsConfirmed : undefined,
-    sidangScheme: sidangScheme !== undefined ? sidangScheme : undefined,
-    cumlaudeScheme: cumlaudeScheme !== undefined ? cumlaudeScheme : undefined,
-    jalurNonYudisium:
-      jalurNonYudisium !== undefined ? jalurNonYudisium : undefined,
-    eviden_cumlaude:
-      eviden_cumlaude !== undefined ? eviden_cumlaude : undefined,
+    judulTugasAkhirIndonesia: judulTugasAkhirIndonesia !== undefined ? judulTugasAkhirIndonesia : undefined,
+    judulTugasAkhirInggris: judulTugasAkhirInggris !== undefined ? judulTugasAkhirInggris : undefined,
+    skemaSidang: skemaSidang !== undefined ? skemaSidang : undefined,
+    pengajuanCumlaude: pengajuanCumlaude !== undefined ? pengajuanCumlaude : undefined,
+    skemaCumlaude: skemaCumlaude !== undefined ? skemaCumlaude : undefined,
+    evidenCumlaude: evidenCumlaude !== undefined ? evidenCumlaude : undefined,
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
-    dosenPembimbing1Id:
-      dosenPembimbing1Id !== undefined
-        ? dosenPembimbing1Id
-        : undefined,
-    dosenPembimbing2Id:
-      dosenPembimbing2Id !== undefined
-        ? dosenPembimbing2Id
-        : undefined,
-    yudisiumPeriodId:
-      yudisiumPeriodId !== undefined ? yudisiumPeriodId : undefined,
+    dosenWaliId: finalDosenWaliId !== undefined ? finalDosenWaliId : undefined,
+    dosenPembimbing1Id: dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
+    dosenPembimbing2Id: dosenPembimbing2Id !== undefined ? dosenPembimbing2Id : undefined,
+    yudisiumPeriodId: yudisiumPeriodId !== undefined ? yudisiumPeriodId : undefined,
     isEdit: null,
     message: null,
   };
@@ -660,14 +670,11 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   const mergedData = { ...existingRegistration, ...updateData };
 
   const requiredFields = [
-    "programType",
+    "program",
     "tak",
-    "thesisTitleId",
-    "thesisTitleEn",
-    "isConfirmed",
+    "judulTugasAkhirIndonesia",
+    "judulTugasAkhirInggris",
     "mahasiswaId",
-    "dosenPembimbing1Id",
-    "dosenPembimbing2Id",
   ];
 
   const missingFields = requiredFields.filter(
@@ -707,6 +714,17 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
       throw new Error("Mahasiswa tidak ditemukan");
     }
   }
+
+  if (mergedData.dosenWaliId) {
+    const dw = await prisma.dosen.findUnique({
+      where: { id: mergedData.dosenWaliId },
+    });
+    if (!dw) {
+      res.status(404);
+      throw new Error("Dosen wali tidak ditemukan");
+    }
+  }
+
   if (mergedData.dosenPembimbing1Id) {
     const d1 = await prisma.dosen.findUnique({
       where: { id: mergedData.dosenPembimbing1Id },
@@ -716,6 +734,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
       throw new Error("Dosen pembimbing 1 tidak ditemukan");
     }
   }
+
   if (mergedData.dosenPembimbing2Id) {
     const d2 = await prisma.dosen.findUnique({
       where: { id: mergedData.dosenPembimbing2Id },
@@ -727,7 +746,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   }
 
   updateData.isDraft = false;
-  updateData.submittedAt = new Date(); // Record student submission time
+  updateData.submittedAt = new Date();
 
   const updatedYudisiumRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
