@@ -160,6 +160,7 @@ model DokumenPersyaratanBerkas {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
   name      String // Nama Berkas
+  code      String    @unique
   category  String // Sidang Reguler / Non Sidang Publikasi Jurnal / Non Sidang Proceeding International / Yudisium
   filepath  String
   isPublish Boolean   @default(true) @map("is_publish")
@@ -349,8 +350,8 @@ model SidangRegistration {
   // Tolak Permohonan
   message                    String?
   isEdit                     DateTime?                  @map("is_edit")
-  admin                      Admin                      @relation(fields: [adminId], references: [id])
-  adminId                    String                     @map("admin_id")
+  admin                      Admin?                     @relation(fields: [adminId], references: [id])
+  adminId                    String?                    @map("admin_id")
   sidangRegistrationUploads  SidangRegistrationUpload[]
   // sidangRegistrationResponses SidangRegistrationResponse[]
 
@@ -464,8 +465,8 @@ model YudisiumRegistration {
   // Tolak Permohonan
   message                      String?
   isEdit                       DateTime?                    @map("is_edit")
-  admin                        Admin                        @relation(fields: [adminId], references: [id])
-  adminId                      String                       @map("admin_id")
+  admin                        Admin?                       @relation(fields: [adminId], references: [id])
+  adminId                      String?                      @map("admin_id")
   yudisiumRegistrationUploads  YudisiumRegistrationUpload[]
   // yudisiumRegistrationResponses YudisiumRegistrationResponse[]
 

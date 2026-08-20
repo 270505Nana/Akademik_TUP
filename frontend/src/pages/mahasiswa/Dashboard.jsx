@@ -7,7 +7,7 @@ import illustration from "../../assets/karakter-dashboard.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
-import {getSKTARequest, getSKTAResponse, getSktaResponseUploadByStudentId, getSidangPeriods, getYudisiumPeriods, getSidangRegistrationByStudentId, getSidangRegistrationResponse, downloadSK } from '../../service/api';
+import {getSKTARequest, getSKTAResponse, getSktaResponseUploadByMahasiswaId, getSidangPeriods, getYudisiumPeriods, getSidangRegistrationByMahasiswaId, downloadSK } from '../../service/api';
 import {determineSkStatus,unwrapResponse,STATUS_SK,} from '../../components/common/Skstatushelper';
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus} from '../../components/admin/sidang/Sidangstatushelper';
 
@@ -219,7 +219,7 @@ const DashboardMahasiswa = () => {
 
   // axios download sk
   const handleUnduhSK = async () => {
-    const uploadId = skUploads?.[0]?.id;
+    const uploadId = sktaRequest?.id;
     if (!uploadId) return;
     setDownloadingSk(true);
     try {
@@ -241,36 +241,29 @@ const DashboardMahasiswa = () => {
   };
 
   const fetchSkStatus = useCallback(async () => {
-    const studentId = student?.studentId;
-    if (!studentId) { setLoadingSk(false); return; }
+    const mahasiswaId = student?.mahasiswaId;
+    if (!mahasiswaId) { setLoadingSk(false); return; }
     setLoadingSk(true);
     try {
-      const request = await getSKTARequest(studentId);
+      const request = await getSKTARequest(mahasiswaId);
       if (!request) { setSkStatus(null); setLoadingSk(false); return; }
       setSktaRequest(request);
-      const [rawResponse, uploadsRaw] = await Promise.all([
-        getSKTAResponse(request.id).catch(() => null),
-        getSktaResponseUploadByStudentId(studentId).catch(() => null),
-      ]);
-      const unwrapped = unwrapResponse(rawResponse);
-      const uploads   = uploadsRaw?.data ?? uploadsRaw ?? [];
-      setSkUploads(uploads);
-      setSkStatus(determineSkStatus(unwrapped, uploads));
+      setSkStatus(determineSkStatus(request));
     } catch (err) {
       console.error('Gagal fetch SK status:', err);
       setSkStatus(null);
     } finally {
       setLoadingSk(false);
     }
-  }, [student?.studentId]);
+  }, [student?.mahasiswaId]);
 
   useEffect(() => { fetchSkStatus(); }, [fetchSkStatus]);
 
   useEffect(() => {
     const fetchSidangRegStatus = async () => {
-      const studentId = student?.studentId;
+      const mahasiswaId = student?.mahasiswaId;
 
-      if (!studentId || skStatus !== STATUS_SK.SUDAH_TERBIT) {
+      if (!mahasiswaId || skStatus !== STATUS_SK.SUDAH_TERBIT) {
         setSidangRegStatus(STATUS_SIDANG.BELUM_DAFTAR);
         setSidangResponse(null);
         setSidangAssignedPeriode(null);
@@ -280,7 +273,7 @@ const DashboardMahasiswa = () => {
 
       setLoadingSidangReg(true);
       try {
-        const rawRegistrations = await getSidangRegistrationByStudentId(studentId);
+        const rawRegistrations = await getSidangRegistrationByMahasiswaId(mahasiswaId);
         const registration = normalizeRegistration(rawRegistrations);
 
         if (!registration) {
@@ -290,19 +283,16 @@ const DashboardMahasiswa = () => {
           return;
         }
 
-        const [response, allPeriods] = await Promise.all([
-          getSidangRegistrationResponse(registration.id).catch(() => null),
-          getSidangPeriods().catch(() => []),
-        ]);
+        const allPeriods = await getSidangPeriods().catch(() => []);
 
         // Periode yang sudah di-attach admin ke registrasi mahasiswa ini
         const assignedPeriode = registration.sidangPeriodId
           ? (allPeriods ?? []).find(p => p.id === registration.sidangPeriodId) ?? null
           : null;
 
-        const status = determineSidangStatus(registration, response, assignedPeriode);
+        const status = determineSidangStatus(registration, null, assignedPeriode);
         setSidangRegStatus(status);
-        setSidangResponse(response);
+        setSidangResponse(registration);
         setSidangAssignedPeriode(assignedPeriode);
 
       } catch (err) {
@@ -316,7 +306,7 @@ const DashboardMahasiswa = () => {
     };
 
     if (!loadingSk) fetchSidangRegStatus();
-  }, [skStatus, loadingSk, student?.studentId]);
+  }, [skStatus, loadingSk, student?.mahasiswaId]);
 
   useEffect(() => {
     const fetchPeriode = async () => {
@@ -575,7 +565,7 @@ const DashboardMahasiswa = () => {
                               <BtnOutline onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
                                 Lihat Respon
                               </BtnOutline>
-                              {skUploads?.[0]?.id && (
+                              {sktaRequest?.id && (
                                 <BtnRed
                                   onClick={handleUnduhSK}
                                   disabled={downloadingSk}

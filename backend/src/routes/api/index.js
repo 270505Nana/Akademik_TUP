@@ -10,10 +10,8 @@ import permohonanSktaRouter from './permohonanSkta.js';
 import templateRouter from './templateUpload.js';
 import sidangPeriodRouter from './sidangPeriod.js';
 import sidangRegistrationRouter from './sidangRegistration.js';
-import sidangRegistrationResponseRouter from './sidangRegistrationResponse.js';
 import yudisiumPeriodRouter from './yudisiumPeriod.js';
 import yudisiumRegistrationRouter from './yudisiumRegistration.js';
-import yudisiumRegistrationResponseRouter from './yudisiumRegistrationResponse.js';
 import sklUploadRouter from './sklUpload.js';
 import transkripUploadRouter from './transkripUpload.js';
 
@@ -30,10 +28,8 @@ router.use("/permohonan-skta", permohonanSktaRouter);
 router.use("/templates", templateRouter);
 router.use("/sidang-periods", sidangPeriodRouter);
 router.use("/sidang-registrations", sidangRegistrationRouter);
-router.use("/sidang-registration-responses", sidangRegistrationResponseRouter);
 router.use("/yudisium-periods", yudisiumPeriodRouter);
 router.use("/yudisium-registrations", yudisiumRegistrationRouter);
-router.use("/yudisium-registration-responses", yudisiumRegistrationResponseRouter);
 router.use("/skl", sklUploadRouter);
 router.use("/transkrip", transkripUploadRouter);
 

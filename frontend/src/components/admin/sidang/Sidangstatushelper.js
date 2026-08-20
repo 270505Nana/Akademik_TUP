@@ -77,11 +77,15 @@ export const determineSidangStatus = (registration, response, period) => {
 
   if (!registration) return STATUS_SIDANG.BELUM_DAFTAR;
 
-  if (registration.isDraft && !response) return STATUS_SIDANG.PROSES_REGISTRASI;
+  const isEdit = registration.isEdit !== undefined && registration.isEdit !== null
+    ? registration.isEdit
+    : (response ? response.isEdit : null);
 
-  if (!registration.isDraft && !response) return STATUS_SIDANG.DALAM_PROSES;
+  if (registration.isDraft && !isEdit) return STATUS_SIDANG.PROSES_REGISTRASI;
 
-  if (response && response.isEdit !== null && response.isEdit !== undefined) {
+  if (!registration.isDraft && !isEdit) return STATUS_SIDANG.DALAM_PROSES;
+
+  if (isEdit !== null && isEdit !== undefined) {
     return STATUS_SIDANG.PERLU_REVISI;
   }
 
@@ -95,7 +99,7 @@ export const determineSidangStatus = (registration, response, period) => {
       : STATUS_SIDANG.PENDAFTARAN_DITERIMA;
   }
 
-  if (registration.submittedAt && response) return STATUS_SIDANG.REVISI_DIPERBARUI;
+  if (registration.submittedAt && isEdit) return STATUS_SIDANG.REVISI_DIPERBARUI;
 
   return STATUS_SIDANG.DALAM_PROSES;
 };

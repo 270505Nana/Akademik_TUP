@@ -1,14 +1,14 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil } from '../utils/validationHelper.js';
+import fs from 'fs';
+import path from 'path';
 
 const allowedMimeTypes = [
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
-import fs from 'fs';
-import path from 'path';
 
 const sanitizeFilename = (value) =>
   String(value || "template")
@@ -16,67 +16,86 @@ const sanitizeFilename = (value) =>
     .replace(/[\\/:*?"<>|]/g, "-")
     .replace(/\s+/g, " ");
 
-const buildDownloadUrl = (req, slug) => {
-  if (!slug) {
-    return null;
-  }
-
-  return `${req.protocol}://${req.get("host")}/templates/download/${slug}`;
+const buildDownloadUrl = (req, code) => {
+  if (!code) return null; 
+  return `${req.protocol}://${req.get("host")}/api/templates/download/${code}`;
 };
 
-const buildPreviewUrl = (req, slug) => {
-  if (!slug) {
-    return null;
-  }
-
-  return `${req.protocol}://${req.get("host")}/templates/preview/${slug}`;
+const buildPreviewUrl = (req, code) => {
+  if (!code) return null; 
+  return `${req.protocol}://${req.get("host")}/api/templates/preview/${code}`;
 };
 
-const withFileUrl = (req, data) => ({
-  ...data,
-  url: buildDownloadUrl(req, data.slug),
-  download: buildDownloadUrl(req, data.slug),
-  preview: buildPreviewUrl(req, data.slug),
-});
+const withFileUrl = (req, data) => {
+  if (!data) return null;
+  const downloadUrl = buildDownloadUrl(req, data.code);
+  const previewUrl = buildPreviewUrl(req, data.code);
+  return {
+    id: data.id,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+    name: data.name,
+    code: data.code,
+    category: data.category,
+    filepath: data.filepath,
+    isPublish: data.isPublish,
+    downloadUrl,
+    previewUrl,
+    url: downloadUrl,
+  };
+};
 
 // Get all template uploads
 const listTemplateUploads = asyncHandler(async (req, res) => {
-  const templateUploads = await prisma.templateUpload.findMany({
-    where: { deletedAt: null },
+  const { category } = req.query;
+  const templateUploads = await prisma.dokumenPersyaratanBerkas.findMany({
+    where: { 
+      deletedAt: null,
+      ...(category && { category }),
+    },
     orderBy: { createdAt: "desc" },
   });
   const data = templateUploads.map((item) => withFileUrl(req, item));
-
   res.json({ data });
 });
 
 // Create template upload
 const createTemplateUpload = asyncHandler(async (req, res) => {
   try {
-    const { name, slug } = req.body;
+    const { name, code, category, isPublish } = req.body;
     const file = req.file;
 
     const errors = [];
     if (isNil(name)) errors.push({ field: 'name', message: 'name wajib diisi' });
-    if (isNil(slug)) errors.push({ field: 'slug', message: 'slug wajib diisi' });
+    if (isNil(code)) errors.push({ field: 'code', message: 'code wajib diisi' });
+    if (isNil(category)) errors.push({ field: 'category', message: 'category wajib diisi' });
     if (!file) {
       errors.push({ field: 'templateFile', message: 'templateFile wajib diunggah' });
     } else if (!allowedMimeTypes.includes(file.mimetype)) {
       errors.push({ field: 'templateFile', message: 'Tipe file tidak valid' });
     }
 
+    if (code) {
+      const codeExists = await prisma.dokumenPersyaratanBerkas.findUnique({
+        where: { code },
+      });
+      if (codeExists) {
+        errors.push({ field: 'code', message: 'code sudah digunakan' });
+      }
+    }
+
     if (errors.length > 0) return sendValidationError(res, errors, req);
 
-    const createdTemplateUpload = await prisma.templateUpload.create({
+    const createdTemplateUpload = await prisma.dokumenPersyaratanBerkas.create({
       data: {
         name,
-        slug,
-        filename: file.filename,
-        path: file.path,
+        code,
+        category,
+        isPublish: isPublish === 'true' || isPublish === true,
+        filepath: file.path,
       },
     });
     const data = withFileUrl(req, createdTemplateUpload);
-
     res.json({
       message: "Template upload created successfully",
       data,
@@ -89,12 +108,12 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
   }
 });
 
-// Get template upload by slug
-const findTemplateUploadBySlug = asyncHandler(async (req, res) => {
-  const slug = req.params.slog;
+// Get template upload by Code
+const findTemplateUploadByCode = asyncHandler(async (req, res) => {
+  const code = req.params.code;
 
-  const templateUpload = await prisma.templateUpload.findFirst({
-    where: { slug, deletedAt: null },
+  const templateUpload = await prisma.dokumenPersyaratanBerkas.findFirst({
+    where: { code, deletedAt: null },
   });
   if (!templateUpload) {
     res.status(404);
@@ -106,23 +125,21 @@ const findTemplateUploadBySlug = asyncHandler(async (req, res) => {
   res.json({ data });
 });
 
-// Update template upload
+// Update template upload by ID (using PATCH)
 const updateTemplateUpload = asyncHandler(async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const { name, slug } = req.body;
+    const id = req.params.id;
+    const { name, code, category, isPublish } = req.body;
     const file = req.file;
 
     const errors = [];
-    if (isNil(name)) errors.push({ field: 'name', message: 'name wajib diisi' });
-    if (isNil(slug)) errors.push({ field: 'slug', message: 'slug wajib diisi' });
     if (file && !allowedMimeTypes.includes(file.mimetype)) {
       errors.push({ field: 'templateFile', message: 'Tipe file tidak valid' });
     }
 
     if (errors.length > 0) return sendValidationError(res, errors, req);
 
-    const templateUpload = await prisma.templateUpload.findFirst({
+    const templateUpload = await prisma.dokumenPersyaratanBerkas.findFirst({
       where: { id, deletedAt: null },
     });
     if (!templateUpload) {
@@ -134,23 +151,34 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
       throw new Error("Unggahan template tidak ditemukan");
     }
 
-    const updatedTemplateUpload = await prisma.templateUpload.update({
+    if (code && code !== templateUpload.code) {
+      const codeExists = await prisma.dokumenPersyaratanBerkas.findUnique({
+        where: { code },
+      });
+      if (codeExists) {
+        if (file?.path) {
+          fs.unlink(file.path, () => {});
+        }
+        errors.push({ field: 'code', message: 'code sudah digunakan' });
+        return sendValidationError(res, errors, req);
+      }
+    }
+
+    const updatedTemplateUpload = await prisma.dokumenPersyaratanBerkas.update({
       where: { id },
       data: {
-        name,
-        slug,
-        ...(file
-          ? {
-              filename: file.filename,
-              path: file.path,
-            }
+        ...(name !== undefined && { name }),
+        ...(code !== undefined && { code }),
+        ...(category !== undefined && { category }),
+        ...(isPublish !== undefined && { isPublish: isPublish === 'true' || isPublish === true }),
+        ...(file ? { filepath: file.path }
           : {}),
       },
     });
     const data = withFileUrl(req, updatedTemplateUpload);
 
-    if (file && templateUpload.path && fs.existsSync(templateUpload.path)) {
-      fs.unlink(templateUpload.path, () => {});
+    if (file && templateUpload.filepath && fs.existsSync(templateUpload.filepath)) {
+      fs.unlink(templateUpload.filepath, () => {});
     }
 
     res.json({
@@ -165,35 +193,32 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
   }
 });
 
-// Delete template upload
+// Delete template upload by ID (soft delete)
 const deleteTemplateUpload = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
 
-  const templateUpload = await prisma.templateUpload.findFirst({
-    where: { id },
+  const templateUpload = await prisma.dokumenPersyaratanBerkas.findFirst({
+    where: { id, deletedAt: null },
   });
   if (!templateUpload) {
     res.status(404);
     throw new Error("Unggahan template tidak ditemukan");
   }
 
-  await prisma.templateUpload.delete({
+  await prisma.dokumenPersyaratanBerkas.update({
     where: { id },
+    data: { deletedAt: new Date() },
   });
-
-  if (templateUpload.path && fs.existsSync(templateUpload.path)) {
-    fs.unlink(templateUpload.path, () => {});
-  }
 
   res.json({ message: "Template upload deleted successfully" });
 });
 
-// Download template
+// Download template by Code
 const downloadTemplateUpload = asyncHandler(async (req, res) => {
-  const slug = req.params.slug;
+  const code = req.params.code;
 
-  const template = await prisma.templateUpload.findUnique({
-    where: { slug },
+  const template = await prisma.dokumenPersyaratanBerkas.findUnique({
+    where: { code },
   });
 
   if (!template) {
@@ -201,19 +226,19 @@ const downloadTemplateUpload = asyncHandler(async (req, res) => {
     throw new Error("Template tidak ditemukan");
   }
 
-  const filePath = path.resolve(process.cwd(), template.path);
-  const ext = path.extname(template.filename || template.path || "") || "";
+  const filePath = path.resolve(process.cwd(), template.filepath);
+  const ext = path.extname(template.filepath || "") || "";
   const downloadName = `${sanitizeFilename(template.name)}${ext}`;
 
   res.download(filePath, downloadName);
 });
 
-// Preview template (serve inline, e.g. for PDF)
+// Preview template (serve inline, e.g. for PDF) by Code
 const previewTemplateUpload = asyncHandler(async (req, res) => {
-  const slug = req.params.slug;
+  const code = req.params.code;
 
-  const template = await prisma.templateUpload.findUnique({
-    where: { slug },
+  const template = await prisma.dokumenPersyaratanBerkas.findUnique({
+    where: { code },
   });
 
   if (!template) {
@@ -221,14 +246,14 @@ const previewTemplateUpload = asyncHandler(async (req, res) => {
     throw new Error("Template tidak ditemukan");
   }
 
-  const filePath = path.resolve(process.cwd(), template.path);
+  const filePath = path.resolve(process.cwd(), template.filepath);
 
   if (!fs.existsSync(filePath)) {
     res.status(404);
     throw new Error("File template tidak ditemukan di server");
   }
 
-  const ext = path.extname(template.filename || template.path || "").toLowerCase();
+  const ext = path.extname(template.filepath || "").toLowerCase();
   let contentType = "application/octet-stream";
   if (ext === ".pdf") {
     contentType = "application/pdf";
@@ -246,10 +271,12 @@ const previewTemplateUpload = asyncHandler(async (req, res) => {
   res.sendFile(filePath);
 });
 
-export { listTemplateUploads,
+export { 
+  listTemplateUploads,
   createTemplateUpload,
-  findTemplateUploadBySlug,
+  findTemplateUploadByCode,
   updateTemplateUpload,
   deleteTemplateUpload,
   downloadTemplateUpload,
-  previewTemplateUpload, };
+  previewTemplateUpload, 
+};

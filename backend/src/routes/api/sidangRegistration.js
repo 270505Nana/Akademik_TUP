@@ -2,7 +2,8 @@ import express from 'express';
 const router = express.Router();
 import { verifyToken } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
-import { listSidangRegistrations,
+import {
+  listSidangRegistrations,
   getSidangRegistrationById,
   getSidangRegistrationByMahasiswaId,
   saveSidangRegistration,
@@ -10,7 +11,10 @@ import { listSidangRegistrations,
   deleteSidangRegistration,
   uploadSidangRegistrationFile,
   getSidangRegistrationFiles,
-  downloadSidangRegistrationFile, } from '../../controllers/sidangRegistrationController.js';
+  downloadSidangRegistrationFile,
+  approveSidangRegistration,
+  rejectSidangRegistration,
+} from '../../controllers/sidangRegistrationController.js';
 import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 
 /**
@@ -51,8 +55,8 @@ router.get("/", verifyToken, listSidangRegistrations);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Sidang registration ID
+ *           type: string
+ *         description: Sidang registration ID (UUID)
  *     responses:
  *       200:
  *         description: Sidang registration data retrieved successfully
@@ -78,8 +82,8 @@ router.get("/:id", verifyToken, getSidangRegistrationById);
  *         name: mahasiswaId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Mahasiswa ID
+ *           type: string
+ *         description: Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: Sidang registration data retrieved successfully
@@ -110,20 +114,36 @@ router.get(
  *         application/json:
  *           schema:
  *             type: object
- *             example:
- *               id: 12
- *               programType: "Reguler"
- *               sidangScheme: "Sidang Reguler"
- *               jalurNonSidang: []
- *               sks: 144
- *               ipk: 3.45
- *               tak: 120
- *               sktaExpDate: "2026-12-31"
- *               thesisTitleId: "Analisis Sistem X"
- *               thesisTitleEn: "Analysis of System X"
- *               mahasiswaId: 20
- *               dosenPembimbing1Id: 5
- *               dosenPembimbing2Id: 7
+ *             properties:
+ *               id:
+ *                 type: string
+ *               programType:
+ *                 type: string
+ *               sidangScheme:
+ *                 type: string
+ *               jalurNonSidang:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               sks:
+ *                 type: integer
+ *               ipk:
+ *                 type: number
+ *               tak:
+ *                 type: integer
+ *               sktaExpDate:
+ *                 type: string
+ *                 format: date-time
+ *               thesisTitleId:
+ *                 type: string
+ *               thesisTitleEn:
+ *                 type: string
+ *               mahasiswaId:
+ *                 type: string
+ *               dosenPembimbing1Id:
+ *                 type: string
+ *               dosenPembimbing2Id:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Sidang registration saved as draft successfully
@@ -159,20 +179,36 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
- *             example:
- *               id: 12
- *               programType: "Reguler"
- *               sidangScheme: "Sidang Reguler"
- *               jalurNonSidang: []
- *               sks: 144
- *               ipk: 3.45
- *               tak: 120
- *               sktaExpDate: "2026-12-31"
- *               thesisTitleId: "Analisis Sistem X"
- *               thesisTitleEn: "Analysis of System X"
- *               mahasiswaId: 20
- *               dosenPembimbing1Id: 5
- *               dosenPembimbing2Id: 7
+ *             properties:
+ *               id:
+ *                 type: string
+ *               programType:
+ *                 type: string
+ *               sidangScheme:
+ *                 type: string
+ *               jalurNonSidang:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               sks:
+ *                 type: integer
+ *               ipk:
+ *                 type: number
+ *               tak:
+ *                 type: integer
+ *               sktaExpDate:
+ *                 type: string
+ *                 format: date-time
+ *               thesisTitleId:
+ *                 type: string
+ *               thesisTitleEn:
+ *                 type: string
+ *               mahasiswaId:
+ *                 type: string
+ *               dosenPembimbing1Id:
+ *                 type: string
+ *               dosenPembimbing2Id:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Sidang registration submitted successfully
@@ -207,8 +243,8 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Sidang registration ID
+ *           type: string
+ *         description: Sidang registration ID (UUID)
  *     responses:
  *       200:
  *         description: Sidang registration deleted successfully
@@ -236,8 +272,8 @@ router.delete("/:id", verifyToken, isAdmin, deleteSidangRegistration);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Sidang registration ID
+ *           type: string
+ *         description: Sidang registration ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -259,10 +295,6 @@ router.delete("/:id", verifyToken, isAdmin, deleteSidangRegistration);
  *               name:
  *                 type: string
  *                 description: Human readable name of the file
- *           example:
- *             file: "(binary)"
- *             slug: "berkasScanKhsDenganTtdDoswalKaprodi"
- *             name: "KHS TTD Doswal dan Kaprodi"
  *     responses:
  *       200:
  *         description: File uploaded/updated successfully
@@ -296,8 +328,8 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
- *         description: Sidang registration ID
+ *           type: string
+ *         description: Sidang registration ID (UUID)
  *     responses:
  *       200:
  *         description: Files retrieved successfully
@@ -321,8 +353,8 @@ router.get("/:id/uploads", verifyToken, getSidangRegistrationFiles);
  *         name: uploadId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Upload ID
+ *           type: string
+ *         description: Upload ID (UUID)
  *     responses:
  *       200:
  *         description: File downloaded successfully
@@ -336,5 +368,90 @@ router.get(
   verifyToken,
   downloadSidangRegistrationFile,
 );
+
+/**
+ * @swagger
+ * /api/sidang-registrations/{id}/approve:
+ *   put:
+ *     summary: Approve sidang registration
+ *     tags: [Sidang Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - adminId
+ *               - sidangPeriodId
+ *             properties:
+ *               adminId:
+ *                 type: string
+ *               sidangPeriodId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Sidang registration approved successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       404:
+ *         description: Registration, admin or period not found
+ */
+router.put("/:id/approve", verifyToken, isAdmin, approveSidangRegistration);
+
+/**
+ * @swagger
+ * /api/sidang-registrations/{id}/reject:
+ *   put:
+ *     summary: Reject / request revision for sidang registration
+ *     tags: [Sidang Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - adminId
+ *               - message
+ *             properties:
+ *               adminId:
+ *                 type: string
+ *               message:
+ *                 type: string
+ *               isEdit:
+ *                 type: string
+ *                 format: date-time
+ *     responses:
+ *       200:
+ *         description: Sidang registration rejected / revision requested successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       404:
+ *         description: Registration or admin not found
+ */
+router.put("/:id/reject", verifyToken, isAdmin, rejectSidangRegistration);
 
 export default router;

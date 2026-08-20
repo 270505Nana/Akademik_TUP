@@ -9,9 +9,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   downloadSidangRegistrationUpload,
   getSidangRegistrationById,
-  getSidangRegistrationResponse,
-  createSidangRegistrationResponse,
-  updateSidangRegistrationResponse,
+  approveSidangRegistration,
+  rejectSidangRegistration,
 } from '../../../service/api';
 import { DOCUMENT_CONFIG, SECTIONS } from '../../../requirement/sidangDocument';
 
@@ -112,7 +111,7 @@ const InfoCard = ({ label, value, icon: Icon, highlight }) => (
 //  Step 1: Data Diri & Akademik 
 
 const Step1 = ({ registration, prodiName }) => {
-  const s = registration?.student || {};
+  const s = registration?.mahasiswa || registration?.student || {};
   const r = registration || {};
   const dosenInfo = [r.dosenPembimbing1?.name, r.dosenPembimbing2?.name]
     .filter(Boolean).join(' & ') || '-';
@@ -562,8 +561,9 @@ const VerifikasiBerkasModal = ({
   const [loadingUploads,    setLoadingUploads]    = useState(false);
   const [fileError,         setFileError]         = useState(null);
 
-  // prodiName diambil langsung dari registration prop (BE sudah include student.studyProgram.name)
-  const prodiName = registration?.student?.studyProgram?.name ?? '-';
+  // prodiName diambil langsung dari registration prop (BE sudah include mahasiswa.studyProgram.name)
+  const m = registration?.mahasiswa || registration?.student;
+  const prodiName = m?.studyProgram?.name ?? '-';
   const periods   = Object.values(periodMap ?? {});
 
   //  Fetch uploads 
@@ -579,40 +579,31 @@ const VerifikasiBerkasModal = ({
       .finally(() => setLoadingUploads(false));
   }, [registration?.id]);
 
-  //  Fetch & restore existing response 
+  //  Restore existing values from registration details
   useEffect(() => {
-    if (!registration?.id) return;
+    if (!registration) return;
 
-    getSidangRegistrationResponse(registration.id)
-      .then(existing => {
-        if (!existing) return;
-        setExistingResponseId(existing.id);
+    // Restore dueDate dari isEdit
+    if (registration.isEdit) setDueDate(registration.isEdit.split('T')[0]);
+    if (registration.message) setMessage(registration.message);
 
-        // Restore dueDate dari isEdit
-        if (existing.isEdit) setDueDate(existing.isEdit.split('T')[0]);
-        if (existing.message) setMessage(existing.message);
+    // Restore selectedPeriodId dari sidangPeriodId di registration
+    const pId = registration.sidangPeriodId ?? null;
+    if (pId) setSelectedPeriodId(pId);
 
-        // Restore selectedPeriodId dari sidangPeriodId di registration
-        const pId = registration.sidangPeriodId ?? null;
-        if (pId) setSelectedPeriodId(pId);
+    // Restore berkasStatuses dari isValid per upload
+    const existingUploads = registration.sidangRegistrationUploads ?? [];
 
-        // Restore berkasStatuses dari isValid per upload
-        const existingUploads =
-          existing.sidangRegistration?.sidangRegistrationUploads ??
-          registration.sidangRegistrationUploads ?? [];
-
-        if (existingUploads.length > 0) {
-          const restored = {};
-          existingUploads.forEach(u => {
-            if (u.isValid === true)       restored[u.id] = BERKAS_STATUS.SESUAI;
-            else if (u.isValid === false) restored[u.id] = BERKAS_STATUS.BERMASALAH;
-            else                          restored[u.id] = BERKAS_STATUS.UNCHECKED;
-          });
-          setBerkasStatuses(restored);
-        }
-      })
-      .catch(() => {});
-  }, [registration?.id]);
+    if (existingUploads.length > 0) {
+      const restored = {};
+      existingUploads.forEach(u => {
+        if (u.isValid === true)       restored[u.id] = BERKAS_STATUS.SESUAI;
+        else if (u.isValid === false) restored[u.id] = BERKAS_STATUS.BERMASALAH;
+        else                          restored[u.id] = BERKAS_STATUS.UNCHECKED;
+      });
+      setBerkasStatuses(restored);
+    }
+  }, [registration]);
 
   //  Auto-load file pertama saat uploads tersedia 
   useEffect(() => {
@@ -695,22 +686,21 @@ const VerifikasiBerkasModal = ({
       .filter(u => berkasStatuses[u.id] === BERKAS_STATUS.SESUAI)
       .map(u => u.id);
 
-    const payload = {
-      sidangRegistrationId:        registration.id,
-      academicStaffId,
-      sidangRegistrationUploadIds: validUploadIds,
-      ...(hasBermasalah
-        ? { isEdit: `${dueDate}T23:59:59.000Z`, message: message.trim(), sidangPeriodId: null }
-        : { isEdit: null, message: null, sidangPeriodId: selectedPeriodId }
-      ),
-    };
-
     setIsSubmitting(true);
     try {
-      if (existingResponseId) {
-        await updateSidangRegistrationResponse(existingResponseId, payload);
+      if (hasBermasalah) {
+        await rejectSidangRegistration(registration.id, {
+          academicStaffId,
+          message: message.trim(),
+          isEdit: `${dueDate}T23:59:59.000Z`,
+          sidangRegistrationUploadIds: validUploadIds,
+        });
       } else {
-        await createSidangRegistrationResponse(payload);
+        await approveSidangRegistration(registration.id, {
+          academicStaffId,
+          sidangPeriodId: selectedPeriodId,
+          sidangRegistrationUploadIds: validUploadIds,
+        });
       }
       onSaved?.();
     } catch (err) {
@@ -720,8 +710,8 @@ const VerifikasiBerkasModal = ({
     }
   };
 
-  const studentName = registration?.student?.name || 'Mahasiswa';
-  const nim         = registration?.student?.nim  || '';
+  const studentName = m?.name || 'Mahasiswa';
+  const nim         = m?.nim  || '';
 
   //  Render 
   return (

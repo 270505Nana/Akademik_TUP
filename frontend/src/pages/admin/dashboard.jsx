@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth } from '../../context/AuthContext';
-import {getSidangPeriods,getAllSidangRegistrations,getAllSktaRequests,getSidangRegistrationResponse,} from '../../service/api';
+import {getSidangPeriods,getAllSidangRegistrations,getAllSktaRequests,} from '../../service/api';
 import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
 import '../dashboard.css';
 
@@ -45,7 +45,7 @@ const MONITORING_SORT_PRIORITY = {
 const pickPrimaryRegistrationPerStudent = (registrations = []) => {
   const grouped = {};
   registrations.forEach((r) => {
-    const sid = r.studentId;
+    const sid = r.mahasiswaId;
     if (!grouped[sid]) grouped[sid] = [];
     grouped[sid].push(r);
   });
@@ -156,15 +156,6 @@ const MonitoringProgress = ({ onShowToast }) => {
       setPeriodMap(prdMap);
 
       const primaryList = pickPrimaryRegistrationPerStudent(allRegs);
-      const respArr = await Promise.all(
-        primaryList.map((r) =>
-          r.thesisTitleId
-            ? getSidangRegistrationResponse(r.id).catch(() => null)
-            : Promise.resolve(null)
-        )
-      );
-      const responseMap = {};
-      primaryList.forEach((r, i) => { if (respArr[i]) responseMap[r.id] = respArr[i]; });
 
       const computedRows = primaryList.map((r) => {
         const hasSubmitted = !!r.thesisTitleId;
@@ -173,8 +164,8 @@ const MonitoringProgress = ({ onShowToast }) => {
         if (!hasSubmitted) {
           return {
             id: r.id,
-            studentId: r.studentId,
-            name: r.student?.name || `Mahasiswa #${r.studentId}`,
+            mahasiswaId: r.mahasiswaId,
+            name: r.student?.name || `Mahasiswa #${r.mahasiswaId}`,
             nim: r.student?.nim || '-',
             prodi: prodiName,
             tahap: 'Tahap 1',
@@ -187,12 +178,12 @@ const MonitoringProgress = ({ onShowToast }) => {
         }
 
         const period    = r.sidangPeriodId ? prdMap[r.sidangPeriodId] : null;
-        const statusKey = determineSidangStatus(r, responseMap[r.id] ?? null, period);
+        const statusKey = determineSidangStatus(r, null, period);
 
         return {
           id: r.id,
-          studentId: r.studentId,
-          name: r.student?.name || `Mahasiswa #${r.studentId}`,
+          mahasiswaId: r.mahasiswaId,
+          name: r.student?.name || `Mahasiswa #${r.mahasiswaId}`,
           nim: r.student?.nim || '-',
           prodi: prodiName,
           tahap: 'Tahap 2',
@@ -386,7 +377,7 @@ const RecentActivity = () => {
         const raw = skResult.value;
         const sktaList = raw?.data ?? raw ?? [];
         (Array.isArray(sktaList) ? sktaList : []).forEach((r) => {
-          const name = r.student?.name || `Mahasiswa #${r.studentId}`;
+          const name = r.student?.name || `Mahasiswa #${r.mahasiswaId}`;
 
           const submittedAt =
             r.sktaRequestUploads?.[0]?.createdAt ??
@@ -412,7 +403,7 @@ const RecentActivity = () => {
       if (sidangResult.status === 'fulfilled') {
         const list = sidangResult.value ?? [];
         list.filter((r) => r.thesisTitleId).forEach((r) => {
-          const name = r.student?.name || `Mahasiswa #${r.studentId}`;
+          const name = r.student?.name || `Mahasiswa #${r.mahasiswaId}`;
           combined.push({
             key: `sidang-${r.id}`,
             name,

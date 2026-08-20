@@ -30,7 +30,7 @@ const createFaculty = asyncHandler(async (req, res) => {
   const faculty = await prisma.faculty.create({
     data: {
       name,
-      isPublish: true,
+      isActive: true,
     },
   });
 
@@ -42,7 +42,7 @@ const createFaculty = asyncHandler(async (req, res) => {
 
 // Cari Fakultas By ID
 const findFacultyById = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
 
   const faculty = await prisma.faculty.findUnique({
     where: { id },
@@ -58,7 +58,7 @@ const findFacultyById = asyncHandler(async (req, res) => {
 
 // Update Fakultas
 const updateFaculty = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
   const { name } = req.body;
 
   const errors = [];
@@ -95,7 +95,7 @@ const updateFaculty = asyncHandler(async (req, res) => {
 
 // Soft Delete Fakultas
 const deleteFaculty = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
 
   const faculty = await prisma.faculty.findUnique({ where: { id } });
 
@@ -117,7 +117,7 @@ const deleteFaculty = asyncHandler(async (req, res) => {
 
 // Toggle Publish Status (Hide/Show)
 const toggleFacultyPublish = asyncHandler(async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
 
   const faculty = await prisma.faculty.findUnique({ where: { id } });
 
@@ -128,12 +128,12 @@ const toggleFacultyPublish = asyncHandler(async (req, res) => {
 
   const updatedFaculty = await prisma.faculty.update({
     where: { id },
-    data: { isPublish: !faculty.isPublish },
+    data: { isActive: !faculty.isActive },
   });
 
   res.json({
     message: `Faculty ${
-      updatedFaculty.isPublish ? "published" : "hidden"
+      updatedFaculty.isActive ? "published" : "hidden"
     } successfully`,
     data: updatedFaculty,
   });

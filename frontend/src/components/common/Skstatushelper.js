@@ -66,6 +66,7 @@ export const determineSkStatus = (permohonan) => {
 
   if (baseStatus === STATUS_SK.SUDAH_TERBIT && permohonan?.expDate) {
     const exp = new Date(permohonan.expDate);
+    exp.setHours(23, 59, 59, 999);
     if (exp < new Date()) return STATUS_SK.EXPIRED;
   }
 
