@@ -124,6 +124,11 @@ router.get(
  *               tak:
  *                 type: integer
  *                 example: 45
+ *               tglSidang:
+ *                 type: string
+ *                 format: date-time
+ *                 example: 2026-08-15T09:30:00.000Z
+ *                 description: Tanggal dan waktu pelaksanaan sidang (format ISO 8601)
  *               judulTugasAkhirIndonesia:
  *                 type: string
  *                 example: Implementasi Sistem Informasi Akademik
@@ -143,6 +148,10 @@ router.get(
  *                 type: string
  *                 description: Masukan nama jurnal/conference pubilkasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional [jika lebih dari satu, pisahkan dengan ENTER]
  *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
+ *               berminatWirausaha:
+ *                 type: boolean
+ *                 example: true
+ *                 description: Pilihan minat berwirausaha mahasiswa
  *               mahasiswaId:
  *                 type: string
  *                 description: Mahasiswa UUID
@@ -200,8 +209,10 @@ router.post(
  *               - id
  *               - program
  *               - tak
+ *               - tglSidang
  *               - judulTugasAkhirIndonesia
  *               - judulTugasAkhirInggris
+ *               - berminatWirausaha
  *               - mahasiswaId
  *             properties:
  *               id:
@@ -213,6 +224,11 @@ router.post(
  *               tak:
  *                 type: integer
  *                 example: 45
+ *               tglSidang:
+ *                 type: string
+ *                 format: date-time
+ *                 example: 2026-08-15T09:30:00.000Z
+ *                 description: Tanggal dan waktu pelaksanaan sidang (format ISO 8601)
  *               judulTugasAkhirIndonesia:
  *                 type: string
  *                 example: Implementasi Sistem Informasi Akademik
@@ -232,6 +248,10 @@ router.post(
  *                 type: string
  *                 description: Masukan nama jurnal/conference pubilkasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional [jika lebih dari satu, pisahkan dengan ENTER]
  *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
+ *               berminatWirausaha:
+ *                 type: boolean
+ *                 example: true
+ *                 description: Pilihan minat berwirausaha mahasiswa
  *               mahasiswaId:
  *                 type: string
  *                 description: Mahasiswa UUID

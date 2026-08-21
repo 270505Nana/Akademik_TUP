@@ -73,10 +73,12 @@ const mapYudisiumRegistrationToFrontend = (item, req) => {
     judulTugasAkhirIndonesia: item.judulTugasAkhirIndonesia,
     judulTugasAkhirInggris: item.judulTugasAkhirInggris,
     tak: item.tak,
+    tglSidang: item.tglSidang,
     skemaSidang: item.skemaSidang,
     pengajuanCumlaude: item.pengajuanCumlaude,
     skemaCumlaude: item.skemaCumlaude,
     evidenCumlaude: item.evidenCumlaude,
+    berminatWirausaha: item.berminatWirausaha,
     dosenPembimbing1Id: item.dosenPembimbing1Id,
     dosenPembimbing2Id: item.dosenPembimbing2Id,
     submittedAt: item.submittedAt,
@@ -251,6 +253,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
   const {
     id,
     tak,
+    tglSidang,
     mahasiswaId,
     dosenWaliId,
     doswalId,
@@ -277,6 +280,7 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
     ? req.body.evidenCumlaude 
     : (req.body.eviden_cumlaude !== undefined ? req.body.eviden_cumlaude : req.body.evidenList);
 
+  const parsedBerminatWirausaha = parseBoolean(req.body.berminatWirausaha);
   const finalDosenWaliId = dosenWaliId !== undefined ? dosenWaliId : doswalId;
 
   const errors = [];
@@ -291,6 +295,10 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
 
   if (!isNil(tak) && isNaN(parseInt(tak))) {
     errors.push({ field: "tak", message: "TAK harus berupa integer" });
+  }
+
+  if (!isNil(tglSidang) && isNaN(new Date(tglSidang).getTime())) {
+    errors.push({ field: "tglSidang", message: "Tanggal sidang tidak valid" });
   }
 
   if (!isNil(judulTugasAkhirIndonesia) && typeof judulTugasAkhirIndonesia !== "string") {
@@ -315,6 +323,10 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
 
   if (!isNil(evidenCumlaude) && typeof evidenCumlaude !== "string") {
     errors.push({ field: "evidenCumlaude", message: "Eviden cumlaude harus berupa string jika diisi" });
+  }
+
+  if (!isNil(req.body.berminatWirausaha) && parsedBerminatWirausaha === undefined) {
+    errors.push({ field: "berminatWirausaha", message: "Minat wirausaha harus berupa boolean" });
   }
 
   if (!isNil(mahasiswaId) && typeof mahasiswaId !== "string") {
@@ -407,12 +419,14 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
   const upsertData = {
     program: program !== undefined ? program : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
+    tglSidang: tglSidang !== undefined ? (tglSidang ? new Date(tglSidang) : null) : undefined,
     judulTugasAkhirIndonesia: judulTugasAkhirIndonesia !== undefined ? judulTugasAkhirIndonesia : undefined,
     judulTugasAkhirInggris: judulTugasAkhirInggris !== undefined ? judulTugasAkhirInggris : undefined,
     skemaSidang: skemaSidang !== undefined ? skemaSidang : undefined,
     pengajuanCumlaude: pengajuanCumlaude !== undefined ? pengajuanCumlaude : undefined,
     skemaCumlaude: skemaCumlaude !== undefined ? skemaCumlaude : undefined,
     evidenCumlaude: evidenCumlaude !== undefined ? evidenCumlaude : undefined,
+    berminatWirausaha: parsedBerminatWirausaha !== undefined ? parsedBerminatWirausaha : undefined,
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenWaliId: finalDosenWaliId !== undefined ? finalDosenWaliId : undefined,
     dosenPembimbing1Id: dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
@@ -503,6 +517,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   const {
     id,
     tak,
+    tglSidang,
     mahasiswaId,
     dosenWaliId,
     doswalId,
@@ -529,6 +544,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     ? req.body.evidenCumlaude 
     : (req.body.eviden_cumlaude !== undefined ? req.body.eviden_cumlaude : req.body.evidenList);
 
+  const parsedBerminatWirausaha = parseBoolean(req.body.berminatWirausaha);
   const finalDosenWaliId = dosenWaliId !== undefined ? dosenWaliId : doswalId;
 
   const errors = [];
@@ -551,6 +567,12 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     errors.push({ field: "tak", message: "TAK harus berupa integer" });
   }
 
+  if (isNil(tglSidang)) {
+    errors.push({ field: "tglSidang", message: "Tanggal sidang wajib diisi" });
+  } else if (isNaN(new Date(tglSidang).getTime())) {
+    errors.push({ field: "tglSidang", message: "Tanggal sidang tidak valid" });
+  }
+
   if (isNil(judulTugasAkhirIndonesia)) {
     errors.push({ field: "judulTugasAkhirIndonesia", message: "Judul TA (Indonesia) wajib diisi" });
   } else if (typeof judulTugasAkhirIndonesia !== "string") {
@@ -561,6 +583,12 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     errors.push({ field: "judulTugasAkhirInggris", message: "Judul TA (Inggris) wajib diisi" });
   } else if (typeof judulTugasAkhirInggris !== "string") {
     errors.push({ field: "judulTugasAkhirInggris", message: "Judul TA (Inggris) harus berupa string" });
+  }
+
+  if (isNil(req.body.berminatWirausaha)) {
+    errors.push({ field: "berminatWirausaha", message: "Minat wirausaha wajib diisi" });
+  } else if (parsedBerminatWirausaha === undefined) {
+    errors.push({ field: "berminatWirausaha", message: "Minat wirausaha harus berupa boolean" });
   }
 
   if (isNil(mahasiswaId)) {
@@ -630,12 +658,14 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   const updateData = {
     program: program !== undefined ? program : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
+    tglSidang: tglSidang ? new Date(tglSidang) : undefined,
     judulTugasAkhirIndonesia: judulTugasAkhirIndonesia !== undefined ? judulTugasAkhirIndonesia : undefined,
     judulTugasAkhirInggris: judulTugasAkhirInggris !== undefined ? judulTugasAkhirInggris : undefined,
     skemaSidang: skemaSidang !== undefined ? skemaSidang : undefined,
     pengajuanCumlaude: pengajuanCumlaude !== undefined ? pengajuanCumlaude : undefined,
     skemaCumlaude: skemaCumlaude !== undefined ? skemaCumlaude : undefined,
     evidenCumlaude: evidenCumlaude !== undefined ? evidenCumlaude : undefined,
+    berminatWirausaha: parsedBerminatWirausaha !== undefined ? parsedBerminatWirausaha : undefined,
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenWaliId: finalDosenWaliId !== undefined ? finalDosenWaliId : undefined,
     dosenPembimbing1Id: dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
@@ -672,6 +702,7 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   const requiredFields = [
     "program",
     "tak",
+    "tglSidang",
     "judulTugasAkhirIndonesia",
     "judulTugasAkhirInggris",
     "mahasiswaId",
