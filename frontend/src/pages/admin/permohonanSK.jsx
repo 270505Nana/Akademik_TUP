@@ -12,18 +12,16 @@ import { determineStatus, unwrapResponse } from '../../components/admin/permohon
 import {
   getAllSktaRequests,
   getSktaResponseByRequestId,
-  getSktaResponseUploadByMahasiswaId,
+  getSktaResponseUploadByStudentId,
   approvePermohonanSK,
   rejectPermohonanSK,
   getStudyPrograms,
-  getStudyProgramById,
   getSKTARequest,
-  getEvidenceUploadsByMahasiswaId,
+  getEvidenceUploadsByStudentId,
 } from '../../service/api';
 import { useAuth } from '../../context/AuthContext';
 import '../../components/admin/css/permohonanSK.css';
 
-/*  Status Badge  */
 const STATUS_CONFIG = {
   'sudah-terbit'    : { label: 'Sudah Terbit',    cls: 'sudah-terbit'    },
   'belum-terbit'    : { label: 'Belum Terbit',    cls: 'belum-terbit'    },
@@ -47,7 +45,6 @@ const PermohonanSK = () => {
   const [filterProdi,        setFilterProdi]        = useState('');
   const [prodiDropdownOpen,  setProdiDropdownOpen]  = useState(false);
   const prodiDropdownRef    = useRef(null);
-  // Sort kolom: field = 'name' | 'prodi' | 'status' | null (null = urutan default/status priority)
   const [sort, setSort]     = useState({ field: null, dir: 'asc' });
   const [filterStatus,       setFilterStatus]       = useState('');
   const [currentPage,        setCurrentPage]        = useState(1);
@@ -60,7 +57,6 @@ const PermohonanSK = () => {
   const [formulirItem,       setFormulirItem]       = useState(null);
   const [alert,              setAlert]              = useState({ show: false, type: '', title: '', message: '' });
 
-  // Debounce search 300ms
   useEffect(() => {
     const timer = setTimeout(() => setSearchDebounced(search.trim().toLowerCase()), 300);
     return () => clearTimeout(timer);
@@ -77,7 +73,6 @@ const PermohonanSK = () => {
       .catch(() => {});
   }, []);
 
-  /* Fetch Requests */
   const fetchRequests = async () => {
     setLoading(true);
     try {
@@ -85,8 +80,6 @@ const PermohonanSK = () => {
       const dataList = res?.data ?? res ?? [];
       const groupByStudent = new Map();
       dataList.forEach(item => {
-        // BE sekarang mengirim `mahasiswaId` (bukan lagi `studentId`).
-        // `student.id` juga selalu sama nilainya, dipakai sebagai fallback kedua.
         const sid = item.studentId ?? item.mahasiswaId ?? item.student?.id ?? item.mahasiswa?.id;
         if (!groupByStudent.has(sid)) groupByStudent.set(sid, []);
         groupByStudent.get(sid).push(item);
@@ -97,14 +90,27 @@ const PermohonanSK = () => {
           const uploadsRaw = await getSktaResponseUploadByStudentId(sid).catch(() => null);
           const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
 
-          const raw = await getSktaResponseByRequestId(item.id).catch(() => null);
-          const sktaResponse = unwrapResponse(raw);
+          const withResponses = await Promise.all(
+            requests.map(async (req) => {
+              const raw = await getSktaResponseByRequestId(req.id).catch(() => null);
+              return { ...req, sktaResponse: unwrapResponse(raw) };
+            })
+          );
 
-          const prodiName = item.student?.studyProgramNama ?? '-';
-          const tanggal = item.createdAt ?? null;
+          const processed = withResponses.filter(r => r.sktaResponse !== null);
+          const chosen    = processed.length > 0
+            ? processed.sort((a, b) => b.id - a.id)[0]   
+            : withResponses.sort((a, b) => b.id - a.id)[0]; 
 
-          // Stamp `studentId` ternormalisasi kembali ke object gabungan supaya
-          // semua pemakaian `item.studentId` di komponen ini tetap berfungsi.
+          const prodiName = chosen.student?.studyProgramNama ?? '-';
+          const tanggal =
+            chosen.sktaRequestUploads?.[0]?.createdAt ??
+            skUploads?.[0]?.createdAt ??
+            chosen.sktaResponse?.createdAt ??
+            chosen.createdAt ??
+            chosen.updatedAt ??
+            null;
+
           return { ...chosen, studentId: sid, skUploads, prodiName, tanggal };
         })
       );
@@ -124,10 +130,6 @@ const PermohonanSK = () => {
 
   const getStatus = r => determineStatus(r.sktaResponse, r.skUploads, r);
 
-  // Urutan prioritas status berkas (ASC).
-  // TODO (menunggu perubahan response BE): saat status "Revisi Diperbaharui" sudah tersedia,
-  // urutan ASC yang diminta = Dalam Proses -> Belum Terbit -> Revisi Diperbaharui -> Sudah Terbit.
-  // Untuk sementara "Mengirim Revisi" diletakkan setelah "Belum Terbit" sampai status barunya siap.
   const STATUS_SORT_PRIORITY = {
     'dalam-proses'   : 1,
     'belum-terbit'   : 2,
@@ -137,9 +139,9 @@ const PermohonanSK = () => {
 
   const handleSort = (field) => {
     setSort(prev => {
-      if (prev.field !== field) return { field, dir: 'asc' };   // kolom baru → mulai ASC
-      if (prev.dir === 'asc')   return { field, dir: 'desc' };  // klik ke-2 → DESC
-      return { field: null, dir: 'asc' };                        // klik ke-3 → netral (kembali ke urutan default)
+      if (prev.field !== field) return { field, dir: 'asc' };   
+      if (prev.dir === 'asc')   return { field, dir: 'desc' };  
+      return { field: null, dir: 'asc' };                        
     });
   };
 
@@ -171,7 +173,6 @@ const PermohonanSK = () => {
           const pb = STATUS_SORT_PRIORITY[getStatus(b)] || 99;
           return sort.dir === 'asc' ? pa - pb : pb - pa;
         }
-        // Default: urutan prioritas status (tanpa klik header)
         const order = { 'mengirim-revisi': 1, 'dalam-proses': 2, 'belum-terbit': 3, 'sudah-terbit': 4 };
         return (order[getStatus(a)] || 99) - (order[getStatus(b)] || 99);
       })
@@ -182,7 +183,6 @@ const PermohonanSK = () => {
 
   useEffect(() => setCurrentPage(1), [searchDebounced, filterProdi, filterStatus]);
 
-  //  Tutup dropdown prodi saat klik di luar 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (prodiDropdownRef.current && !prodiDropdownRef.current.contains(e.target)) {
@@ -193,15 +193,13 @@ const PermohonanSK = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  //  PREVIEW EVIDENCE LENGKAP 
   const handlePreviewEvidence = async (item) => {
     const studentId = item.studentId ?? item.mahasiswaId ?? item.student?.id;
     if (!studentId) return showAlert('error', 'Error', 'Student ID tidak ditemukan');
 
     try {
-      // Ambil data lengkap pengajuan SK
-      const sktaRequest = await getSKTARequest(mahasiswaId);
-      const evidenceUploads = await getEvidenceUploadsByMahasiswaId(mahasiswaId);
+      const sktaRequest = await getSKTARequest(studentId);
+      const evidenceUploads = await getEvidenceUploadsByStudentId(studentId);
 
       setEvidenceItem({
         ...item,
@@ -214,8 +212,6 @@ const PermohonanSK = () => {
       showAlert('error', 'Gagal Membuka Evidence', 'Tidak dapat memuat data evidence');
     }
   };
-
-  // handleDownloadSK dipindah ke VerifikasiModal
 
   const handleOpenVerifikasi = async (item) => {
     setSelectedVerifikasi(item);
@@ -511,7 +507,6 @@ const PermohonanSK = () => {
       </AnimatePresence>
 
       <style>{`
-        /* ── Layout root: sidebar + konten tidak terpotong meski di-zoom ── */
         .sk-page-root {
           display: flex;
           min-height: 100vh;
@@ -519,12 +514,12 @@ const PermohonanSK = () => {
         }
         .sk-main-content {
           flex: 1;
-          min-width: 0;          /* kunci: cegah flex child overflow */
+          min-width: 0;          
           overflow-x: hidden;
           display: flex;
           flex-direction: column;
         }
-        /* #sidebar (sidebar.css) lebarnya 240px via --sidebar-width, fixed position — main content wajib punya margin-left senilai itu supaya tidak ketutup sidebar */
+       
         #sidebar ~ .sk-main-content,
         .sk-main-content {
           margin-left: 240px;
@@ -534,7 +529,6 @@ const PermohonanSK = () => {
         @media (max-width: 991.98px) {
           .sk-main-content { margin-left: 0 !important; }
         }
-        /* page-wrapper ikut flex stretch */
         .sk-main-content .page-wrapper {
           flex: 1;
           min-width: 0;
@@ -542,25 +536,16 @@ const PermohonanSK = () => {
           margin-left: 0 !important;  /* override aturperiode.css margin-left var */
         }
 
-        /* ── Tempelkan konten ke bagian atas page-wrapper — hilangkan padding/margin bawaan layout global, TANPA menyentuh margin-left sk-main-content di atas ── */
+        
         .sk-main-content .page-wrapper,
         .sk-main-content .top-bar-red {
           margin-top: 0 !important;
           padding-top: 0 !important;
         }
 
-        /* ── Action buttons: selalu sama lebar ── */
+      /* ── Action buttons: selalu sama lebar ── */
         .action-buttons { vertical-align: middle; }
 
-        /* ══════════════════════════════════════════════════════════
-           RESPONSIVE FULL-WIDTH
-           Beberapa boilerplate Vite/React memberi #root max-width +
-           margin:auto (agar konten default ke-center). Itu bikin
-           halaman "berhenti" di lebar tertentu dan sisa ruang di
-           kanan jadi kosong saat browser di-zoom out / layar lebar.
-           Paksa semua wrapper di jalur ini full width supaya topbar
-           merah & konten selalu mengisi sisa ruang di samping sidebar.
-           ══════════════════════════════════════════════════════════ */
         html, body, #root {
           width: 100% !important;
           max-width: none !important;
@@ -584,16 +569,9 @@ const PermohonanSK = () => {
           overflow: visible !important;
         }
 
-        /* ══════════════════════════════════════════════════════════
-           TOOLBAR ROW: status tabs + dropdown prodi tidak boleh
-           terpisah ke baris baru — biarkan wrap bareng tab terakhir
-           ══════════════════════════════════════════════════════════ */
         .sk-status-tabs { align-items: center; overflow: visible; }
         .sk-prodi-dropdown-panel { max-width: min(240px, calc(100vw - 32px)); }
 
-        /* ══════════════════════════════════════════════════════════
-           CUSTOM DROPDOWN PRODI — selalu buka ke bawah, styling rapi
-           ══════════════════════════════════════════════════════════ */
         .sk-prodi-dropdown {
           position: relative;
           flex-shrink: 0;
