@@ -16,6 +16,15 @@ const sanitizeFilename = (value) =>
     .replace(/[\\/:*?"<>|]/g, "-")
     .replace(/\s+/g, " ");
 
+const generateCodeFromName = (text) => {
+  return text
+  .toString()
+  .toLowerCase()
+  .trim()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)+/g, '');
+}
+
 const buildDownloadUrl = (req, code) => {
   if (!code) return null; 
   return `${req.protocol}://${req.get("host")}/api/templates/download/${code}`;
@@ -62,12 +71,11 @@ const listTemplateUploads = asyncHandler(async (req, res) => {
 // Create template upload
 const createTemplateUpload = asyncHandler(async (req, res) => {
   try {
-    const { name, code, category, isPublish } = req.body;
+    const { name, category, isPublish } = req.body;
     const file = req.file;
 
     const errors = [];
     if (isNil(name)) errors.push({ field: 'name', message: 'name wajib diisi' });
-    if (isNil(code)) errors.push({ field: 'code', message: 'code wajib diisi' });
     if (isNil(category)) errors.push({ field: 'category', message: 'category wajib diisi' });
     if (!file) {
       errors.push({ field: 'templateFile', message: 'templateFile wajib diunggah' });
@@ -75,21 +83,24 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
       errors.push({ field: 'templateFile', message: 'Tipe file tidak valid' });
     }
 
-    if (code) {
-      const codeExists = await prisma.dokumenPersyaratanBerkas.findUnique({
-        where: { code },
-      });
-      if (codeExists) {
-        errors.push({ field: 'code', message: 'code sudah digunakan' });
-      }
-    }
-
     if (errors.length > 0) return sendValidationError(res, errors, req);
+
+    const autoCode = generateCodeFromName(name);
+    const codeExists = await prisma.dokumenPersyaratanBerkas.findUnique({
+      where: {code: autoCode},
+    });
+
+    if (codeExists) {
+      if (file?.path) {
+        fs.unlink(file.path, () => {});
+      }
+      return sendValidationError(res, [{ field: 'name', message: 'nama dokumen sudah digunakan di dokumen lain' }], req);
+    }
 
     const createdTemplateUpload = await prisma.dokumenPersyaratanBerkas.create({
       data: {
         name,
-        code,
+        code: autoCode,
         category,
         isPublish: isPublish === 'true' || isPublish === true,
         filepath: file.path,
@@ -129,7 +140,7 @@ const findTemplateUploadByCode = asyncHandler(async (req, res) => {
 const updateTemplateUpload = asyncHandler(async (req, res) => {
   try {
     const id = req.params.id;
-    const { name, code, category, isPublish } = req.body;
+    const { name, category, isPublish } = req.body;
     const file = req.file;
 
     const errors = [];
@@ -151,24 +162,25 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
       throw new Error("Unggahan template tidak ditemukan");
     }
 
-    if (code && code !== templateUpload.code) {
+    let updatedCode = templateUpload.code;
+    if (name && name !== templateUpload.name) {
+      updatedCode = generateCodeFromName(name);
+
       const codeExists = await prisma.dokumenPersyaratanBerkas.findUnique({
-        where: { code },
+        where: { code: updatedCode },
       });
       if (codeExists) {
         if (file?.path) {
           fs.unlink(file.path, () => {});
         }
-        errors.push({ field: 'code', message: 'code sudah digunakan' });
-        return sendValidationError(res, errors, req);
+          return sendValidationError(res, [{ field: 'name', message: 'nama dokumen baru sudah digunakan di dokumen lain' }], req);
       }
     }
-
     const updatedTemplateUpload = await prisma.dokumenPersyaratanBerkas.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
-        ...(code !== undefined && { code }),
+        code: updatedCode,
         ...(category !== undefined && { category }),
         ...(isPublish !== undefined && { isPublish: isPublish === 'true' || isPublish === true }),
         ...(file ? { filepath: file.path }

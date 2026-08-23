@@ -65,16 +65,12 @@ router.get("/", verifyToken, listTemplateUploads);
  *             type: object
  *             required:
  *               - name
- *               - code
  *               - category
  *               - templateFile
  *             properties:
  *               name:
  *                 type: string
  *                 example: Template Surat TA
- *               code:
- *                 type: string
- *                 example: evidence-dosen-pembimbing
  *               category:
  *                 type: string
  *                 example: Kategori dokumen (Yudisium, Sidang, dll)
@@ -194,9 +190,6 @@ router.get("/preview/:code", previewTemplateUpload);
  *               name:
  *                 type: string
  *                 example: Template Surat TA Revisi
- *               code:
- *                 type: string
- *                 example: evidence-dosen-pembimbing
  *               category:
  *                 type: string
  *                 example: Yudisium
