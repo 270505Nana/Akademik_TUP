@@ -1,24 +1,28 @@
-/* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import yudisiumReducer, { initialState } from '../hooks/useYudisiumReducer';
+import React, { useReducer, useEffect } from 'react';
+import { initialFormState, formReducer } from '../hooks/useYudisiumReducer';
 
-const YudisiumFormContext = createContext();
+const YudisiumFormContext = React.createContext();
 
 export function YudisiumFormProvider({ children }) {
-  const [state, dispatch] = useReducer(yudisiumReducer, initialState);
+  const [state, dispatch] = useReducer(formReducer, initialFormState);
 
+  // Load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('yudisium_form_draft');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      // yg di restore cuman datanta, bukan step terakhir
-      dispatch({ type: 'UPDATE_DATA', payload: parsed.data });
+      try {
+        const parsed = JSON.parse(saved);
+        dispatch({ type: 'RESTORE_DRAFT', payload: parsed });
+      } catch (e) {
+        console.error("Failed to parse draft", e);
+      }
     }
   }, []);
 
+  // Save to localStorage 
   useEffect(() => {
-    localStorage.setItem('yudisium_form_draft', JSON.stringify({ data: state.data }));
-  }, [state.data]);
+    localStorage.setItem('yudisium_form_draft', JSON.stringify(state));
+  }, [state]);
 
   return (
     <YudisiumFormContext.Provider value={{ state, dispatch }}>
@@ -27,10 +31,10 @@ export function YudisiumFormProvider({ children }) {
   );
 }
 
-export function useYudisiumForm() {
-  const context = useContext(YudisiumFormContext);
+export function useYudisiumContext() {
+  const context = React.useContext(YudisiumFormContext);
   if (!context) {
-    throw new Error('useYudisiumForm must be used within a YudisiumFormProvider');
+    throw new Error('useYudisiumContext must be used within a YudisiumFormProvider');
   }
   return context;
 }

@@ -24,6 +24,7 @@ import UploadSKL           from "./pages/admin/skltranskrip";
 import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";             
 import ProtectedRoute      from "./components/common/protectedRoute";
 import PendaftaranSidang   from "./pages/mahasiswa/pendaftaransidang";
+import PendaftaranYudisium from "./pages/mahasiswa/pendaftaranyudisium";
 import KelolaDataDosen      from "./pages/admin/keloladatadosen";
 
 const Placeholder = ({ title }) => (
@@ -84,7 +85,7 @@ const App = () => {
             path="/mahasiswa/pendaftaran-yudisium"
             element={
               <ProtectedRoute allowedRoles={["MAHASISWA"]} requireCompleteProfile={true}>
-                <Placeholder title="Pendaftaran Yudisium" />
+                <PendaftaranYudisium />
               </ProtectedRoute>
             }
           />
