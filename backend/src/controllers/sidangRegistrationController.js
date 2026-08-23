@@ -411,16 +411,17 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     }
   }
 
+  // Map req.body field names → Prisma model field names (source of truth: schema.prisma)
   const upsertData = {
-    programType: programType !== undefined ? programType : undefined,
-    sidangScheme: sidangScheme !== undefined ? sidangScheme : undefined,
+    program: programType !== undefined ? programType : undefined,               // Prisma: program
+    skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined,         // Prisma: skemaSidang
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
-    thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
-    thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
+    judulTugasAkhirIndonesia: thesisTitleId !== undefined ? thesisTitleId : undefined, // Prisma: judulTugasAkhirIndonesia
+    judulTugasAkhirInggris: thesisTitleEn !== undefined ? thesisTitleEn : undefined,   // Prisma: judulTugasAkhirInggris
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined
@@ -622,17 +623,17 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     throw new Error(editCheck.reason);
   }
 
-  // Update field sebelum validasi (supaya merge)
+  // Update field sebelum validasi (supaya merge) — gunakan nama field Prisma sebagai key
   const updateData = {
-    programType: programType !== undefined ? programType : undefined,
-    sidangScheme: sidangScheme !== undefined ? sidangScheme : undefined,
+    program: programType !== undefined ? programType : undefined,               // Prisma: program
+    skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined,         // Prisma: skemaSidang
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
-    thesisTitleId: thesisTitleId !== undefined ? thesisTitleId : undefined,
-    thesisTitleEn: thesisTitleEn !== undefined ? thesisTitleEn : undefined,
+    judulTugasAkhirIndonesia: thesisTitleId !== undefined ? thesisTitleId : undefined, // Prisma: judulTugasAkhirIndonesia
+    judulTugasAkhirInggris: thesisTitleEn !== undefined ? thesisTitleEn : undefined,   // Prisma: judulTugasAkhirInggris
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined
@@ -668,15 +669,15 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
 
   const mergedData = { ...existingRegistration, ...updateData };
 
-  // 1. Validasi Field Required
+  // 1. Validasi Field Required — pakai nama field Prisma agar cocok saat merge dengan existingRegistration
   const requiredFields = [
-    "programType",
+    "program",
     "sks",
     "ipk",
     "tak",
     "sktaExpDate",
-    "thesisTitleId",
-    "thesisTitleEn",
+    "judulTugasAkhirIndonesia",
+    "judulTugasAkhirInggris",
     "mahasiswaId",
     "dosenPembimbing1Id",
     "dosenPembimbing2Id",
