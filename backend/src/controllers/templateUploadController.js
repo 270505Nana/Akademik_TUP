@@ -8,6 +8,8 @@ const allowedMimeTypes = [
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/zip",
+  "application/x-zip-compressed",
 ];
 
 const sanitizeFilename = (value) =>
@@ -273,6 +275,8 @@ const previewTemplateUpload = asyncHandler(async (req, res) => {
     contentType = "application/msword";
   } else if (ext === ".docx") {
     contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }else if (ext === ".zip") {
+    contentType = "application/zip";
   }
 
   const displayName = `${sanitizeFilename(template.name)}${ext}`;
