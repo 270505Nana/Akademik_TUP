@@ -11,7 +11,6 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
   const [isServerChecking, setIsServerChecking] = useState(false);
   const [serverCheckDone, setServerCheckDone] = useState(false);
 
-  // Auto logout jika token expired / invalid
   useEffect(() => {
     if (!isAuthenticated && user) {
       logout();
@@ -32,7 +31,9 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
         setIsServerChecking(true);
         fetchAndLoadStudent(user.id).finally(() => {
           setIsServerChecking(false);
-          setServerCheckDone(true);
+          setTimeout(() => {
+            setServerCheckDone(true);
+          }, 150);
         });
       }, 0);
     }
@@ -43,7 +44,6 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
     }
   }, [isStudentLoading, isComplete, isAuthenticated, user?.id, requireCompleteProfile, fetchAndLoadStudent, serverCheckDone, isServerChecking]);
 
-  // Jika belum login
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
@@ -60,7 +60,6 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
     return <LoadingScreen />;
   }
 
-  // Redirect mahasiswa yang belum lengkapi data
   if (
     user.role === "MAHASISWA" &&
     requireCompleteProfile &&
@@ -69,6 +68,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireCompleteProfile = false
   ) {
     return <Navigate to="/lengkapi-data" replace />;
   }
+  
   return children;
 };
 

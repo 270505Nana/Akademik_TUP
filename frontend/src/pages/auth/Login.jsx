@@ -32,15 +32,14 @@ const LoginPage = () => {
   const [ssoUsername, setSsoUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [alert, setAlert] = useState(null); // { type, msg }
+  const [alert, setAlert] = useState(null); 
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const { login, user, isAuthenticated } = useAuth();
   const { fetchAndLoadStudent } = useStudent();
   const navigate = useNavigate();
 
-  // ── Deteksi session expired dari URL (?expired=true) ──────────────────────
-  // Pakai ref agar hanya diproses SEKALI saat mount, tidak terulang saat re-render
   const expiredHandled = useRef(false);
 
   useEffect(() => {
@@ -48,7 +47,6 @@ const LoginPage = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("expired") === "true") {
       expiredHandled.current = true;
-      // Bersihkan URL dulu SEBELUM set state agar tidak terbaca ulang
       window.history.replaceState({}, "", "/login");
       setAlert({
         type: "warning",
@@ -56,15 +54,16 @@ const LoginPage = () => {
       });
     }
   }, []);
-
-  if (isAuthenticated && user) {
-    const roleMap = {
-      MAHASISWA: "/mahasiswa/dashboard",
-      DOSEN: "/dosen/dashboard",
-      ADMIN: "/akademik/dashboard",
-    };
-    return <Navigate to={roleMap[user.role] || "/login"} replace />;
-  }
+  useEffect(() => {
+    if (isAuthenticated && user && !isLoading && !isSuccess) {
+      const roleMap = {
+        MAHASISWA: "/mahasiswa/dashboard",
+        DOSEN: "/dosen/dashboard",
+        ADMIN: "/akademik/dashboard",
+      };
+      navigate(roleMap[user.role] || "/login", { replace: true });
+    }
+  }, [isAuthenticated, user, isLoading, isSuccess, navigate]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -75,8 +74,6 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Pastikan alert expired tidak ikut muncul saat submit
     setAlert(null);
 
     if (!ssoUsername.trim()) {
@@ -91,7 +88,6 @@ const LoginPage = () => {
     setIsLoading(true);
     try {
       const data = await loginUser({ email: ssoUsername, password });
-
       const role = data.data?.role?.toUpperCase()?.trim();
 
       const allowedRolesForTab = TAB_ALLOWED_ROLES[activeTab];
@@ -121,6 +117,7 @@ const LoginPage = () => {
           ADMIN: "/akademik/dashboard",
         }[role] || "/login";
 
+      setIsSuccess(true);
       setAlert({
         type: "success",
         msg: "Login berhasil! Mengarahkan ke dashboard...",
@@ -130,16 +127,9 @@ const LoginPage = () => {
       const backendMsg = err.response?.data?.message?.toLowerCase() || "";
 
       let errMsg = "Login gagal. Periksa email dan password kamu.";
-      if (
-        backendMsg.includes("tidak ditemukan") ||
-        backendMsg.includes("not found")
-      ) {
+      if (backendMsg.includes("tidak ditemukan") || backendMsg.includes("not found")) {
         errMsg = "Akun dengan email ini tidak terdaftar.";
-      } else if (
-        backendMsg.includes("password") ||
-        backendMsg.includes("salah") ||
-        backendMsg.includes("invalid")
-      ) {
+      } else if (backendMsg.includes("password") || backendMsg.includes("salah") || backendMsg.includes("invalid")) {
         errMsg = "Email atau password yang kamu masukkan salah.";
       } else if (backendMsg.includes("belum diverifikasi")) {
         errMsg = "Akun kamu belum diverifikasi. Silakan hubungi admin.";
@@ -178,7 +168,6 @@ const LoginPage = () => {
         <div className="blob blob-bottom-left" />
 
         <div className="form-card">
-          {/* Navigasi kembali ke Portal Informasi dari halaman Login */}
           <Link to="/" className="back-to-portal">
             <BsArrowLeft />
             Kembali ke Portal Informasi
@@ -228,7 +217,6 @@ const LoginPage = () => {
                   value={ssoUsername}
                   onChange={(e) => {
                     setSsoUsername(e.target.value);
-                    // Alert (termasuk session-expired) hilang saat user mulai ketik email
                     if (alert) setAlert(null);
                   }}
                   autoComplete="email"

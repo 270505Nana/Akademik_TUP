@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState } from "react";
 import {
   getStudentData,
@@ -22,6 +21,7 @@ export const StudentProvider = ({ children }) => {
     }
     return null;
   });
+
   const [isComplete, setIsComplete] = useState(() => {
     const savedData = localStorage.getItem("student_data");
     if (savedData) {
@@ -34,8 +34,9 @@ export const StudentProvider = ({ children }) => {
     }
     return false;
   });
+
   const [isStudentLoading, setIsStudentLoading] = useState(false);
-  const [sktaRequestId, setSktaRequestId] = useState(null); //save sktarequestid
+  const [sktaRequestId, setSktaRequestId] = useState(null); 
 
   const updateStudent = (data) => {
     setStudent(data);
@@ -43,17 +44,16 @@ export const StudentProvider = ({ children }) => {
     localStorage.setItem("student_data", JSON.stringify(data));
   };
 
-  //  Simpan sktaRequestId setelah POST /api/skta-requests
-  // Dipakai untuk GET /api/skta-responses/{sktaRequestId}
   const updateSktaRequestId = (id) => {
     setSktaRequestId(id);
   };
 
   // Fetch data student dari server
   const fetchAndLoadStudent = async (userId) => {
+    setIsStudentLoading(true); 
     try {
       const [
-        { data: studentData },
+        studentResponse,
         rawLecturers,
         rawStudyPrograms,
         rawFaculties,
@@ -64,7 +64,13 @@ export const StudentProvider = ({ children }) => {
         getFaculties(),
       ]);
 
-      if (!studentData?.nim) return false;
+     
+      const studentData = studentResponse?.data ?? studentResponse;
+
+      if (!studentData || !studentData?.nim) {
+        setIsStudentLoading(false);
+        return false;
+      }
 
       const matchedProdi = rawStudyPrograms.find(
         (p) => String(p.id) === String(studentData.studyProgramId),
@@ -96,6 +102,7 @@ export const StudentProvider = ({ children }) => {
       };
 
       updateStudent(mapped);
+      setIsStudentLoading(false); 
       return true;
     } catch (err) {
       if (err.response?.status === 404) {
@@ -105,6 +112,7 @@ export const StudentProvider = ({ children }) => {
       } else {
         console.error("Gagal fetch data student dari server:", err);
       }
+      setIsStudentLoading(false); 
       return false;
     }
   };
