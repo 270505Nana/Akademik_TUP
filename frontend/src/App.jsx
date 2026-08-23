@@ -3,28 +3,29 @@ import { StudentProvider } from "./context/StudentContext";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import LandingPage         from "./pages/landing/LandingPage";
-import PusatInformasiTA    from "./pages/landing/PusatInformasiTA";
-import LoginPage           from "./pages/auth/Login";
-import RegisterPage        from "./pages/auth/Register";
-import LengkapiData        from "./pages/mahasiswa/lengkapidata";
-import DashboardMahasiswa  from "./pages/mahasiswa/Dashboard";
-import DashboardAkademik   from "./pages/admin/dashboard";
-import DashboardDosen      from "./pages/dosen/dashboard";
-import JadwalNilaiSidang   from "./pages/dosen/JadwalNilaiSidang";
-import InputNilaiSidang    from "./pages/dosen/InputNilaiSidang";
-import MahasiswaBimbingan  from "./pages/dosen/MahasiswaBimbingan";
-import RegistrasiTATUP     from "./pages/dosen/RegistrasiTATUP";
-import PengajuanSK         from "./pages/mahasiswa/pengajuanSK";
-import PermohonanSK        from "./pages/admin/permohonanSK";
-import AturPeriodeSidang   from "./pages/admin/aturperiodesidang";
+import LandingPage from "./pages/landing/LandingPage";
+import PusatInformasiTA from "./pages/landing/PusatInformasiTA";
+import LoginPage from "./pages/auth/Login";
+import RegisterPage from "./pages/auth/Register";
+import LengkapiData from "./pages/mahasiswa/lengkapidata";
+import DashboardMahasiswa from "./pages/mahasiswa/Dashboard";
+import DashboardAkademik from "./pages/admin/dashboard";
+import DashboardDosen from "./pages/dosen/dashboard";
+import JadwalNilaiSidang from "./pages/dosen/JadwalNilaiSidang";
+import InputNilaiSidang from "./pages/dosen/InputNilaiSidang";
+import MahasiswaBimbingan from "./pages/dosen/MahasiswaBimbingan";
+import RegistrasiTATUP from "./pages/dosen/RegistrasiTATUP";
+import PenjadwalanSidang from "./pages/dosen/PenjadwalanSidang";
+import PengajuanSK from "./pages/mahasiswa/pengajuanSK";
+import PermohonanSK from "./pages/admin/permohonanSK";
+import AturPeriodeSidang from "./pages/admin/aturperiodesidang";
 import AturPeriodeYudisium from "./pages/admin/aturperiodeyudisium";
-import AturBerkas          from "./pages/admin/requirementdocs";
-import UploadSKL           from "./pages/admin/skltranskrip";             
-import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";             
-import ProtectedRoute      from "./components/common/protectedRoute";
-import PendaftaranSidang   from "./pages/mahasiswa/pendaftaransidang";
-import KelolaDataDosen      from "./pages/admin/keloladatadosen";
+import AturBerkas from "./pages/admin/requirementdocs";
+import UploadSKL from "./pages/admin/skltranskrip";
+import RegistrasiSidang from "./pages/admin/RegistrasiSidang";
+import ProtectedRoute from "./components/common/protectedRoute";
+import PendaftaranSidang from "./pages/mahasiswa/pendaftaransidang";
+import KelolaDataDosen from "./pages/admin/keloladatadosen";
 
 const Placeholder = ({ title }) => (
   <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -40,7 +41,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/pusat-informasi" element={<PusatInformasiTA />} />
-          <Route path="/login"    element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
           {/* Lengkapi Data */}
@@ -102,7 +103,7 @@ const App = () => {
           <Route
             path="/dosen/jadwal-nilai-sidang"
             element={
-              <ProtectedRoute allowedRoles={["LECTURER"]}>
+              <ProtectedRoute allowedRoles={["DOSEN"]}>
                 <JadwalNilaiSidang />
               </ProtectedRoute>
             }
@@ -111,7 +112,7 @@ const App = () => {
           <Route
             path="/dosen/input-nilai/:id"
             element={
-              <ProtectedRoute allowedRoles={["LECTURER"]}>
+              <ProtectedRoute allowedRoles={["DOSEN"]}>
                 <InputNilaiSidang />
               </ProtectedRoute>
             }
@@ -120,7 +121,7 @@ const App = () => {
           <Route
             path="/dosen/mahasiswa-bimbingan"
             element={
-              <ProtectedRoute allowedRoles={["LECTURER"]}>
+              <ProtectedRoute allowedRoles={["DOSEN"]}>
                 <MahasiswaBimbingan />
               </ProtectedRoute>
             }
@@ -129,8 +130,17 @@ const App = () => {
           <Route
             path="/dosen/registrasi-ta-tup"
             element={
-              <ProtectedRoute allowedRoles={["LECTURER"]}>
+              <ProtectedRoute allowedRoles={["DOSEN"]}>
                 <RegistrasiTATUP />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dosen/penjadwalan-sidang"
+            element={
+              <ProtectedRoute allowedRoles={["DOSEN"]}>
+                <PenjadwalanSidang />
               </ProtectedRoute>
             }
           />
@@ -159,7 +169,7 @@ const App = () => {
                 <AturPeriodeYudisium />
               </ProtectedRoute>
             }
-          />          
+          />
           <Route
             path="/akademik/permohonan-sk"
             element={

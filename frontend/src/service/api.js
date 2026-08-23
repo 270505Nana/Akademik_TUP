@@ -395,6 +395,16 @@ export const upsertSidangRegistrationResponse = async (payload, existingId) => {
   return createSidangRegistrationResponse(payload.sidangRegistrationId, payload); // Disesuaikan
 };
 
+export const approveSidangRegistration = async (registrationId, payload) => {
+  const response = await api.post(`/api/sidang-registrations/${registrationId}/approve`, payload);
+  return response.data?.data ?? response.data;
+};
+
+export const rejectSidangRegistration = async (registrationId, payload) => {
+  const response = await api.post(`/api/sidang-registrations/${registrationId}/reject`, payload);
+  return response.data?.data ?? response.data;
+};
+
 // ------------------------------------------- ETC -------------------------------------------
 export const getLecturers = async () => api.get("/api/dosen").then((r) => r.data?.data ?? r.data);
 export const getFaculties = async () => api.get("/api/faculties").then((r) => r.data?.data ?? r.data);

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Check,
   UploadCloud,
@@ -15,6 +15,11 @@ import {
   uploadSidangRegistrationFile,
   downloadSidangRegistrationUpload,
 } from "../../../service/api";
+import {
+  fetchTemplatePreviewBlob,
+  triggerTemplateDownload,
+} from "../../../service/sidangTemplateHandler";
+import FilePreviewModal from "./FilePreviewModal";
 
 const DocUploadPanel = ({
   sectionTitle,
@@ -31,6 +36,71 @@ const DocUploadPanel = ({
   viewingFileId,
 }) => {
   const activeDoc = documents.find((d) => d.id === activeDocId) || documents[0];
+
+  // State untuk alur preview template via modal in-page
+  const [templateState, setTemplateState] = useState({
+    isFetching: false,
+    isDownloading: false,
+    previewedDocId: null,
+    error: null,
+  });
+  // Blob URL & judul untuk modal preview template
+  const [templateModal, setTemplateModal] = useState({ blobUrl: null, title: "" });
+
+  // Reset state template saat user berpindah ke dokumen lain
+  useEffect(() => {
+    if (templateState.previewedDocId && templateState.previewedDocId !== activeDoc?.id) {
+      setTemplateState({ isFetching: false, isDownloading: false, previewedDocId: null, error: null });
+    }
+  }, [activeDoc?.id]);
+
+  const handleCloseTemplateModal = () => {
+    // Revoke segera saat modal ditutup — tidak perlu tunggu timeout
+    if (templateModal.blobUrl) URL.revokeObjectURL(templateModal.blobUrl);
+    setTemplateModal({ blobUrl: null, title: "" });
+  };
+
+  const handlePreviewTemplate = async () => {
+    if (!activeDoc?.slug) {
+      setTemplateState((prev) => ({ ...prev, error: "Template untuk dokumen ini belum tersedia." }));
+      return;
+    }
+    setTemplateState((prev) => ({ ...prev, isFetching: true, error: null }));
+    try {
+      const { blob, name } = await fetchTemplatePreviewBlob(activeDoc.slug);
+      const blobUrl = URL.createObjectURL(blob);
+      // Tampilkan di modal — revoke dilakukan di handleCloseTemplateModal
+      setTemplateModal({ blobUrl, title: name || activeDoc.name });
+      setTemplateState({ isFetching: false, isDownloading: false, previewedDocId: activeDoc.id, error: null });
+    } catch (err) {
+      const isNotFound = err?.response?.status === 404;
+      setTemplateState((prev) => ({
+        ...prev,
+        isFetching: false,
+        error: isNotFound
+          ? "Template untuk dokumen ini belum diunggah oleh admin."
+          : "Gagal memuat template. Silakan coba lagi.",
+      }));
+    }
+  };
+
+  // Trigger unduh final — re-fetch via downloadUrl endpoint
+  const handleDownloadTemplate = async () => {
+    if (!activeDoc?.slug || templateState.isDownloading) return;
+    setTemplateState((prev) => ({ ...prev, isDownloading: true, error: null }));
+    try {
+      await triggerTemplateDownload(activeDoc.slug);
+    } catch (err) {
+      setTemplateState((prev) => ({
+        ...prev,
+        error: "Gagal mengunduh template. Silakan coba lagi.",
+      }));
+    } finally {
+      setTemplateState((prev) => ({ ...prev, isDownloading: false }));
+    }
+  };
+
+  const isPreviewReady = templateState.previewedDocId === activeDoc?.id;
 
   return (
     <div className="doc-section-container" style={{ marginBottom: "4rem" }}>
@@ -100,10 +170,11 @@ const DocUploadPanel = ({
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center",
+                alignItems: "flex-start",
+                gap: "1rem",
               }}
             >
-              <div>
+              <div style={{ flex: 1 }}>
                 <h4 style={{ fontWeight: 700, marginBottom: "0.5rem" }}>
                   Download Template
                 </h4>
@@ -112,11 +183,23 @@ const DocUploadPanel = ({
                   <br />
                   Silahkan unduh dan isi template di samping ini.
                 </p>
+                {templateState.error && (
+                  <p style={{ fontSize: "0.8rem", color: "#DC2626", marginTop: "0.5rem", fontWeight: 600 }}>
+                    {templateState.error}
+                  </p>
+                )}
               </div>
-              <button className="download-btn">
-                <Download size={16} />
-                <span>Download Template Disini</span>
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem", flexShrink: 0 }}>
+                {/* Tombol preview — fetch blob dan buka di tab baru */}
+                <button
+                  className="download-btn"
+                  onClick={handlePreviewTemplate}
+                  disabled={templateState.isFetching}
+                >
+                  <Download size={16} />
+                  <span>{templateState.isFetching ? "Memuat..." : "Download Template Disini"}</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -365,6 +448,14 @@ const DocUploadPanel = ({
           </div>
         </div>
       </div>
+      {/* Modal preview template — revoke URL dilakukan saat close, bukan setTimeout */}
+      <FilePreviewModal
+        blobUrl={templateModal.blobUrl}
+        title={templateModal.title}
+        onClose={handleCloseTemplateModal}
+        onDownload={isPreviewReady ? handleDownloadTemplate : null}
+        isDownloading={templateState.isDownloading}
+      />
     </div>
   );
 };
@@ -377,6 +468,14 @@ export default function Step2({ registrationId }) {
   const fileMapRef = useRef({});
   const [isUploading, setIsUploading] = useState(false);
   const [viewingFileId, setViewingFileId] = useState(null);
+  // State modal preview untuk berkas yang sudah diupload mahasiswa
+  const [fileModal, setFileModal] = useState({ blobUrl: null, title: "" });
+
+  const handleCloseFileModal = () => {
+    // Revoke segera saat modal ditutup
+    if (fileModal.blobUrl) URL.revokeObjectURL(fileModal.blobUrl);
+    setFileModal({ blobUrl: null, title: "" });
+  };
 
   // Filter documents by section
   const getSectionDocs = (section) =>
@@ -474,15 +573,14 @@ export default function Step2({ registrationId }) {
     dispatch({ type: "SET_ACTIVE_DOC", section, value: docId });
   };
 
-  // via axios (interceptor otomatis nyisipin token)
+  // Fetch blob dan tampilkan di modal — revoke saat modal ditutup via handleCloseFileModal
   const handleViewFile = async (doc) => {
     if (!doc.uploadId) return;
     setViewingFileId(doc.id);
     try {
       const blob = await downloadSidangRegistrationUpload(doc.uploadId);
       const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank", "noopener,noreferrer");
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+      setFileModal({ blobUrl, title: doc.fileName || doc.name });
     } catch (error) {
       console.error("Gagal membuka berkas:", error);
       alert("Gagal membuka berkas. Silakan coba lagi.");
@@ -500,6 +598,14 @@ export default function Step2({ registrationId }) {
         style={{ display: "none" }}
         onChange={handleFileChange}
         accept=".pdf,.jpg,.jpeg,.png"
+      />
+
+      {/* Modal preview berkas yang sudah diupload mahasiswa */}
+      <FilePreviewModal
+        blobUrl={fileModal.blobUrl}
+        title={fileModal.title}
+        onClose={handleCloseFileModal}
+        onDownload={null}
       />
 
       <div className="step-title-container">
@@ -655,7 +761,7 @@ export default function Step2({ registrationId }) {
       {data.sidangScheme === "Non Sidang" &&
         data.jalurNonSidang &&
         data.jalurNonSidang.length > 0 && (
-          <>
+          <div>
             <h2
               style={{
                 fontSize: "1.5rem",
@@ -702,25 +808,9 @@ export default function Step2({ registrationId }) {
                 />
               );
             })}
-          </>
+          </div>
         )}
-
-      <div
-        className="divider"
-        style={{ borderTop: "2px solid #2d3748", margin: "4rem 0" }}
-      ></div>
-
-      {/* <h2
-        style={{
-          fontSize: "1.5rem",
-          fontWeight: 900,
-          marginBottom: "3rem",
-          color: "#2d3748",
-        }}
-      >
-        SYARAT BERKAS WAJIB SIDANG
-      </h2> */}
-
+        
       <DocUploadPanel
         sectionTitle="Berkas Wajib Sidang"
         sectionId={SECTIONS.WAJIB}
