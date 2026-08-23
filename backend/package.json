@@ -10,7 +10,6 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:db-push": "prisma db push",
-    "prisma:db-seed": "prisma db seed",
     "prisma:studio": "prisma studio"
   },
   "keywords": [

@@ -18,7 +18,6 @@ npm run prisma:generate
 ```sh
 # Setup DB
 npm run prisma:db-push
-npm run prisma:db-seed
 npm run prisma:generate
 
 # Run service (development-only)
