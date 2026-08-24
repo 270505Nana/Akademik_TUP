@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, Eye, Loader, User, BookOpen, Hash, GraduationCap, Phone, Users } from 'lucide-react';
 import { motion } from 'motion/react';
-import { downloadEvidence, getLecturers } from '../../../service/api';
+import { downloadEvidence, downloadFileFromUrl, getLecturers } from '../../../service/api';
 
 const EvidenceModal = ({ item, onClose }) => {
   const [selectedPreview,  setSelectedPreview]  = useState(null);
@@ -38,6 +38,9 @@ const EvidenceModal = ({ item, onClose }) => {
   };
 
   const fetchBlob = async (upload) => {
+    if (upload?.downloadUrl) {
+      return await downloadFileFromUrl(upload.downloadUrl);
+    }
     const uploadId = upload?.id;
     if (!uploadId) throw new Error(`Upload ID tidak ditemukan`);
     return await downloadEvidence(uploadId);
