@@ -4,7 +4,6 @@ const router = express.Router();
 
 import { listMahasiswa,
   upsertMahasiswa,
-  findMahasiswaByUserId,
   findMahasiswaById, } from '../../controllers/mahasiswaController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
@@ -38,19 +37,19 @@ router.get("/", verifyToken, listMahasiswa);
 
 /**
  * @swagger
- * /api/mahasiswa/{userId}:
+ * /api/mahasiswa/{id}:
  *   put:
- *     summary: Create or update mahasiswa data by user ID
+ *     summary: Create or update mahasiswa data by Mahasiswa ID or User ID
  *     tags: [Mahasiswa]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: User ID with MAHASISWA role
+ *         description: Mahasiswa ID or User ID
  *     requestBody:
  *       required: true
  *       content:
@@ -116,7 +115,7 @@ router.get("/", verifyToken, listMahasiswa);
  *         description: Internal server error
  */
 router.put(
-  "/:userId",
+  "/:id",
   verifyToken,
   isMahasiswa,
   upsertMahasiswa,
@@ -124,38 +123,9 @@ router.put(
 
 /**
  * @swagger
- * /api/mahasiswa/{userId}:
+ * /api/mahasiswa/{id}:
  *   get:
- *     summary: Get mahasiswa data by user ID
- *     tags: [Mahasiswa]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID of mahasiswa
- *     responses:
- *       200:
- *         description: Mahasiswa data retrieved successfully
- *       401:
- *         description: Token not found
- *       403:
- *         description: Invalid token
- *       404:
- *         description: Mahasiswa data not found
- *       500:
- *         description: Internal server error
- */
-router.get("/:userId", verifyToken, findMahasiswaByUserId);
-
-/**
- * @swagger
- * /api/mahasiswa/id/{id}:
- *   get:
- *     summary: Get mahasiswa data by student ID
+ *     summary: Get mahasiswa data by Mahasiswa ID or User ID
  *     tags: [Mahasiswa]
  *     security:
  *       - bearerAuth: []
@@ -165,7 +135,7 @@ router.get("/:userId", verifyToken, findMahasiswaByUserId);
  *         required: true
  *         schema:
  *           type: string
- *         description: Mahasiswa ID (not userId) of mahasiswa
+ *         description: Mahasiswa ID or User ID
  *     responses:
  *       200:
  *         description: Mahasiswa data retrieved successfully
@@ -178,6 +148,6 @@ router.get("/:userId", verifyToken, findMahasiswaByUserId);
  *       500:
  *         description: Internal server error
  */
-router.get("/id/:id", verifyToken, findMahasiswaById);
+router.get("/:id", verifyToken, findMahasiswaById);
 
 export default router;

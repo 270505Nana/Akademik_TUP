@@ -10,7 +10,19 @@ const SLUG_TO_NAME = Object.values(DOCUMENT_CONFIG)
   .flat()
   .reduce((acc, doc) => { acc[doc.slug] = doc.name; return acc; }, {});
 
-const getBerkasName = (upload) => SLUG_TO_NAME[upload.slug] || upload.name || upload.filename || 'Berkas';
+// Helper: ambil nama resmi berkas dari slug, fallback ke upload.name
+const getBerkasName = (upload) =>
+  SLUG_TO_NAME[upload.slug] || upload.name || upload.filename || 'Berkas';
+
+const CLR = {
+  red: '#C0182A',
+  green: '#16A34A',
+  orange: '#D97706',
+  border: '#E2E8F0',
+  muted: '#94A3B8',
+  text: '#1E293B',
+  sub: '#64748B',
+};
 
 const CLR = { red: '#C0182A', green: '#16A34A', orange: '#D97706', border: '#E2E8F0', muted: '#94A3B8', text: '#1E293B', sub: '#64748B' };
 
@@ -69,8 +81,12 @@ const Step1 = ({ registration, prodiName }) => {
         <InfoCard label="Nomor Induk Mahasiswa (NIM)" icon={Hash} value={s.nim} />
         <InfoCard label="Program Studi Terdaftar" icon={BookOpen} value={prodiName} />
         <InfoCard label="Skema / Jalur Tugas Akhir" icon={GraduationCap} value={r.sidangScheme || 'Sidang Reguler'} />
-        <div style={{ gridColumn: '1 / -1' }}><InfoCard label="Judul Tugas Akhir (TA)" icon={FileText} value={r.thesisTitleId} highlight /></div>
-        <div style={{ gridColumn: '1 / -1' }}><InfoCard label="Dosen Pembimbing" icon={User} value={dosenInfo} /></div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <InfoCard label="Judul Tugas Akhir (TA)" icon={FileText} value={r.thesisTitleId} highlight />
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <InfoCard label="Dosen Pembimbing" icon={User} value={dosenInfo} />
+        </div>
       </div>
     </div>
   );
@@ -193,12 +209,29 @@ const Step3Revisi = ({ berkasStatuses, uploads, dueDate, setDueDate, message, se
         </div>
       </div>
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}><Clock size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Batas Waktu Perbaikan *</label>
-        <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #CBD5E1', borderRadius: 8, fontSize: 14, color: CLR.text, outline: 'none', boxSizing: 'border-box' }} onFocus={e => e.target.style.borderColor = CLR.red} onBlur={e => e.target.style.borderColor = '#CBD5E1'} />
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          <Clock size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+          Batas Waktu Perbaikan *
+        </label>
+        <input
+          type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+          style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #CBD5E1', borderRadius: 8, fontSize: 14, color: CLR.text, outline: 'none', boxSizing: 'border-box' }}
+          onFocus={e => e.target.style.borderColor = CLR.red}
+          onBlur={e => e.target.style.borderColor = '#CBD5E1'}
+        />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}><MessageSquare size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Catatan / Instruksi Perbaikan *</label>
-        <textarea value={message} onChange={e => setMessage(e.target.value)} rows={5} placeholder="Contoh: Berkas scan akta kelahiran tidak terbaca..." style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #CBD5E1', borderRadius: 8, fontSize: 13, color: CLR.text, resize: 'vertical', outline: 'none', lineHeight: 1.6, boxSizing: 'border-box', fontFamily: 'inherit' }} onFocus={e => e.target.style.borderColor = CLR.red} onBlur={e => e.target.style.borderColor = '#CBD5E1'} />
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          <MessageSquare size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+          Catatan / Instruksi Perbaikan untuk Mahasiswa *
+        </label>
+        <textarea
+          value={message} onChange={e => setMessage(e.target.value)} rows={5}
+          placeholder="Contoh: Berkas scan akta kelahiran tidak terbaca, harap scan ulang dengan resolusi minimum 300dpi..."
+          style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #CBD5E1', borderRadius: 8, fontSize: 13, color: CLR.text, resize: 'vertical', outline: 'none', lineHeight: 1.6, boxSizing: 'border-box', fontFamily: 'inherit' }}
+          onFocus={e => e.target.style.borderColor = CLR.red}
+          onBlur={e => e.target.style.borderColor = '#CBD5E1'}
+        />
       </div>
     </div>
   );
@@ -216,37 +249,70 @@ const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) =>
         <div style={{ padding: '16px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8, fontSize: 13, color: '#92400E', display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={16} /> Belum ada periode sidang yang tersedia. Buat periode terlebih dahulu di menu Atur Periode.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {periods.filter(p => new Date(p.endDate) >= new Date()).map(p => {
-            const now = new Date();
-            const start = new Date(p.startDate);
-            const end = new Date(p.endDate);
-            const status = now >= start && now <= end ? 'Aktif' : now < start ? 'Mendatang' : 'Selesai';
-            const statusColor = status === 'Aktif' ? CLR.green : status === 'Mendatang' ? '#1D4ED8' : CLR.sub;
-            const statusBg = status === 'Aktif' ? '#DCFCE7' : status === 'Mendatang' ? '#DBEAFE' : '#F1F5F9';
-            const isSelected = selectedPeriodId === p.id;
-            const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-            return (
-              <div key={p.id} onClick={() => onSelectPeriod(p.id)} style={{ padding: '14px 16px', borderRadius: 10, cursor: 'pointer', border: `2px solid ${isSelected ? CLR.red : CLR.border}`, background: isSelected ? '#FEF2F2' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.15s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, border: `2px solid ${isSelected ? CLR.red : '#D1D5DB'}`, background: isSelected ? CLR.red : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {isSelected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />}
+          {periods
+            // Hanya tampilkan periode yang belum selesai (endDate >= hari ini)
+            .filter(p => new Date(p.endDate) >= new Date())
+            .map(p => {
+              const now = new Date();
+              const start = new Date(p.startDate);
+              const end = new Date(p.endDate);
+              // Status murni dari rentang tanggal (isOpen di DB tidak auto-update)
+              const status = now >= start && now <= end ? 'Aktif'
+                : now < start ? 'Mendatang'
+                  : 'Selesai';
+              const statusColor = status === 'Aktif' ? CLR.green : status === 'Mendatang' ? '#1D4ED8' : CLR.sub;
+              const statusBg = status === 'Aktif' ? '#DCFCE7' : status === 'Mendatang' ? '#DBEAFE' : '#F1F5F9';
+              const isSelected = selectedPeriodId === p.id;
+              const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
+              return (
+                <div
+                  key={p.id} onClick={() => onSelectPeriod(p.id)}
+                  style={{
+                    padding: '14px 16px', borderRadius: 10, cursor: 'pointer',
+                    border: `2px solid ${isSelected ? CLR.red : CLR.border}`,
+                    background: isSelected ? '#FEF2F2' : '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${isSelected ? CLR.red : '#D1D5DB'}`,
+                      background: isSelected ? CLR.red : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {isSelected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: CLR.text }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: CLR.sub, marginTop: 2 }}>
+                        {fmtDate(p.startDate)} — {fmtDate(p.endDate)}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: CLR.text }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: CLR.sub, marginTop: 2 }}>{fmtDate(p.startDate)} — {fmtDate(p.endDate)}</div>
-                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 9999, background: statusBg, color: statusColor }}>
+                    {status}
+                  </span>
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 9999, background: statusBg, color: statusColor }}>{status}</span>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       )}
     </div>
   </div>
 );
 
-const VerifikasiBerkasModal = ({ registration, academicStaffId, periodMap, onClose, onSaved }) => {
+//  VerifikasiBerkasModal (Main) 
+
+const VerifikasiBerkasModal = ({
+  registration,
+  academicStaffId,
+  periodMap,
+  onClose,
+  onSaved,
+}) => {
   const [step, setStep] = useState(1);
   const [berkasStatuses, setBerkasStatuses] = useState({});
   const [previewFile, setPreviewFile] = useState(null);
@@ -256,10 +322,12 @@ const VerifikasiBerkasModal = ({ registration, academicStaffId, periodMap, onClo
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [existingResponseId, setExistingResponseId] = useState(null);
   const [uploads, setUploads] = useState([]);
   const [loadingUploads, setLoadingUploads] = useState(false);
   const [fileError, setFileError] = useState(null);
 
+  // prodiName diambil langsung dari registration prop (BE sudah include mahasiswa.studyProgram.name)
   const m = registration?.mahasiswa || registration?.student;
   const prodiName = m?.studyProgram?.name ?? '-';
   const periods = Object.values(periodMap ?? {});
@@ -300,9 +368,14 @@ const VerifikasiBerkasModal = ({ registration, academicStaffId, periodMap, onClo
     }
   }, [uploads]);
 
+  //  Derived values 
   const hasBermasalah = Object.values(berkasStatuses).some(v => v === BERKAS_STATUS.BERMASALAH);
-  const allChecked = uploads.length > 0 && uploads.every(u => berkasStatuses[u.id] === BERKAS_STATUS.SESUAI || berkasStatuses[u.id] === BERKAS_STATUS.BERMASALAH);
-  const uncheckedCount = uploads.filter(u => !berkasStatuses[u.id] || berkasStatuses[u.id] === BERKAS_STATUS.UNCHECKED).length;
+  const allChecked = uploads.length > 0 && uploads.every(u =>
+    berkasStatuses[u.id] === BERKAS_STATUS.SESUAI || berkasStatuses[u.id] === BERKAS_STATUS.BERMASALAH
+  );
+  const uncheckedCount = uploads.filter(u =>
+    !berkasStatuses[u.id] || berkasStatuses[u.id] === BERKAS_STATUS.UNCHECKED
+  ).length;
 
   const handleToggle = (uploadId, status) => {
     setBerkasStatuses(prev => ({
@@ -395,10 +468,39 @@ const VerifikasiBerkasModal = ({ registration, academicStaffId, periodMap, onClo
   const nim = m?.nim || '';
 
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 'var(--sidebar-width, 260px)', zIndex: 1000, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <motion.div initial={{ scale: 0.94, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.94, opacity: 0, y: 20 }} transition={{ type: 'spring', damping: 20, stiffness: 300 }} onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: step === 2 ? 1100 : 720, height: '92vh', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${CLR.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0F172A' }}>Verifikasi Berkas - {studentName}</h3>
+    <div
+      style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0,
+        left: 'var(--sidebar-width, 260px)',
+        zIndex: 1000,
+        background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(3px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16,
+      }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.94, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.94, opacity: 0, y: 20 }}
+        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#fff', borderRadius: 16, width: '100%',
+          maxWidth: step === 2 ? 1100 : 720,
+          height: '92vh', maxHeight: '92vh',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '20px 24px 16px', borderBottom: `1px solid ${CLR.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+        }}>
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0F172A' }}>
+            Verifikasi Berkas - {studentName}
+          </h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: CLR.sub, background: '#F1F5F9', padding: '4px 12px', borderRadius: 9999 }}>NIM {nim}</span>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: CLR.sub }}><X size={20} /></button>

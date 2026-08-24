@@ -9,14 +9,15 @@ const generateDocuments = () => {
         section,
         name: entry.name,
         slug: entry.slug,
+        templateCode: entry.templateCode || null,  // dipakai oleh template preview handler
         fileUrl: null,
         status: "pending",
         fileName: "",
         fileSize: "",
         error: null,
         isValid: null,       // null = belum direview, true = ACC admin, false = perlu revisi
-        downloadUrl: null,   
-        uploadId: null,      
+        downloadUrl: null,
+        uploadId: null,
       });
     });
   });
@@ -164,7 +165,7 @@ export function formReducer(state, action) {
       // Sinkronkan status dokumen dari data sidangRegistrationUploads 
       const uploadsBySlug = {};
       (action.uploads || []).forEach((u) => {
-        uploadsBySlug[u.slug] = u;
+        uploadsBySlug[u.category] = u;
       });
 
       const merged = state.documents.map((doc) => {

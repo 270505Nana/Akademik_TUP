@@ -1,9 +1,10 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Home,
   Calendar,
   Users,
   FilePlus2,
+  ClipboardList,
   ChevronDown,
   LogOut,
 } from 'lucide-react';
@@ -48,6 +49,7 @@ const SidebarDosen = ({ isOpen, onClose }) => {
       label: 'Sidang',
       items: [
         { label: 'Jadwal & Nilai Sidang', icon: <Calendar className="nav-icon" />, path: '/dosen/jadwal-nilai-sidang' },
+        { label: 'Penjadwalan Sidang',    icon: <ClipboardList className="nav-icon" />, path: '/dosen/penjadwalan-sidang' },
       ],
     },
   ];

@@ -10,7 +10,7 @@ import { useStudent } from "../../context/StudentContext";
 import Step1 from "../../components/mahasiswa/sidang/Step1Sidang";
 import Step2 from "../../components/mahasiswa/sidang/Step2Sidang";
 import CustomAlert from "../../components/common/CustomAlert";
-import {getLecturers,getSidangRegistrationByMahasiswaId,getSktaResponseUploadByMahasiswaId,saveSidangRegistration,submitSidangRegistration,} from "../../service/api";
+import {getLecturers,getSidangRegistrationByStudentId,getSktaResponseUploadByStudentId,saveSidangRegistration,submitSidangRegistration,} from "../../service/api";
 import {STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from "../../components/admin/sidang/Sidangstatushelper";
 
 const STEP1_REQUIRED = [
@@ -171,8 +171,8 @@ function PendaftaranSidangContent() {
     thesisTitleId:      data.thesisTitleId,
     thesisTitleEn:      data.thesisTitleEn,
     mahasiswaId,
-    dosenPembimbing1Id: data.dosenPembimbing1Id ? Number(data.dosenPembimbing1Id) : null,
-    dosenPembimbing2Id: data.dosenPembimbing2Id ? Number(data.dosenPembimbing2Id) : null,
+    dosenPembimbing1Id: data.dosenPembimbing1Id || null,
+    dosenPembimbing2Id: data.dosenPembimbing2Id || null,
   });
 
   const handleSaveStep1 = async () => {
@@ -263,14 +263,17 @@ function PendaftaranSidangContent() {
     return parsed.toISOString().split("T")[0];
   };
 
+  // Map BE response field names (Prisma) → form state keys (untuk buildSavePayload/request body)
   const applyRegistrationToForm = (registration) => {
     if (!registration) return;
     dispatch({
       type: "SET_INITIAL_DATA",
       payload: {
-        programType:        registration.programType        || "",
-        sidangScheme:       registration.sidangScheme       || "",
-        
+        // BE response: program → form state key: programType
+        programType:        registration.program            || "",
+        // BE response: skemaSidang → form state key: sidangScheme
+        sidangScheme:       registration.skemaSidang        || "",
+
         jalurNonSidang:     Array.isArray(registration.jalurNonSidang)
                               ? registration.jalurNonSidang
                               : [],
@@ -278,8 +281,10 @@ function PendaftaranSidangContent() {
         ipk:                registration.ipk               ?? "",
         tak:                registration.tak               ?? "",
         sktaExpDate:        normalizeDateInput(registration.sktaExpDate),
-        thesisTitleId:      registration.thesisTitleId      || "",
-        thesisTitleEn:      registration.thesisTitleEn      || "",
+        // BE response: judulTugasAkhirIndonesia → form state key: thesisTitleId
+        thesisTitleId:      registration.judulTugasAkhirIndonesia || "",
+        // BE response: judulTugasAkhirInggris → form state key: thesisTitleEn
+        thesisTitleEn:      registration.judulTugasAkhirInggris   || "",
         dosenPembimbing1Id: registration.dosenPembimbing1Id
                               ? String(registration.dosenPembimbing1Id)
                               : "",
@@ -294,7 +299,7 @@ function PendaftaranSidangContent() {
     setIsRegistrationLoading(true);
     try {
       // Response: { data: { id, isDraft, programType, ... } }
-      const response = await getSidangRegistrationByMahasiswaId(id);
+      const response = await getSidangRegistrationByStudentId(id);
       const existing = response?.data ?? response;
 
       if (!existing) {
@@ -333,7 +338,7 @@ function PendaftaranSidangContent() {
     }
     console.log("[DEBUG checkSkta] Melakukan fetch untuk mahasiswaId:", mahasiswaId);
     try {
-      const response = await getSktaResponseUploadByMahasiswaId(mahasiswaId);
+      const response = await getSktaResponseUploadByStudentId(mahasiswaId);
       console.log("[DEBUG checkSkta] Respon API:", response);
       const hasSkta = Array.isArray(response)
         ? response.length > 0
