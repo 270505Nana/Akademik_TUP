@@ -1,303 +1,340 @@
-import React, { useState } from 'react';
-import { useYudisiumForm } from '../../../context/YudisiumFormContext';
-import { BsPerson, BsHash, BsMortarboard, BsAward, BsBuildings, BsChevronLeft, BsChevronRight, BsCheck, BsInfoCircleFill } from 'react-icons/bs';
-import CustomAlert from '../../common/CustomAlert';
-const Step1Yudisium = () => {
-  const { state, dispatch } = useYudisiumForm();
-  const { data } = state;
-  const [error, setError] = useState(false);
+import React, { useState, useRef, useEffect } from "react";
+import { User, Hash, BookOpen, Phone, CheckCircle2, Search, ChevronDown } from "lucide-react";
+import { useYudisiumContext } from "../../../context/YudisiumFormContext";
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    dispatch({ type: 'UPDATE_DATA', payload: { [name]: value } });
-  };
+const SearchableSelect = ({ value, onChange, options, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapperRef = useRef(null);
 
-  const handleJalurChange = (val) => {
-    // Reset skema waktu pindah jalurmnya
-    let newSkema = [];
-    if (val === 'Pengajuan Summa Cumlaude') {
-      newSkema = ['Publikasi Jurnal'];
+  const selectedOption = options.find(opt => String(opt.value) === String(value));
+  const displayValue = selectedOption ? selectedOption.label : "";
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
     }
-    dispatch({ 
-      type: 'UPDATE_DATA', 
-      payload: { 
-        jalurYudisium: val,
-        skemaTambahan: newSkema
-      } 
-    });
-  };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const handleSkemaToggle = (skema) => {
-    if (data.jalurYudisium === 'Pengajuan Summa Cumlaude') return;
-    
-    const current = [...data.skemaTambahan];
-    if (current.includes(skema)) {
-      dispatch({ type: 'UPDATE_DATA', payload: { skemaTambahan: current.filter(s => s !== skema) } });
-    } else {
-      dispatch({ type: 'UPDATE_DATA', payload: { skemaTambahan: [...current, skema] } });
-    }
-  };
-
-  const validateStep1 = () => {
-    const requiredFields = [
-      'nama', 'nim', 'prodi', 'tak', 'program', 
-      'doswal', 'skemaSidang', 'jalurYudisium', 
-      'judulId', 'judulEn'
-    ];
-    
-    const isAnyEmpty = requiredFields.some(field => {
-      if (field === 'skemaTambahan') return data.skemaTambahan.length === 0;
-      return !data[field] || data[field].toString().trim() === '';
-    });
-
-    if (isAnyEmpty) {
-      setError(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return false;
-    }
-    
-    setError(false);
-    return true;
-  };
-
-  const handleNext = () => {
-    if (validateStep1()) {
-      dispatch({ type: 'SET_STEP', value: 2 });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+  const filteredOptions = options.filter(opt =>
+    opt.label.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
-    <div className="yudisium-page-container">
-      
-      <div className="instruction-box">
-        <div className="instruction-icon-circle">
-          <BsInfoCircleFill size={28} />
-        </div>
-        <div className="instruction-content">
-          <h3>Pendaftaran Yudisium Telkom University Purwokerto</h3>
-          <p>Sebelum melengkapi data pendaftaran sidang, silahkan pelajari dan pahami informasi terkait pendaftaran sidang pada tautan :</p>
-          <p><a href="https://tel-u.ac.id/panduansidangtup">https://tel-u.ac.id/panduansidangtup</a></p>
-          <p style={{ fontWeight: 800, marginTop: '0.8rem' }}>Harap Baca Dengan Teliti</p>
-        </div>
-
-        <div className="contact-person-badge" onClick={() => window.open('https://wa.me/6285117001281', '_blank')}>
-          <BsInfoCircleFill size={18} />
-          <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP</span>
-        </div>
-
+    <div ref={wrapperRef} style={{ position: "relative" }}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="form-input"
+        style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          cursor: "pointer", 
+          background: "#fff",
+          padding: "10px 14px",
+          minHeight: "42px"
+        }}
+      >
+        <span style={{ color: displayValue ? "#1E293B" : "#94A3B8", fontSize: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {displayValue || placeholder}
+        </span>
+        <ChevronDown size={16} color="#94A3B8" style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "0.2s", flexShrink: 0, marginLeft: "8px" }} />
       </div>
 
-      <div className="step-header">
-        <span className="step-label-red">Step 1</span>
-        <h2 className="step-title-red">Pendaftaran Yudisium Telkom University Purwokerto</h2>
-      </div>
-
-      {error && (
-        <CustomAlert 
-          type="error" 
-          message="Mohon Lengkapi Semua Dokumen Sebelum Submit" 
-          style={{ marginBottom: '2rem' }} 
-        />
+      {isOpen && (
+        <div style={{ 
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50, 
+          background: "#fff", border: "1px solid #E2E8F0", borderRadius: "8px", 
+          marginTop: "4px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", 
+          maxHeight: "260px", display: "flex", flexDirection: "column", overflow: "hidden" 
+        }}>
+          <div style={{ padding: "10px", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px", background: "#F8FAFC" }}>
+            <Search size={16} color="#94A3B8" />
+            <input
+              type="text"
+              placeholder="Ketik nama atau kode dosen..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ border: "none", outline: "none", width: "100%", fontSize: "13px", background: "transparent" }}
+              autoFocus
+            />
+          </div>
+          <div style={{ overflowY: "auto", flex: 1, padding: "4px 0" }}>
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt) => (
+                <div
+                  key={opt.value}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                    setQuery("");
+                  }}
+                  style={{ 
+                    padding: "10px 14px", cursor: "pointer", fontSize: "13px", 
+                    color: "#334155", background: String(value) === String(opt.value) ? "#FEF2F2" : "transparent",
+                    fontWeight: String(value) === String(opt.value) ? "600" : "400",
+                    transition: "background 0.15s"
+                  }}
+                  onMouseEnter={(e) => { if (String(value) !== String(opt.value)) e.currentTarget.style.background = "#F1F5F9"; }}
+                  onMouseLeave={(e) => { if (String(value) !== String(opt.value)) e.currentTarget.style.background = "transparent"; }}
+                >
+                  {opt.label}
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: "16px 14px", fontSize: "13px", color: "#94A3B8", textAlign: "center", fontStyle: "italic" }}>
+                Dosen tidak ditemukan
+              </div>
+            )}
+          </div>
+        </div>
       )}
-
-      <div className="form-section">
-        <div className="section-divider">
-          <h2>Identitas & Program Studi</h2>
-        </div>
-        
-        <div className="form-grid">
-          <div className="input-group">
-            <label>NAMA</label>
-            <div className="input-with-icon">
-              <BsPerson className="input-icon" />
-              <input 
-                className="input-field"
-                name="nama" 
-                value={data.nama} 
-                onChange={handleInputChange} 
-                placeholder="Masukan Nama Jawaban Anda" 
-              />
-            </div>
-          </div>
-          <div className="input-group">
-            <label>NIM (NOMOR INDUK MAHASISWA) *</label>
-            <div className="input-with-icon">
-              <input 
-                className="input-field read-only"
-                name="nim" 
-                value={data.nim} 
-                readOnly
-                placeholder="231110406666" 
-              />
-            </div>
-            <span className="helper-text">NIM terverifikasi oleh sistem secara otomatis.</span>
-          </div>
-        </div>
-
-        <div className="form-grid" style={{ marginTop: '1.5rem' }}>
-          <div className="input-group">
-            <label>PROGRAM STUDI</label>
-            <div className="input-with-icon">
-              <BsMortarboard className="input-icon" />
-              <select className="input-field" name="prodi" value={data.prodi} onChange={handleInputChange}>
-                <option value="">Pilih Program Studi Anda</option>
-                <option value="S1 Informatika">S1 Informatika</option>
-                <option value="S1 Sistem Informasi">S1 Sistem Informasi</option>
-                <option value="S1 Teknik Elektro">S1 Teknik Elektro</option>
-              </select>
-            </div>
-          </div>
-          <div className="input-group">
-            <label>TAK</label>
-            <div className="input-with-icon">
-              <input 
-                className="input-field"
-                name="tak" 
-                value={data.tak} 
-                onChange={handleInputChange} 
-                placeholder="60" 
-              />
-            </div>
-            <span className="helper-text">Poin minimum untuk TAK Mahasiswa Reguler : 60, Alih Jenjang : 25, Diploma : 45</span>
-          </div>
-        </div>
-
-        <div className="form-grid" style={{ marginTop: '1.5rem' }}>
-          <div className="input-group">
-            <label>PROGRAM</label>
-            <div className="radio-pill-group">
-              <div 
-                className={`radio-pill ${data.program === 'Reguler' ? 'active' : ''}`}
-                onClick={() => dispatch({ type: 'UPDATE_DATA', payload: { program: 'Reguler' } })}
-              >
-                <div className="check-icon-box">
-                  {data.program === 'Reguler' && <BsCheck size={18} />}
-                </div>
-                <span>Reguler</span>
-              </div>
-              <div 
-                className={`radio-pill ${data.program === 'Alih Jenjang' ? 'active' : ''}`}
-                onClick={() => dispatch({ type: 'UPDATE_DATA', payload: { program: 'Alih Jenjang' } })}
-              >
-                <div className="check-icon-box">
-                  {data.program === 'Alih Jenjang' && <BsCheck size={18} />}
-                </div>
-                <span>Alih Jenjang</span>
-              </div>
-            </div>
-          </div>
-          <div className="input-group">
-            <label>KODE DOSEN WALI</label>
-            <div className="input-with-icon">
-              <input 
-                className="input-field"
-                name="doswal" 
-                value={data.doswal} 
-                onChange={handleInputChange} 
-                placeholder="ACW-Ariq Cahya Wardhana, S.Kom., M.Kom" 
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="form-section">
-        <div className="section-divider">
-          <h2>Informasi Tugas Akhir</h2>
-        </div>
-        
-        <div className="sub-section-grid">
-           <div>
-              <label style={{ fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '1rem', display: 'block' }}>SKEMA SIDANG</label>
-              <div className="vertical-choice-list">
-                 {['Sidang Reguler', 'Non Sidang', 'Capstone', 'Sidang Khusus Prodi'].map(skema => (
-                    <label key={skema} className="choice-item">
-                       <input 
-                        type="radio" 
-                        name="skemaSidang" 
-                        checked={data.skemaSidang === skema} 
-                        onChange={() => dispatch({ type: 'UPDATE_DATA', payload: { skemaSidang: skema } })} 
-                       />
-                       <span>{skema}</span>
-                    </label>
-                 ))}
-              </div>
-
-              <label style={{ fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', marginTop: '2rem', marginBottom: '1rem', display: 'block' }}>PENGAJUAN CUMLAUDE</label>
-              <div className="vertical-choice-list">
-                 {['Non Cumlaude', 'Pengajuan Cumlaude', 'Pengajuan Summa Cumlaude'].map(jalur => (
-                    <label key={jalur} className="choice-item">
-                       <input 
-                        type="radio" 
-                        name="jalurYudisium" 
-                        checked={data.jalurYudisium === jalur} 
-                        onChange={() => handleJalurChange(jalur)} 
-                       />
-                       <span>{jalur}</span>
-                    </label>
-                 ))}
-              </div>
-           </div>
-
-           <div>
-              <label style={{ fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '1rem', display: 'block' }}>SKEMA AJUAN CUMLAUDE / SUMMA CUMLAUDE</label>
-              <p className="choice-subtext" style={{ marginBottom: '1rem' }}>Khusus pengajuan "Summa Cumlaude" hanya menerima skema Publikasi Jurnal saja</p>
-              <div className="vertical-choice-list">
-                 {['Publikasi Jurnal', 'Pameran', 'Lomba', 'HKI'].map(skema => (
-                    <label key={skema} className="choice-item">
-                       <input 
-                        type="checkbox" 
-                        checked={data.skemaTambahan.includes(skema)} 
-                        onChange={() => handleSkemaToggle(skema)}
-                        disabled={data.jalurYudisium === 'Pengajuan Summa Cumlaude'}
-                       />
-                       <span>{skema}</span>
-                    </label>
-                 ))}
-              </div>
-           </div>
-        </div>
-
-        <div className="textarea-container">
-          <label>JUDUL TUGAS AKHIR (BAHASA INDONESIA) *</label>
-          <textarea 
-            className="textarea-field"
-            name="judulId" 
-            value={data.judulId} 
-            onChange={handleInputChange}
-            placeholder="Rancang Bangun Sistem Informasi Pendaftaran Yudisium Berbasis Web Menggunakan React dan Tailwind CSS"
-          />
-        </div>
-
-        <div className="textarea-container">
-          <label>JUDUL TUGAS AKHIR (BAHASA INGGRIS) *</label>
-          <textarea 
-            className="textarea-field"
-            name="judulEn" 
-            value={data.judulEn} 
-            onChange={handleInputChange}
-            placeholder="Design and Development of a Web-Based Graduation Registration Information System Using React and Tailwind CSS"
-          />
-          <span className="helper-text">Pastikan judul sesuai dengan yang tertera di SK Yudisium terakhir.</span>
-        </div>
-      </div>
-
-      <div className="footer-pagination-yudisium">
-        <div className="nav-arrows">
-          <button className="nav-arrow-btn" disabled><BsChevronLeft /></button>
-          <div className="page-numbers">
-            <div className="page-number active">1</div>
-            <div className="page-number" onClick={handleNext}>2</div>
-          </div>
-          <button className="nav-arrow-btn" onClick={handleNext}><BsChevronRight /></button>
-        </div>
-        <button className="btn-submit-yudisium" onClick={handleNext}>
-          Simpan & Lanjutkan
-        </button>
-      </div>
     </div>
   );
 };
 
-export default Step1Yudisium;
+const InfoCard = ({ label, value, icon: Icon }) => (
+  <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "10px", padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: "12px" }}>
+    <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <Icon size={18} color="#C0182A" />
+    </div>
+    <div>
+      <div style={{ fontSize: "10px", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "4px" }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B", lineHeight: "1.4" }}>
+        {value}
+      </div>
+    </div>
+  </div>
+);
+
+export default function Step1Yudisium({ studentInfo, lecturers }) {
+  const { state, dispatch } = useYudisiumContext();
+  const { data } = state;
+
+  const dosenOptions = lecturers.map(d => ({
+    value: d.id,
+    label: `${d.kodeDosen} - ${d.name || d.nama}`
+  }));
+
+  const handleChange = (field, value) => {
+    dispatch({ type: "UPDATE_FIELD", field, value });
+  };
+
+  const handleSkemaCumlaudeChange = (val) => {
+    let current = [...(data.skemaCumlaude || [])];
+    if (current.includes(val)) {
+      current = current.filter(item => item !== val);
+    } else {
+      current.push(val);
+    }
+    handleChange("skemaCumlaude", current);
+  };
+
+  return (
+    <div className="step-content">
+      <div className="info-banner" style={{ marginBottom: "2rem" }}>
+        <div className="banner-icon-container">
+          <CheckCircle2 color="#16a34a" size={24} />
+        </div>
+        <div className="banner-content">
+          <h4>Informasi Mahasiswa</h4>
+          <p>Pastikan data diri kamu di bawah ini sudah sesuai sebelum melanjutkan pendaftaran yudisium.</p>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "32px" }}>
+        <InfoCard label="Nama Lengkap" icon={User} value={studentInfo.nama} />
+        <InfoCard label="NIM" icon={Hash} value={studentInfo.nim} />
+        <InfoCard label="Program Studi" icon={BookOpen} value={studentInfo.prodi} />
+        <InfoCard label="No. Telepon" icon={Phone} value={studentInfo.phone} />
+      </div>
+
+      <div className="form-grid">
+        <div className="form-group">
+          <label className="form-label">Program <span style={{ color: "red" }}>*</span></label>
+          <select className="form-select" value={data.program} onChange={(e) => handleChange("program", e.target.value)}>
+            <option value="">-- Pilih Program --</option>
+            <option value="Reguler">Reguler</option>
+            <option value="Alih Jenjang">Alih Jenjang</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Total Nilai TAK <span style={{ color: "red" }}>*</span></label>
+          <input 
+            type="number" 
+            min="0"
+            className="form-input"
+            style={{
+              borderColor: (data.program === "Reguler" && data.tak !== "" && Number(data.tak) < 60) || 
+                           (data.program === "Alih Jenjang" && data.tak !== "" && Number(data.tak) < 45) 
+                           ? "#ef4444" : ""
+            }}
+            placeholder="Contoh: 60" 
+            value={data.tak} 
+            onKeyDown={(e) => {
+              if (e.key === '-' || e.key === 'e') e.preventDefault();
+            }}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || Number(val) >= 0) handleChange("tak", val);
+            }} 
+          />
+          {data.program === "Reguler" && data.tak !== "" && Number(data.tak) < 60 && (
+            <p style={{ fontSize: "12px", color: "#ef4444", marginTop: "6px", fontWeight: "500" }}>
+              ⚠️ Nilai TAK untuk program Reguler minimal 60.
+            </p>
+          )}
+          {data.program === "Alih Jenjang" && data.tak !== "" && Number(data.tak) < 45 && (
+            <p style={{ fontSize: "12px", color: "#ef4444", marginTop: "6px", fontWeight: "500" }}>
+              ⚠️ Nilai TAK untuk program Alih Jenjang minimal 45.
+            </p>
+          )}
+        </div>
+
+        <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+          <label className="form-label">Judul Tugas Akhir (Indonesia) <span style={{ color: "red" }}>*</span></label>
+          <textarea className="form-input" rows={2} placeholder="Masukkan judul dalam bahasa Indonesia" value={data.judulTugasAkhirIndonesia} onChange={(e) => handleChange("judulTugasAkhirIndonesia", e.target.value)} />
+        </div>
+
+        <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+          <label className="form-label">Judul Tugas Akhir (Inggris) <span style={{ color: "red" }}>*</span></label>
+          <textarea className="form-input" rows={2} placeholder="Masukkan judul dalam bahasa Inggris" value={data.judulTugasAkhirInggris} onChange={(e) => handleChange("judulTugasAkhirInggris", e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Skema Sidang <span style={{ color: "red" }}>*</span></label>
+          <select className="form-select" value={data.skemaSidang} onChange={(e) => handleChange("skemaSidang", e.target.value)}>
+            <option value="">-- Pilih Skema --</option>
+            <option value="Sidang Reguler">Sidang Reguler</option>
+            <option value="Non Sidang">Non Sidang</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Apakah Anda berminat wirausaha? <span style={{ color: "red" }}>*</span></label>
+          <select className="form-select" value={data.minatWirausaha} onChange={(e) => handleChange("minatWirausaha", e.target.value)}>
+            <option value="">-- Pilih --</option>
+            <option value="Ya">Ya, Berminat</option>
+            <option value="Tidak">Tidak</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Dosen Pembimbing 1 <span style={{ color: "red" }}>*</span></label>
+          <SearchableSelect 
+            options={dosenOptions}
+            value={data.dosenPembimbing1Id}
+            onChange={(val) => handleChange("dosenPembimbing1Id", val)}
+            placeholder="-- Pilih Dosen Pembimbing 1 --"
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Dosen Pembimbing 2</label>
+          <SearchableSelect 
+            options={dosenOptions}
+            value={data.dosenPembimbing2Id}
+            onChange={(val) => handleChange("dosenPembimbing2Id", val)}
+            placeholder="-- Pilih Dosen Pembimbing 2 (Opsional) --"
+          />
+        </div>
+
+        {/*  CUMLAUDE */}
+        <div className="form-group" style={{ gridColumn: "1 / -1", marginTop: "1rem", borderTop: "1px solid #e2e8f0", paddingTop: "1.5rem" }}>
+          <label className="form-label" style={{ fontSize: "16px", color: "#0f172a" }}>
+            Pengajuan Cumlaude / Summa Cumlaude
+          </label>
+          <select 
+            className="form-select" 
+            value={data.pengajuanCumlaude} 
+            onChange={(e) => {
+              const val = e.target.value;
+              handleChange("pengajuanCumlaude", val);
+              
+              if (val === "Pengajuan Summacumlaude") {
+                handleChange("skemaCumlaude", ["Publikasi Jurnal"]);
+              }
+            }}
+          >
+            <option value="Non Cumlaude">Tidak Mengajukan</option>
+            <option value="Pengajuan Cumlaude">Ya, Mengajukan Cumlaude</option>
+            <option value="Pengajuan Summacumlaude">Ya, Mengajukan Summa Cumlaude</option>
+          </select>
+        </div>
+
+        {data.pengajuanCumlaude !== "Non Cumlaude" && (
+          <>
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label className="form-label">Skema <span style={{ color: "red" }}>*</span></label>
+              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginTop: "8px" }}>
+                {["Publikasi Jurnal", "Prestasi Lomba", "HKI/Paten", "Pameran"].map((opsi) => {
+                  const isSumma = data.pengajuanCumlaude === "Pengajuan Summacumlaude";
+                  const isJurnal = opsi === "Publikasi Jurnal";
+                  const forceDisable = isSumma;
+
+                  return (
+                    <label 
+                      key={opsi} 
+                      style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: "8px", 
+                        fontSize: "14px", 
+                        cursor: forceDisable ? "not-allowed" : "pointer" 
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(data.skemaCumlaude || []).includes(opsi)}
+                        disabled={forceDisable}
+                        onChange={() => handleSkemaCumlaudeChange(opsi)}
+                        style={{ 
+                          width: "16px", 
+                          height: "16px", 
+                          accentColor: "#C0182A", 
+                          cursor: forceDisable ? "not-allowed" : "pointer" 
+                        }}
+                      />
+                      <span style={{ color: forceDisable ? "#94a3b8" : "inherit", fontWeight: (isSumma && isJurnal) ? "600" : "400" }}>
+                        {opsi} {(isSumma && isJurnal) && "(Wajib)"}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label className="form-label">
+                Detail Publikasi / Prestasi (Sertifikat/Jurnal) <span style={{ color: "red" }}>*</span>
+              </label>
+              <textarea
+                className="form-input"
+                placeholder="Sebutkan detail publikasi atau prestasi kamu di sini... (Pisahkan dengan Enter)"
+                value={data.evidenCumlaude}
+                onChange={(e) => handleChange("evidenCumlaude", e.target.value)}
+                rows={5}
+                style={{ 
+                  resize: "vertical", 
+                  padding: "12px 14px",
+                  minHeight: "120px",
+                  lineHeight: "1.5"
+                }}
+              />
+              <p style={{ fontSize: "12px", color: "#64748b", marginTop: "6px" }}>
+                Catatan: Jika ada lebih dari satu, pisahkan dengan baris baru (Enter).
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

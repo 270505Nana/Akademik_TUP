@@ -146,6 +146,14 @@
   border-left-color: var(--primary);
 }
 
+/* Styling untuk sub-menu yang sedang aktif (halaman yang sedang dibuka) */
+.sub-nav li a.active {
+  color: var(--primary);
+  background: var(--sidebar-active);
+  border-left-color: var(--primary);
+  font-weight: 600;
+}
+
 .sidebar-user {
   padding: 14px 16px;
   border-top: 1px solid #F1F5F9;

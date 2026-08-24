@@ -57,7 +57,7 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
           icon: <Calendar className="nav-icon" />,
           subItems: [
             "Registrasi Sidang",
-            // 'Registrasi Yudisium'
+            'Registrasi Yudisium'
           ],
         },
       ],
