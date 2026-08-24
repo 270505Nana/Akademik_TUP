@@ -421,6 +421,22 @@ export const getYudisiumPeriods = async () => {
   }
 };
 
+export const getActiveYudisiumPeriod = async () => {
+  const response = await api.get('/api/yudisium-periods?category=pendaftaran yudisium');
+  const periods = response.data?.data ?? response.data;
+  
+  const now = new Date();
+
+  const activePeriod = periods.find(p => {
+    const start = new Date(p.startDate);
+    const end = new Date(p.endDate);
+    return p.isOpen === true && now >= start && now <= end;
+  });
+  
+  return activePeriod || null;
+};
+
+
 export const createSidangPeriod = async ({ name, startDate, endDate }) => {
   const now = new Date();
   const start = new Date(`${startDate}T12:00:00`);
