@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../../components/mahasiswa/sidang/sidang.css";
 import logoSimta from "../../assets/logo-simta.png";
@@ -10,15 +10,16 @@ import { useStudent } from "../../context/StudentContext";
 import Step1Yudisium from "../../components/mahasiswa/yudisium/Step1Yudisium";
 import Step2Yudisium from "../../components/mahasiswa/yudisium/Step2Yudisium";
 import CustomAlert from "../../components/common/CustomAlert";
+import SidebarMahasiswa from "../../components/sidebar/SidebarMahasiswa";
 import { REQUIRED_SLUGS, SECTIONS } from "../../components/mahasiswa/yudisium/YudisiumDocument";
 
 import { 
   getLecturers, 
   saveYudisiumRegistration, 
   uploadYudisiumRegistrationFile, 
-  submitYudisiumRegistration 
+  submitYudisiumRegistration, 
+  getActiveYudisiumPeriod
 } from "../../service/api";
-import axios from "axios"; 
 
 const STEP1_REQUIRED = [
   { key: "program", label: "Program" },
@@ -61,7 +62,6 @@ function validateStep2(data, documents) {
     }
   }
 
-  // Validasi Tambahan untuk Kewirausahaan
   if (data.minatWirausaha === "Ya") {
     const wirausahaDoc = documents.find(doc => doc.section === SECTIONS.WIRAUSAHA);
     if (wirausahaDoc && !wirausahaDoc.file) {
@@ -79,6 +79,7 @@ function PendaftaranYudisiumContent() {
   const { student } = useStudent();
   const { step, data, documents } = state;
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSavingStep1, setIsSavingStep1] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lecturers, setLecturers] = useState([]);
@@ -101,10 +102,12 @@ function PendaftaranYudisiumContent() {
   useEffect(() => {
     const fetchPeriod = async () => {
       try {
-        const res = await axios.get('/api/yudisium-periods?category=pendaftaran yudisium');
-        const activePeriod = res.data?.data?.find(p => p.isOpen);
+        const activePeriod = await getActiveYudisiumPeriod();
+        
         if (activePeriod) {
           dispatch({ type: "UPDATE_FIELD", field: "yudisiumRegistrationPeriodId", value: activePeriod.id });
+        } else {
+          dispatch({ type: "UPDATE_FIELD", field: "yudisiumRegistrationPeriodId", value: "" });
         }
       } catch (error) {
         console.error("Failed to fetch yudisium periods", error);
@@ -215,57 +218,100 @@ function PendaftaranYudisiumContent() {
   };
 
   return (
-    <div className="page-wrapper">
-      <div className="top-header-nav">
-        <button className="btn-back-square" onClick={() => navigate("/mahasiswa/dashboard")}>
-          <ArrowLeft size={18} />
-          <span>Kembali</span>
-        </button>
-        <div className="header-logos">
-          <img src={logoSimta} alt="SIMTA" className="simta-brand-logo" />
-          <div className="logo-divider"></div>
-          <img src={logoTelkom} alt="Telkom" className="telkom-brand-logo" />
+    <div className="flex min-h-screen" style={{ background: "#F4F6FB" }}>
+      <SidebarMahasiswa isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      
+      <div id="yudisium-main" className="flex-1 relative">
+        <div className="page-wrapper yudisium-wrapper">
+          <div className="top-header-nav">
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <button 
+                className="topbar-toggle lg:hidden" 
+                onClick={() => setSidebarOpen(true)} 
+                style={{ border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}
+              >
+                <Menu size={20} />
+              </button>
+              
+              <button className="btn-back-square" onClick={() => navigate("/mahasiswa/dashboard")}>
+                <ArrowLeft size={18} />
+                <span className="hidden sm:inline">Kembali</span>
+              </button>
+            </div>
+
+            <div className="header-logos">
+              <img src={logoSimta} alt="SIMTA" className="simta-brand-logo" />
+              <div className="logo-divider"></div>
+              <img src={logoTelkom} alt="Telkom" className="telkom-brand-logo" />
+            </div>
+          </div>
+
+          <div className="simta-container">
+            {formAlert && (
+              <div style={{ padding: "16px 24px 0" }}>
+                <CustomAlert type={formAlert.type} message={formAlert.msg} />
+              </div>
+            )}
+
+            <main>
+              {step === 1 ? (
+                <Step1Yudisium studentInfo={studentInfo} lecturers={lecturers} />
+              ) : (
+                <Step2Yudisium />
+              )}
+            </main>
+
+            <footer className="footer-nav">
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button className="btn-pagination" onClick={() => setStep(1)} disabled={step === 1 || isSubmitting}>
+                  <ChevronLeft size={16} />
+                </button>
+                <div className={`page-num ${step === 1 ? "active" : ""}`} onClick={() => setStep(1)}>1</div>
+                <div className={`page-num ${step === 2 ? "active" : ""}`} onClick={() => setStep(2)}>2</div>
+                <button className="btn-pagination" onClick={() => setStep(2)} disabled={step === 2 || isSubmitting}>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {step === 1 ? (
+                <button className="btn-primary" onClick={handleSaveStep1} disabled={isSavingStep1}>
+                  {isSavingStep1 ? "Menyimpan..." : "Simpan & Lanjutkan"}
+                </button>
+              ) : (
+                <button className="btn-primary" onClick={handleSubmit} disabled={isSubmitting || !registrationId}>
+                  {isSubmitting ? "Mengunggah & Mengirim..." : "Submit Pendaftaran"}
+                </button>
+              )}
+            </footer>
+          </div>
         </div>
       </div>
 
-      <div className="simta-container">
-        {formAlert && (
-          <div style={{ padding: "16px 24px 0" }}>
-            <CustomAlert type={formAlert.type} message={formAlert.msg} />
-          </div>
-        )}
+      <style>{`
+        #yudisium-main {
+          margin-left: var(--sidebar-width, 240px);
+          width: calc(100% - var(--sidebar-width, 240px));
+          transition: margin-left 0.3s ease;
+          display: flex;
+          flex-direction: column;
+        }
 
-        <main>
-          {step === 1 ? (
-            <Step1Yudisium studentInfo={studentInfo} lecturers={lecturers} />
-          ) : (
-            <Step2Yudisium />
-          )}
-        </main>
+        /* Menimpa global styling dari sidang.css agar tidak menabrak sidebar */
+        .yudisium-wrapper {
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          position: relative !important;
+          min-height: 100vh !important;
+        }
 
-        <footer className="footer-nav">
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <button className="btn-pagination" onClick={() => setStep(1)} disabled={step === 1 || isSubmitting}>
-              <ChevronLeft size={16} />
-            </button>
-            <div className={`page-num ${step === 1 ? "active" : ""}`} onClick={() => setStep(1)}>1</div>
-            <div className={`page-num ${step === 2 ? "active" : ""}`} onClick={() => setStep(2)}>2</div>
-            <button className="btn-pagination" onClick={() => setStep(2)} disabled={step === 2 || isSubmitting}>
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {step === 1 ? (
-            <button className="btn-primary" onClick={handleSaveStep1} disabled={isSavingStep1}>
-              {isSavingStep1 ? "Menyimpan..." : "Simpan & Lanjutkan"}
-            </button>
-          ) : (
-            <button className="btn-primary" onClick={handleSubmit} disabled={isSubmitting || !registrationId}>
-              {isSubmitting ? "Mengunggah & Mengirim..." : "Submit Pendaftaran"}
-            </button>
-          )}
-        </footer>
-      </div>
+        @media (max-width: 991.98px) {
+          #yudisium-main {
+            margin-left: 0;
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   );
 }
