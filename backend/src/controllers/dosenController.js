@@ -33,7 +33,25 @@ const listDosens = asyncHandler(async (req, res) => {
 
 // Update or Insert Dosen
 const upsertDosen = asyncHandler(async (req, res) => {
-  const userId = req.params.userId; // String UUID
+  const idOrUserId = req.params.id; // String UUID
+
+  let dosenRecord = await prisma.dosen.findUnique({
+    where: { id: idOrUserId },
+  });
+
+  let userId;
+  if (dosenRecord) {
+    userId = dosenRecord.userId;
+  } else {
+    dosenRecord = await prisma.dosen.findUnique({
+      where: { userId: idOrUserId },
+    });
+    if (dosenRecord) {
+      userId = dosenRecord.userId;
+    } else {
+      userId = idOrUserId;
+    }
+  }
 
   const user = await prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
   if (!user) {
@@ -93,12 +111,12 @@ const upsertDosen = asyncHandler(async (req, res) => {
   });
 });
 
-// Find Dosen By User Id
-const findDosenByUserId = asyncHandler(async (req, res) => {
-  const userId = req.params.userId; // String UUID
+// Find Dosen By Id (with fallback to userId)
+const findDosenById = asyncHandler(async (req, res) => {
+  const idOrUserId = req.params.id; // String UUID
 
-  const dosen = await prisma.dosen.findUnique({
-    where: { userId },
+  let dosen = await prisma.dosen.findUnique({
+    where: { id: idOrUserId },
     include: {
       user: {
         select: {
@@ -109,6 +127,22 @@ const findDosenByUserId = asyncHandler(async (req, res) => {
       },
     },
   });
+
+  if (!dosen) {
+    // Fallback to userId
+    dosen = await prisma.dosen.findUnique({
+      where: { userId: idOrUserId },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+  }
 
   if (!dosen) {
     res.status(404);
@@ -127,6 +161,61 @@ const findDosenByUserId = asyncHandler(async (req, res) => {
   });
 });
 
+// Toggle Ketua KK status
+const toggleKetuaKK = asyncHandler(async (req, res) => {
+  const idOrUserId = req.params.id; // String UUID
+
+  let dosen = await prisma.dosen.findUnique({
+    where: { id: idOrUserId },
+  });
+
+  if (!dosen) {
+    // Fallback to userId
+    dosen = await prisma.dosen.findUnique({
+      where: { userId: idOrUserId },
+    });
+  }
+
+  if (!dosen) {
+    res.status(404);
+    throw new Error("Data dosen tidak ditemukan");
+  }
+
+  const nextStatus = !dosen.isKetuaKK;
+
+  const updatedDosen = await prisma.$transaction(async (tx) => {
+    if (nextStatus) {
+      // Set dosen lain di KK (Research Group) yang sama ke false
+      await tx.dosen.updateMany({
+        where: {
+          researchGroupId: dosen.researchGroupId,
+          isKetuaKK: true,
+          NOT: {
+            id: dosen.id,
+          },
+        },
+        data: {
+          isKetuaKK: false,
+        },
+      });
+    }
+
+    // Update status dosen saat ini
+    return await tx.dosen.update({
+      where: { id: dosen.id },
+      data: {
+        isKetuaKK: nextStatus,
+      },
+    });
+  });
+
+  res.json({
+    message: `Berhasil mengubah status Ketua KK menjadi ${nextStatus ? 'Aktif' : 'Nonaktif'}`,
+    data: updatedDosen,
+  });
+});
+
 export { listDosens,
   upsertDosen,
-  findDosenByUserId, };
+  findDosenById,
+  toggleKetuaKK, };

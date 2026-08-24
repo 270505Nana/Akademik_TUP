@@ -33,7 +33,25 @@ const listMahasiswa = asyncHandler(async (req, res) => {
 
 // Update or Insert Mahasiswa
 const upsertMahasiswa = asyncHandler(async (req, res) => {
-  const userId = req.params.userId; // String UUID
+  const idOrUserId = req.params.id; // String UUID
+
+  let mahasiswaRecord = await prisma.mahasiswa.findUnique({
+    where: { id: idOrUserId },
+  });
+
+  let userId;
+  if (mahasiswaRecord) {
+    userId = mahasiswaRecord.userId;
+  } else {
+    mahasiswaRecord = await prisma.mahasiswa.findUnique({
+      where: { userId: idOrUserId },
+    });
+    if (mahasiswaRecord) {
+      userId = mahasiswaRecord.userId;
+    } else {
+      userId = idOrUserId;
+    }
+  }
 
   const user = await prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
   if (!user) {
@@ -123,12 +141,12 @@ const upsertMahasiswa = asyncHandler(async (req, res) => {
   });
 });
 
-// Find Mahasiswa By User Id
-const findMahasiswaByUserId = asyncHandler(async (req, res) => {
-  const userId = req.params.userId; // String UUID
+// Find Mahasiswa By Id (with fallback to userId)
+const findMahasiswaById = asyncHandler(async (req, res) => {
+  const idOrUserId = req.params.id; // String UUID
 
-  const mahasiswa = await prisma.mahasiswa.findUnique({
-    where: { userId },
+  let mahasiswa = await prisma.mahasiswa.findUnique({
+    where: { id: idOrUserId },
     include: {
       user: {
         select: {
@@ -141,38 +159,20 @@ const findMahasiswaByUserId = asyncHandler(async (req, res) => {
   });
 
   if (!mahasiswa) {
-    res.status(404);
-    throw new Error("Data mahasiswa tidak ditemukan");
-  }
-
-  const { user, ...rest } = mahasiswa;
-
-  res.json({
-    data: {
-      ...rest,
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || null,
-    },
-  });
-});
-
-// Find Mahasiswa By Id
-const findMahasiswaById = asyncHandler(async (req, res) => {
-  const id = req.params.id; // String UUID
-
-  const mahasiswa = await prisma.mahasiswa.findUnique({
-    where: { id },
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-          phone: true,
+    // Fallback to userId
+    mahasiswa = await prisma.mahasiswa.findUnique({
+      where: { userId: idOrUserId },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
         },
       },
-    },
-  });
+    });
+  }
 
   if (!mahasiswa) {
     res.status(404);
@@ -193,5 +193,4 @@ const findMahasiswaById = asyncHandler(async (req, res) => {
 
 export { listMahasiswa,
   upsertMahasiswa,
-  findMahasiswaByUserId,
   findMahasiswaById, };

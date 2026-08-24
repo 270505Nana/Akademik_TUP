@@ -4,11 +4,12 @@ const router = express.Router();
 
 import { listDosens,
   upsertDosen,
-  findDosenByUserId, } from '../../controllers/dosenController.js';
+  findDosenById,
+  toggleKetuaKK, } from '../../controllers/dosenController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
 
-import { isDosen } from '../../middlewares/authorize.js';
+import { isDosen, isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -37,19 +38,19 @@ router.get("/", verifyToken, listDosens);
 
 /**
  * @swagger
- * /api/dosen/{userId}:
+ * /api/dosen/{id}:
  *   put:
- *     summary: Create or update dosen data by user ID
+ *     summary: Create or update dosen data by Dosen ID or User ID
  *     tags: [Dosen]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: User ID with DOSEN role
+ *         description: Dosen ID or User ID
  *     requestBody:
  *       required: true
  *       content:
@@ -91,7 +92,7 @@ router.get("/", verifyToken, listDosens);
  *         description: Internal server error
  */
 router.put(
-  "/:userId",
+  "/:id",
   verifyToken,
   isDosen,
   upsertDosen,
@@ -99,19 +100,19 @@ router.put(
 
 /**
  * @swagger
- * /api/dosen/{userId}:
+ * /api/dosen/{id}:
  *   get:
- *     summary: Get dosen data by user ID
+ *     summary: Get dosen data by Dosen ID or User ID
  *     tags: [Dosen]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: User ID of dosen
+ *         description: Dosen ID or User ID
  *     responses:
  *       200:
  *         description: Dosen data retrieved successfully
@@ -124,6 +125,35 @@ router.put(
  *       500:
  *         description: Internal server error
  */
-router.get("/:userId", verifyToken, findDosenByUserId);
+router.get("/:id", verifyToken, findDosenById);
+
+/**
+ * @swagger
+ * /api/dosen/{id}/toggle-ketua-kk:
+ *   patch:
+ *     summary: Toggle isKetuaKK status of dosen by Dosen ID or User ID (Admin only)
+ *     tags: [Dosen]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Dosen ID or User ID
+ *     responses:
+ *       200:
+ *         description: Toggle Ketua KK status successful
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied or Invalid token
+ *       404:
+ *         description: Dosen data not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch("/:id/toggle-ketua-kk", verifyToken, isAdmin, toggleKetuaKK);
 
 export default router;

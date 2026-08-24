@@ -4,7 +4,7 @@ const router = express.Router();
 
 import { listAdmins,
   upsertAdmin,
-  findAdminByUserId, } from '../../controllers/adminController.js';
+  findAdminById, } from '../../controllers/adminController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
 
@@ -37,19 +37,19 @@ router.get("/", verifyToken, isAdmin, listAdmins);
 
 /**
  * @swagger
- * /api/admin/{userId}:
+ * /api/admin/{id}:
  *   put:
- *     summary: Create or update admin data by user ID
+ *     summary: Create or update admin data by Admin ID or User ID
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: User ID with ADMIN role
+ *         description: Admin ID or User ID
  *     requestBody:
  *       required: true
  *       content:
@@ -76,7 +76,7 @@ router.get("/", verifyToken, isAdmin, listAdmins);
  *         description: Internal server error
  */
 router.put(
-  "/:userId",
+  "/:id",
   verifyToken,
   isAdmin,
   upsertAdmin,
@@ -84,19 +84,19 @@ router.put(
 
 /**
  * @swagger
- * /api/admin/{userId}:
+ * /api/admin/{id}:
  *   get:
- *     summary: Get admin data by user ID
+ *     summary: Get admin data by Admin ID or User ID
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: User ID of admin
+ *         description: Admin ID or User ID
  *     responses:
  *       200:
  *         description: Admin data retrieved successfully
@@ -109,6 +109,6 @@ router.put(
  *       500:
  *         description: Internal server error
  */
-router.get("/:userId", verifyToken, isAdmin, findAdminByUserId);
+router.get("/:id", verifyToken, isAdmin, findAdminById);
 
 export default router;

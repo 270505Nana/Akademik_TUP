@@ -33,7 +33,25 @@ const listAdmins = asyncHandler(async (req, res) => {
 
 // Update or Insert Admin
 const upsertAdmin = asyncHandler(async (req, res) => {
-  const userId = req.params.userId; // String UUID
+  const idOrUserId = req.params.id; // String UUID
+
+  let adminRecord = await prisma.admin.findUnique({
+    where: { id: idOrUserId },
+  });
+
+  let userId;
+  if (adminRecord) {
+    userId = adminRecord.userId;
+  } else {
+    adminRecord = await prisma.admin.findUnique({
+      where: { userId: idOrUserId },
+    });
+    if (adminRecord) {
+      userId = adminRecord.userId;
+    } else {
+      userId = idOrUserId;
+    }
+  }
 
   const user = await prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
   if (!user) {
@@ -76,12 +94,12 @@ const upsertAdmin = asyncHandler(async (req, res) => {
   });
 });
 
-// Find Admin By User Id
-const findAdminByUserId = asyncHandler(async (req, res) => {
-  const userId = req.params.userId; // String UUID
+// Find Admin By Id (with fallback to userId)
+const findAdminById = asyncHandler(async (req, res) => {
+  const idOrUserId = req.params.id; // String UUID
 
-  const admin = await prisma.admin.findUnique({
-    where: { userId },
+  let admin = await prisma.admin.findUnique({
+    where: { id: idOrUserId },
     include: {
       user: {
         select: {
@@ -92,6 +110,22 @@ const findAdminByUserId = asyncHandler(async (req, res) => {
       },
     },
   });
+
+  if (!admin) {
+    // Fallback to userId
+    admin = await prisma.admin.findUnique({
+      where: { userId: idOrUserId },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+  }
 
   if (!admin) {
     res.status(404);
@@ -112,4 +146,4 @@ const findAdminByUserId = asyncHandler(async (req, res) => {
 
 export { listAdmins,
   upsertAdmin,
-  findAdminByUserId, };
+  findAdminById, };
