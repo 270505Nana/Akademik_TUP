@@ -7,116 +7,116 @@ export const SECTIONS = {
 };
 
 export const REQUIRED_SLUGS = [
-  "berkasFormValidasiDosenWali",
-  "berkasRekomendasiSidangPembimbing",
-  "berkasScanPernyataanBiodataIjazahBermaterai",
-  "berkasDummyIjazahBermaterai",
-  "berkasScanAktaKelahiran",
-  "berkasScanIjazahTerakhir",
-  "berkasScanKhsDenganTtdDoswalKaprodi",
-  "berkasLogBimbingan",
-  "berkasSertifikatTak",
-  "berkasRekomendasiBerkasEvidenceTaPaIgraciasPembimbing",
-  "uploadDraftBukuTaSiapSidang",
+  "berkas-form-validasi-dosen-wali",
+  "berkas-rekomendasi-sidang-pembimbing",
+  "berkas-scan-pernyataan-biodata-ijazah-bermaterai",
+  "berkas-dummy-ijazah-bermaterai",
+  "berkas-scan-akta-kelahiran",
+  "berkas-scan-ijazah-terakhir",
+  "berkas-scan-khs-dengan-ttd-doswal-kaprodi",
+  "berkas-log-bimbingan",
+  "berkas-sertifikat-tak",
+  "berkas-rekomendasi-berkas-evidence-ta-pa-igracias-pembimbing",
+  "upload-draft-buku-ta-siap-sidang",
 ];
 
 export const NON_SIDANG_SLUGS = {
   "Publikasi Jurnal": [
-    "berkasLoaJurnal",
-    "berkasPersetujuanPublikasiTaSebagaiPenggantiSidangJurnal",
-    "berkasCameraReadyPaperYangSudahTerbit",
-    "berkasCameraReadyPaperJurnal",
-    "berkasRiwayatReviewOlehReviewers",
-    "berkasResponseJurnal",
+    "berkas-loa-jurnal",
+    "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-jurnal",
+    "berkas-camera-ready-paper-yang-sudah-terbit",
+    "berkas-camera-ready-paper-jurnal",
+    "berkas-riwayat-review-oleh-reviewers",
+    "berkas-response-jurnal",
   ],
   "Proceeding International": [
-    "berkasLoaProceeding",
-    "berkasPersetujuanPublikasiTaSebagaiPenggantiSidangProceeding",
-    "berkasCameraReadyPaperProceeding",
-    "berkasPaktaIntegritas",
-    "berkasResponseProceeding",
+    "berkas-loa-proceeding",
+    "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-proceeding",
+    "berkas-camera-ready-paper-proceeding",
+    "berkas-pakta-integritas",
+    "berkas-response-proceeding",
   ],
   HKI: [
-    "sertifikatHki",
-    "sertifikatDariMitraDudi",
-    "sertifikatPendukungLainnya",
+    "sertifikat-hki",
+    "sertifikat-dari-mitra-dudi",
+    "sertifikat-pendukung-lainnya",
   ],
 };
 
 const REQUIRED_DOCUMENTS = [
   {
-    slug: "berkasFormValidasiDosenWali",
+    slug: "berkas-form-validasi-dosen-wali",
     name: "Berkas Form Validasi Dosen Wali",
   },
   {
-    slug: "berkasRekomendasiSidangPembimbing",
+    slug: "berkas-rekomendasi-sidang-pembimbing",
     name: "Berkas Rekomendasi Sidang Pembimbing",
   },
   {
-    slug: "berkasScanPernyataanBiodataIjazahBermaterai",
+    slug: "berkas-scan-pernyataan-biodata-ijazah-bermaterai",
     name: "Berkas Scan Pernyataan Biodata Ijazah Bermaterai",
   },
   {
-    slug: "berkasDummyIjazahBermaterai",
+    slug: "berkas-dummy-ijazah-bermaterai",
     name: "Berkas Dummy Ijazah Bermaterai",
   },
-  { slug: "berkasScanAktaKelahiran", name: "Berkas Scan Akta Kelahiran" },
-  { slug: "berkasScanIjazahTerakhir", name: "Berkas Scan Ijazah Terakhir" },
+  { slug: "berkas-scan-akta-kelahiran", name: "Berkas Scan Akta Kelahiran" },
+  { slug: "berkas-scan-ijazah-terakhir", name: "Berkas Scan Ijazah Terakhir" },
   {
-    slug: "berkasScanKhsDenganTtdDoswalKaprodi",
+    slug: "berkas-scan-khs-dengan-ttd-doswal-kaprodi",
     name: "Berkas Scan KHS dengan TTD Doswal/Kaprodi",
   },
-  { slug: "berkasLogBimbingan", name: "Berkas Log Bimbingan" },
-  { slug: "berkasSertifikatTak", name: "Berkas Sertifikat TAK" },
+  { slug: "berkas-log-bimbingan", name: "Berkas Log Bimbingan" },
+  { slug: "berkas-sertifikat-tak", name: "Berkas Sertifikat TAK" },
   {
-    slug: "berkasRekomendasiBerkasEvidenceTaPaIgraciasPembimbing",
+    slug: "berkas-rekomendasi-berkas-evidence-ta-pa-igracias-pembimbing",
     name: "Berkas Rekomendasi Evidence TA/PA iGracias Pembimbing",
   },
   {
-    slug: "uploadDraftBukuTaSiapSidang",
+    slug: "upload-draft-buku-ta-siap-sidang",
     name: "Upload Draft Buku TA Siap Sidang",
   },
 ];
 
 const JURNAL_DOCUMENTS = [
-  { slug: "berkasLoaJurnal", name: "Berkas LoA Jurnal" },
+  { slug: "berkas-loa-jurnal", name: "Berkas LoA Jurnal" },
   {
-    slug: "berkasPersetujuanPublikasiTaSebagaiPenggantiSidangJurnal",
+    slug: "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-jurnal",
     name: "Berkas Persetujuan Publikasi TA Pengganti Sidang (Jurnal)",
   },
   {
-    slug: "berkasCameraReadyPaperYangSudahTerbit",
+    slug: "berkas-camera-ready-paper-yang-sudah-terbit",
     name: "Berkas Camera Ready Paper (Sudah Terbit)",
   },
   {
-    slug: "berkasCameraReadyPaperJurnal",
+    slug: "berkas-camera-ready-paper-jurnal",
     name: "Berkas Camera Ready Paper (Jurnal)",
   },
   {
-    slug: "berkasRiwayatReviewOlehReviewers",
+    slug: "berkas-riwayat-review-oleh-reviewers",
     name: "Berkas Riwayat Review oleh Reviewers",
   },
-  { slug: "berkasResponseJurnal", name: "Berkas Response Jurnal" },
+  { slug: "berkas-response-jurnal", name: "Berkas Response Jurnal" },
 ];
 
 const PROCEEDING_DOCUMENTS = [
-  { slug: "berkasLoaProceeding", name: "Berkas LoA Proceeding" },
+  { slug: "berkas-loa-proceeding", name: "Berkas LoA Proceeding" },
   {
-    slug: "berkasPersetujuanPublikasiTaSebagaiPenggantiSidangProceeding",
+    slug: "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-proceeding",
     name: "Berkas Persetujuan Publikasi TA Pengganti Sidang (Proceeding)",
   },
   {
-    slug: "berkasCameraReadyPaperProceeding",
+    slug: "berkas-camera-ready-paper-proceeding",
     name: "Berkas Camera Ready Paper Proceeding",
   },
-  { slug: "berkasPaktaIntegritas", name: "Berkas Pakta Integritas" },
-  { slug: "berkasResponseProceeding", name: "Berkas Response Proceeding" },
+  { slug: "berkas-pakta-integritas", name: "Berkas Pakta Integritas" },
+  { slug: "berkas-response-proceeding", name: "Berkas Response Proceeding" },
 ];
 
 const HKI_DOCUMENTS = [
-  { slug: "sertifikatHki", name: "Sertifikat HKI" },
-  { slug: "sertifikatDariMitraDudi", name: "Sertifikat dari Mitra DUDI" },
-  { slug: "sertifikatPendukungLainnya", name: "Sertifikat Pendukung Lainnya" },
+  { slug: "sertifikat-hki", name: "Sertifikat HKI" },
+  { slug: "sertifikat-dari-mitra-dudi", name: "Sertifikat dari Mitra DUDI" },
+  { slug: "sertifikat-pendukung-lainnya", name: "Sertifikat Pendukung Lainnya" },
 ];
 
 export const DOCUMENT_CONFIG = {
