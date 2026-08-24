@@ -1,172 +1,94 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, GraduationCap, Info, Phone, User } from "lucide-react";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+import React, { useState, useRef, useEffect } from "react";
+import { User, Hash, BookOpen, Phone, CheckCircle2, Search, ChevronDown } from "lucide-react";
 import { useYudisiumContext } from "../../../context/YudisiumFormContext";
 
-const kelompokKeilmuan = [
-  { id: "kk1", researchGroupId: 1, label: "ELECTRONICS AND TELECOMMUNICATIONS SCIENCE" },
-  { id: "kk2", researchGroupId: 2, label: "INDUSTRIAL SYSTEMS ENGINEERING" },
-  { id: "kk3", researchGroupId: 3, label: "MEDIA, DESIGN AND CREATIVE INNOVATION" },
-  { id: "kk4", researchGroupId: 4, label: "APPLIED ARTIFICIAL INTELLIGENCE" },
-  { id: "kk5", researchGroupId: 5, label: "CYBER SECURITY, IOT, AND CLOUD SYSTEM" },
-  { id: "kk6", researchGroupId: 6, label: "DATA SCIENCE AND OPTIMIZATION" },
-  { id: "kk7", researchGroupId: 7, label: "BIOENGINEERING, FOOD TECHNOLOGY AND ADVANCE MATERIAL" },
-  { id: "kk8", researchGroupId: 8, label: "SOFTWARE ENGINEERING AND MULTIMEDIA" },
-];
-
-const getKelompokLabel = (researchGroupId) => {
-  if (!researchGroupId) return null;
-  return kelompokKeilmuan.find((kk) => kk.researchGroupId === researchGroupId)?.label || null;
-};
-
-const getResearchGroupName = (lect) =>
-  getKelompokLabel(lect?.researchGroupId) ||
-  lect?.researchGroup?.name ||
-  (typeof lect?.researchGroup === "string" ? lect.researchGroup : null) ||
-  lect?.researchGroupName ||
-  lect?.kelompokKeilmuan ||
-  lect?.group?.name ||
-  "-";
-
-const formatLecturer = (lect) => {
-  if (!lect) return "-";
-  const kode = lect.kodeDosen || lect.lecturerCode || lect.kode || "-";
-  const nama = lect.user?.name || lect.name || lect.nama || "-";
-  return `${kode} - ${nama} (${getResearchGroupName(lect)})`;
-};
-
-const formatLecturerShort = (lect) => {
-  if (!lect) return "-";
-  const kode = lect.kodeDosen || lect.lecturerCode || lect.kode || "-";
-  const nama = lect.user?.name || lect.name || lect.nama || "-";
-  return `${kode} - ${nama}`;
-};
-
-const StaticValue = ({ children }) => (
-  <div className="static-field">{children ?? "-"}</div>
-);
-
-const LecturerDropdown = ({ lecturers, value, onChange, placeholder, excludeId }) => {
-  const [open, setOpen] = useState(false);
+const SearchableSelect = ({ value, onChange, options, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const wrapRef = useRef(null);
+  const wrapperRef = useRef(null);
+
+  const selectedOption = options.find(opt => String(opt.value) === String(value));
+  const displayValue = selectedOption ? selectedOption.label : "";
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
-        setOpen(false);
-        setQuery("");
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
       }
-    };
+    }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selected = lecturers.find((l) => String(l.id) === String(value));
-
-  const filtered = lecturers.filter((l) => {
-    if (excludeId && String(l.id) === String(excludeId)) return false;
-    if (!query) return true;
-    const label = `${l.kodeDosen || l.lecturerCode || l.kode || ""} ${l.user?.name || l.name || l.nama || ""}`.toLowerCase();
-    return label.includes(query.toLowerCase());
-  });
+  const filteredOptions = options.filter(opt =>
+    opt.label.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
-    <div ref={wrapRef} style={{ position: "relative" }}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="input-field"
-        style={{
-          width: "100%",
-          textAlign: "left",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
+    <div ref={wrapperRef} style={{ position: "relative" }}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="form-input"
+        style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          cursor: "pointer", 
           background: "#fff",
-          cursor: "pointer",
+          padding: "10px 14px",
+          minHeight: "42px"
         }}
       >
-        <span style={{
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          color: selected ? "inherit" : "#94A3B8",
-        }}>
-          {selected ? formatLecturerShort(selected) : (placeholder || "Pilih Dosen")}
+        <span style={{ color: displayValue ? "#1E293B" : "#94A3B8", fontSize: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {displayValue || placeholder}
         </span>
-        <ChevronDown size={16} style={{ flexShrink: 0, color: "#94A3B8" }} />
-      </button>
+        <ChevronDown size={16} color="#94A3B8" style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "0.2s", flexShrink: 0, marginLeft: "8px" }} />
+      </div>
 
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            right: 0,
-            zIndex: 50,
-            background: "#fff",
-            border: "1px solid #E2E8F0",
-            borderRadius: 10,
-            boxShadow: "0 12px 28px rgba(15,23,42,0.14)",
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ padding: 8, borderBottom: "1px solid #F1F5F9" }}>
+      {isOpen && (
+        <div style={{ 
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50, 
+          background: "#fff", border: "1px solid #E2E8F0", borderRadius: "8px", 
+          marginTop: "4px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", 
+          maxHeight: "260px", display: "flex", flexDirection: "column", overflow: "hidden" 
+        }}>
+          <div style={{ padding: "10px", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: "8px", background: "#F8FAFC" }}>
+            <Search size={16} color="#94A3B8" />
             <input
               type="text"
-              autoFocus
+              placeholder="Ketik nama atau kode dosen..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari nama / kode dosen..."
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                border: "1px solid #E2E8F0",
-                borderRadius: 8,
-                fontSize: 13,
-                outline: "none",
-                boxSizing: "border-box",
-              }}
+              style={{ border: "none", outline: "none", width: "100%", fontSize: "13px", background: "transparent" }}
+              autoFocus
             />
           </div>
-          <div style={{ maxHeight: 260, overflowY: "auto" }}>
-            {filtered.length === 0 ? (
-              <div style={{ padding: "14px 12px", fontSize: 13, color: "#9CA3AF", textAlign: "center" }}>
-                Dosen tidak ditemukan.
-              </div>
+          <div style={{ overflowY: "auto", flex: 1, padding: "4px 0" }}>
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt) => (
+                <div
+                  key={opt.value}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                    setQuery("");
+                  }}
+                  style={{ 
+                    padding: "10px 14px", cursor: "pointer", fontSize: "13px", 
+                    color: "#334155", background: String(value) === String(opt.value) ? "#FEF2F2" : "transparent",
+                    fontWeight: String(value) === String(opt.value) ? "600" : "400",
+                    transition: "background 0.15s"
+                  }}
+                  onMouseEnter={(e) => { if (String(value) !== String(opt.value)) e.currentTarget.style.background = "#F1F5F9"; }}
+                  onMouseLeave={(e) => { if (String(value) !== String(opt.value)) e.currentTarget.style.background = "transparent"; }}
+                >
+                  {opt.label}
+                </div>
+              ))
             ) : (
-              filtered.map((lect) => {
-                const isSelected = String(lect.id) === String(value);
-                return (
-                  <div
-                    key={lect.id}
-                    onClick={() => {
-                      onChange(String(lect.id));
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                    style={{
-                      padding: "10px 14px",
-                      cursor: "pointer",
-                      fontSize: 13,
-                      fontWeight: isSelected ? 700 : 500,
-                      background: isSelected ? "#FEF2F2" : "#fff",
-                      color: isSelected ? "#C0182A" : "#1E293B",
-                      borderBottom: "1px solid #F8FAFC",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = "#F8FAFC";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = "#fff";
-                    }}
-                  >
-                    {formatLecturerShort(lect)}
-                  </div>
-                );
-              })
+              <div style={{ padding: "16px 14px", fontSize: "13px", color: "#94A3B8", textAlign: "center", fontStyle: "italic" }}>
+                Dosen tidak ditemukan
+              </div>
             )}
           </div>
         </div>
@@ -175,284 +97,244 @@ const LecturerDropdown = ({ lecturers, value, onChange, placeholder, excludeId }
   );
 };
 
-const quillModules = {
-  toolbar: [
-    [{ list: "ordered" }, { list: "bullet" }],
-    ["clean"],
-  ],
-};
+const InfoCard = ({ label, value, icon: Icon }) => (
+  <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "10px", padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: "12px" }}>
+    <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <Icon size={18} color="#C0182A" />
+    </div>
+    <div>
+      <div style={{ fontSize: "10px", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "4px" }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B", lineHeight: "1.4" }}>
+        {value}
+      </div>
+    </div>
+  </div>
+);
 
-export default function Step1Yudisium({ studentInfo = {}, lecturers = [], readOnly = false }) {
+export default function Step1Yudisium({ studentInfo, lecturers }) {
   const { state, dispatch } = useYudisiumContext();
   const { data } = state;
 
-  const programs = ["Reguler", "Alih Jenjang"];
-  const skemas = ["Sidang Reguler", "Non Sidang", "Capstone", "Sidang Khusus Prodi"];
-  const cumlaudeOptions = ["Non Cumlaude", "Pengajuan Cumlaude", "Summa Cumlaude"];
-  const skemaCumlaudeList = ["Publikasi Jurnal", "Pameran", "Lomba", "HKI"];
+  const dosenOptions = lecturers.map(d => ({
+    value: d.id,
+    label: `${d.kodeDosen} - ${d.name || d.nama}`
+  }));
 
-  const updateField = (field, value) => {
-    if (readOnly) return;
+  const handleChange = (field, value) => {
     dispatch({ type: "UPDATE_FIELD", field, value });
   };
 
-  const handleCumlaudeChange = (val) => {
-    if (readOnly) return;
-    updateField("pengajuanCumlaude", val);
-    
-    // Auto-select and lock if Summa Cumlaude
-    if (val === "Summa Cumlaude") {
-      updateField("skemaCumlaude", ["Publikasi Jurnal"]);
-    } else if (val === "Non Cumlaude") {
-      updateField("skemaCumlaude", []);
-      updateField("evidenCumlaude", "");
+  const handleSkemaCumlaudeChange = (val) => {
+    let current = [...(data.skemaCumlaude || [])];
+    if (current.includes(val)) {
+      current = current.filter(item => item !== val);
+    } else {
+      current.push(val);
     }
+    handleChange("skemaCumlaude", current);
   };
-
-  const toggleSkemaCumlaude = (option) => {
-    if (readOnly || data.pengajuanCumlaude === "Summa Cumlaude") return;
-    const current = data.skemaCumlaude || [];
-    const next = current.includes(option)
-      ? current.filter((i) => i !== option)
-      : [...current, option];
-    updateField("skemaCumlaude", next);
-  };
-
-  const pembimbing1 = lecturers.find((l) => String(l.id) === String(data.dosenPembimbing1Id));
-  const pembimbing2 = lecturers.find((l) => String(l.id) === String(data.dosenPembimbing2Id));
 
   return (
     <div className="step-content">
-      <div className="info-banner">
+      <div className="info-banner" style={{ marginBottom: "2rem" }}>
         <div className="banner-icon-container">
-          <Info color="#d69e2e" size={24} />
+          <CheckCircle2 color="#16a34a" size={24} />
         </div>
         <div className="banner-content">
-          <h4>Pendaftaran Yudisium Telkom University Purwokerto</h4>
-          <p>Lengkapi data pendaftaran Yudisium dengan benar dan teliti sesuai dengan data akademik terakhir.</p>
+          <h4>Informasi Mahasiswa</h4>
+          <p>Pastikan data diri kamu di bawah ini sudah sesuai sebelum melanjutkan pendaftaran yudisium.</p>
         </div>
       </div>
 
-      <div className="step-title-container">
-        <div className="step-label">Step 1</div>
-        <h2 className="step-main-title">
-          Formulir Data Akademik Yudisium
-        </h2>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "32px" }}>
+        <InfoCard label="Nama Lengkap" icon={User} value={studentInfo.nama} />
+        <InfoCard label="NIM" icon={Hash} value={studentInfo.nim} />
+        <InfoCard label="Program Studi" icon={BookOpen} value={studentInfo.prodi} />
+        <InfoCard label="No. Telepon" icon={Phone} value={studentInfo.phone} />
       </div>
 
-      <section className="form-section">
-        <h3 className="section-head">Identitas & Program Studi</h3>
-        <div className="form-grid">
-          <div className="input-group">
-            <label>Nama</label>
-            <div className="input-with-icon">
-              <User className="input-icon" size={18} />
-              <div className="static-field">{studentInfo.nama || "-"}</div>
-            </div>
-          </div>
-          
-          <div className="input-group">
-            <label>NIM</label>
-            <div className="input-with-icon">
-              <div className="static-field">{studentInfo.nim || "-"}</div>
-            </div>
-          </div>
-
-          <div className="input-group">
-            <label>Program Studi</label>
-            <div className="input-with-icon">
-              <GraduationCap className="input-icon" size={18} />
-              <div className="static-field">{studentInfo.prodi || "-"}</div>
-            </div>
-          </div>
-
-          <div className="input-group">
-            <label>No. HP</label>
-            <div className="input-with-icon">
-              <Phone className="input-icon" size={18} />
-              <div className="static-field">{studentInfo.phone || "-"}</div>
-            </div>
-          </div>
-
-          <div className="input-group">
-            <label>Program</label>
-            {readOnly ? (
-              <StaticValue>{data.program || "-"}</StaticValue>
-            ) : (
-              <div className="program-selector">
-                {programs.map((p) => (
-                  <div key={p} className={`program-card ${data.program === p ? "active" : ""}`} onClick={() => updateField("program", p)}>
-                    <div className="checkbox-visual">
-                      {data.program === p && <span className="checkbox-dot" />}
-                    </div>
-                    <span>{p}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="input-group">
-            <label>Score TAK Terbaru</label>
-            {readOnly ? (
-              <StaticValue>{data.tak || "-"}</StaticValue>
-            ) : (
-              <div className="input-with-icon">
-                <input type="number" className="input-field" placeholder="0" value={data.tak} onChange={(e) => updateField("tak", e.target.value)} />
-              </div>
-            )}
-          </div>
-
-          <div className="input-group">
-            <label>Tanggal Sidang</label>
-            <div className="input-with-icon">
-              <div className="static-field">{data.sidangDate}</div>
-            </div>
-            <span className="helper-text">Tanggal sidang otomatis di-generate oleh sistem.</span>
-          </div>
+      <div className="form-grid">
+        <div className="form-group">
+          <label className="form-label">Program <span style={{ color: "red" }}>*</span></label>
+          <select className="form-select" value={data.program} onChange={(e) => handleChange("program", e.target.value)}>
+            <option value="">-- Pilih Program --</option>
+            <option value="Reguler">Reguler</option>
+            <option value="Alih Jenjang">Alih Jenjang</option>
+          </select>
         </div>
-      </section>
 
-      <section className="form-section">
-        <h3 className="section-head">Informasi Tugas Akhir & Skema</h3>
-        <div className="form-grid">
-           <div className="input-group">
-            <label>Kode Dosen Wali</label>
-            <div className="input-with-icon">
-              <div className="static-field">{data.dosenWaliId}</div>
+        <div className="form-group">
+          <label className="form-label">Total Nilai TAK <span style={{ color: "red" }}>*</span></label>
+          <input 
+            type="number" 
+            min="0"
+            className="form-input"
+            style={{
+              borderColor: (data.program === "Reguler" && data.tak !== "" && Number(data.tak) < 60) || 
+                           (data.program === "Alih Jenjang" && data.tak !== "" && Number(data.tak) < 45) 
+                           ? "#ef4444" : ""
+            }}
+            placeholder="Contoh: 60" 
+            value={data.tak} 
+            onKeyDown={(e) => {
+              if (e.key === '-' || e.key === 'e') e.preventDefault();
+            }}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || Number(val) >= 0) handleChange("tak", val);
+            }} 
+          />
+          {data.program === "Reguler" && data.tak !== "" && Number(data.tak) < 60 && (
+            <p style={{ fontSize: "12px", color: "#ef4444", marginTop: "6px", fontWeight: "500" }}>
+              ⚠️ Nilai TAK untuk program Reguler minimal 60.
+            </p>
+          )}
+          {data.program === "Alih Jenjang" && data.tak !== "" && Number(data.tak) < 45 && (
+            <p style={{ fontSize: "12px", color: "#ef4444", marginTop: "6px", fontWeight: "500" }}>
+              ⚠️ Nilai TAK untuk program Alih Jenjang minimal 45.
+            </p>
+          )}
+        </div>
+
+        <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+          <label className="form-label">Judul Tugas Akhir (Indonesia) <span style={{ color: "red" }}>*</span></label>
+          <textarea className="form-input" rows={2} placeholder="Masukkan judul dalam bahasa Indonesia" value={data.judulTugasAkhirIndonesia} onChange={(e) => handleChange("judulTugasAkhirIndonesia", e.target.value)} />
+        </div>
+
+        <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+          <label className="form-label">Judul Tugas Akhir (Inggris) <span style={{ color: "red" }}>*</span></label>
+          <textarea className="form-input" rows={2} placeholder="Masukkan judul dalam bahasa Inggris" value={data.judulTugasAkhirInggris} onChange={(e) => handleChange("judulTugasAkhirInggris", e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Skema Sidang <span style={{ color: "red" }}>*</span></label>
+          <select className="form-select" value={data.skemaSidang} onChange={(e) => handleChange("skemaSidang", e.target.value)}>
+            <option value="">-- Pilih Skema --</option>
+            <option value="Sidang Reguler">Sidang Reguler</option>
+            <option value="Non Sidang">Non Sidang</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Apakah Anda berminat wirausaha? <span style={{ color: "red" }}>*</span></label>
+          <select className="form-select" value={data.minatWirausaha} onChange={(e) => handleChange("minatWirausaha", e.target.value)}>
+            <option value="">-- Pilih --</option>
+            <option value="Ya">Ya, Berminat</option>
+            <option value="Tidak">Tidak</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Dosen Pembimbing 1 <span style={{ color: "red" }}>*</span></label>
+          <SearchableSelect 
+            options={dosenOptions}
+            value={data.dosenPembimbing1Id}
+            onChange={(val) => handleChange("dosenPembimbing1Id", val)}
+            placeholder="-- Pilih Dosen Pembimbing 1 --"
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Dosen Pembimbing 2</label>
+          <SearchableSelect 
+            options={dosenOptions}
+            value={data.dosenPembimbing2Id}
+            onChange={(val) => handleChange("dosenPembimbing2Id", val)}
+            placeholder="-- Pilih Dosen Pembimbing 2 (Opsional) --"
+          />
+        </div>
+
+        {/*  CUMLAUDE */}
+        <div className="form-group" style={{ gridColumn: "1 / -1", marginTop: "1rem", borderTop: "1px solid #e2e8f0", paddingTop: "1.5rem" }}>
+          <label className="form-label" style={{ fontSize: "16px", color: "#0f172a" }}>
+            Pengajuan Cumlaude / Summa Cumlaude
+          </label>
+          <select 
+            className="form-select" 
+            value={data.pengajuanCumlaude} 
+            onChange={(e) => {
+              const val = e.target.value;
+              handleChange("pengajuanCumlaude", val);
+              
+              if (val === "Pengajuan Summacumlaude") {
+                handleChange("skemaCumlaude", ["Publikasi Jurnal"]);
+              }
+            }}
+          >
+            <option value="Non Cumlaude">Tidak Mengajukan</option>
+            <option value="Pengajuan Cumlaude">Ya, Mengajukan Cumlaude</option>
+            <option value="Pengajuan Summacumlaude">Ya, Mengajukan Summa Cumlaude</option>
+          </select>
+        </div>
+
+        {data.pengajuanCumlaude !== "Non Cumlaude" && (
+          <>
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label className="form-label">Skema <span style={{ color: "red" }}>*</span></label>
+              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginTop: "8px" }}>
+                {["Publikasi Jurnal", "Prestasi Lomba", "HKI/Paten", "Pameran"].map((opsi) => {
+                  const isSumma = data.pengajuanCumlaude === "Pengajuan Summacumlaude";
+                  const isJurnal = opsi === "Publikasi Jurnal";
+                  const forceDisable = isSumma;
+
+                  return (
+                    <label 
+                      key={opsi} 
+                      style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: "8px", 
+                        fontSize: "14px", 
+                        cursor: forceDisable ? "not-allowed" : "pointer" 
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(data.skemaCumlaude || []).includes(opsi)}
+                        disabled={forceDisable}
+                        onChange={() => handleSkemaCumlaudeChange(opsi)}
+                        style={{ 
+                          width: "16px", 
+                          height: "16px", 
+                          accentColor: "#C0182A", 
+                          cursor: forceDisable ? "not-allowed" : "pointer" 
+                        }}
+                      />
+                      <span style={{ color: forceDisable ? "#94a3b8" : "inherit", fontWeight: (isSumma && isJurnal) ? "600" : "400" }}>
+                        {opsi} {(isSumma && isJurnal) && "(Wajib)"}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          <div className="input-group">
-            <label>Dosen Pembimbing 1</label>
-            {readOnly ? (
-              <StaticValue>{formatLecturer(pembimbing1)}</StaticValue>
-            ) : (
-              <LecturerDropdown 
-                lecturers={lecturers} 
-                value={data.dosenPembimbing1Id} 
-                onChange={(id) => updateField("dosenPembimbing1Id", id)} 
-                excludeId={data.dosenPembimbing2Id} 
-                placeholder="Pilih Dosen Pembimbing 1"
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label className="form-label">
+                Detail Publikasi / Prestasi (Sertifikat/Jurnal) <span style={{ color: "red" }}>*</span>
+              </label>
+              <textarea
+                className="form-input"
+                placeholder="Sebutkan detail publikasi atau prestasi kamu di sini... (Pisahkan dengan Enter)"
+                value={data.evidenCumlaude}
+                onChange={(e) => handleChange("evidenCumlaude", e.target.value)}
+                rows={5}
+                style={{ 
+                  resize: "vertical", 
+                  padding: "12px 14px",
+                  minHeight: "120px",
+                  lineHeight: "1.5"
+                }}
               />
-            )}
-          </div>
-
-          <div className="input-group"></div>
-
-          <div className="input-group">
-            <label>Dosen Pembimbing 2</label>
-            {readOnly ? (
-              <StaticValue>{formatLecturer(pembimbing2)}</StaticValue>
-            ) : (
-              <LecturerDropdown 
-                lecturers={lecturers} 
-                value={data.dosenPembimbing2Id} 
-                onChange={(id) => updateField("dosenPembimbing2Id", id)} 
-                excludeId={data.dosenPembimbing1Id} 
-                placeholder="Pilih Dosen Pembimbing 2"
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="input-group" style={{ marginTop: "2rem" }}>
-          <label>Skema Sidang</label>
-          {readOnly ? (
-            <StaticValue>{data.skemaSidang || "-"}</StaticValue>
-          ) : (
-            <div className="input-with-icon">
-              <select className="input-field" value={data.skemaSidang} onChange={(e) => updateField("skemaSidang", e.target.value)}>
-                <option value="">Pilih Skema Sidang</option>
-                {skemas.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <p style={{ fontSize: "12px", color: "#64748b", marginTop: "6px" }}>
+                Catatan: Jika ada lebih dari satu, pisahkan dengan baris baru (Enter).
+              </p>
             </div>
-          )}
-        </div>
-
-        <div className="input-group" style={{ marginTop: "2rem" }}>
-          <label>Judul Tugas Akhir (Bahasa Indonesia) *</label>
-          {readOnly ? (
-            <StaticValue>{data.judulTugasAkhirIndonesia || "-"}</StaticValue>
-          ) : (
-            <textarea className="textarea-field" value={data.judulTugasAkhirIndonesia} onChange={(e) => updateField("judulTugasAkhirIndonesia", e.target.value)} placeholder="Masukkan Judul Tugas Akhir (Bahasa Indonesia)"></textarea>
-          )}
-        </div>
-
-        <div className="input-group" style={{ marginTop: "2rem" }}>
-          <label>Judul Tugas Akhir (Bahasa Inggris) *</label>
-          {readOnly ? (
-            <StaticValue>{data.judulTugasAkhirInggris || "-"}</StaticValue>
-          ) : (
-            <textarea className="textarea-field" value={data.judulTugasAkhirInggris} onChange={(e) => updateField("judulTugasAkhirInggris", e.target.value)} placeholder="Masukkan Judul Tugas Akhir (Bahasa Inggris)"></textarea>
-          )}
-        </div>
-      </section>
-
-      <section className="form-section">
-        <h3 className="section-head">Pengajuan Predikat & Kewirausahaan</h3>
-        
-        <div className="input-group">
-          <label>Pengajuan Cumlaude</label>
-          {readOnly ? (
-             <StaticValue>{data.pengajuanCumlaude || "-"}</StaticValue>
-          ) : (
-            <div className="input-with-icon">
-              <select className="input-field" value={data.pengajuanCumlaude} onChange={(e) => handleCumlaudeChange(e.target.value)}>
-                {cumlaudeOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          )}
-        </div>
-
-        {(data.pengajuanCumlaude === "Pengajuan Cumlaude" || data.pengajuanCumlaude === "Summa Cumlaude") && (
-           <div className="input-group" style={{ marginTop: "1rem", padding: "1.5rem", background: "#f8fafc", borderRadius: "12px", border: "1px solid var(--border-grey)" }}>
-             <label style={{ color: "var(--primary-red)" }}>Skema Cumlaude *</label>
-             <span className="helper-text">Pilih opsi skema yang sesuai</span>
-             <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-                {skemaCumlaudeList.map((option) => (
-                  <div 
-                    key={option} 
-                    className={`program-card ${data.skemaCumlaude?.includes(option) ? "active" : ""} ${data.pengajuanCumlaude === "Summa Cumlaude" && option !== "Publikasi Jurnal" ? "disabled" : ""}`} 
-                    onClick={() => toggleSkemaCumlaude(option)} 
-                    style={{ padding: "0.5rem 1rem", opacity: data.pengajuanCumlaude === "Summa Cumlaude" && option !== "Publikasi Jurnal" ? 0.5 : 1, cursor: data.pengajuanCumlaude === "Summa Cumlaude" && option !== "Publikasi Jurnal" ? "not-allowed" : "pointer" }}
-                  >
-                    <div className="checkbox-visual">
-                      {data.skemaCumlaude?.includes(option) && <Check color="white" size={14} strokeWidth={3} />}
-                    </div>
-                    <span style={{ fontSize: "0.85rem" }}>{option}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="input-group" style={{ marginTop: "2rem" }}>
-                <label>Detail Publikasi / Prestasi (Gunakan Numbering)</label>
-                {readOnly ? (
-                  <div className="static-field" dangerouslySetInnerHTML={{ __html: data.evidenCumlaude }} />
-                ) : (
-                  <div style={{ background: "white", borderRadius: "8px" }}>
-                    <ReactQuill theme="snow" value={data.evidenCumlaude} onChange={(val) => updateField("evidenCumlaude", val)} modules={quillModules} placeholder="Contoh: 1. Juara 1 Pagelaran Mahasiswa Nasional..." />
-                  </div>
-                )}
-              </div>
-           </div>
+          </>
         )}
-
-        <div className="input-group" style={{ marginTop: "2rem" }}>
-          <label>Apakah berminat dan memenuhi kriteria menjadi Mahasiswa Berprestasi Bidang Kewirausahaan?</label>
-          {readOnly ? (
-            <StaticValue>{data.minatWirausaha || "-"}</StaticValue>
-          ) : (
-            <div className="input-with-icon">
-              <select className="input-field" value={data.minatWirausaha} onChange={(e) => updateField("minatWirausaha", e.target.value)}>
-                <option value="">-- Pilih --</option>
-                <option value="Ya">Ya, Saya Berminat</option>
-                <option value="Tidak">Tidak</option>
-              </select>
-            </div>
-          )}
-        </div>
-      </section>
+      </div>
     </div>
   );
 }
