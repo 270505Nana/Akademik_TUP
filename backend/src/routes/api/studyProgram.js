@@ -163,7 +163,7 @@ router.delete(
 /**
  * @swagger
  * /api/study-programs/{id}/toggle-publish:
- *   post:
+ *   patch:
  *     summary: Toggle study program publish status (hide/show)
  *     tags: [Study Program]
  *     security:
@@ -180,7 +180,7 @@ router.delete(
  *       404:
  *         description: Study program not found
  */
-router.post(
+router.patch(
   "/:id/toggle-publish",
   verifyToken,
   authorize("ADMIN"),

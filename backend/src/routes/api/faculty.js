@@ -154,7 +154,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
 /**
  * @swagger
  * /api/faculties/{id}/toggle-publish:
- *   post:
+ *   patch:
  *     summary: Toggle faculty publish status (hide/show)
  *     tags: [Faculty]
  *     security:
@@ -171,7 +171,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
  *       404:
  *         description: Faculty not found
  */
-router.post(
+router.patch(
   "/:id/toggle-publish",
   verifyToken,
   authorize("ADMIN"),
