@@ -24,8 +24,6 @@ const CLR = {
   sub: '#64748B',
 };
 
-const CLR = { red: '#C0182A', green: '#16A34A', orange: '#D97706', border: '#E2E8F0', muted: '#94A3B8', text: '#1E293B', sub: '#64748B' };
-
 const STEPS = [
   { n: 1, label: 'Data Diri & Akademik' },
   { n: 2, label: 'Periksa Berkas & Dokumen' },
@@ -327,7 +325,6 @@ const VerifikasiBerkasModal = ({
   const [loadingUploads, setLoadingUploads] = useState(false);
   const [fileError, setFileError] = useState(null);
 
-  // prodiName diambil langsung dari registration prop (BE sudah include mahasiswa.studyProgram.name)
   const m = registration?.mahasiswa || registration?.student;
   const prodiName = m?.studyProgram?.name ?? '-';
   const periods = Object.values(periodMap ?? {});
@@ -441,7 +438,7 @@ const VerifikasiBerkasModal = ({
     setIsSubmitting(true);
     try {
       if (hasBermasalah) {
-        // MENGIRIM REVISI KE BACKEND MENGGUNAKAN createSidangRegistrationResponse
+
         await createSidangRegistrationResponse(registration.id, {
           academicStaffId,
           message: message.trim(),
@@ -449,7 +446,7 @@ const VerifikasiBerkasModal = ({
           sidangRegistrationUploadIds: validUploadIds,
         });
       } else {
-        // MENGIRIM APPROVAL KE BACKEND MENGGUNAKAN createSidangRegistrationResponse
+
         await createSidangRegistrationResponse(registration.id, {
           academicStaffId,
           sidangPeriodId: selectedPeriodId,
