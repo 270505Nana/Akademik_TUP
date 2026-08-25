@@ -335,6 +335,18 @@ export const getYudisiumTemplates = async () => {
   }
 };
 
+// Mengambil data registrasi / draft milik mahasiswa by idnya
+export const getMyYudisiumRegistrations = async (mahasiswaId) => {
+  try {
+    const response = await api.get(`/api/yudisium-registrations/student/${mahasiswaId}`);
+    const data = response.data?.data ?? response.data;
+    return Array.isArray(data) ? data : (data ? [data] : []);
+  } catch (e) {
+    console.error("Gagal mengambil data registrasi yudisium:", e);
+    return [];
+  }
+};
+
 // ------------------------------------------- SIDANG ADMIN -------------------------------------------
 export const getAllSidangRegistrations = async () => {
   const response = await api.get('/api/sidang-registrations');

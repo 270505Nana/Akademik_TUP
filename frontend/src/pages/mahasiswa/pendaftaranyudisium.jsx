@@ -11,7 +11,6 @@ import Step1Yudisium from "../../components/mahasiswa/yudisium/Step1Yudisium";
 import Step2Yudisium from "../../components/mahasiswa/yudisium/Step2Yudisium";
 import CustomAlert from "../../components/common/CustomAlert";
 import SidebarMahasiswa from "../../components/sidebar/SidebarMahasiswa";
-
 import { SECTIONS } from "../../components/mahasiswa/yudisium/YudisiumDocument";
 
 import { 
@@ -19,7 +18,8 @@ import {
   saveYudisiumRegistration, 
   submitYudisiumRegistration,
   getActiveYudisiumPeriod,
-  getYudisiumTemplates 
+  getYudisiumTemplates,
+  getMyYudisiumRegistrations 
 } from "../../service/api";
 
 const STEP1_REQUIRED = [
@@ -65,26 +65,38 @@ function PendaftaranYudisiumContent() {
   const [isSavingStep1, setIsSavingStep1] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lecturers, setLecturers] = useState([]);
-  const [registrationId, setRegistrationId] = useState(null);
   const [formAlert, setFormAlert] = useState(null);
 
+  // Ambil dari context, BUKAN dari local state useState!
+  const registrationId = data.registrationId;
   const mahasiswaId = student?.mahasiswaId || profile?.id || user?.id;
 
   const studentInfo = {
     nama: student?.namaLengkap || profile?.name || user?.username || "-",
     nim: student?.nim || profile?.nim || "-",
-    prodi: student?.studyProgramNama || profile?.studyProgram?.name || "-",
+    prodi: student?.studyProgramNama || profile?.studyProgram?.name || "-"
     phone: user?.phone || profile?.phone || user?.no_telp || "-",
   };
 
+  // FETCH DATA INITIAL (Dosen, Template, dan Draft dari BE berdasarkan Mahasiswa ID)
   useEffect(() => {
     getLecturers().then(res => setLecturers(res || [])).catch(console.error);
-    
     
     getYudisiumTemplates().then(templates => {
       dispatch({ type: "SET_DYNAMIC_DOCUMENTS", payload: templates });
     }).catch(console.error);
-  }, [dispatch]);
+
+    if (mahasiswaId) {
+      getMyYudisiumRegistrations(mahasiswaId).then(drafts => {
+        if (drafts && drafts.length > 0) {
+          const latestDraft = drafts.find(d => d.isDraft);
+          if (latestDraft) {
+            dispatch({ type: "RESTORE_FROM_API", payload: latestDraft });
+          }
+        }
+      }).catch(console.error);
+    }
+  }, [dispatch, mahasiswaId]); 
 
   useEffect(() => {
     const fetchPeriod = async () => {
@@ -141,7 +153,10 @@ function PendaftaranYudisiumContent() {
       setIsSavingStep1(true);
       const result = await saveYudisiumRegistration(buildSavePayload());
       const savedId = result?.id ?? result?.data?.id ?? null;
-      if (savedId) setRegistrationId(savedId);
+      
+      if (savedId) {
+        dispatch({ type: "UPDATE_FIELD", field: "registrationId", value: savedId });
+      }
       
       setStep(2);
     } catch (e) {
@@ -237,7 +252,7 @@ function PendaftaranYudisiumContent() {
               {step === 1 ? (
                 <Step1Yudisium studentInfo={studentInfo} lecturers={lecturers} />
               ) : (
-                <Step2Yudisium registrationId={registrationId} />
+                <Step2Yudisium registrationId={registrationId} studentInfo={studentInfo} />
               )}
             </main>
 
