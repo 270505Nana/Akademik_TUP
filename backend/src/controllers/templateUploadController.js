@@ -1,6 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -58,16 +59,25 @@ const withFileUrl = (req, data) => {
 
 // Get all template uploads
 const listTemplateUploads = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
   const { category } = req.query;
-  const templateUploads = await prisma.dokumenPersyaratanBerkas.findMany({
-    where: { 
-      deletedAt: null,
-      ...(category && { category }),
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const whereClause = {
+    deletedAt: null,
+    ...(category && { category }),
+  };
+
+  const [total, templateUploads] = await Promise.all([
+    prisma.dokumenPersyaratanBerkas.count({ where: whereClause }),
+    prisma.dokumenPersyaratanBerkas.findMany({
+      where: whereClause,
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
   const data = templateUploads.map((item) => withFileUrl(req, item));
-  res.json({ data });
+  res.json(formatPaginationResponse(data, total, paginationParams));
 });
 
 // Create template upload

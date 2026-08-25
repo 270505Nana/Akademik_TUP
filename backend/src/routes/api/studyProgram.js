@@ -25,7 +25,7 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  * @swagger
  * /api/study-programs:
  *   get:
- *     summary: Get all study program data (with filter and sort)
+ *     summary: Get all study program data (with filter, sort, and pagination)
  *     tags: [Study Program]
  *     security:
  *       - bearerAuth: []
@@ -51,9 +51,22 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *           type: string
  *           enum: [a-z, z-a, active-inactive, inactive-active]
  *         description: Sort study programs by name or active status
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Study program data retrieved successfully
+ *         description: Study program data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

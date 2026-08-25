@@ -19,7 +19,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/sidang-periods:
  *   get:
- *     summary: Get all sidang periods
+ *     summary: Get all sidang periods (with filter and pagination)
  *     tags: [Sidang Period]
  *     security:
  *       - bearerAuth: []
@@ -29,9 +29,22 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *         description: Filter periods by category (pendaftaran sidang / sidang)
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Sidang period data retrieved successfully
+ *         description: Sidang period data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

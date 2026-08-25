@@ -3,6 +3,7 @@ import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
 import { sendValidationError, isNil, parseBoolean, isValidISO8601 } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Constants for File Validation
 const REQUIRED_SLUGS = [];
@@ -189,18 +190,23 @@ const checkYudisiumEditable = async (registrationId) => {
 
 // Yudisium Registration List
 const listYudisiumRegistrations = asyncHandler(async (req, res) => {
-  const yudisiumRegistrations = await prisma.yudisiumRegistration.findMany({
-    include: yudisiumInclude,
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const paginationParams = getPaginationParams(req.query);
+
+  const [total, yudisiumRegistrations] = await Promise.all([
+    prisma.yudisiumRegistration.count(),
+    prisma.yudisiumRegistration.findMany({
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      include: yudisiumInclude,
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+  ]);
 
   const data = yudisiumRegistrations.map((reg) => mapYudisiumRegistrationToFrontend(reg, req));
 
-  res.json({
-    data,
-  });
+  res.json(formatPaginationResponse(data, total, paginationParams));
 });
 
 // Get Yudisium Registration by ID

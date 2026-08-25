@@ -1,9 +1,11 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil, parseBoolean } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Daftar Semua Fakultas (dengan filter & sort)
 const listFaculties = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
   const { name, isActive, is_active, sortBy, sort } = req.query;
 
   const where = { deletedAt: null };
@@ -36,14 +38,17 @@ const listFaculties = asyncHandler(async (req, res) => {
     orderBy = [{ isActive: 'asc' }, { name: 'asc' }];
   }
 
-  const faculties = await prisma.faculty.findMany({
-    where,
-    orderBy,
-  });
+  const [total, faculties] = await Promise.all([
+    prisma.faculty.count({ where }),
+    prisma.faculty.findMany({
+      where,
+      orderBy,
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+    }),
+  ]);
 
-  res.json({
-    data: faculties,
-  });
+  res.json(formatPaginationResponse(faculties, total, paginationParams));
 });
 
 // Cari Fakultas By ID

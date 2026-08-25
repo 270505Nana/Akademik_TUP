@@ -25,7 +25,7 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  * @swagger
  * /api/faculties:
  *   get:
- *     summary: Get all faculty data (with filter and sort)
+ *     summary: Get all faculty data (with filter, sort, and pagination)
  *     tags: [Faculty]
  *     security:
  *       - bearerAuth: []
@@ -46,9 +46,22 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *           type: string
  *           enum: [a-z, z-a, active-inactive, inactive-active]
  *         description: Sort faculties by name or active status
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Faculty data retrieved successfully
+ *         description: Faculty data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

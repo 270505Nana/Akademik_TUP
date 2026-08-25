@@ -1,9 +1,11 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil, parseBoolean } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Daftar Semua Program Studi (dengan filter & sort)
 const listStudyPrograms = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
   const { name, isActive, is_active, facultyId, faculty_id, sortBy, sort } = req.query;
 
   const where = { deletedAt: null };
@@ -41,15 +43,18 @@ const listStudyPrograms = asyncHandler(async (req, res) => {
     orderBy = [{ isActive: 'asc' }, { name: 'asc' }];
   }
 
-  const studyPrograms = await prisma.studyProgram.findMany({
-    where,
-    orderBy,
-    include: { faculty: true },
-  });
+  const [total, studyPrograms] = await Promise.all([
+    prisma.studyProgram.count({ where }),
+    prisma.studyProgram.findMany({
+      where,
+      orderBy,
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      include: { faculty: true },
+    }),
+  ]);
 
-  res.json({
-    data: studyPrograms,
-  });
+  res.json(formatPaginationResponse(studyPrograms, total, paginationParams));
 });
 
 // Cari Program Studi By ID

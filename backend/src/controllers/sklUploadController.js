@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { sendValidationError, isNil } from '../utils/validationHelper.js';
 import { v4 as uuidv4 } from 'uuid';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 const mapMahasiswa = (mahasiswa) => {
   if (!mahasiswa) return null;
@@ -57,6 +58,7 @@ const sklInclude = {
 
 // List all SKL uploads (from BerkasMahasiswa with category "SKL")
 const listSklUploads = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
   let whereClause = { deletedAt: null, category: "SKL" };
 
   // If user is MAHASISWA, they can only see their own SKL uploads
@@ -71,14 +73,21 @@ const listSklUploads = asyncHandler(async (req, res) => {
     whereClause.mahasiswaId = student.id;
   }
 
-  const sklUploads = await prisma.berkasMahasiswa.findMany({
-    where: whereClause,
-    include: sklInclude,
-    orderBy: { createdAt: "desc" },
-  });
+  const [total, sklUploads] = await Promise.all([
+    prisma.berkasMahasiswa.count({
+      where: whereClause,
+    }),
+    prisma.berkasMahasiswa.findMany({
+      where: whereClause,
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      include: sklInclude,
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   const data = sklUploads.map((item) => mapSklUpload(item, req));
-  res.json({ data });
+  res.json(formatPaginationResponse(data, total, paginationParams));
 });
 
 // Get SKL upload by ID

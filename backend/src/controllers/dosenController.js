@@ -1,20 +1,31 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Daftar Semua Dosen
 const listDosens = asyncHandler(async (req, res) => {
-  const dosens = await prisma.dosen.findMany({
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-          phone: true,
+  const paginationParams = getPaginationParams(req.query);
+
+  const [total, dosens] = await Promise.all([
+    prisma.dosen.count(),
+    prisma.dosen.findMany({
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   const mapped = dosens.map((d) => {
     const { user, ...rest } = d;
@@ -26,9 +37,7 @@ const listDosens = asyncHandler(async (req, res) => {
     };
   });
 
-  res.json({
-    data: mapped,
-  });
+  res.json(formatPaginationResponse(mapped, total, paginationParams));
 });
 
 // Update or Insert Dosen

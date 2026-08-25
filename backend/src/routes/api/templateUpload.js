@@ -28,7 +28,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/templates:
  *   get:
- *     summary: Get all template uploads
+ *     summary: Get all template uploads (with filter and pagination)
  *     tags: [Template Upload]
  *     security:
  *       - bearerAuth: []
@@ -48,9 +48,22 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *             - Yudisium - Evidence Cumlaude Lomba
  *             - Yudisium - Evidence Cumlaude HKI
  *         description: Filter by category
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Template upload data retrieved successfully
+ *         description: Template upload data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

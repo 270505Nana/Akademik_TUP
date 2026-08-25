@@ -1,9 +1,11 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Daftar Semua Periode Sidang
 const listSidangPeriods = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
   const { category } = req.query;
 
   const whereClause = { deletedAt: null };
@@ -11,16 +13,21 @@ const listSidangPeriods = asyncHandler(async (req, res) => {
     whereClause.category = category;
   }
 
-  const sidangPeriods = await prisma.sidangPeriod.findMany({
-    where: whereClause,
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const [total, sidangPeriods] = await Promise.all([
+    prisma.sidangPeriod.count({
+      where: whereClause,
+    }),
+    prisma.sidangPeriod.findMany({
+      where: whereClause,
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+  ]);
 
-  res.json({
-    data: sidangPeriods,
-  });
+  res.json(formatPaginationResponse(sidangPeriods, total, paginationParams));
 });
 
 // Ambil Detail Sidang Period by ID

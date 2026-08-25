@@ -22,13 +22,27 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/dosen:
  *   get:
- *     summary: Get all dosen data
+ *     summary: Get all dosen data (paginated)
  *     tags: [Dosen]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Dosen data retrieved successfully
+ *         description: Dosen data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

@@ -21,13 +21,27 @@ import { isMahasiswa } from '../../middlewares/authorize.js';
  * @swagger
  * /api/mahasiswa:
  *   get:
- *     summary: Get all mahasiswa data
+ *     summary: Get all mahasiswa data (paginated)
  *     tags: [Mahasiswa]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Mahasiswa data retrieved successfully
+ *         description: Mahasiswa data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

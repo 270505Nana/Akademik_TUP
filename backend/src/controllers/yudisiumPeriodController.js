@@ -1,9 +1,11 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Daftar Semua Periode Yudisium
 const listYudisiumPeriods = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
   const { category } = req.query;
 
   const whereClause = { deletedAt: null };
@@ -11,16 +13,21 @@ const listYudisiumPeriods = asyncHandler(async (req, res) => {
     whereClause.category = category;
   }
 
-  const yudisiumPeriods = await prisma.yudisiumPeriod.findMany({
-    where: whereClause,
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const [total, yudisiumPeriods] = await Promise.all([
+    prisma.yudisiumPeriod.count({
+      where: whereClause,
+    }),
+    prisma.yudisiumPeriod.findMany({
+      where: whereClause,
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+  ]);
 
-  res.json({
-    data: yudisiumPeriods,
-  });
+  res.json(formatPaginationResponse(yudisiumPeriods, total, paginationParams));
 });
 
 // Ambil Detail Yudisium Period by ID

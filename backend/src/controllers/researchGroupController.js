@@ -1,9 +1,11 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil, parseBoolean } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Daftar Semua Kelompok Keahlian (dengan filter & sort)
 const listResearchGroups = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
   const { name, isActive, is_active, sortBy, sort } = req.query;
 
   const where = { deletedAt: null };
@@ -36,14 +38,17 @@ const listResearchGroups = asyncHandler(async (req, res) => {
     orderBy = [{ isActive: 'asc' }, { name: 'asc' }];
   }
 
-  const researchGroups = await prisma.researchGroup.findMany({
-    where,
-    orderBy,
-  });
+  const [total, researchGroups] = await Promise.all([
+    prisma.researchGroup.count({ where }),
+    prisma.researchGroup.findMany({
+      where,
+      orderBy,
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+    }),
+  ]);
 
-  res.json({
-    data: researchGroups,
-  });
+  res.json(formatPaginationResponse(researchGroups, total, paginationParams));
 });
 
 // Ambil Detail Kelompok Keahlian By ID

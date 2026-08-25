@@ -3,6 +3,7 @@ import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
 import { sendValidationError, isNil, isValidISO8601 } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Constants for File Validation
 const REQUIRED_SLUGS = [
@@ -231,18 +232,23 @@ const checkSidangEditable = async (registrationId) => {
 
 // Sidang Registration List
 const listSidangRegistrations = asyncHandler(async (req, res) => {
-  const sidangRegistrations = await prisma.sidangRegistration.findMany({
-    include: sidangInclude,
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const paginationParams = getPaginationParams(req.query);
+
+  const [total, sidangRegistrations] = await Promise.all([
+    prisma.sidangRegistration.count(),
+    prisma.sidangRegistration.findMany({
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      include: sidangInclude,
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+  ]);
 
   const data = sidangRegistrations.map((reg) => mapSidangRegistrationToFrontend(reg, req));
 
-  res.json({
-    data,
-  });
+  res.json(formatPaginationResponse(data, total, paginationParams));
 });
 
 // Get Sidang Registration by ID

@@ -19,7 +19,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/yudisium-periods:
  *   get:
- *     summary: Get all yudisium periods
+ *     summary: Get all yudisium periods (with filter and pagination)
  *     tags: [Yudisium Period]
  *     security:
  *       - bearerAuth: []
@@ -29,9 +29,22 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *         description: Filter periods by category (pendaftaran yudisium / yudisium)
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Yudisium period data retrieved successfully
+ *         description: Yudisium period data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:
