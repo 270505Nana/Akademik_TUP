@@ -1,11 +1,44 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
-import { sendValidationError, isNil } from '../utils/validationHelper.js';
+import { sendValidationError, isNil, parseBoolean } from '../utils/validationHelper.js';
 
-// Daftar Semua Fakultas
+// Daftar Semua Fakultas (dengan filter & sort)
 const listFaculties = asyncHandler(async (req, res) => {
+  const { name, isActive, is_active, sortBy, sort } = req.query;
+
+  const where = { deletedAt: null };
+
+  if (name && typeof name === 'string' && name.trim() !== '') {
+    where.name = {
+      contains: name.trim(),
+      mode: 'insensitive',
+    };
+  }
+
+  const activeParam = isActive !== undefined ? isActive : is_active;
+  if (activeParam !== undefined) {
+    const parsedActive = parseBoolean(activeParam);
+    if (parsedActive !== undefined) {
+      where.isActive = parsedActive;
+    }
+  }
+
+  let orderBy = { name: 'asc' };
+  const sortParam = (sortBy || sort || '').toLowerCase().trim();
+
+  if (sortParam === 'a-z' || sortParam === 'name_asc') {
+    orderBy = { name: 'asc' };
+  } else if (sortParam === 'z-a' || sortParam === 'name_desc') {
+    orderBy = { name: 'desc' };
+  } else if (sortParam === 'active-inactive' || sortParam === 'active' || sortParam === 'status') {
+    orderBy = [{ isActive: 'desc' }, { name: 'asc' }];
+  } else if (sortParam === 'inactive-active' || sortParam === 'inactive') {
+    orderBy = [{ isActive: 'asc' }, { name: 'asc' }];
+  }
+
   const faculties = await prisma.faculty.findMany({
-    where: { deletedAt: null },
+    where,
+    orderBy,
   });
 
   res.json({
@@ -13,9 +46,28 @@ const listFaculties = asyncHandler(async (req, res) => {
   });
 });
 
-// Buat Fakultas Baru
+// Cari Fakultas By ID
+const findFacultyById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const faculty = await prisma.faculty.findFirst({
+    where: {
+      id,
+      deletedAt: null,
+    },
+  });
+
+  if (!faculty) {
+    res.status(404);
+    throw new Error("Fakultas tidak ditemukan");
+  }
+
+  res.json({ data: faculty });
+});
+
+// Buat Fakultas Baru (Restore jika sudah ada tapi soft-deleted)
 const createFaculty = asyncHandler(async (req, res) => {
-  const { name } = req.body;
+  const { name, isActive } = req.body;
 
   const errors = [];
   if (isNil(name)) {
@@ -27,10 +79,48 @@ const createFaculty = asyncHandler(async (req, res) => {
   }
   if (errors.length > 0) return sendValidationError(res, errors, req);
 
+  const trimmedName = String(name).trim();
+
+  // Cari apakah ada data dengan nama yang sama (termasuk yang soft-deleted)
+  const existing = await prisma.faculty.findFirst({
+    where: {
+      name: {
+        equals: trimmedName,
+        mode: 'insensitive',
+      },
+    },
+    omit: {
+      deletedAt: false,
+    },
+  });
+
+  if (existing) {
+    if (existing.deletedAt === null) {
+      return sendValidationError(res, [
+        { field: 'name', message: 'Nama fakultas sudah terdaftar' }
+      ], req);
+    }
+
+    // Jika sebelumnya soft-deleted, hapus status soft-delete (restore)
+    const restored = await prisma.faculty.update({
+      where: { id: existing.id },
+      data: {
+        name: trimmedName,
+        deletedAt: null,
+        isActive: isActive !== undefined ? (parseBoolean(isActive) ?? true) : true,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Fakultas berhasil dipulihkan",
+      data: restored,
+    });
+  }
+
   const faculty = await prisma.faculty.create({
     data: {
-      name,
-      isActive: true,
+      name: trimmedName,
+      isActive: isActive !== undefined ? (parseBoolean(isActive) ?? true) : true,
     },
   });
 
@@ -40,26 +130,10 @@ const createFaculty = asyncHandler(async (req, res) => {
   });
 });
 
-// Cari Fakultas By ID
-const findFacultyById = asyncHandler(async (req, res) => {
-  const id = req.params.id;
-
-  const faculty = await prisma.faculty.findUnique({
-    where: { id },
-  });
-
-  if (!faculty || faculty.deletedAt != null) {
-    res.status(404);
-    throw new Error("Fakultas tidak ditemukan");
-  }
-
-  res.json({ data: faculty });
-});
-
 // Update Fakultas
 const updateFaculty = asyncHandler(async (req, res) => {
-  const id = req.params.id;
-  const { name } = req.body;
+  const { id } = req.params;
+  const { name, isActive } = req.body;
 
   const errors = [];
   if (req.body.name !== undefined) {
@@ -73,18 +147,45 @@ const updateFaculty = asyncHandler(async (req, res) => {
   }
   if (errors.length > 0) return sendValidationError(res, errors, req);
 
-  const faculty = await prisma.faculty.findUnique({ where: { id } });
+  const faculty = await prisma.faculty.findFirst({
+    where: { id, deletedAt: null },
+  });
 
-  if (!faculty || faculty.deletedAt != null) {
+  if (!faculty) {
     res.status(404);
     throw new Error("Fakultas tidak ditemukan");
   }
 
+  const updateData = {};
+  if (name !== undefined) {
+    const trimmedName = String(name).trim();
+    // Cek duplikasi nama dengan fakultas lain yang aktif
+    const duplicate = await prisma.faculty.findFirst({
+      where: {
+        name: { equals: trimmedName, mode: 'insensitive' },
+        deletedAt: null,
+        NOT: { id },
+      },
+    });
+
+    if (duplicate) {
+      return sendValidationError(res, [
+        { field: 'name', message: 'Nama fakultas sudah terdaftar' }
+      ], req);
+    }
+    updateData.name = trimmedName;
+  }
+
+  if (isActive !== undefined) {
+    const parsed = parseBoolean(isActive);
+    if (parsed !== undefined) {
+      updateData.isActive = parsed;
+    }
+  }
+
   const updatedFaculty = await prisma.faculty.update({
     where: { id },
-    data: {
-      name: name || faculty.name,
-    },
+    data: updateData,
   });
 
   res.json({
@@ -95,11 +196,13 @@ const updateFaculty = asyncHandler(async (req, res) => {
 
 // Soft Delete Fakultas
 const deleteFaculty = asyncHandler(async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
-  const faculty = await prisma.faculty.findUnique({ where: { id } });
+  const faculty = await prisma.faculty.findFirst({
+    where: { id, deletedAt: null },
+  });
 
-  if (!faculty || faculty.deletedAt != null) {
+  if (!faculty) {
     res.status(404);
     throw new Error("Fakultas tidak ditemukan");
   }
@@ -115,33 +218,37 @@ const deleteFaculty = asyncHandler(async (req, res) => {
   });
 });
 
-// Toggle Publish Status (Hide/Show)
-const toggleFacultyPublish = asyncHandler(async (req, res) => {
-  const id = req.params.id;
+// Toggle Status Aktif (isActive)
+const toggleFacultyActive = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-  const faculty = await prisma.faculty.findUnique({ where: { id } });
+  const faculty = await prisma.faculty.findFirst({
+    where: { id, deletedAt: null },
+  });
 
-  if (!faculty || faculty.deletedAt != null) {
+  if (!faculty) {
     res.status(404);
     throw new Error("Fakultas tidak ditemukan");
   }
 
+  const nextStatus = !faculty.isActive;
+
   const updatedFaculty = await prisma.faculty.update({
     where: { id },
-    data: { isActive: !faculty.isActive },
+    data: { isActive: nextStatus },
   });
 
   res.json({
-    message: `Faculty ${
-      updatedFaculty.isActive ? "published" : "hidden"
-    } successfully`,
+    message: `Faculty ${nextStatus ? "activated" : "deactivated"} successfully`,
     data: updatedFaculty,
   });
 });
 
-export { listFaculties,
+export {
+  listFaculties,
   createFaculty,
   findFacultyById,
   updateFaculty,
   deleteFaculty,
-  toggleFacultyPublish, };
+  toggleFacultyActive,
+};

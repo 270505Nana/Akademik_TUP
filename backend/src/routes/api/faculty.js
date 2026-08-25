@@ -2,17 +2,17 @@ import express from 'express';
 
 const router = express.Router();
 
-import { listFaculties,
+import {
+  listFaculties,
   createFaculty,
   findFacultyById,
   updateFaculty,
   deleteFaculty,
-  toggleFacultyPublish, } from '../../controllers/facultyController.js';
+  toggleFacultyActive,
+} from '../../controllers/facultyController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { authorize } from '../../middlewares/authorize.js';
-
-
+import { isAdmin, authorize } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -25,10 +25,27 @@ import { authorize } from '../../middlewares/authorize.js';
  * @swagger
  * /api/faculties:
  *   get:
- *     summary: Get all faculty data
+ *     summary: Get all faculty data (with filter and sort)
  *     tags: [Faculty]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Filter by faculty name (case-insensitive substring)
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status (true/false)
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [a-z, z-a, active-inactive, inactive-active]
+ *         description: Sort faculties by name or active status
  *     responses:
  *       200:
  *         description: Faculty data retrieved successfully
@@ -43,7 +60,7 @@ router.get("/", verifyToken, listFaculties);
  * @swagger
  * /api/faculties:
  *   post:
- *     summary: Create new faculty
+ *     summary: Create new faculty (or restore if previously soft-deleted)
  *     tags: [Faculty]
  *     security:
  *       - bearerAuth: []
@@ -53,16 +70,26 @@ router.get("/", verifyToken, listFaculties);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
  *             properties:
  *               name:
  *                 type: string
+ *                 example: Fakultas Rekayasa Industri
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
  *     responses:
  *       201:
  *         description: Faculty created successfully
+ *       200:
+ *         description: Soft-deleted faculty restored successfully
  *       400:
- *         description: Invalid input
+ *         description: Validation error or duplicate name
  *       401:
  *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
  */
 router.post(
   "/",
@@ -84,10 +111,15 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *         description: Faculty UUID
  *     responses:
  *       200:
  *         description: Faculty data retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
  *       404:
  *         description: Faculty not found
  */
@@ -106,7 +138,8 @@ router.get("/:id", verifyToken, findFacultyById);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *         description: Faculty UUID
  *     requestBody:
  *       required: true
  *       content:
@@ -116,9 +149,17 @@ router.get("/:id", verifyToken, findFacultyById);
  *             properties:
  *               name:
  *                 type: string
+ *               isActive:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Faculty updated successfully
+ *       400:
+ *         description: Validation error or duplicate name
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
  *       404:
  *         description: Faculty not found
  */
@@ -142,10 +183,15 @@ router.put(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *         description: Faculty UUID
  *     responses:
  *       200:
  *         description: Faculty deleted successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
  *       404:
  *         description: Faculty not found
  */
@@ -153,9 +199,9 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
 
 /**
  * @swagger
- * /api/faculties/{id}/toggle-publish:
+ * /api/faculties/{id}/toggle-active:
  *   patch:
- *     summary: Toggle faculty publish status (hide/show)
+ *     summary: Toggle faculty active status (Admin only)
  *     tags: [Faculty]
  *     security:
  *       - bearerAuth: []
@@ -164,18 +210,23 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *         description: Faculty UUID
  *     responses:
  *       200:
  *         description: Faculty status updated successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
  *       404:
  *         description: Faculty not found
  */
 router.patch(
-  "/:id/toggle-publish",
+  "/:id/toggle-active",
   verifyToken,
   authorize("ADMIN"),
-  toggleFacultyPublish,
+  toggleFacultyActive,
 );
 
 export default router;

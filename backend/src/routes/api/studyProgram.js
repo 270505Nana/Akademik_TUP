@@ -2,17 +2,17 @@ import express from 'express';
 
 const router = express.Router();
 
-import { listStudyPrograms,
+import {
+  listStudyPrograms,
   createStudyProgram,
   findStudyProgramById,
   updateStudyProgram,
   deleteStudyProgram,
-  toggleStudyProgramPublish, } from '../../controllers/studyProgramController.js';
+  toggleStudyProgramActive,
+} from '../../controllers/studyProgramController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { authorize } from '../../middlewares/authorize.js';
-
-
+import { isAdmin, authorize } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -25,10 +25,32 @@ import { authorize } from '../../middlewares/authorize.js';
  * @swagger
  * /api/study-programs:
  *   get:
- *     summary: Get all study program data
+ *     summary: Get all study program data (with filter and sort)
  *     tags: [Study Program]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Filter by study program name (case-insensitive substring)
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status (true/false)
+ *       - in: query
+ *         name: facultyId
+ *         schema:
+ *           type: string
+ *         description: Filter by faculty UUID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [a-z, z-a, active-inactive, inactive-active]
+ *         description: Sort study programs by name or active status
  *     responses:
  *       200:
  *         description: Study program data retrieved successfully
@@ -43,7 +65,7 @@ router.get("/", verifyToken, listStudyPrograms);
  * @swagger
  * /api/study-programs:
  *   post:
- *     summary: Create new study program
+ *     summary: Create new study program (or restore if previously soft-deleted)
  *     tags: [Study Program]
  *     security:
  *       - bearerAuth: []
@@ -53,18 +75,32 @@ router.get("/", verifyToken, listStudyPrograms);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - facultyId
  *             properties:
  *               name:
  *                 type: string
+ *                 example: S1 Teknik Industri
  *               facultyId:
- *                 type: integer
+ *                 type: string
+ *                 example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
  *     responses:
  *       201:
  *         description: Study program created successfully
+ *       200:
+ *         description: Soft-deleted study program restored successfully
  *       400:
- *         description: Invalid input
+ *         description: Validation error or duplicate name
  *       401:
  *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
+ *       404:
+ *         description: Faculty not found
  */
 router.post(
   "/",
@@ -86,10 +122,15 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *         description: Study program UUID
  *     responses:
  *       200:
  *         description: Study program data retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
  *       404:
  *         description: Study program not found
  */
@@ -108,7 +149,8 @@ router.get("/:id", verifyToken, findStudyProgramById);
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *         description: Study program UUID
  *     requestBody:
  *       required: true
  *       content:
@@ -119,12 +161,20 @@ router.get("/:id", verifyToken, findStudyProgramById);
  *               name:
  *                 type: string
  *               facultyId:
- *                 type: integer
+ *                 type: string
+ *               isActive:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Study program updated successfully
+ *       400:
+ *         description: Validation error or duplicate name
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
  *       404:
- *         description: Study program not found
+ *         description: Study program or Faculty not found
  */
 router.put(
   "/:id",
@@ -146,10 +196,15 @@ router.put(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *         description: Study program UUID
  *     responses:
  *       200:
  *         description: Study program deleted successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
  *       404:
  *         description: Study program not found
  */
@@ -162,9 +217,9 @@ router.delete(
 
 /**
  * @swagger
- * /api/study-programs/{id}/toggle-publish:
+ * /api/study-programs/{id}/toggle-active:
  *   patch:
- *     summary: Toggle study program publish status (hide/show)
+ *     summary: Toggle study program active status (Admin only)
  *     tags: [Study Program]
  *     security:
  *       - bearerAuth: []
@@ -173,18 +228,23 @@ router.delete(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
+ *         description: Study program UUID
  *     responses:
  *       200:
  *         description: Study program status updated successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
  *       404:
  *         description: Study program not found
  */
 router.patch(
-  "/:id/toggle-publish",
+  "/:id/toggle-active",
   verifyToken,
   authorize("ADMIN"),
-  toggleStudyProgramPublish,
+  toggleStudyProgramActive,
 );
 
 export default router;
