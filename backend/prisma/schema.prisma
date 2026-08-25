@@ -151,7 +151,7 @@ model DokumenPersyaratanBerkas {
   code      String    @unique
   category  String // Sidang Reguler / Non Sidang Publikasi Jurnal / Non Sidang Proceeding International / Yudisium
   filepath  String
-  isPublish Boolean   @default(true) @map("is_publish")
+  isPublish Boolean   @default(false) @map("is_publish")
 
   @@map("dokumen_persyaratan_berkas")
 }
