@@ -9,7 +9,7 @@ import { listDosens,
 
 import { verifyToken } from '../../middlewares/auth.js';
 
-import { isDosen, isAdmin } from '../../middlewares/authorize.js';
+import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -40,7 +40,7 @@ router.get("/", verifyToken, listDosens);
  * @swagger
  * /api/dosen/{id}:
  *   put:
- *     summary: Create or update dosen data by Dosen ID or User ID
+ *     summary: Create or update dosen data by Dosen ID or User ID (Admin only)
  *     tags: [Dosen]
  *     security:
  *       - bearerAuth: []
@@ -85,7 +85,7 @@ router.get("/", verifyToken, listDosens);
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token
+ *         description: Access denied or Invalid token
  *       404:
  *         description: User not found
  *       500:
@@ -94,7 +94,7 @@ router.get("/", verifyToken, listDosens);
 router.put(
   "/:id",
   verifyToken,
-  isDosen,
+  isAdmin,
   upsertDosen,
 );
 
