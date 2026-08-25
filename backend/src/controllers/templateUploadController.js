@@ -212,16 +212,18 @@ const deleteTemplateUpload = asyncHandler(async (req, res) => {
   const id = req.params.id;
 
   const templateUpload = await prisma.dokumenPersyaratanBerkas.findFirst({
-    where: { id, deletedAt: null },
+    where: { id },
   });
   if (!templateUpload) {
     res.status(404);
     throw new Error("Unggahan template tidak ditemukan");
   }
+  if  (templateUpload.filepath && fs.existsSync(templateUpload.filepath)) {
+    fs.unlinkSync(templateUpload.filepath);
+  }
 
-  await prisma.dokumenPersyaratanBerkas.update({
+  await prisma.dokumenPersyaratanBerkas.delete({
     where: { id },
-    data: { deletedAt: new Date() },
   });
 
   res.json({ message: "Template upload deleted successfully" });
@@ -287,6 +289,30 @@ const previewTemplateUpload = asyncHandler(async (req, res) => {
   res.sendFile(filePath);
 });
 
+  const togglePublishTemplate = asyncHandler(async (req, res) => {
+    const id = req.params.id;
+
+    const templateUpload = await prisma.dokumenPersyaratanBerkas.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!templateUpload) {
+      res.status(404);
+      throw new Error("Unggahan template tidak ditemukan");
+    }
+    const updatedTemplateUpload = await prisma.dokumenPersyaratanBerkas.update({
+      where: { id },
+      data: {
+        isPublish: !templateUpload.isPublish,
+      },
+    });
+    const data = withFileUrl(req, updatedTemplateUpload);
+
+    res.json({
+      message: `template status changed to ${updatedTemplateUpload.isPublish ? 'published' : 'unpublished'}`,
+      data,
+    });
+  });
+
 export { 
   listTemplateUploads,
   createTemplateUpload,
@@ -295,4 +321,5 @@ export {
   deleteTemplateUpload,
   downloadTemplateUpload,
   previewTemplateUpload, 
+  togglePublishTemplate
 };

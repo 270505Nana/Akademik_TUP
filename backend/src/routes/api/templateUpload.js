@@ -10,6 +10,7 @@ import {
   deleteTemplateUpload,
   downloadTemplateUpload,
   previewTemplateUpload, 
+  togglePublishTemplate,
 } from '../../controllers/templateUploadController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
@@ -279,5 +280,25 @@ router.patch(
  *         description: Internal server error
  */
 router.delete("/:id", verifyToken, isAdmin, deleteTemplateUpload);
+
+/**
+ * @swagger
+ * /api/templates/{id}/toggle-publish:
+ *   patch:
+ *     summary: Toggle publish status of a template upload
+ *     tags: [Template Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Template publish status toggled successfully
+ */
+router.patch("/:id/toggle-publish", verifyToken, isAdmin, togglePublishTemplate);
 
 export default router;
