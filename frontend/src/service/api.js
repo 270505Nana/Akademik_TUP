@@ -323,6 +323,18 @@ export const submitYudisiumRegistration = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
+// template dinamis, tp baru by category
+export const getYudisiumTemplates = async () => {
+  try {
+    const response = await api.get('/api/templates?category=Yudisium');
+    const data = response.data?.data ?? response.data ?? response;
+    return Array.isArray(data) ? data : (data.data || []);
+  } catch (e) {
+    console.error("Gagal mengambil template yudisium:", e);
+    return [];
+  }
+};
+
 // ------------------------------------------- SIDANG ADMIN -------------------------------------------
 export const getAllSidangRegistrations = async () => {
   const response = await api.get('/api/sidang-registrations');

@@ -11,14 +11,15 @@ import Step1Yudisium from "../../components/mahasiswa/yudisium/Step1Yudisium";
 import Step2Yudisium from "../../components/mahasiswa/yudisium/Step2Yudisium";
 import CustomAlert from "../../components/common/CustomAlert";
 import SidebarMahasiswa from "../../components/sidebar/SidebarMahasiswa";
-import { REQUIRED_SLUGS, SECTIONS } from "../../components/mahasiswa/yudisium/YudisiumDocument";
+
+import { SECTIONS } from "../../components/mahasiswa/yudisium/YudisiumDocument";
 
 import { 
   getLecturers, 
   saveYudisiumRegistration, 
-  uploadYudisiumRegistrationFile, 
-  submitYudisiumRegistration, 
-  getActiveYudisiumPeriod
+  submitYudisiumRegistration,
+  getActiveYudisiumPeriod,
+  getYudisiumTemplates 
 } from "../../service/api";
 
 const STEP1_REQUIRED = [
@@ -34,6 +35,10 @@ function validateStep1(data) {
   for (const field of STEP1_REQUIRED) {
     if (!data[field.key]) return `Kolom "${field.label}" wajib diisi.`;
   }
+  
+  if (data.program === "Reguler" && Number(data.tak) < 60) return "Nilai TAK untuk program Reguler minimal 60.";
+  if (data.program === "Alih Jenjang" && Number(data.tak) < 45) return "Nilai TAK untuk program Alih Jenjang minimal 45.";
+  
   if (data.pengajuanCumlaude !== "Non Cumlaude" && data.skemaCumlaude.length === 0) {
     return "Skema Cumlaude wajib dipilih minimal satu opsi.";
   }
@@ -46,29 +51,6 @@ function validateStep1(data) {
   if (data.dosenPembimbing1Id && data.dosenPembimbing2Id && String(data.dosenPembimbing1Id) === String(data.dosenPembimbing2Id)) {
     return "Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama.";
   }
-  return null;
-}
-
-function validateStep2(data, documents) {
-  const missingWajib = documents.filter(doc => REQUIRED_SLUGS.includes(doc.slug) && !doc.file);
-  if (missingWajib.length > 0) {
-    return `Ada ${missingWajib.length} dokumen wajib yang belum diunggah.`;
-  }
-
-  if (data.pengajuanCumlaude !== "Non Cumlaude") {
-    const cumlaudeDoc = documents.find(doc => doc.section === SECTIONS.CUMLAUDE);
-    if (cumlaudeDoc && !cumlaudeDoc.file) {
-      return "Dokumen bukti prestasi Cumlaude wajib diunggah.";
-    }
-  }
-
-  if (data.minatWirausaha === "Ya") {
-    const wirausahaDoc = documents.find(doc => doc.section === SECTIONS.WIRAUSAHA);
-    if (wirausahaDoc && !wirausahaDoc.file) {
-      return "Formulir Pendaftaran Mahasiswa Berprestasi Bidang Inovasi & Kewirausahaan wajib diunggah.";
-    }
-  }
-
   return null;
 }
 
@@ -97,13 +79,17 @@ function PendaftaranYudisiumContent() {
 
   useEffect(() => {
     getLecturers().then(res => setLecturers(res || [])).catch(console.error);
-  }, []);
+    
+    
+    getYudisiumTemplates().then(templates => {
+      dispatch({ type: "SET_DYNAMIC_DOCUMENTS", payload: templates });
+    }).catch(console.error);
+  }, [dispatch]);
 
   useEffect(() => {
     const fetchPeriod = async () => {
       try {
         const activePeriod = await getActiveYudisiumPeriod();
-        
         if (activePeriod) {
           dispatch({ type: "UPDATE_FIELD", field: "yudisiumRegistrationPeriodId", value: activePeriod.id });
         } else {
@@ -153,9 +139,7 @@ function PendaftaranYudisiumContent() {
 
     try {
       setIsSavingStep1(true);
-      const payload = buildSavePayload();
-      const result = await saveYudisiumRegistration(payload);
-      
+      const result = await saveYudisiumRegistration(buildSavePayload());
       const savedId = result?.id ?? result?.data?.id ?? null;
       if (savedId) setRegistrationId(savedId);
       
@@ -168,49 +152,51 @@ function PendaftaranYudisiumContent() {
     }
   };
 
-  const handleSubmit = async () => {
-    setFormAlert(null);
-    const error = validateStep2(data, documents);
-    if (error) {
-      setFormAlert({ type: "error", msg: error });
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
+  const isStep2Complete = () => {
+    const mandatorySlugs = documents
+      .filter(doc => doc.section === SECTIONS.WAJIB)
+      .map(doc => doc.slug);
+
+    if (data.pengajuanCumlaude !== "Non Cumlaude") {
+      if (data.skemaCumlaude.includes("Publikasi Jurnal")) mandatorySlugs.push("loa-publisher");
+      if (data.skemaCumlaude.includes("Pameran")) mandatorySlugs.push("sertifikat-pameran");
+      if (data.skemaCumlaude.includes("Prestasi Lomba")) mandatorySlugs.push("sertifikat-lomba");
+      if (data.skemaCumlaude.includes("HKI/Paten")) mandatorySlugs.push("sertifikat-hki");
     }
 
-    if (!registrationId) {
-      setFormAlert({ type: "error", msg: "Simpan draft di Step 1 terlebih dahulu." });
-      return;
+    if (data.minatWirausaha === "Ya") {
+      mandatorySlugs.push("formulir-wirausaha");
     }
+
+    const missingDocs = documents.filter(doc => mandatorySlugs.includes(doc.slug) && doc.status !== "completed");
+    return missingDocs.length === 0;
+  };
+
+  const handleSaveDraft = () => {
+    alert("Draft berkas berhasil disimpan di sistem! Kamu bisa melanjutkan unggahan nanti.");
+    navigate("/mahasiswa/dashboard");
+  };
+
+  const handleSubmit = async () => {
+    setFormAlert(null);
+    if (!registrationId) return;
 
     try {
       setIsSubmitting(true);
-
-      const filesToUpload = documents.filter(doc => doc.file);
-      for (const doc of filesToUpload) {
-        await uploadYudisiumRegistrationFile(registrationId, {
-          file: doc.file,
-          slug: doc.slug,
-          name: doc.name
-        });
-      }
-
       await submitYudisiumRegistration({
         ...buildSavePayload(),
         id: registrationId,
         isConfirmed: true
       });
 
-      localStorage.removeItem("yudisium_form_draft");
-      
       alert(
         "Pendaftaran Berhasil!\n\n" +
-        "Apabila terdapat revisi berkas Mohon konfirmasi pembaruan ke Helpdesk Tugas Akhir (+6285117001281).\n\n" +
-        "Setelah menjadi TUNC, Telkom University Purwokerto tidak menyelenggarakan ceremonial yudisium. Sidang Yudisium dilaksanakan tertutup. SKL diterbitkan 2-3 minggu setelah status di Kampus Pusat selesai diproses."
+        "Apabila terdapat revisi berkas Mohon konfirmasi pembaruan ke Helpdesk.\n\n" +
+        "Sidang Yudisium dilaksanakan tertutup. SKL diterbitkan 2-3 minggu setelah diproses."
       );
-      
       navigate("/mahasiswa/dashboard");
     } catch (e) {
-      setFormAlert({ type: "error", msg: e.response?.data?.message || "Gagal submit pendaftaran yudisium." });
+      setFormAlert({ type: "error", msg: e.response?.data?.message || "Gagal mengirim pendaftaran." });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
@@ -225,20 +211,14 @@ function PendaftaranYudisiumContent() {
         <div className="page-wrapper yudisium-wrapper">
           <div className="top-header-nav">
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <button 
-                className="topbar-toggle lg:hidden" 
-                onClick={() => setSidebarOpen(true)} 
-                style={{ border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}
-              >
+              <button className="topbar-toggle lg:hidden" onClick={() => setSidebarOpen(true)} style={{ border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
                 <Menu size={20} />
               </button>
-              
               <button className="btn-back-square" onClick={() => navigate("/mahasiswa/dashboard")}>
                 <ArrowLeft size={18} />
                 <span className="hidden sm:inline">Kembali</span>
               </button>
             </div>
-
             <div className="header-logos">
               <img src={logoSimta} alt="SIMTA" className="simta-brand-logo" />
               <div className="logo-divider"></div>
@@ -257,7 +237,7 @@ function PendaftaranYudisiumContent() {
               {step === 1 ? (
                 <Step1Yudisium studentInfo={studentInfo} lecturers={lecturers} />
               ) : (
-                <Step2Yudisium />
+                <Step2Yudisium registrationId={registrationId} />
               )}
             </main>
 
@@ -278,9 +258,15 @@ function PendaftaranYudisiumContent() {
                   {isSavingStep1 ? "Menyimpan..." : "Simpan & Lanjutkan"}
                 </button>
               ) : (
-                <button className="btn-primary" onClick={handleSubmit} disabled={isSubmitting || !registrationId}>
-                  {isSubmitting ? "Mengunggah & Mengirim..." : "Submit Pendaftaran"}
-                </button>
+                isStep2Complete() ? (
+                  <button className="btn-primary" onClick={handleSubmit} disabled={isSubmitting || !registrationId}>
+                    {isSubmitting ? "Mengirim..." : "Submit Pendaftaran"}
+                  </button>
+                ) : (
+                  <button className="btn-primary" onClick={handleSaveDraft} style={{ background: '#F59E0B', color: '#fff', border: 'none' }}>
+                    Simpan Draft
+                  </button>
+                )
               )}
             </footer>
           </div>
@@ -288,29 +274,9 @@ function PendaftaranYudisiumContent() {
       </div>
 
       <style>{`
-        #yudisium-main {
-          margin-left: var(--sidebar-width, 240px);
-          width: calc(100% - var(--sidebar-width, 240px));
-          transition: margin-left 0.3s ease;
-          display: flex;
-          flex-direction: column;
-        }
-
-        /* Menimpa global styling dari sidang.css agar tidak menabrak sidebar */
-        .yudisium-wrapper {
-          width: 100% !important;
-          max-width: 100% !important;
-          margin: 0 !important;
-          position: relative !important;
-          min-height: 100vh !important;
-        }
-
-        @media (max-width: 991.98px) {
-          #yudisium-main {
-            margin-left: 0;
-            width: 100%;
-          }
-        }
+        #yudisium-main { margin-left: var(--sidebar-width, 240px); width: calc(100% - var(--sidebar-width, 240px)); transition: margin-left 0.3s ease; display: flex; flex-direction: column; }
+        .yudisium-wrapper { width: 100% !important; max-width: 100% !important; margin: 0 !important; position: relative !important; min-height: 100vh !important; }
+        @media (max-width: 991.98px) { #yudisium-main { margin-left: 0; width: 100%; } }
       `}</style>
     </div>
   );
