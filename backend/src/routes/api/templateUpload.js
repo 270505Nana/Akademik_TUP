@@ -36,7 +36,17 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         name: category
  *         schema:
  *           type: string
- *         description: Filter by category (e.g. Yudisium, Sidang, etc.)
+ *           enum:
+ *             - Sidang - Berkas Wajib
+ *             - Sidang - Evidence Non Sidang Publikasi Jurnal
+ *             - Sidang - Evidence Non Sidang Proceeding International
+ *             - Sidang - Evidence Non Sidang HKI
+ *             - Yudisium - Berkas Wajib
+ *             - Yudisium - Evidence Cumlaude Publikasi Jurnal
+ *             - Yudisium - Evidence Cumlaude Pameran
+ *             - Yudisium - Evidence Cumlaude Lomba
+ *             - Yudisium - Evidence Cumlaude HKI
+ *         description: Filter by category
  *     responses:
  *       200:
  *         description: Template upload data retrieved successfully
@@ -73,7 +83,17 @@ router.get("/", verifyToken, listTemplateUploads);
  *                 example: Template Surat TA
  *               category:
  *                 type: string
- *                 example: Kategori dokumen (Yudisium, Sidang, dll)
+ *                 enum:
+ *                   - Sidang - Berkas Wajib
+ *                   - Sidang - Evidence Non Sidang Publikasi Jurnal
+ *                   - Sidang - Evidence Non Sidang Proceeding International
+ *                   - Sidang - Evidence Non Sidang HKI
+ *                   - Yudisium - Berkas Wajib
+ *                   - Yudisium - Evidence Cumlaude Publikasi Jurnal
+ *                   - Yudisium - Evidence Cumlaude Pameran
+ *                   - Yudisium - Evidence Cumlaude Lomba
+ *                   - Yudisium - Evidence Cumlaude HKI
+ *                 example: Sidang - Berkas Wajib
  *               isPublish:
  *                 type: boolean
  *               templateFile:
@@ -192,7 +212,17 @@ router.get("/preview/:code", previewTemplateUpload);
  *                 example: Template Surat TA Revisi
  *               category:
  *                 type: string
- *                 example: Yudisium
+ *                 enum:
+ *                   - Sidang - Berkas Wajib
+ *                   - Sidang - Evidence Non Sidang Publikasi Jurnal
+ *                   - Sidang - Evidence Non Sidang Proceeding International
+ *                   - Sidang - Evidence Non Sidang HKI
+ *                   - Yudisium - Berkas Wajib
+ *                   - Yudisium - Evidence Cumlaude Publikasi Jurnal
+ *                   - Yudisium - Evidence Cumlaude Pameran
+ *                   - Yudisium - Evidence Cumlaude Lomba
+ *                   - Yudisium - Evidence Cumlaude HKI
+ *                 example: Yudisium - Berkas Wajib
  *               isPublish:
  *                 type: boolean
  *               templateFile:
