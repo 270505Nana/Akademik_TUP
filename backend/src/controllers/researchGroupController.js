@@ -3,16 +3,17 @@ import prisma from "../config/prisma.js";
 import { sendValidationError, isNil, parseBoolean } from '../utils/validationHelper.js';
 import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
-// Daftar Semua Kelompok Keahlian (dengan filter & sort)
+// Daftar Semua Kelompok Keahlian (dengan search, filter, sort, dan pagination)
 const listResearchGroups = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { name, isActive, is_active, sortBy, sort } = req.query;
+  const { search, q, name, isActive, is_active, sortBy, sort } = req.query;
 
   const where = { deletedAt: null };
 
-  if (name && typeof name === 'string' && name.trim() !== '') {
+  const searchTerm = (search || q || name || '').trim();
+  if (searchTerm) {
     where.name = {
-      contains: name.trim(),
+      contains: searchTerm,
       mode: 'insensitive',
     };
   }
@@ -28,14 +29,18 @@ const listResearchGroups = asyncHandler(async (req, res) => {
   let orderBy = { name: 'asc' };
   const sortParam = (sortBy || sort || '').toLowerCase().trim();
 
-  if (sortParam === 'a-z' || sortParam === 'name_asc') {
+  if (sortParam === 'a-z') {
     orderBy = { name: 'asc' };
-  } else if (sortParam === 'z-a' || sortParam === 'name_desc') {
+  } else if (sortParam === 'z-a') {
     orderBy = { name: 'desc' };
-  } else if (sortParam === 'active-inactive' || sortParam === 'active' || sortParam === 'status') {
+  } else if (sortParam === 'active-inactive' || sortParam === 'active') {
     orderBy = [{ isActive: 'desc' }, { name: 'asc' }];
   } else if (sortParam === 'inactive-active' || sortParam === 'inactive') {
     orderBy = [{ isActive: 'asc' }, { name: 'asc' }];
+  } else if (sortParam === 'newest') {
+    orderBy = { createdAt: 'desc' };
+  } else if (sortParam === 'oldest') {
+    orderBy = { createdAt: 'asc' };
   }
 
   const [total, researchGroups] = await Promise.all([

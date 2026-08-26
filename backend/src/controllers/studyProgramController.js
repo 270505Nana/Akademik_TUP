@@ -3,16 +3,17 @@ import prisma from "../config/prisma.js";
 import { sendValidationError, isNil, parseBoolean } from '../utils/validationHelper.js';
 import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
-// Daftar Semua Program Studi (dengan filter & sort)
+// Daftar Semua Program Studi (dengan search, filter, sort, dan pagination)
 const listStudyPrograms = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { name, isActive, is_active, facultyId, faculty_id, sortBy, sort } = req.query;
+  const { search, q, name, isActive, is_active, facultyId, faculty_id, faculty, sortBy, sort } = req.query;
 
   const where = { deletedAt: null };
 
-  if (name && typeof name === 'string' && name.trim() !== '') {
+  const searchTerm = (search || q || name || '').trim();
+  if (searchTerm) {
     where.name = {
-      contains: name.trim(),
+      contains: searchTerm,
       mode: 'insensitive',
     };
   }
@@ -25,22 +26,44 @@ const listStudyPrograms = asyncHandler(async (req, res) => {
     }
   }
 
-  const facultyParam = facultyId || faculty_id;
-  if (facultyParam && typeof facultyParam === 'string' && facultyParam.trim() !== '') {
-    where.facultyId = facultyParam.trim();
+  const fId = (facultyId || faculty_id || '').trim();
+  const fParam = (faculty || '').trim();
+
+  if (fId) {
+    where.facultyId = fId;
+  } else if (fParam) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(fParam);
+    if (isUUID) {
+      where.facultyId = fParam;
+    } else {
+      where.faculty = {
+        name: {
+          contains: fParam,
+          mode: 'insensitive',
+        },
+      };
+    }
   }
 
   let orderBy = { name: 'asc' };
   const sortParam = (sortBy || sort || '').toLowerCase().trim();
 
-  if (sortParam === 'a-z' || sortParam === 'name_asc') {
+  if (sortParam === 'a-z') {
     orderBy = { name: 'asc' };
-  } else if (sortParam === 'z-a' || sortParam === 'name_desc') {
+  } else if (sortParam === 'z-a') {
     orderBy = { name: 'desc' };
-  } else if (sortParam === 'active-inactive' || sortParam === 'active' || sortParam === 'status') {
+  } else if (sortParam === 'faculty_asc') {
+    orderBy = { faculty: { name: 'asc' } };
+  } else if (sortParam === 'faculty_desc') {
+    orderBy = { faculty: { name: 'desc' } };
+  } else if (sortParam === 'active-inactive' || sortParam === 'active') {
     orderBy = [{ isActive: 'desc' }, { name: 'asc' }];
   } else if (sortParam === 'inactive-active' || sortParam === 'inactive') {
     orderBy = [{ isActive: 'asc' }, { name: 'asc' }];
+  } else if (sortParam === 'newest') {
+    orderBy = { createdAt: 'desc' };
+  } else if (sortParam === 'oldest') {
+    orderBy = { createdAt: 'asc' };
   }
 
   const [total, studyPrograms] = await Promise.all([

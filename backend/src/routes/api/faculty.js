@@ -31,10 +31,10 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: name
+ *         name: search
  *         schema:
  *           type: string
- *         description: Filter by faculty name (case-insensitive substring)
+ *         description: Search by faculty name (case-insensitive substring)
  *       - in: query
  *         name: isActive
  *         schema:
@@ -44,8 +44,8 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [a-z, z-a, active-inactive, inactive-active]
- *         description: Sort faculties by name or active status
+ *           enum: [a-z, z-a, active-inactive, inactive-active, newest, oldest]
+ *         description: Sort faculties by name (a-z, z-a), status (active-inactive, inactive-active), or creation time (newest, oldest)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:

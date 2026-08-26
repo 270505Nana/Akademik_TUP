@@ -22,11 +22,27 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/dosen:
  *   get:
- *     summary: Get all dosen data (paginated)
+ *     summary: Get all dosen data (with search, filter, sort, and pagination)
  *     tags: [Dosen]
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search keyword across name, NIP, NIDN, or kode dosen
+ *       - in: query
+ *         name: researchGroup
+ *         schema:
+ *           type: string
+ *         description: Filter by Research Group ID or Name
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [a-z, z-a, research_group_asc, research_group_desc, newest, oldest]
+ *         description: Sort dosen by name (a-z, z-a), research group (research_group_asc, research_group_desc), or created time (newest, oldest)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:

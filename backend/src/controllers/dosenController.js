@@ -3,39 +3,169 @@ import prisma from "../config/prisma.js";
 import { sendValidationError, isNil } from '../utils/validationHelper.js';
 import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
-// Daftar Semua Dosen
+const mapDosen = (dosen) => {
+  if (!dosen) return null;
+  const { user, ...rest } = dosen;
+  return {
+    ...rest,
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || null,
+  };
+};
+
+const dosenInclude = {
+  user: {
+    select: {
+      name: true,
+      email: true,
+      phone: true,
+    },
+  },
+  researchGroup: true,
+};
+
+// Daftar Semua Dosen (dengan search, filter, sort, dan pagination)
 const listDosens = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
+  const {
+    search,
+    q,
+    name,
+    nip,
+    nidn,
+    kodeDosen,
+    kode_dosen,
+    researchGroupId,
+    research_group_id,
+    researchGroup,
+    research_group,
+    sortBy,
+    sort,
+    order,
+  } = req.query;
 
-  const [total, dosens] = await Promise.all([
-    prisma.dosen.count(),
-    prisma.dosen.findMany({
-      skip: paginationParams.skip,
-      take: paginationParams.take,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      include: {
+  const where = {
+    deletedAt: null,
+  };
+
+  // Search across name, nip, nidn, kodeDosen
+  const searchTerm = (search || q || '').trim();
+  if (searchTerm) {
+    where.OR = [
+      {
         user: {
-          select: {
-            name: true,
-            email: true,
-            phone: true,
+          name: {
+            contains: searchTerm,
+            mode: 'insensitive',
           },
         },
       },
+      {
+        nip: {
+          contains: searchTerm,
+          mode: 'insensitive',
+        },
+      },
+      {
+        nidn: {
+          contains: searchTerm,
+          mode: 'insensitive',
+        },
+      },
+      {
+        kodeDosen: {
+          contains: searchTerm,
+          mode: 'insensitive',
+        },
+      },
+    ];
+  }
+
+  // Specific field filters
+  if (name && typeof name === 'string' && name.trim() !== '') {
+    where.user = {
+      ...where.user,
+      name: {
+        contains: name.trim(),
+        mode: 'insensitive',
+      },
+    };
+  }
+
+  if (nip && typeof nip === 'string' && nip.trim() !== '') {
+    where.nip = {
+      contains: nip.trim(),
+      mode: 'insensitive',
+    };
+  }
+
+  if (nidn && typeof nidn === 'string' && nidn.trim() !== '') {
+    where.nidn = {
+      contains: nidn.trim(),
+      mode: 'insensitive',
+    };
+  }
+
+  const kodeDosenParam = kodeDosen || kode_dosen;
+  if (kodeDosenParam && typeof kodeDosenParam === 'string' && kodeDosenParam.trim() !== '') {
+    where.kodeDosen = {
+      contains: kodeDosenParam.trim(),
+      mode: 'insensitive',
+    };
+  }
+
+  // Filter based on researchGroup
+  const rgId = (researchGroupId || research_group_id || '').trim();
+  const rg = (researchGroup || research_group || '').trim();
+
+  if (rgId) {
+    where.researchGroupId = rgId;
+  } else if (rg) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rg);
+    if (isUUID) {
+      where.researchGroupId = rg;
+    } else {
+      where.researchGroup = {
+        name: {
+          contains: rg,
+          mode: 'insensitive',
+        },
+      };
+    }
+  }
+
+  // Sort options: a-z, z-a, research_group_asc, research_group_desc, newest, oldest
+  const sortParam = (sortBy || sort || '').toLowerCase().trim();
+
+  let orderBy = { createdAt: 'desc' };
+
+  if (sortParam === 'a-z') {
+    orderBy = { user: { name: 'asc' } };
+  } else if (sortParam === 'z-a') {
+    orderBy = { user: { name: 'desc' } };
+  } else if (sortParam === 'research_group_asc' || sortParam === 'researchgroup_asc') {
+    orderBy = { researchGroup: { name: 'asc' } };
+  } else if (sortParam === 'research_group_desc' || sortParam === 'researchgroup_desc') {
+    orderBy = { researchGroup: { name: 'desc' } };
+  } else if (sortParam === 'oldest') {
+    orderBy = { createdAt: 'asc' };
+  } else if (sortParam === 'newest') {
+    orderBy = { createdAt: 'desc' };
+  }
+
+  const [total, dosens] = await Promise.all([
+    prisma.dosen.count({ where }),
+    prisma.dosen.findMany({
+      where,
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      orderBy,
+      include: dosenInclude,
     }),
   ]);
 
-  const mapped = dosens.map((d) => {
-    const { user, ...rest } = d;
-    return {
-      ...rest,
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || null,
-    };
-  });
+  const mapped = dosens.map(mapDosen);
 
   res.json(formatPaginationResponse(mapped, total, paginationParams));
 });
@@ -126,30 +256,14 @@ const findDosenById = asyncHandler(async (req, res) => {
 
   let dosen = await prisma.dosen.findUnique({
     where: { id: idOrUserId },
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-          phone: true,
-        },
-      },
-    },
+    include: dosenInclude,
   });
 
   if (!dosen) {
     // Fallback to userId
     dosen = await prisma.dosen.findUnique({
       where: { userId: idOrUserId },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
-      },
+      include: dosenInclude,
     });
   }
 
@@ -158,15 +272,8 @@ const findDosenById = asyncHandler(async (req, res) => {
     throw new Error("Data dosen tidak ditemukan");
   }
 
-  const { user, ...rest } = dosen;
-
   res.json({
-    data: {
-      ...rest,
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || null,
-    },
+    data: mapDosen(dosen),
   });
 });
 

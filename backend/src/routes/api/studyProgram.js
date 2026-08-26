@@ -31,10 +31,10 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: name
+ *         name: search
  *         schema:
  *           type: string
- *         description: Filter by study program name (case-insensitive substring)
+ *         description: Search by study program name (case-insensitive substring)
  *       - in: query
  *         name: isActive
  *         schema:
@@ -44,13 +44,13 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *         name: facultyId
  *         schema:
  *           type: string
- *         description: Filter by faculty UUID
+ *         description: Filter by Faculty UUID or Name
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [a-z, z-a, active-inactive, inactive-active]
- *         description: Sort study programs by name or active status
+ *           enum: [a-z, z-a, faculty_asc, faculty_desc, active-inactive, inactive-active, newest, oldest]
+ *         description: Sort study programs by name (a-z, z-a), faculty (faculty_asc, faculty_desc), status (active-inactive, inactive-active), or creation time (newest, oldest)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
