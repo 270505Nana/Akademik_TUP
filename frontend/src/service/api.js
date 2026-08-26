@@ -130,9 +130,10 @@ export const getLecturerData = async (userId) => {
   return response.data;
 };
 
-export const getAllDosen = async () => {
-  const response = await api.get('/api/dosen');
-  return response.data?.data ?? response.data;
+export const getAllDosen = async (params = {}) => {
+  const response = await api.get('/api/dosen', { params });
+  // Kembalikan seluruh response (data + pagination) agar FE bisa baca metadata
+  return response.data;
 };
 
 export const getResearchGroups = async () => {
