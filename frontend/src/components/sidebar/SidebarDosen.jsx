@@ -17,7 +17,12 @@ import './sidebar.css';
 const SidebarDosen = ({ isOpen, onClose }) => {
   const location  = useLocation();
   const navigate  = useNavigate();
-  const { logout } = useAuth();
+  const { user, profile, logout } = useAuth();
+  const namaDisplay  = profile?.name || user?.name || user?.username || 'Dosen';
+  const avatarChar   = (namaDisplay.trim().charAt(0) || 'D').toUpperCase();
+  const roleDisplay  = user?.role === 'DOSEN' ? 'Dosen' : (user?.role || 'Dosen');
+  const fotoProfil   = profile?.avatarUrl || profile?.avatar || profile?.foto || null;
+  const isKetuaKK    = profile?.isKetuaKK ?? false;
 
   const [expandedMenus, setExpandedMenus]         = useState({});
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -30,7 +35,13 @@ const SidebarDosen = ({ isOpen, onClose }) => {
     setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
   };
 
-  // Definisi menu sidebar dosen.
+  // Menu "Penjadwalan Sidang" hanya ditampilkan jika dosen adalah Ketua KK,
+  // berdasarkan data profil fresh yang di-fetch dari BE saat halaman dimuat.
+  const sidangItems = [
+    { label: 'Jadwal & Nilai Sidang', icon: <Calendar className="nav-icon" />, path: '/dosen/jadwal-nilai-sidang' },
+    ...(isKetuaKK ? [{ label: 'Penjadwalan Sidang', icon: <ClipboardList className="nav-icon" />, path: '/dosen/penjadwalan-sidang' }] : []),
+  ];
+
   const menuSidebar = [
     {
       label: 'Utama',
@@ -47,10 +58,7 @@ const SidebarDosen = ({ isOpen, onClose }) => {
     },
     {
       label: 'Sidang',
-      items: [
-        { label: 'Jadwal & Nilai Sidang', icon: <Calendar className="nav-icon" />, path: '/dosen/jadwal-nilai-sidang' },
-        { label: 'Penjadwalan Sidang',    icon: <ClipboardList className="nav-icon" />, path: '/dosen/penjadwalan-sidang' },
-      ],
+      items: sidangItems,
     },
   ];
 
@@ -155,10 +163,20 @@ const SidebarDosen = ({ isOpen, onClose }) => {
         </nav>
 
         <div className="sidebar-user">
-          <div className="avatar">P</div>
+          <div className="avatar">
+            {fotoProfil ? (
+              <img
+                src={fotoProfil}
+                alt={namaDisplay}
+                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+              />
+            ) : (
+              avatarChar
+            )}
+          </div>
           <div className="user-info">
-            <div className="user-name">Dr. Purwono</div>
-            <div className="user-role">Dosen</div>
+            <div className="user-name" title={namaDisplay}>{namaDisplay}</div>
+            <div className="user-role">{roleDisplay}</div>
           </div>
           <button className="logout-btn" onClick={handleLogout} title="Keluar dari sistem">
             <LogOut size={16} />

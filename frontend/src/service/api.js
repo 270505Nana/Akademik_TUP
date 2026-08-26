@@ -118,13 +118,60 @@ export const getSKTAResponse = async (sktaRequestId) => {
 };
 
 // ------------------------------------------- DOSEN -------------------------------------------
-export const getLecturersData = async (userId) => {
-  const response = await api.get(`/api/lecturers`);
-  return response.data;
+export const getLecturersData = async () => {
+  const response = await api.get('/api/dosen');
+  return response.data?.data ?? response.data;
 };
 
 export const getLecturerData = async (userId) => {
-  const response = await api.get(`/api/lecturers/${userId}`);
+  // Endpoint /api/dosen/:id mengembalikan semua field dosen termasuk isKetuaKK
+  const response = await api.get(`/api/dosen/${userId}`);
+  return response.data;
+};
+
+export const getAllDosen = async () => {
+  const response = await api.get('/api/dosen');
+  return response.data?.data ?? response.data;
+};
+
+export const getResearchGroups = async () => {
+  const response = await api.get('/api/research-groups');
+  return response.data?.data ?? response.data;
+};
+
+export const toggleDosenKetuaKK = async (dosenId) => {
+  const response = await api.patch(`/api/dosen/${dosenId}/toggle-ketua-kk`);
+  return response.data;
+};
+
+export const updateDosenKK = async (dosenId, { nip, name, researchGroupId, kodeDosen }) => {
+  const response = await api.put(`/api/dosen/${dosenId}`, {
+    nip, name, researchGroupId, kodeDosen,
+  });
+
+  return response.data;
+};
+
+// ------------------------------------------- RESEARCH GROUPS (CRUD) -------------------------------------------
+
+// POST /api/research-groups — Buat KK baru; BE otomatis restore jika nama sama pernah di-soft-delete.
+// Response body: { message, data: { id (UUID), name, isActive, ... } }
+export const createResearchGroup = async (name) => {
+  const response = await api.post('/api/research-groups', { name });
+  return response.data?.data ?? response.data;
+};
+
+// PUT /api/research-groups/:id — Ganti nama KK.
+// Response body: { message, data: { id, name, ... } }
+export const updateResearchGroup = async (id, name) => {
+  const response = await api.put(`/api/research-groups/${id}`, { name });
+  return response.data?.data ?? response.data;
+};
+
+// DELETE /api/research-groups/:id — Soft-delete KK.
+// Response body: { message, data: { id, deletedAt, ... } }
+export const deleteResearchGroup = async (id) => {
+  const response = await api.delete(`/api/research-groups/${id}`);
   return response.data;
 };
 
