@@ -44,49 +44,82 @@ export const AuthProvider = ({ children }) => {
   });
 
   const inactivityTimer = useRef(null);
+  // Flag untuk mencegah mount effect menimpa fetch profil yang sedang dilakukan oleh login()
+  const isLoggingIn = useRef(false);
 
   // login
   const login = async (userData) => {
+    // Bersihkan sesi lama sebelum menyimpan data sesi baru
+    localStorage.removeItem("simta_user");
+    localStorage.removeItem("simta_profile");
+    localStorage.removeItem("simta_token");
+    localStorage.removeItem("student_data");
+
     const { token: tkn, ...rest } = userData;
-    console.log("1. userData masuk:", userData);
-    console.log("2. rest (user):", rest);
+
+    // Tandai bahwa proses login sedang berlangsung agar mount effect tidak ikut fetch
+    isLoggingIn.current = true;
 
     setUser(rest);
     setToken(tkn);
     localStorage.setItem("simta_user", JSON.stringify(rest));
     localStorage.setItem("simta_token", tkn);
 
-    console.log("3. role:", rest?.role);
-    console.log("4. id:", rest?.id);
-
     async function fetchProfile(role, id) {
-      let profile;
-
+      let profileRes;
       if (role === "MAHASISWA") {
-        profile = await getStudentData(id);
+        profileRes = await getStudentData(id);
       } else if (role === "DOSEN") {
-        profile = await getLecturerData(id);
+        profileRes = await getLecturerData(id);
       } else if (role === "ADMIN") {
-        profile = await getAcademicStaffData(id);
+        profileRes = await getAcademicStaffData(id);
       }
-
-      return profile;
+      return profileRes;
     }
 
-    console.log("role", rest?.role);
-    console.log("id", rest?.id);
-
-    const profile = await fetchProfile(rest?.role, rest?.id);
-
-    console.log("5. profile result:", profile);
-
-    console.log("set profile", profile);
-
-    setProfile(profile?.data);
-    localStorage.setItem("simta_profile", JSON.stringify(profile?.data));
-
-    console.log("6. login selesai");
+    try {
+      const profileRes = await fetchProfile(rest?.role, rest?.id);
+      const profileData = profileRes?.data || profileRes;
+      if (profileData) {
+        setProfile(profileData);
+        localStorage.setItem("simta_profile", JSON.stringify(profileData));
+      }
+    } catch (err) {
+      console.error("Gagal memuat profil saat login:", err);
+    } finally {
+      isLoggingIn.current = false;
+    }
   };
+
+  // Fetch fresh profil dari BE setiap kali halaman di-refresh selama token valid.
+  // langsung terlihat tanpa perlu logout-login ulang.
+  useEffect(() => {
+    if (!user || !token) return;
+    if (isLoggingIn.current) return;
+
+    async function refreshProfile() {
+      try {
+        let profileRes;
+        if (user.role === "MAHASISWA") {
+          profileRes = await getStudentData(user.id);
+        } else if (user.role === "DOSEN") {
+          profileRes = await getLecturerData(user.id);
+        } else if (user.role === "ADMIN") {
+          profileRes = await getAcademicStaffData(user.id);
+        }
+        const profileData = profileRes?.data || profileRes;
+        if (profileData) {
+          setProfile(profileData);
+          localStorage.setItem("simta_profile", JSON.stringify(profileData));
+        }
+      } catch (err) {
+        console.error("Gagal refresh profil saat inisialisasi:", err);
+      }
+    }
+
+    refreshProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Cukup dijalankan sekali saat mount — user dan token sudah stabil dari localStorage
 
   const logout = useCallback(() => {
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);

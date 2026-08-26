@@ -376,22 +376,39 @@ const RegistrasiTATUP = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [faculties, setFaculties] = useState([]);
   const [studyPrograms, setStudyPrograms] = useState([]);
+  const [prodiFetchError, setProdiFetchError] = useState(false);
+  const [isLoadingProdi, setIsLoadingProdi] = useState(true);
 
   const PAGE_SIZE = 10;
 
   // Mengambil data Fakultas dan Program Studi dari API Backend
   useEffect(() => {
-    Promise.all([
-      getFaculties().catch(() => []),
-      getStudyPrograms().catch(() => []),
-    ]).then(([facList, prodiList]) => {
-      if (Array.isArray(facList) && facList.length > 0) {
-        setFaculties(facList);
-      }
-      if (Array.isArray(prodiList) && prodiList.length > 0) {
-        setStudyPrograms(prodiList);
-      }
-    });
+    setIsLoadingProdi(true);
+    setProdiFetchError(false);
+
+    getFaculties()
+      .then(facList => {
+        if (Array.isArray(facList) && facList.length > 0) {
+          setFaculties(facList);
+        }
+      })
+      .catch(err => console.error('Gagal memuat data fakultas:', err));
+
+    getStudyPrograms()
+      .then(prodiList => {
+        const data = Array.isArray(prodiList) ? prodiList : prodiList?.data || [];
+        setStudyPrograms(data);
+        setProdiFetchError(false);
+      })
+      .catch(err => {
+        console.error('Gagal mengambil data program studi dari backend:', err);
+        // Menandai kegagalan fetch tanpa mengisi array fallback dummy
+        setStudyPrograms([]);
+        setProdiFetchError(true);
+      })
+      .finally(() => {
+        setIsLoadingProdi(false);
+      });
   }, []);
 
   // Filter status registrasi TA yang tersedia
@@ -643,41 +660,47 @@ const RegistrasiTATUP = () => {
             </div>
 
             {/* Dropdown Major (Dinamis dari API Backend Study Programs) */}
-            <div style={{ minWidth: 180 }}>
+            <div style={{ minWidth: 180, display: 'flex', flexDirection: 'column', gap: 4 }}>
               <select
                 value={selectedProdi}
                 onChange={e => {
                   setSelectedProdi(e.target.value);
                   setCurrentPage(1);
                 }}
+                disabled={isLoadingProdi || prodiFetchError}
                 style={{
                   width: '100%',
                   padding: '9px 12px',
-                  border: '1.5px solid #E2E8F0',
+                  border: `1.5px solid ${prodiFetchError ? '#FCA5A5' : '#E2E8F0'}`,
                   borderRadius: 8,
                   fontSize: 13,
                   fontWeight: 500,
-                  color: '#374151',
-                  background: '#FFFFFF',
+                  color: prodiFetchError ? '#991B1B' : '#374151',
+                  background: prodiFetchError ? '#FEF2F2' : isLoadingProdi ? '#F8FAFC' : '#FFFFFF',
                   outline: 'none',
-                  cursor: 'pointer',
+                  cursor: (isLoadingProdi || prodiFetchError) ? 'not-allowed' : 'pointer',
                 }}
               >
-                <option value="">All Majors</option>
-                {studyPrograms.length > 0
-                  ? studyPrograms.map(prodi => (
+                {isLoadingProdi ? (
+                  <option value="">Memuat program studi...</option>
+                ) : prodiFetchError ? (
+                  <option value="">Gagal memuat program studi</option>
+                ) : (
+                  <>
+                    <option value="">All Majors</option>
+                    {studyPrograms.map(prodi => (
                       <option key={prodi.id} value={prodi.id}>
                         {prodi.name}
                       </option>
-                    ))
-                  : [
-                      <option key="1" value="1">S1 Informatika</option>,
-                      <option key="5" value="5">S1 Teknik Elektro</option>,
-                      <option key="7" value="7">S1 Teknik Industri</option>,
-                      <option key="8" value="8">S1 Sistem Informasi</option>,
-                      <option key="11" value="11">S1 Desain Komunikasi Visual (DKV)</option>,
-                    ]}
+                    ))}
+                  </>
+                )}
               </select>
+              {prodiFetchError && (
+                <span style={{ fontSize: 11, color: '#DC2626', lineHeight: 1.3 }}>
+                  Gagal memuat data program studi. Silakan muat ulang halaman.
+                </span>
+              )}
             </div>
 
             {/* Dropdown Status */}
