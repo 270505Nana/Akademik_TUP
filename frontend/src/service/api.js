@@ -69,7 +69,7 @@ export const saveStudentData = async (userId, payload) => {
 // ------------------------------------------- MAHASISWA SIDE SK-------------------------------------------
 export const getSKTARequest = async (studentId) => {
   try {
-    const response = await api.get(`/api/skta-requests/${studentId}`);
+    const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
     return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
@@ -77,31 +77,32 @@ export const getSKTARequest = async (studentId) => {
   }
 };
 
-export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, studentId, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
+export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, studentId, mahasiswaId, dosenPembimbing1Id, dosenPembimbing2Id, evidence, category }) => {
   const formData = new FormData();
   formData.append("proposalTitleId", proposalTitleId);
   formData.append("proposalTitleEn", proposalTitleEn);
-  formData.append("studentId", String(studentId));
+  formData.append("mahasiswaId", String(mahasiswaId || studentId));
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   formData.append("evidence", evidence);
 
-  const response = await api.post("/api/skta-requests", formData, {
+  const url = category ? `/api/permohonan-skta?category=${encodeURIComponent(category)}` : "/api/permohonan-skta";
+  const response = await api.post(url, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
 };
 
-export const resubmitSKTARequest = async ({ sktaRequestId, studentId, proposalTitleId, proposalTitleEn, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
+export const resubmitSKTARequest = async ({ sktaRequestId, studentId, mahasiswaId, proposalTitleId, proposalTitleEn, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
   const formData = new FormData();
-  if (studentId) formData.append("studentId", String(studentId));
+  if (mahasiswaId || studentId) formData.append("mahasiswaId", String(mahasiswaId || studentId));
   formData.append("proposalTitleId", proposalTitleId);
   formData.append("proposalTitleEn", proposalTitleEn);
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   if (evidence) formData.append("evidence", evidence);
 
-  const response = await api.patch(`/api/skta-requests/${sktaRequestId}`, formData, {
+  const response = await api.put(`/api/permohonan-skta/${sktaRequestId}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
@@ -109,7 +110,7 @@ export const resubmitSKTARequest = async ({ sktaRequestId, studentId, proposalTi
 
 export const getSKTAResponse = async (sktaRequestId) => {
   try {
-    const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
+    const response = await api.get(`/api/permohonan-skta/${sktaRequestId}`);
     return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
@@ -183,7 +184,7 @@ export const getAcademicStaffData = async (userId) => {
 
 export const getAllSktaRequests = async (params = {}) => {
   try {
-    const response = await api.get("/api/skta-requests", { params });
+    const response = await api.get("/api/permohonan-skta", { params });
     return response.data?.data ?? response.data;            
   } catch (err) {
     console.error("Error fetching all SKTA requests:", err);
@@ -192,13 +193,13 @@ export const getAllSktaRequests = async (params = {}) => {
 };
 
 export const getSktaRequestById = async (id) => {
-  const response = await api.get(`/api/skta-requests/${id}`);
-  return response.data;
+  const response = await api.get(`/api/permohonan-skta/${id}`);
+  return response.data?.data ?? response.data;
 };
 
 export const getSktaResponseByRequestId = async (sktaRequestId) => {
   try {
-    const response = await api.get(`/api/skta-responses/${sktaRequestId}`);
+    const response = await api.get(`/api/permohonan-skta/${sktaRequestId}`);
     return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
@@ -208,8 +209,8 @@ export const getSktaResponseByRequestId = async (sktaRequestId) => {
 
 export const getSktaResponseUploadByStudentId = async (studentId) => {
   try {
-    const response = await api.get(`/api/skta-responses/requests/${studentId}/uploads`);
-    return response.data;
+    const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
+    return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
     throw err;
@@ -221,31 +222,30 @@ export const createOrUpdateSktaResponse = async (payload) => {
     const existingId = payload.get('id');
     if (existingId) {
       payload.delete('id'); 
-      return api.patch(`/api/skta-responses/${existingId}`, payload, {
+      return api.put(`/api/permohonan-skta/${existingId}`, payload, {
         headers: { "Content-Type": "multipart/form-data" },
       });
     }
-    return api.post("/api/skta-responses", payload, {
+    return api.post("/api/permohonan-skta", payload, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   }
 
   const { id, ...data } = payload;
   if (id) {
-    return api.patch(`/api/skta-responses/${id}`, data);
+    return api.put(`/api/permohonan-skta/${id}`, data);
   }
-  return api.post("/api/skta-responses", data);
+  return api.post("/api/permohonan-skta", data);
 };
 
 export const uploadSkFinal = async (sktaResponseId, file) => {
   const formData = new FormData();
-  formData.append("file", file);
-  formData.append("sktaResponseId", sktaResponseId);
+  formData.append("skta", file);
 
-  const response = await api.post(`/api/skta-responses/${sktaResponseId}/uploads`, formData, {
+  const response = await api.put(`/api/permohonan-skta/${sktaResponseId}/approve`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
-  return response.data;
+  return response.data?.data ?? response.data;
 };
 
 export const downloadFileFromUrl = async (url) => {
@@ -253,24 +253,24 @@ export const downloadFileFromUrl = async (url) => {
   return response.data;
 };
 
-export const downloadEvidence = async (uploadId) => {
-  const response = await api.get(`/api/skta-requests/uploads/${uploadId}/download`, { responseType: 'blob' });
+export const downloadEvidence = async (id) => {
+  const response = await api.get(`/api/permohonan-skta/${id}/download/evidence`, { responseType: 'blob' });
   return response.data;
 };
  
 export const getEvidenceUploadsByStudentId = async (studentId) => {
   try {
-    const response = await api.get(`/api/skta-requests/${studentId}`);
+    const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
     const requestData = response.data?.data ?? response.data;
-    return requestData?.sktaRequestUploads || [];
+    return requestData?.evidenceUploadPath ? [requestData] : [];
   } catch (err) {
     if (err.response?.status === 404) return [];
     throw err;
   }
 };
 
-export const downloadSK = async (uploadId) => {
-  const response = await api.get(`/api/skta-responses/uploads/${uploadId}/download`, { responseType: "blob" });
+export const downloadSK = async (id) => {
+  const response = await api.get(`/api/permohonan-skta/${id}/download/skta`, { responseType: "blob" });
   return response.data;
 };
 
@@ -287,15 +287,14 @@ export const uploadDokumenValidasi = async (studentId, pdfBlob, namaFile) => {
 // Menambahkan fungsi Approve SK
 export const approvePermohonanSK = async (permohonanId, payload) => {
   const formData = new FormData();
-  formData.append("sktaRequestId", permohonanId);
   formData.append("adminId", payload.adminId);
   formData.append("hasUploadedFinalProposal", payload.hasUploadedFinalProposal);
   formData.append("hasTakenLanguageTest", payload.hasTakenLanguageTest);
   
   if (payload.expDate) formData.append("expDate", payload.expDate);
-  if (payload.sktaFile) formData.append("file", payload.sktaFile);
+  if (payload.sktaFile) formData.append("skta", payload.sktaFile);
 
-  const response = await api.post("/api/skta-responses", formData, {
+  const response = await api.put(`/api/permohonan-skta/${permohonanId}/approve`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data?.data ?? response.data;
@@ -303,8 +302,7 @@ export const approvePermohonanSK = async (permohonanId, payload) => {
 
 // Menambahkan fungsi Reject SK
 export const rejectPermohonanSK = async (permohonanId, payload) => {
-  const response = await api.post("/api/skta-responses", {
-    sktaRequestId: permohonanId,
+  const response = await api.put(`/api/permohonan-skta/${permohonanId}/reject`, {
     message: payload.message,
     adminId: payload.adminId,
   });
