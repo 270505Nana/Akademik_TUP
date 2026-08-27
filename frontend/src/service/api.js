@@ -69,11 +69,13 @@ export const saveStudentData = async (userId, payload) => {
 // ------------------------------------------- MAHASISWA SIDE SK-------------------------------------------
 export const getSKTARequest = async (studentId) => {
   try {
-    const response = await api.get(`/api/skta-requests/${studentId}`);
-    return response.data?.data ?? response.data;
-  } catch (err) {
-    if (err.response?.status === 404) return null;
-    throw err;
+    const response = await api.get(`/api/permohonan-skta/mahasiswa/${studentId}`);
+    return response.data?.data || response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return null;
+    }
+    throw error;
   }
 };
 
