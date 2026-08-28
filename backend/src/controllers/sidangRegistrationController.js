@@ -1,62 +1,106 @@
-import asyncHandler from 'express-async-handler';
+import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import fs from 'fs';
-import path from 'path';
-import { sendValidationError, isNil, isValidISO8601 } from '../utils/validationHelper.js';
-import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
+import fs from "fs";
+import path from "path";
+import {
+  sendValidationError,
+  isNil,
+  isValidISO8601,
+} from "../utils/validationHelper.js";
+import {
+  getPaginationParams,
+  formatPaginationResponse,
+} from "../utils/paginationHelper.js";
 
-// Constants for File Validation
-const REQUIRED_SLUGS = [
-  "berkas-form-validasi-dosen-wali",
-  "berkas-rekomendasi-sidang-pembimbing",
-  "berkas-scan-pernyataan-biodata-ijazah-bermaterai",
-  "berkas-dummy-ijazah-bermaterai",
-  "berkas-scan-akta-kelahiran",
-  "berkas-scan-ijazah-terakhir",
-  "berkas-scan-khs-dengan-ttd-doswal-kaprodi",
-  "berkas-log-bimbingan",
-  "berkas-sertifikat-tak",
-  "berkas-rekomendasi-berkas-evidence-ta-pa-igracias-pembimbing",
-  "upload-draft-buku-ta-siap-sidang",
-];
+// Constants for File Validation (Lama - dicomment)
+// const REQUIRED_SLUGS = [
+//   "berkas-form-validasi-dosen-wali",
+//   "berkas-rekomendasi-sidang-pembimbing",
+//   "berkas-scan-pernyataan-biodata-ijazah-bermaterai",
+//   "berkas-dummy-ijazah-bermaterai",
+//   "berkas-scan-akta-kelahiran",
+//   "berkas-scan-ijazah-terakhir",
+//   "berkas-scan-khs-dengan-ttd-doswal-kaprodi",
+//   "berkas-log-bimbingan",
+//   "berkas-sertifikat-tak",
+//   "berkas-rekomendasi-berkas-evidence-ta-pa-igracias-pembimbing",
+//   "upload-draft-buku-ta-siap-sidang",
+// ];
+//
+// const NON_SIDANG_SLUGS = {
+//   "Publikasi Jurnal": [
+//     "berkas-loa-jurnal",
+//     "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-jurnal",
+//     "berkas-camera-ready-paper-yang-sudah-terbit",
+//     "berkas-camera-ready-paper-jurnal",
+//     "berkas-riwayat-review-oleh-reviewers",
+//     "berkas-response-jurnal",
+//   ],
+//   "Proceeding International": [
+//     "berkas-loa-proceeding",
+//     "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-proceeding",
+//     "berkas-camera-ready-paper-proceeding",
+//     "berkas-pakta-integritas",
+//     "berkas-response-proceeding",
+//   ],
+//   HKI: [
+//     "sertifikat-hki",
+//     "sertifikat-dari-mitra-dudi",
+//     "sertifikat-pendukung-lainnya",
+//   ],
+// };
 
-const NON_SIDANG_SLUGS = {
-  "Publikasi Jurnal": [
-    "berkas-loa-jurnal",
-    "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-jurnal",
-    "berkas-camera-ready-paper-yang-sudah-terbit",
-    "berkas-camera-ready-paper-jurnal",
-    "berkas-riwayat-review-oleh-reviewers",
-    "berkas-response-jurnal",
-  ],
-  "Proceeding International": [
-    "berkas-loa-proceeding",
-    "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-proceeding",
-    "berkas-camera-ready-paper-proceeding",
-    "berkas-pakta-integritas",
-    "berkas-response-proceeding",
-  ],
-  HKI: [
-    "sertifikat-hki",
-    "sertifikat-dari-mitra-dudi",
-    "sertifikat-pendukung-lainnya",
-  ],
+const NON_SIDANG_CATEGORY_MAP = {
+  "Publikasi Jurnal": "Sidang - Evidence Non Sidang Publikasi Jurnal",
+  "Proceeding International":
+    "Sidang - Evidence Non Sidang Proceeding International",
+  HKI: "Sidang - Evidence Non Sidang HKI",
+};
+
+// Ambil slug berkas wajib sidang dari database dokumen persyaratan berkas
+const getRequiredSlugsFromDb = async () => {
+  const docs = await prisma.dokumenPersyaratanBerkas.findMany({
+    where: {
+      category: {
+        in: ["Sidang - Berkas Wajib"],
+      },
+      deletedAt: null,
+    },
+    select: { code: true },
+  });
+  return docs.map((doc) => doc.code);
+};
+
+// Ambil slug berkas evidence non sidang dari database dokumen persyaratan berkas sesuai jalur
+const getNonSidangSlugsFromDb = async (jalur) => {
+  const categoryName =
+    NON_SIDANG_CATEGORY_MAP[jalur] || `Sidang - Evidence Non Sidang ${jalur}`;
+  const docs = await prisma.dokumenPersyaratanBerkas.findMany({
+    where: {
+      category: {
+        in: [categoryName],
+      },
+      deletedAt: null,
+    },
+    select: { code: true },
+  });
+  return docs.map((doc) => doc.code);
 };
 
 const mapMahasiswa = (mahasiswa) => {
   if (!mahasiswa) return null;
   return {
     id: mahasiswa.id,
-    nim: mahasiswa.nim || '',
-    kelasAsal: mahasiswa.kelasAsal || '',
+    nim: mahasiswa.nim || "",
+    kelasAsal: mahasiswa.kelasAsal || "",
     tahunAngkatan: mahasiswa.tahunAngkatan,
     sks: mahasiswa.sks,
     ipk: mahasiswa.ipk,
     tak: mahasiswa.tak,
     studyProgramId: mahasiswa.studyProgramId,
     dosenWaliId: mahasiswa.dosenWaliId,
-    name: mahasiswa.user?.name || '',
-    email: mahasiswa.user?.email || '',
+    name: mahasiswa.user?.name || "",
+    email: mahasiswa.user?.email || "",
     phone: mahasiswa.user?.phone || null,
     studyProgram: mahasiswa.studyProgram
       ? {
@@ -78,8 +122,8 @@ const mapDosen = (dosen) => {
     kodeDosen: dosen.kodeDosen,
     researchGroupId: dosen.researchGroupId,
     userId: dosen.userId,
-    name: dosen.user?.name || '',
-    email: dosen.user?.email || '',
+    name: dosen.user?.name || "",
+    email: dosen.user?.email || "",
     phone: dosen.user?.phone || null,
   };
 };
@@ -89,8 +133,8 @@ const mapAdmin = (admin) => {
   return {
     id: admin.id,
     userId: admin.userId,
-    name: admin.user?.name || '',
-    email: admin.user?.email || '',
+    name: admin.user?.name || "",
+    email: admin.user?.email || "",
     phone: admin.user?.phone || null,
   };
 };
@@ -209,21 +253,35 @@ const checkSidangEditable = async (registrationId) => {
   });
 
   if (!registration) {
-    return { exists: false, editable: false, reason: "Pendaftaran sidang tidak ditemukan." };
+    return {
+      exists: false,
+      editable: false,
+      reason: "Pendaftaran sidang tidak ditemukan.",
+    };
   }
 
   if (!registration.isDraft) {
-    const hasActiveEditPermission = registration.isEdit && new Date(registration.isEdit) > new Date();
+    const hasActiveEditPermission =
+      registration.isEdit && new Date(registration.isEdit) > new Date();
 
     if (!hasActiveEditPermission) {
-      return { exists: true, editable: false, reason: "Pendaftaran sudah dikirim dan tidak memiliki izin edit yang aktif." };
+      return {
+        exists: true,
+        editable: false,
+        reason:
+          "Pendaftaran sudah dikirim dan tidak memiliki izin edit yang aktif.",
+      };
     }
   }
 
   if (registration.isEdit) {
     const isEditExpired = new Date(registration.isEdit) < new Date();
     if (isEditExpired) {
-      return { exists: true, editable: false, reason: "Batas waktu izin edit dari admin telah kedaluwarsa." };
+      return {
+        exists: true,
+        editable: false,
+        reason: "Batas waktu izin edit dari admin telah kedaluwarsa.",
+      };
     }
   }
 
@@ -246,7 +304,9 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
     }),
   ]);
 
-  const data = sidangRegistrations.map((reg) => mapSidangRegistrationToFrontend(reg, req));
+  const data = sidangRegistrations.map((reg) =>
+    mapSidangRegistrationToFrontend(reg, req),
+  );
 
   res.json(formatPaginationResponse(data, total, paginationParams));
 });
@@ -315,17 +375,23 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
   } = req.body;
 
   const errors = [];
-  
+
   if (!isNil(id) && typeof id !== "string") {
     errors.push({ field: "id", message: "ID harus berupa string" });
   }
-  
+
   if (!isNil(programType) && typeof programType !== "string") {
-    errors.push({ field: "programType", message: "Tipe program harus berupa string" });
+    errors.push({
+      field: "programType",
+      message: "Tipe program harus berupa string",
+    });
   }
 
   if (!isNil(jalurNonSidang) && !Array.isArray(jalurNonSidang)) {
-    errors.push({ field: "jalurNonSidang", message: "Jalur non sidang harus berupa array jika diisi" });
+    errors.push({
+      field: "jalurNonSidang",
+      message: "Jalur non sidang harus berupa array jika diisi",
+    });
   }
 
   if (!isNil(sks) && isNaN(parseInt(sks))) {
@@ -341,27 +407,46 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   if (!isNil(sktaExpDate) && !isValidISO8601(sktaExpDate)) {
-    errors.push({ field: "sktaExpDate", message: "Tanggal berlaku SKTA harus berupa tanggal yang valid (format ISO 8601)" });
+    errors.push({
+      field: "sktaExpDate",
+      message:
+        "Tanggal berlaku SKTA harus berupa tanggal yang valid (format ISO 8601)",
+    });
   }
 
   if (!isNil(thesisTitleId) && typeof thesisTitleId !== "string") {
-    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) harus berupa string" });
+    errors.push({
+      field: "thesisTitleId",
+      message: "Judul TA (ID) harus berupa string",
+    });
   }
 
   if (!isNil(thesisTitleEn) && typeof thesisTitleEn !== "string") {
-    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) harus berupa string" });
+    errors.push({
+      field: "thesisTitleEn",
+      message: "Judul TA (EN) harus berupa string",
+    });
   }
 
   if (!isNil(mahasiswaId) && typeof mahasiswaId !== "string") {
-    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa string" });
+    errors.push({
+      field: "mahasiswaId",
+      message: "ID mahasiswa harus berupa string",
+    });
   }
 
   if (!isNil(dosenPembimbing1Id) && typeof dosenPembimbing1Id !== "string") {
-    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa string" });
+    errors.push({
+      field: "dosenPembimbing1Id",
+      message: "ID dosen pembimbing 1 harus berupa string",
+    });
   }
 
   if (!isNil(dosenPembimbing2Id) && typeof dosenPembimbing2Id !== "string") {
-    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa string" });
+    errors.push({
+      field: "dosenPembimbing2Id",
+      message: "ID dosen pembimbing 2 harus berupa string",
+    });
   }
 
   if (errors.length > 0) {
@@ -419,24 +504,22 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
 
   // Map req.body field names → Prisma model field names (source of truth: schema.prisma)
   const upsertData = {
-    program: programType !== undefined ? programType : undefined,               // Prisma: program
-    skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined,         // Prisma: skemaSidang
+    program: programType !== undefined ? programType : undefined, // Prisma: program
+    skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
-    judulTugasAkhirIndonesia: thesisTitleId !== undefined ? thesisTitleId : undefined, // Prisma: judulTugasAkhirIndonesia
-    judulTugasAkhirInggris: thesisTitleEn !== undefined ? thesisTitleEn : undefined,   // Prisma: judulTugasAkhirInggris
+    judulTugasAkhirIndonesia:
+      thesisTitleId !== undefined ? thesisTitleId : undefined, // Prisma: judulTugasAkhirIndonesia
+    judulTugasAkhirInggris:
+      thesisTitleEn !== undefined ? thesisTitleEn : undefined, // Prisma: judulTugasAkhirInggris
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenPembimbing1Id:
-      dosenPembimbing1Id !== undefined
-        ? dosenPembimbing1Id
-        : undefined,
+      dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
     dosenPembimbing2Id:
-      dosenPembimbing2Id !== undefined
-        ? dosenPembimbing2Id
-        : undefined,
+      dosenPembimbing2Id !== undefined ? dosenPembimbing2Id : undefined,
     isDraft: true,
   };
 
@@ -472,7 +555,9 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
       // Creating a new registration: Must have an active open period
       if (!activePeriod) {
         res.status(400);
-        throw new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+        throw new Error(
+          "Tidak ada periode pendaftaran sidang yang aktif saat ini.",
+        );
       }
 
       // Check if student is already registered in this active period
@@ -486,7 +571,9 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
 
       if (existingInPeriod) {
         res.status(400);
-        throw new Error("Mahasiswa sudah terdaftar pada periode pendaftaran sidang yang aktif.");
+        throw new Error(
+          "Mahasiswa sudah terdaftar pada periode pendaftaran sidang yang aktif.",
+        );
       }
 
       upsertData.sidangRegistrationPeriodId = activePeriod.id;
@@ -500,7 +587,9 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     // Create new
     if (!activePeriod) {
       res.status(400);
-      throw new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+      throw new Error(
+        "Tidak ada periode pendaftaran sidang yang aktif saat ini.",
+      );
     }
 
     upsertData.sidangRegistrationPeriodId = activePeriod.id;
@@ -536,7 +625,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   } = req.body;
 
   const errors = [];
-  
+
   if (isNil(id)) {
     errors.push({ field: "id", message: "ID wajib diisi untuk submit" });
   } else if (typeof id !== "string") {
@@ -546,11 +635,17 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   if (isNil(programType)) {
     errors.push({ field: "programType", message: "Tipe program wajib diisi" });
   } else if (typeof programType !== "string") {
-    errors.push({ field: "programType", message: "Tipe program harus berupa string" });
+    errors.push({
+      field: "programType",
+      message: "Tipe program harus berupa string",
+    });
   }
 
   if (!isNil(jalurNonSidang) && !Array.isArray(jalurNonSidang)) {
-    errors.push({ field: "jalurNonSidang", message: "Jalur non sidang harus berupa array jika diisi" });
+    errors.push({
+      field: "jalurNonSidang",
+      message: "Jalur non sidang harus berupa array jika diisi",
+    });
   }
 
   if (isNil(sks)) {
@@ -572,39 +667,73 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   if (isNil(sktaExpDate)) {
-    errors.push({ field: "sktaExpDate", message: "Tanggal berlaku SKTA wajib diisi" });
+    errors.push({
+      field: "sktaExpDate",
+      message: "Tanggal berlaku SKTA wajib diisi",
+    });
   } else if (!isValidISO8601(sktaExpDate)) {
-    errors.push({ field: "sktaExpDate", message: "Tanggal berlaku SKTA harus berupa tanggal yang valid (format ISO 8601)" });
+    errors.push({
+      field: "sktaExpDate",
+      message:
+        "Tanggal berlaku SKTA harus berupa tanggal yang valid (format ISO 8601)",
+    });
   }
 
   if (isNil(thesisTitleId)) {
-    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) wajib diisi" });
+    errors.push({
+      field: "thesisTitleId",
+      message: "Judul TA (ID) wajib diisi",
+    });
   } else if (typeof thesisTitleId !== "string") {
-    errors.push({ field: "thesisTitleId", message: "Judul TA (ID) harus berupa string" });
+    errors.push({
+      field: "thesisTitleId",
+      message: "Judul TA (ID) harus berupa string",
+    });
   }
 
   if (isNil(thesisTitleEn)) {
-    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) wajib diisi" });
+    errors.push({
+      field: "thesisTitleEn",
+      message: "Judul TA (EN) wajib diisi",
+    });
   } else if (typeof thesisTitleEn !== "string") {
-    errors.push({ field: "thesisTitleEn", message: "Judul TA (EN) harus berupa string" });
+    errors.push({
+      field: "thesisTitleEn",
+      message: "Judul TA (EN) harus berupa string",
+    });
   }
 
   if (isNil(mahasiswaId)) {
     errors.push({ field: "mahasiswaId", message: "ID mahasiswa wajib diisi" });
   } else if (typeof mahasiswaId !== "string") {
-    errors.push({ field: "mahasiswaId", message: "ID mahasiswa harus berupa string" });
+    errors.push({
+      field: "mahasiswaId",
+      message: "ID mahasiswa harus berupa string",
+    });
   }
 
   if (isNil(dosenPembimbing1Id)) {
-    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 wajib diisi" });
+    errors.push({
+      field: "dosenPembimbing1Id",
+      message: "ID dosen pembimbing 1 wajib diisi",
+    });
   } else if (typeof dosenPembimbing1Id !== "string") {
-    errors.push({ field: "dosenPembimbing1Id", message: "ID dosen pembimbing 1 harus berupa string" });
+    errors.push({
+      field: "dosenPembimbing1Id",
+      message: "ID dosen pembimbing 1 harus berupa string",
+    });
   }
 
   if (isNil(dosenPembimbing2Id)) {
-    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 wajib diisi" });
+    errors.push({
+      field: "dosenPembimbing2Id",
+      message: "ID dosen pembimbing 2 wajib diisi",
+    });
   } else if (typeof dosenPembimbing2Id !== "string") {
-    errors.push({ field: "dosenPembimbing2Id", message: "ID dosen pembimbing 2 harus berupa string" });
+    errors.push({
+      field: "dosenPembimbing2Id",
+      message: "ID dosen pembimbing 2 harus berupa string",
+    });
   }
 
   if (errors.length > 0) {
@@ -631,24 +760,22 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
 
   // Update field sebelum validasi (supaya merge) — gunakan nama field Prisma sebagai key
   const updateData = {
-    program: programType !== undefined ? programType : undefined,               // Prisma: program
-    skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined,         // Prisma: skemaSidang
+    program: programType !== undefined ? programType : undefined, // Prisma: program
+    skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
-    judulTugasAkhirIndonesia: thesisTitleId !== undefined ? thesisTitleId : undefined, // Prisma: judulTugasAkhirIndonesia
-    judulTugasAkhirInggris: thesisTitleEn !== undefined ? thesisTitleEn : undefined,   // Prisma: judulTugasAkhirInggris
+    judulTugasAkhirIndonesia:
+      thesisTitleId !== undefined ? thesisTitleId : undefined, // Prisma: judulTugasAkhirIndonesia
+    judulTugasAkhirInggris:
+      thesisTitleEn !== undefined ? thesisTitleEn : undefined, // Prisma: judulTugasAkhirInggris
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenPembimbing1Id:
-      dosenPembimbing1Id !== undefined
-        ? dosenPembimbing1Id
-        : undefined,
+      dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
     dosenPembimbing2Id:
-      dosenPembimbing2Id !== undefined
-        ? dosenPembimbing2Id
-        : undefined,
+      dosenPembimbing2Id !== undefined ? dosenPembimbing2Id : undefined,
     isEdit: null,
     message: null,
   };
@@ -668,7 +795,9 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   } else {
     if (!activePeriod) {
       res.status(400);
-      throw new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+      throw new Error(
+        "Tidak ada periode pendaftaran sidang yang aktif saat ini.",
+      );
     }
     updateData.sidangRegistrationPeriodId = activePeriod.id;
   }
@@ -701,24 +830,24 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   // 2. Validasi Uploaded Files
-  const uploadedCategories = (existingRegistration.sidangRegistrationUploads || []).map(
-    (upload) => upload.category,
-  );
+  const uploadedCategories = (
+    existingRegistration.sidangRegistrationUploads || []
+  ).map((upload) => upload.category);
 
   const missingFiles = [];
 
-  // Wajib
-  for (const slug of REQUIRED_SLUGS) {
+  // Wajib (ambil dari database dokumen persyaratan berkas)
+  const requiredSlugs = await getRequiredSlugsFromDb();
+  for (const slug of requiredSlugs) {
     if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
   }
 
-  // Jalur Non Sidang
+  // Jalur Non Sidang (ambil dari database dokumen persyaratan berkas sesuai jalur)
   if (mergedData.jalurNonSidang && Array.isArray(mergedData.jalurNonSidang)) {
     for (const jalur of mergedData.jalurNonSidang) {
-      if (NON_SIDANG_SLUGS[jalur]) {
-        for (const slug of NON_SIDANG_SLUGS[jalur]) {
-          if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
-        }
+      const nonSidangSlugs = await getNonSidangSlugsFromDb(jalur);
+      for (const slug of nonSidangSlugs) {
+        if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
       }
     }
   }
@@ -939,7 +1068,10 @@ const approveSidangRegistration = asyncHandler(async (req, res) => {
     errors.push({ field: "adminId", message: "ID staf akademik wajib diisi" });
   }
   if (isNil(sidangPeriodId)) {
-    errors.push({ field: "sidangPeriodId", message: "ID periode sidang wajib diisi" });
+    errors.push({
+      field: "sidangPeriodId",
+      message: "ID periode sidang wajib diisi",
+    });
   }
 
   if (errors.length > 0) {
@@ -1021,7 +1153,10 @@ const rejectSidangRegistration = asyncHandler(async (req, res) => {
     errors.push({ field: "message", message: "Pesan penolakan wajib diisi" });
   }
   if (!isNil(isEdit) && !isValidISO8601(isEdit)) {
-    errors.push({ field: "isEdit", message: "isEdit harus berupa tanggal yang valid (format ISO 8601)" });
+    errors.push({
+      field: "isEdit",
+      message: "isEdit harus berupa tanggal yang valid (format ISO 8601)",
+    });
   }
 
   if (errors.length > 0) {
