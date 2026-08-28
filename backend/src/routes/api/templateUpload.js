@@ -38,6 +38,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *           enum:
+ *             - Permohonan SKTA
  *             - Sidang - Berkas Wajib
  *             - Sidang - Evidence Non Sidang Publikasi Jurnal
  *             - Sidang - Evidence Non Sidang Proceeding International
@@ -98,6 +99,7 @@ router.get("/", verifyToken, listTemplateUploads);
  *               category:
  *                 type: string
  *                 enum:
+ *                   - Permohonan SKTA
  *                   - Sidang - Berkas Wajib
  *                   - Sidang - Evidence Non Sidang Publikasi Jurnal
  *                   - Sidang - Evidence Non Sidang Proceeding International
@@ -227,6 +229,7 @@ router.get("/preview/:code", previewTemplateUpload);
  *               category:
  *                 type: string
  *                 enum:
+ *                   - Permohonan SKTA
  *                   - Sidang - Berkas Wajib
  *                   - Sidang - Evidence Non Sidang Publikasi Jurnal
  *                   - Sidang - Evidence Non Sidang Proceeding International
