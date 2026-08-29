@@ -53,6 +53,7 @@ const withFileUrl = (req, data) => {
     category: data.category,
     filepath: data.filepath,
     isPublish: data.isPublish,
+    isRequired: data.isRequired,
     downloadUrl,
     previewUrl,
     url: downloadUrl,
@@ -84,7 +85,7 @@ const listTemplateUploads = asyncHandler(async (req, res) => {
 // Create template upload
 const createTemplateUpload = asyncHandler(async (req, res) => {
   try {
-    const { name, category, isPublish } = req.body;
+    const { name, category, isPublish, isRequired } = req.body;
     const file = req.file;
 
     const errors = [];
@@ -142,6 +143,7 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
         code: autoCode,
         category,
         isPublish: isPublish === "true" || isPublish === true,
+        isRequired: isRequired !== undefined ? (isRequired === "true" || isRequired === true) : true,
         filepath: relativePosixPath,
       },
     });
@@ -179,7 +181,7 @@ const findTemplateUploadByCode = asyncHandler(async (req, res) => {
 const updateTemplateUpload = asyncHandler(async (req, res) => {
   try {
     const id = req.params.id;
-    const { name, category, isPublish } = req.body;
+    const { name, category, isPublish, isRequired } = req.body;
     const file = req.file;
 
     const errors = [];
@@ -282,6 +284,9 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
         ...(category !== undefined && { category }),
         ...(isPublish !== undefined && {
           isPublish: isPublish === "true" || isPublish === true,
+        }),
+        ...(isRequired !== undefined && {
+          isRequired: isRequired === "true" || isRequired === true,
         }),
         filepath: finalFilepath,
       },
@@ -425,6 +430,30 @@ const togglePublishTemplate = asyncHandler(async (req, res) => {
   });
 });
 
+const toggleRequiredTemplate = asyncHandler(async (req, res) => {
+  const id = req.params.id;
+
+  const templateUpload = await prisma.dokumenPersyaratanBerkas.findFirst({
+    where: { id },
+  });
+  if (!templateUpload) {
+    res.status(404);
+    throw new Error("Unggahan template tidak ditemukan");
+  }
+  const updatedTemplateUpload = await prisma.dokumenPersyaratanBerkas.update({
+    where: { id },
+    data: {
+      isRequired: !templateUpload.isRequired,
+    },
+  });
+  const data = withFileUrl(req, updatedTemplateUpload);
+
+  res.json({
+    message: `template requirement status changed to ${updatedTemplateUpload.isRequired ? "required" : "optional"}`,
+    data,
+  });
+});
+
 export {
   listTemplateUploads,
   createTemplateUpload,
@@ -434,4 +463,5 @@ export {
   downloadTemplateUpload,
   previewTemplateUpload,
   togglePublishTemplate,
+  toggleRequiredTemplate,
 };

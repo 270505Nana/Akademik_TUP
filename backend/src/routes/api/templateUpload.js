@@ -1,21 +1,22 @@
-import express from 'express';
+import express from "express";
 
 const router = express.Router();
 
-import { 
+import {
   listTemplateUploads,
   createTemplateUpload,
   findTemplateUploadByCode,
   updateTemplateUpload,
   deleteTemplateUpload,
   downloadTemplateUpload,
-  previewTemplateUpload, 
+  previewTemplateUpload,
   togglePublishTemplate,
-} from '../../controllers/templateUploadController.js';
+  toggleRequiredTemplate,
+} from "../../controllers/templateUploadController.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { upload } from '../../middlewares/upload.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { upload } from "../../middlewares/upload.js";
+import { isAdmin } from "../../middlewares/authorize.js";
 
 /**
  * @swagger
@@ -91,6 +92,8 @@ router.get("/", verifyToken, listTemplateUploads);
  *             required:
  *               - name
  *               - category
+ *               - isPublish
+ *               - isRequired
  *             properties:
  *               name:
  *                 type: string
@@ -111,6 +114,9 @@ router.get("/", verifyToken, listTemplateUploads);
  *                 example: Sidang - Berkas Wajib
  *               isPublish:
  *                 type: boolean
+ *               isRequired:
+ *                 type: boolean
+ *                 example: true
  *               templateFile:
  *                 type: string
  *                 format: binary
@@ -241,6 +247,9 @@ router.get("/preview/:code", previewTemplateUpload);
  *                 example: Yudisium - Berkas Wajib
  *               isPublish:
  *                 type: boolean
+ *               isRequired:
+ *                 type: boolean
+ *                 example: true
  *               templateFile:
  *                 type: string
  *                 format: binary
@@ -314,6 +323,36 @@ router.delete("/:id", verifyToken, isAdmin, deleteTemplateUpload);
  *       200:
  *         description: Template publish status toggled successfully
  */
-router.patch("/:id/toggle-publish", verifyToken, isAdmin, togglePublishTemplate);
+router.patch(
+  "/:id/toggle-publish",
+  verifyToken,
+  isAdmin,
+  togglePublishTemplate,
+);
+
+/**
+ * @swagger
+ * /api/templates/{id}/toggle-required:
+ *   patch:
+ *     summary: Toggle required status of a template upload
+ *     tags: [Template Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Template required status toggled successfully
+ */
+router.patch(
+  "/:id/toggle-required",
+  verifyToken,
+  isAdmin,
+  toggleRequiredTemplate,
+);
 
 export default router;
