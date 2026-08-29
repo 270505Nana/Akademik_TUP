@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import {
+import React, { useState, useEffect, useCallback, useMemo } from 'react';import {
   Search, ChevronLeft, ChevronRight, Menu,
   Users, Settings2, X, AlertTriangle,
 } from 'lucide-react';
@@ -11,7 +10,7 @@ import KelolaKKModal from '../../components/common/KelolaKKModal';
 import { getAllDosen, getResearchGroups, toggleDosenKetuaKK, updateDosenKK, createResearchGroup, updateResearchGroup, deleteResearchGroup } from '../../service/api';
 import '../../components/admin/css/keloladatadosen.css';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 10;
 
 
 
@@ -134,6 +133,8 @@ const KelolaDataDosen = () => {
 
   const [dosenList, setDosenList] = useState([]);
   const [researchGroups, setResearchGroups] = useState([]);
+  // Server-side pagination state
+  const [totalItems, setTotalItems] = useState(0);
 
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
@@ -151,11 +152,25 @@ const KelolaDataDosen = () => {
     setTimeout(() => setAlert(p => ({ ...p, show: false })), 3500);
   }, []);
 
-  const fetchData = useCallback(async (prevOrderIds = null) => {
+
+  const fetchData = useCallback(async ({ page = 1, search: q = '', researchGroupId = '' } = {}) => {
     setIsLoadingData(true);
     try {
-      const [dosenRaw, kkRaw] = await Promise.all([getAllDosen(), getResearchGroups()]);
-      const mapped = (Array.isArray(dosenRaw) ? dosenRaw : []).map(d => ({
+      const params = {
+        page,
+        limit: PAGE_SIZE,
+        ...(q && { search: q }),
+        ...(researchGroupId && { researchGroupId }),
+      };
+      const [dosenRes, kkRaw] = await Promise.all([
+        getAllDosen(params),
+        getResearchGroups(),
+      ]);
+
+      const rawList = Array.isArray(dosenRes?.data) ? dosenRes.data : [];
+      const pagination = dosenRes?.pagination ?? {};
+
+      const mapped = rawList.map(d => ({
         id: d.id,
         nama: d.name,
         nip: d.nip ?? d.nidn ?? '',
@@ -164,17 +179,8 @@ const KelolaDataDosen = () => {
         isKetuaKK: d.isKetuaKK ?? false,
       }));
 
-      if (prevOrderIds && prevOrderIds.length > 0) {
-        // Pertahankan urutan sesuai posisi sebelum refresh agar baris tidak loncat,
-        const orderMap = new Map(prevOrderIds.map((id, i) => [id, i]));
-        mapped.sort((a, b) => {
-          const ia = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
-          const ib = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
-          return ia - ib;
-        });
-      }
-
       setDosenList(mapped);
+      setTotalItems(pagination.total ?? rawList.length);
       setResearchGroups(Array.isArray(kkRaw) ? kkRaw : []);
     } catch (err) {
       showAlert('error', 'Gagal Memuat Data', 'Tidak dapat mengambil data dosen. Coba muat ulang halaman.');
@@ -184,34 +190,29 @@ const KelolaDataDosen = () => {
   }, [showAlert]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData({ page: 1 });
+  }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => setSearchDebounced(search.trim().toLowerCase()), 300);
+    const t = setTimeout(() => setSearchDebounced(search.trim()), 400);
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => setCurrentPage(1), [searchDebounced, filterKK]);
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchData({ page: 1, search: searchDebounced, researchGroupId: filterKK });
+  }, [searchDebounced, filterKK]);
+
+  useEffect(() => {
+    fetchData({ page: currentPage, search: searchDebounced, researchGroupId: filterKK });
+  }, [currentPage]);
 
   const kkNameById = useCallback((id) => {
     return researchGroups.find(g => g.id === id)?.name ?? '—';
   }, [researchGroups]);
 
-  const filteredList = useMemo(() => {
-    return dosenList
-      .filter(d => {
-        if (!searchDebounced) return true;
-        return d.nama.toLowerCase().includes(searchDebounced) || d.nip.toLowerCase().includes(searchDebounced);
-      })
-      .filter(d => {
-        if (!filterKK) return true;
-        return d.researchGroupId === filterKK;
-      });
-  }, [dosenList, searchDebounced, filterKK]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
-  const paginated = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const paginated = dosenList;
 
   const handleSaveDosen = async (dosenId, { isKetuaKK, researchGroupId }) => {
     const original = dosenList.find(d => d.id === dosenId);
@@ -225,9 +226,6 @@ const KelolaDataDosen = () => {
       return;
     }
 
-    // Simpan urutan ID sebelum fetch agar posisi baris tabel tidak loncat setelah refresh.
-    const prevOrderIds = dosenList.map(d => d.id);
-
     setIsSaving(true);
     try {
       if (kkChanged) {
@@ -238,15 +236,10 @@ const KelolaDataDosen = () => {
           kodeDosen: original.kodeDosen,
         });
       }
-
-      // Jika status Ketua KK berubah, panggil toggle endpoint terpisah.
       if (ketuaChanged) {
         await toggleDosenKetuaKK(dosenId);
       }
-
-      // Refresh dari API agar perubahan cascade BE ikut terlihat (mis. dosen lain di KK
-      // yang sama otomatis di-unset), dengan mempertahankan urutan baris sebelumnya.
-      await fetchData(prevOrderIds);
+      await fetchData({ page: currentPage, search: searchDebounced, researchGroupId: filterKK });
 
       setEditingDosen(null);
       showAlert('success', 'Berhasil', 'Data dosen berhasil diperbarui.');
@@ -266,12 +259,9 @@ const KelolaDataDosen = () => {
     }
   };
 
-  // Ganti nama KK via API (PUT /api/research-groups/:id).
-  // Sebelumnya hanya update state lokal — perubahan tidak tersimpan ke DB.
   const handleRenameKK = async (groupId, newName) => {
     try {
       const updated = await updateResearchGroup(groupId, newName);
-      // Gunakan data dari response BE sebagai source of truth
       setResearchGroups(prev => prev.map(g => g.id === groupId ? { ...g, name: updated.name } : g));
       showAlert('success', 'Berhasil', 'Nama kelompok keahlian berhasil diperbarui.');
     } catch (err) {
@@ -282,14 +272,10 @@ const KelolaDataDosen = () => {
     }
   };
 
-  // Buat KK baru via API (POST /api/research-groups).
-  // Sebelumnya membuat id lokal palsu (angka increment) — menyebabkan researchGroupId yang
-  // dikirim ke PUT /api/dosen/:id bukan UUID asli sehingga data hilang setelah refresh.
-  // BE juga menangani restore soft-delete by name, jadi tidak perlu logika tambahan di sini.
+  
   const handleCreateKK = async (name) => {
     try {
       const created = await createResearchGroup(name);
-      // ID asli UUID dari BE — aman dipakai sebagai researchGroupId dosen
       setResearchGroups(prev => [...prev, created]);
       showAlert('success', 'Berhasil', 'Kelompok keahlian baru berhasil ditambahkan.');
     } catch (err) {
@@ -300,8 +286,6 @@ const KelolaDataDosen = () => {
     }
   };
 
-  // Hapus KK via API (DELETE /api/research-groups/:id).
-  // Reset filterKK jika KK yang dihapus sedang aktif di-filter agar tabel tidak stuck kosong.
   const handleDeleteKK = async (groupId) => {
     try {
       await deleteResearchGroup(groupId);
@@ -429,13 +413,13 @@ const KelolaDataDosen = () => {
                 </table>
               </div>
 
-              {filteredList.length > 0 && (
+              {totalItems > 0 && (
                 <div className="dd-footer">
                   <span className="dd-page-info">
-                    Menampilkan {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredList.length)}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)} dari {filteredList.length} data
+                    Menampilkan {Math.min((currentPage - 1) * PAGE_SIZE + 1, totalItems)}–{Math.min(currentPage * PAGE_SIZE, totalItems)} dari {totalItems} data
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <button className="dd-btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                    <button className="dd-btn-page" disabled={currentPage === 1 || isLoadingData} onClick={() => setCurrentPage(p => p - 1)}>
                       <ChevronLeft size={14} />
                     </button>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
@@ -443,11 +427,12 @@ const KelolaDataDosen = () => {
                         key={p}
                         className={`dd-btn-page ${p === currentPage ? 'active' : ''}`}
                         onClick={() => setCurrentPage(p)}
+                        disabled={isLoadingData}
                       >
                         {p}
                       </button>
                     ))}
-                    <button className="dd-btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                    <button className="dd-btn-page" disabled={currentPage === totalPages || isLoadingData} onClick={() => setCurrentPage(p => p + 1)}>
                       <ChevronRight size={14} />
                     </button>
                   </div>

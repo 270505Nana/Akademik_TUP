@@ -32,6 +32,8 @@ Object.keys(SECTIONS).forEach((key) => {
 export const initialFormState = {
   step: 1,
   data: {
+    id: null,
+    mahasiswaId: null,
     programType: "",
     sks: "",
     ipk: "",
@@ -53,6 +55,22 @@ export const initialFormState = {
 
 export function formReducer(state, action) {
   switch (action.type) {
+    case "SET_REGISTRATION_ID":
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          id: action.id ?? action.payload ?? null,
+        },
+      };
+    case "SET_MAHASISWA_ID":
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          mahasiswaId: action.mahasiswaId ?? action.payload ?? null,
+        },
+      };
     case "UPDATE_FIELD":
       return {
         ...state,

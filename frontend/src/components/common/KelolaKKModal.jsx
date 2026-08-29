@@ -3,8 +3,6 @@ import { X, Plus, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 import '../admin/css/keloladatadosen.css';
 
-// Sub-modal untuk tambah KK baru. onCreate kini async (memanggil API), jadi kita
-// tampilkan loading dan tangkap error agar pengguna tahu jika terjadi masalah.
 const TambahKKModal = ({ onClose, onCreate }) => {
   const [name, setName] = useState('');
   const [error, setError] = useState(null);
@@ -20,8 +18,6 @@ const TambahKKModal = ({ onClose, onCreate }) => {
       await onCreate(trimmed);
       onClose();
     } catch {
-      // Error sudah ditangani di handleCreateKK (showAlert di parent).
-      // Tutup modal agar pengguna bisa melihat notifikasi error dari parent.
       onClose();
     } finally {
       setIsSaving(false);
@@ -82,13 +78,10 @@ const KelolaKKModal = ({ researchGroups, onClose, onRename, onCreate, onDelete }
   const [localError, setLocalError] = useState(null);
   const [showTambah, setShowTambah] = useState(false);
 
-  // busyId: ID baris yang sedang dalam proses (simpan/hapus) — disable tombol lain di baris itu.
   const [busyId, setBusyId] = useState(null);
-  // confirmDeleteId: ID KK yang sedang menunggu konfirmasi penghapusan (langkah ke-2).
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const startEdit = (group) => {
-    // Batalkan konfirmasi hapus yang sedang aktif agar UI tidak kacau.
     setConfirmDeleteId(null);
     setEditingId(group.id);
     setEditValue(group.name);
@@ -105,28 +98,23 @@ const KelolaKKModal = ({ researchGroups, onClose, onRename, onCreate, onDelete }
     try {
       await onRename(id, trimmed);
     } finally {
-      // Selalu bersihkan state editing meski gagal (error sudah ditangani di parent).
       setEditingId(null);
       setEditValue('');
       setBusyId(null);
     }
   };
 
-  // Langkah 1 delete: tampilkan tombol konfirmasi "Ya, Hapus" + "Batal".
   const requestDelete = (groupId) => {
-    setEditingId(null);   // batalkan edit jika sedang aktif
+    setEditingId(null);   
     setLocalError(null);
     setConfirmDeleteId(groupId);
   };
 
-  // Langkah 2 delete: pengguna mengklik "Ya, Hapus" — eksekusi API.
   const handleConfirmDelete = async (groupId) => {
     setBusyId(groupId);
     setConfirmDeleteId(null);
     try {
       await onDelete(groupId);
-      // onDelete sudah mengupdate researchGroups di parent via setResearchGroups,
-      // jadi baris ini otomatis hilang dari list tanpa perlu setState tambahan di sini.
     } finally {
       setBusyId(null);
     }
@@ -180,7 +168,6 @@ const KelolaKKModal = ({ researchGroups, onClose, onRename, onCreate, onDelete }
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleConfirmEdit(group.id)}
                       />
-                      {/* Tampilkan loading text saat request API berlangsung */}
                       <button
                         className="dd-btn-text save"
                         onClick={() => handleConfirmEdit(group.id)}
@@ -197,7 +184,6 @@ const KelolaKKModal = ({ researchGroups, onClose, onRename, onCreate, onDelete }
                       </button>
                     </>
                   ) : isConfirmingDelete ? (
-                    // Langkah 2: konfirmasi sebelum hapus — UI minta penegasan eksplisit.
                     <>
                       <span className="dd-kk-row-name" style={{ color: '#991B1B' }}>
                         Hapus &quot;{group.name}&quot;?
@@ -218,10 +204,8 @@ const KelolaKKModal = ({ researchGroups, onClose, onRename, onCreate, onDelete }
                       </button>
                     </>
                   ) : (
-                    // Mode normal: tampilkan nama + tombol Edit + tombol Hapus.
                     <>
                       <span className="dd-kk-row-name">{group.name}</span>
-                      {/* Disable semua tombol di baris lain yang sedang busy */}
                       <button
                         className="dd-btn-text"
                         onClick={() => startEdit(group)}
@@ -229,7 +213,6 @@ const KelolaKKModal = ({ researchGroups, onClose, onRename, onCreate, onDelete }
                       >
                         Edit
                       </button>
-                      {/* Langkah 1 delete: klik Hapus -> muncul konfirmasi */}
                       <button
                         className="dd-btn-text danger"
                         onClick={() => requestDelete(group.id)}
@@ -256,4 +239,4 @@ const KelolaKKModal = ({ researchGroups, onClose, onRename, onCreate, onDelete }
   );
 };
 
-export default KelolaKKModal;
+export default KelolaKKModal;

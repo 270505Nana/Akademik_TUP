@@ -43,9 +43,9 @@ api.interceptors.response.use(
 );
 
 // ------------------------------------------- AUTH -------------------------------------------
-export const registerUser = async ({ username, email, no_telp, password, confirmPassword }) => {
+export const registerUser = async ({ name, email, no_telp, password, confirmPassword }) => {
   const response = await api.post("/api/auth/register", {
-    username, email, phone: no_telp, password, confirmPassword,
+    name, email, phone: no_telp, password, confirmPassword,
   });
   return response.data;
 };
@@ -130,9 +130,10 @@ export const getLecturerData = async (userId) => {
   return response.data;
 };
 
-export const getAllDosen = async () => {
-  const response = await api.get('/api/dosen');
-  return response.data?.data ?? response.data;
+export const getAllDosen = async (params = {}) => {
+  const response = await api.get('/api/dosen', { params });
+  // Kembalikan seluruh response (data + pagination) agar FE bisa baca metadata
+  return response.data;
 };
 
 export const getResearchGroups = async () => {
@@ -321,7 +322,7 @@ export const getSidangRegistrationByStudentId = async (studentId) => {
 };
 
 export const saveSidangRegistration = async (payload) => {
-  const response = await api.post("/api/sidang-registrations/save", payload);
+  const response = await api.post("/api/sidang-registrations/", payload);
   return response.data?.data ?? response.data;
 };
 
@@ -463,7 +464,8 @@ export const rejectSidangRegistration = async (registrationId, payload) => {
 };
 
 // ------------------------------------------- ETC -------------------------------------------
-export const getLecturers = async () => api.get("/api/dosen").then((r) => r.data?.data ?? r.data);
+export const getLecturers = async (params = { limit: "all", sortBy: "a-z" }) =>
+  api.get("/api/dosen", { params }).then((r) => r.data?.data ?? r.data);
 export const getFaculties = async () => api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
 export const getStudyPrograms = async () => api.get("/api/study-programs").then((r) => r.data?.data ?? r.data);
 export const getStudyProgramById = async (id) => api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
