@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
+import React, { useState, useEffect, useCallback, useMemo } from 'react';import {
   Search, ChevronLeft, ChevronRight, Menu,
   Users, Settings2, X, AlertTriangle,
 } from 'lucide-react';
