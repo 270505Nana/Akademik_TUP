@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import SidebarAdmin    from '../../components/sidebar/SidebarAdmin';
 import CustomAlert     from '../../components/common/CustomAlert';
-import EvidenceModal   from '../../components/admin/permohonanSK/EvidenceModal';
 import VerifikasiModal from '../../components/admin/permohonanSK/VerifikasiModal';
 import FormulirSKModal from '../../components/admin/permohonanSK/FormulirskModal';
 import { determineStatus, unwrapResponse } from '../../components/admin/permohonanSK/skHelpers';
@@ -51,7 +50,6 @@ const PermohonanSK = () => {
   const [requests,           setRequests]           = useState([]);
   const [prodiList,          setProdiList]          = useState([]);
   const [loading,            setLoading]            = useState(false);
-  const [evidenceItem,       setEvidenceItem]       = useState(null);
   const [selectedVerifikasi, setSelectedVerifikasi] = useState(null);
   const [existingResponse,   setExistingResponse]   = useState(null);
   const [formulirItem,       setFormulirItem]       = useState(null);
@@ -102,7 +100,6 @@ const PermohonanSK = () => {
             ? processed.sort((a, b) => b.id - a.id)[0]   
             : withResponses.sort((a, b) => b.id - a.id)[0]; 
 
-          // PERBAIKAN: Mapping prodiName dari BE JSON
           const prodiName = chosen.mahasiswa?.studyProgram?.name ?? chosen.student?.studyProgram?.name ?? '-';
           
           const tanggal =
@@ -151,7 +148,6 @@ const PermohonanSK = () => {
     [...requests]
       .filter(r => {
         if (!searchDebounced) return true;
-        // PERBAIKAN: Mapping search untuk nama dan nim
         const name = (r.mahasiswa?.name || r.student?.name || '').toLowerCase();
         const nim  = (r.mahasiswa?.nim || r.student?.nim  || '').toLowerCase();
         return name.includes(searchDebounced) || nim.includes(searchDebounced);
@@ -160,7 +156,6 @@ const PermohonanSK = () => {
       .filter(r => !filterStatus || getStatus(r) === filterStatus)
       .sort((a, b) => {
         if (sort.field === 'name') {
-          // PERBAIKAN: Mapping sort
           const na = (a.mahasiswa?.name || a.student?.name || '').toLowerCase();
           const nb = (b.mahasiswa?.name || b.student?.name || '').toLowerCase();
           const cmp = na.localeCompare(nb, 'id');
@@ -197,36 +192,35 @@ const PermohonanSK = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handlePreviewEvidence = async (item) => {
+  const handleOpenUnifiedModal = async (item, initialStep = 1) => {
+    setSelectedVerifikasi(null);
+    setExistingResponse(null);
+    
     const studentId = item.studentId ?? item.mahasiswaId ?? item.student?.id;
     if (!studentId) return showAlert('error', 'Error', 'Student ID tidak ditemukan');
 
     try {
-      const sktaRequest = await getSKTARequest(studentId);
-      const evidenceUploads = await getEvidenceUploadsByStudentId(studentId);
+      const [rawResp, uploadsRaw, reqData, evUploads] = await Promise.all([
+        getSktaResponseByRequestId(item.id).catch(() => null),
+        getSktaResponseUploadByStudentId(studentId).catch(() => null),
+        getSKTARequest(studentId).catch(() => null),
+        getEvidenceUploadsByStudentId(studentId).catch(() => [])
+      ]);
 
-      setEvidenceItem({
+      const unwrapped = unwrapResponse(rawResp);
+      const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
+      setExistingResponse(unwrapped ? { ...unwrapped, skUploads } : null);
+
+      setSelectedVerifikasi({
         ...item,
-        sktaRequest: sktaRequest,           
-        evidenceUploads: evidenceUploads,  
-        isPreview: true
+        sktaRequest: reqData,
+        evidenceUploads: evUploads,
+        initialStep: initialStep
       });
     } catch (err) {
       console.error(err);
-      showAlert('error', 'Gagal Membuka Evidence', 'Tidak dapat memuat data evidence');
+      showAlert('error', 'Gagal Membuka Data', 'Tidak dapat memuat detail pengajuan');
     }
-  };
-
-  const handleOpenVerifikasi = async (item) => {
-    setSelectedVerifikasi(item);
-    setExistingResponse(null);
-    const [raw, uploadsRaw] = await Promise.all([
-      getSktaResponseByRequestId(item.id).catch(() => null),
-      getSktaResponseUploadByStudentId(item.studentId ?? item.mahasiswaId ?? item.student?.id).catch(() => null),
-    ]);
-    const unwrapped = unwrapResponse(raw);
-    const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
-    setExistingResponse(unwrapped ? { ...unwrapped, skUploads } : null);
   };
 
   const handleCloseVerifikasi = () => {
@@ -275,7 +269,7 @@ const PermohonanSK = () => {
           <span className="mobile-menu-title">SIMTA</span>
         </div>
 
-        <div className="page-wrapper" style={{ minWidth: 0, width: '100%', overflowX: 'auto', margin: 0, padding: 0 }}>
+        <div className="page-wrapper" style={{ minWidth: 0, width: '100%', overflowX: 'auto', margin: 0, padding: 0, zoom: 0.9 }}>
           <div className="top-bar-red" style={{ overflow: 'hidden', margin: 0 }}>
             <h1 style={{ margin: 0 }}>Layanan SK TA</h1>
           </div>
@@ -389,7 +383,7 @@ const PermohonanSK = () => {
                             : <ArrowUpDown size={11} color="#CBD5E1" />}
                         </span>
                       </th>
-                      <th style={{ textAlign: 'center' }}>EVIDENCE</th>
+                      <th style={{ textAlign: 'center' }}>EVIDENCE & VERIFIKASI DATA</th>
                       <th
                         style={{ textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
                         onClick={() => handleSort('status')}
@@ -412,11 +406,8 @@ const PermohonanSK = () => {
                       <tr><td colSpan={6} className="text-center py-12">Tidak ada data sesuai filter</td></tr>
                     ) : (
                       paginated.map((item, idx) => {
-                        // PERBAIKAN: Mapping mahasiswa
                         const student = item.mahasiswa || item.student || {};
                         const status = getStatus(item);
-                        const actionLabel = status === 'sudah-terbit' ? 'Terverifikasi' :
-                                          status === 'mengirim-revisi' ? 'Tinjau Revisi' : 'Verifikasi';
 
                         return (
                           <tr key={item.id}>
@@ -427,8 +418,9 @@ const PermohonanSK = () => {
                             </td>
                             <td><span className="sk-prodi-text">{item.prodiName}</span></td>
                             <td className="text-center">
-                              <button className="btn-evidence" onClick={() => handlePreviewEvidence(item)}>
-                                <Eye size={13} /> Lihat Evidence
+                              {/* Open Unified Modal on Step 1 */}
+                              <button className="btn-evidence" onClick={() => handleOpenUnifiedModal(item, 1)}>
+                                <Eye size={13} /> Evidence
                               </button>
                             </td>
                             <td style={{ textAlign: 'center' }}>
@@ -436,16 +428,12 @@ const PermohonanSK = () => {
                             </td>
                             <td className="text-center action-buttons">
                               <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'center', gap: 6 }}>
-                                {/* Verifikasi / Terverifikasi / Tinjau Revisi */}
-                                <button className="btn-verifikasi-sk" onClick={() => handleOpenVerifikasi(item)}>
-                                  {actionLabel}
-                                </button>
                                 <button
                                   className="btn-export-sk sm"
                                   style={{ opacity: status === 'sudah-terbit' ? 1 : 0, pointerEvents: status === 'sudah-terbit' ? 'auto' : 'none' }}
                                   onClick={() => setFormulirItem(item)}
                                 >
-                                  Export
+                                  Export FormulirSKTA
                                 </button>
                               </div>
                             </td>
@@ -486,13 +474,6 @@ const PermohonanSK = () => {
 
       {/* Modals */}
       <AnimatePresence>
-        {evidenceItem && (
-          <EvidenceModal 
-            item={evidenceItem} 
-            onClose={() => setEvidenceItem(null)} 
-          />
-        )}
-        
         {selectedVerifikasi && (
           <VerifikasiModal
             selectedPermohonan={selectedVerifikasi}
@@ -502,7 +483,6 @@ const PermohonanSK = () => {
             onSave={handleSaveVerifikasi}
           />
         )}
-
 
         {formulirItem && (
           <FormulirSKModal
@@ -540,7 +520,7 @@ const PermohonanSK = () => {
           flex: 1;
           min-width: 0;
           width: 100%;
-          margin-left: 0 !important;  /* override aturperiode.css margin-left var */
+          margin-left: 0 !important; 
         }
 
         
@@ -549,8 +529,6 @@ const PermohonanSK = () => {
           margin-top: 0 !important;
           padding-top: 0 !important;
         }
-
-      /* ── Action buttons: selalu sama lebar ── */
         .action-buttons { vertical-align: middle; }
 
         html, body, #root {
@@ -657,6 +635,14 @@ const PermohonanSK = () => {
           flex-shrink: 0;
           color: #C0182A;
         }
+      
+        @-moz-document url-prefix() {
+          .sk-main-content .page-wrapper {
+             transform: scale(0.9);
+             transform-origin: top left;
+             width: 111.11% !important;
+          }
+        }
       `}</style>
 
       <AnimatePresence>
@@ -670,4 +656,4 @@ const PermohonanSK = () => {
   );
 };
 
-export default PermohonanSK;
+export default PermohonanSK;  
