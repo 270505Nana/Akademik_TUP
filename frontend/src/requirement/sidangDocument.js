@@ -4,6 +4,8 @@ export const SECTIONS = {
   JURNAL: "Publikasi Jurnal",
   PROCEEDING: "Proceeding International",
   HKI: "HKI",
+  TEST_BAHASA_SUDAH: "Test Bahasa",
+  TEST_BAHASA_BELUM: "Test Bahasa (Belum Memenuhi)",
 };
 
 export const REQUIRED_SLUGS = [
@@ -18,6 +20,23 @@ export const REQUIRED_SLUGS = [
   "berkas-sertifikat-tak",
   "berkas-rekomendasi-berkas-evidence-ta-pa-igracias-pembimbing",
   "upload-draft-buku-ta-siap-sidang",
+];
+
+/*
+ * DAFTAR SLUG DOKUMEN TEST BAHASA:
+ * Digunakan untuk validasi kelengkapan berkas di Step 2 sesuai pilihan radio mahasiswa:
+ * - TEST_BAHASA_SUDAH_SLUGS: 1 berkas sertifikat (skor >= 450)
+ * - TEST_BAHASA_BELUM_SLUGS: 3 berkas sertifikat retake/tes terpisah + 1 surat pemakluman
+ */
+export const TEST_BAHASA_SUDAH_SLUGS = [
+  "berkas-sertifikat-test-bahasa",
+];
+
+export const TEST_BAHASA_BELUM_SLUGS = [
+  "berkas-sertifikat-test-bahasa-1",
+  "berkas-sertifikat-test-bahasa-2",
+  "berkas-sertifikat-test-bahasa-3",
+  "berkas-surat-pemakluman-test-bahasa",
 ];
 
 export const NON_SIDANG_SLUGS = {
@@ -119,11 +138,45 @@ const HKI_DOCUMENTS = [
   { slug: "sertifikat-pendukung-lainnya", name: "Sertifikat Pendukung Lainnya" },
 ];
 
+/*
+ * KONFIGURASI DOKUMEN TEST BAHASA:
+ * - TEST_BAHASA_SUDAH_DOCUMENTS: Jalur bagi mahasiswa yang sudah memenuhi skor minimum >= 450 (1 dokumen).
+ * - TEST_BAHASA_BELUM_DOCUMENTS: Jalur bagi mahasiswa yang belum memenuhi skor (3 sertifikat tes + 1 surat pemakluman).
+ *   Surat pemakluman mendukung preview/download formulir template via slug-nya.
+ */
+const TEST_BAHASA_SUDAH_DOCUMENTS = [
+  {
+    slug: "berkas-sertifikat-test-bahasa",
+    name: "Berkas Sertifikat Test Bahasa (Skor ≥ 450)",
+  },
+];
+
+const TEST_BAHASA_BELUM_DOCUMENTS = [
+  {
+    slug: "berkas-sertifikat-test-bahasa-1",
+    name: "Berkas Sertifikat Test Bahasa 1",
+  },
+  {
+    slug: "berkas-sertifikat-test-bahasa-2",
+    name: "Berkas Sertifikat Test Bahasa 2",
+  },
+  {
+    slug: "berkas-sertifikat-test-bahasa-3",
+    name: "Berkas Sertifikat Test Bahasa 3",
+  },
+  {
+    slug: "berkas-surat-pemakluman-test-bahasa",
+    name: "Berkas Surat Pemakluman Test Bahasa",
+  },
+];
+
 export const DOCUMENT_CONFIG = {
   [SECTIONS.WAJIB]: REQUIRED_DOCUMENTS,
   [SECTIONS.JURNAL]: JURNAL_DOCUMENTS,
   [SECTIONS.PROCEEDING]: PROCEEDING_DOCUMENTS,
   [SECTIONS.HKI]: HKI_DOCUMENTS,
+  [SECTIONS.TEST_BAHASA_SUDAH]: TEST_BAHASA_SUDAH_DOCUMENTS,
+  [SECTIONS.TEST_BAHASA_BELUM]: TEST_BAHASA_BELUM_DOCUMENTS,
 };
 
 // Map display names to keys used in data.jalurNonSidang

@@ -815,20 +815,30 @@ const MahasiswaBimbingan = () => {
   const [logModalStudent, setLogModalStudent] = useState(null);
   const [skModalStudent, setSkModalStudent] = useState(null);
   const [studyPrograms, setStudyPrograms] = useState([]);
+  const [prodiFetchError, setProdiFetchError] = useState(false);
+  const [isLoadingProdi, setIsLoadingProdi] = useState(true);
 
-  // Jumlah data per halaman diatur menjadi 10
   const PAGE_SIZE = 10;
 
   // Mengambil data Program Studi resmi dari backend API
   useEffect(() => {
+    setIsLoadingProdi(true);
+    setProdiFetchError(false);
+
     getStudyPrograms()
       .then(data => {
-        if (Array.isArray(data)) {
-          setStudyPrograms(data);
-        }
+        const prodiList = Array.isArray(data) ? data : data?.data || [];
+        setStudyPrograms(prodiList);
+        setProdiFetchError(false);
       })
       .catch(err => {
         console.error('Gagal mengambil daftar program studi dari backend:', err);
+        // Menandai kegagalan fetch tanpa mengisi array fallback dummy
+        setStudyPrograms([]);
+        setProdiFetchError(true);
+      })
+      .finally(() => {
+        setIsLoadingProdi(false);
       });
   }, []);
 
@@ -1023,40 +1033,47 @@ const MahasiswaBimbingan = () => {
             </div>
 
             {/* Select Major (dari data Backend Study Programs) */}
-            <div style={{ minWidth: 180 }}>
+            <div style={{ minWidth: 180, display: 'flex', flexDirection: 'column', gap: 4 }}>
               <select
                 value={selectedProdi}
                 onChange={e => {
                   setSelectedProdi(e.target.value);
                   setCurrentPage(1);
                 }}
+                disabled={isLoadingProdi || prodiFetchError}
                 style={{
                   width: '100%',
                   padding: '9px 12px',
-                  border: '1.5px solid #E2E8F0',
+                  border: `1.5px solid ${prodiFetchError ? '#FCA5A5' : '#E2E8F0'}`,
                   borderRadius: 8,
                   fontSize: 13,
                   fontWeight: 500,
-                  color: '#374151',
-                  background: '#FFFFFF',
+                  color: prodiFetchError ? '#991B1B' : '#374151',
+                  background: prodiFetchError ? '#FEF2F2' : isLoadingProdi ? '#F8FAFC' : '#FFFFFF',
                   outline: 'none',
-                  cursor: 'pointer',
+                  cursor: (isLoadingProdi || prodiFetchError) ? 'not-allowed' : 'pointer',
                 }}
               >
-                <option value="">All Majors</option>
-                {studyPrograms.length > 0
-                  ? studyPrograms.map(prodi => (
+                {isLoadingProdi ? (
+                  <option value="">Memuat program studi...</option>
+                ) : prodiFetchError ? (
+                  <option value="">Gagal memuat program studi</option>
+                ) : (
+                  <>
+                    <option value="">All Majors</option>
+                    {studyPrograms.map(prodi => (
                       <option key={prodi.id} value={prodi.id}>
                         {prodi.name}
                       </option>
-                    ))
-                  : [
-                      <option key="1" value="1">S1 Informatika</option>,
-                      <option key="2" value="2">S1 Sistem Informasi</option>,
-                      <option key="3" value="3">S1 Rekayasa Perangkat Lunak</option>,
-                      <option key="4" value="4">S1 Teknik Telekomunikasi</option>,
-                    ]}
+                    ))}
+                  </>
+                )}
               </select>
+              {prodiFetchError && (
+                <span style={{ fontSize: 11, color: '#DC2626', lineHeight: 1.3 }}>
+                  Gagal memuat data program studi. Silakan muat ulang halaman.
+                </span>
+              )}
             </div>
 
             {/* Select Status */}

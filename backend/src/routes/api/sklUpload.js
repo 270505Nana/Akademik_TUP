@@ -24,13 +24,27 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/skl:
  *   get:
- *     summary: Retrieve list of SKL uploads
+ *     summary: Retrieve list of SKL uploads (paginated)
  *     tags: [SKL Upload]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: List of SKL uploads retrieved successfully
+ *         description: List of SKL uploads retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

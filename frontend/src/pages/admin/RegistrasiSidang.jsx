@@ -7,7 +7,7 @@ import CustomAlert           from '../../components/common/CustomAlert';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth }           from '../../context/AuthContext';
 import {getAllSidangRegistrations,getSidangPeriods,} from '../../service/api';
-import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
+import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/Sidangstatushelper';
 import '../../components/admin/sidang/RegistrasiSidang.css';
 
 const FILTER_TABS = [

@@ -1,20 +1,31 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Daftar Semua Mahasiswa
 const listMahasiswa = asyncHandler(async (req, res) => {
-  const mahasiswa = await prisma.mahasiswa.findMany({
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-          phone: true,
+  const paginationParams = getPaginationParams(req.query);
+
+  const [total, mahasiswa] = await Promise.all([
+    prisma.mahasiswa.count(),
+    prisma.mahasiswa.findMany({
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   const mapped = mahasiswa.map((m) => {
     const { user, ...rest } = m;
@@ -26,9 +37,7 @@ const listMahasiswa = asyncHandler(async (req, res) => {
     };
   });
 
-  res.json({
-    data: mapped,
-  });
+  res.json(formatPaginationResponse(mapped, total, paginationParams));
 });
 
 // Update or Insert Mahasiswa

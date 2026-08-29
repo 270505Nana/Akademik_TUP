@@ -25,16 +25,16 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/research-groups:
  *   get:
- *     summary: Get all research group data (with filter and sort)
+ *     summary: Get all research group data (with filter, sort, and pagination)
  *     tags: [Research Group]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: name
+ *         name: search
  *         schema:
  *           type: string
- *         description: Filter by research group name (case-insensitive substring)
+ *         description: Search by research group name (case-insensitive substring)
  *       - in: query
  *         name: isActive
  *         schema:
@@ -44,11 +44,24 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [a-z, z-a, active-inactive, inactive-active]
- *         description: Sort research groups by name or active status
+ *           enum: [a-z, z-a, active-inactive, inactive-active, newest, oldest]
+ *         description: Sort research groups by name (a-z, z-a), status (active-inactive, inactive-active), or creation time (newest, oldest)
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Research group data retrieved successfully
+ *         description: Research group data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

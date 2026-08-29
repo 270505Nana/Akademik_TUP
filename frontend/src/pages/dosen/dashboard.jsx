@@ -4,14 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarDosen from '../../components/sidebar/SidebarDosen';
 import FooterDosen from '../../components/common/FooterDosen';
+import { useAuth } from '../../context/AuthContext';
 import '../dashboard.css';
 
-// Mock data sementara untuk dashboard dosen.
-// Nanti diganti dengan response API.
-const MOCK_DOSEN = {
-  nama: 'Dr. Purwono',
-  inisial: 'P',
-};
 
 const MOCK_STATISTIK = [
   { label: 'Total Mahasiswa Bimbingan', nilai: 24, icon: 'users' },
@@ -255,6 +250,8 @@ const DashboardDosen = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const namaDisplay = profile?.name || user?.name || user?.username || 'Dosen';
 
   const showToast = (message, icon, type = 'info') => {
     const id = Date.now();
@@ -286,7 +283,7 @@ const DashboardDosen = () => {
         <main className="page-body">
           {/* Welcome Card */}
           <div className="welcome-card">
-            <h5>Halo, {MOCK_DOSEN.nama}! 👋</h5>
+            <h5>Halo, {namaDisplay}! 👋</h5>
             <p>Berikut informasi jadwal sidang dan tugas yang perlu Anda tindak lanjuti.</p>
           </div>
 

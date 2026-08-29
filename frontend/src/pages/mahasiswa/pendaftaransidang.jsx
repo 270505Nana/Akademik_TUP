@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../../components/mahasiswa/sidang/sidang.css";
@@ -19,7 +19,12 @@ import {
   submitSidangRegistration,
 } from "../../service/api";
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG } from "../../components/admin/sidang/Sidangstatushelper";
-import { REQUIRED_SLUGS, NON_SIDANG_SLUGS } from "../../requirement/sidangDocument";
+import {
+  REQUIRED_SLUGS,
+  NON_SIDANG_SLUGS,
+  TEST_BAHASA_SUDAH_SLUGS,
+  TEST_BAHASA_BELUM_SLUGS,
+} from "../../requirement/sidangDocument";
 
 const STEP1_REQUIRED = [
   { key: "programType",        label: "Program (Reguler / Alih Jenjang)" },
@@ -60,20 +65,47 @@ function validateStep1(data) {
   return null;
 }
 
+/*
+ * VALIDASI STEP 2:
+ * 1. Pilihan radio Test Bahasa ("Sudah" / "Belum") wajib diisi.
+ * 2. Berkas Test Bahasa sesuai opsi yang dipilih wajib diunggah dan disimpan:
+ *    - "Sudah": 1 berkas sertifikat (TEST_BAHASA_SUDAH_SLUGS)
+ *    - "Belum": 3 berkas sertifikat + 1 surat pemakluman (TEST_BAHASA_BELUM_SLUGS)
+ * 3. Berkas Wajib Sidang (REQUIRED_SLUGS) wajib diunggah dan disimpan.
+ * 4. Berkas Jalur Non-Sidang (NON_SIDANG_SLUGS) wajib diunggah jika skema Non-Sidang dipilih.
+ */
 function validateStep2(data, documents) {
   if (!data.testBahasaPersyaratan) {
     return "Jawaban persyaratan Test Bahasa wajib dipilih.";
   }
 
   const completedSlugs = documents.filter((d) => d.status === "completed").map((d) => d.slug);
-  const missingSlugs = REQUIRED_SLUGS.filter((slug) => !completedSlugs.includes(slug));
 
+  // Percabangan validasi dokumen Test Bahasa sesuai opsi "Sudah" / "Belum"
+  const testBahasaSlugs = data.testBahasaPersyaratan === "Sudah"
+    ? TEST_BAHASA_SUDAH_SLUGS
+    : data.testBahasaPersyaratan === "Belum"
+      ? TEST_BAHASA_BELUM_SLUGS
+      : [];
+
+  const missingTestBahasaSlugs = testBahasaSlugs.filter((slug) => !completedSlugs.includes(slug));
+  if (missingTestBahasaSlugs.length > 0) {
+    const missingNames = documents
+      .filter((d) => missingTestBahasaSlugs.includes(d.slug) && d.status !== "completed")
+      .map((d) => d.name);
+    const displayList = missingNames.length > 0 ? missingNames.join(", ") : `${missingTestBahasaSlugs.length} dokumen`;
+    return `Dokumen Test Bahasa belum lengkap diunggah: ${displayList}.`;
+  }
+
+  // Validasi Berkas Wajib Sidang
+  const missingSlugs = REQUIRED_SLUGS.filter((slug) => !completedSlugs.includes(slug));
   if (missingSlugs.length > 0) {
     const missingNames = documents.filter((d) => missingSlugs.includes(d.slug) && d.status !== "completed").map((d) => d.name);
     const displayList = missingNames.length > 0 ? missingNames.join(", ") : `${missingSlugs.length} dokumen wajib`;
     return `Dokumen berikut belum diunggah dan disimpan: ${displayList}.`;
   }
 
+  // Validasi Berkas Jalur Non-Sidang (jika skema Non-Sidang dipilih)
   if (data.sidangScheme === "Non Sidang" && data.jalurNonSidang?.length > 0) {
     for (const jalur of data.jalurNonSidang) {
       const jalurSlugs = NON_SIDANG_SLUGS[jalur] ?? [];
@@ -100,15 +132,20 @@ function PendaftaranSidangContent() {
   const [isRegistrationLoading, setIsRegistrationLoading] = useState(false);
   const [isSavingStep1,         setIsSavingStep1]         = useState(false);
   const [lecturers,             setLecturers]             = useState([]);
+  const [isLecturersLoading,    setIsLecturersLoading]    = useState(true);
   const [registrationId,        setRegistrationId]        = useState(null);
   const [registrationMeta,      setRegistrationMeta]      = useState(null);
   const [sidangAdminResponse,   setSidangAdminResponse]   = useState(null);
   const [formAlert,             setFormAlert]             = useState(null);
+  const [autosaveStatus,        setAutosaveStatus]        = useState("idle"); // "idle" | "saving" | "saved" | "error"
+
+  const isHydrating = useRef(true);
+  const lastSavedPayload = useRef(null);
+  const latestRequestId = useRef(0);
 
   const mahasiswaId = student?.mahasiswaId || profile?.id || user?.id;
   const isStep1Locked = Boolean(registrationMeta?.submittedAt);
   const isRevisionActive = Boolean(sidangAdminResponse?.isEdit !== null && sidangAdminResponse?.isEdit !== undefined && sidangAdminResponse?.message);
-
   const revisionDueDateText = sidangAdminResponse?.isEdit
     ? new Date(sidangAdminResponse.isEdit).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
     : null;
@@ -135,15 +172,23 @@ function PendaftaranSidangContent() {
     programType:        data.programType,
     sidangScheme:       data.sidangScheme,
     jalurNonSidang:     Array.isArray(data.jalurNonSidang) ? data.jalurNonSidang : [],
+    /*
+     * KONTRAK FE -> BE (Persiapan Fitur Test Bahasa):
+     * Mengirimkan nilai pilihan radio testBahasaPersyaratan ("Sudah" | "Belum" | null).
+     * CATATAN STATUS BACKEND: Field ini dikirim sebagai persiapan kontrak FE-BE.
+     * Jika tabel/schema database backend belum memiliki kolom ini, BE akan mengabaikannya
+     * dengan aman tanpa menimbulkan error request.
+     */
+    testBahasaPersyaratan: data.testBahasaPersyaratan || null,
     sks:                data.sks ? Number(data.sks) : 0,
     ipk:                data.ipk ? Number(data.ipk) : 0,
     tak:                data.tak ? Number(data.tak) : 0,
     sktaExpDate:        data.sktaExpDate || null,
-    thesisTitleId:      data.thesisTitleId,
-    thesisTitleEn:      data.thesisTitleEn,
-    mahasiswaId,
-    dosenPembimbing1Id: data.dosenPembimbing1Id ? Number(data.dosenPembimbing1Id) : null,
-    dosenPembimbing2Id: data.dosenPembimbing2Id ? Number(data.dosenPembimbing2Id) : null,
+    thesisTitleId:      data.thesisTitleId ? data.thesisTitleId.trim() : "",
+    thesisTitleEn:      data.thesisTitleEn ? data.thesisTitleEn.trim() : "",
+    mahasiswaId:        String(mahasiswaId),
+    dosenPembimbing1Id: data.dosenPembimbing1Id ? String(data.dosenPembimbing1Id) : null,
+    dosenPembimbing2Id: data.dosenPembimbing2Id ? String(data.dosenPembimbing2Id) : null,
   });
 
   const handleSaveStep1 = async () => {
@@ -163,11 +208,17 @@ function PendaftaranSidangContent() {
     try {
       setIsSavingStep1(true);
       const result = await saveSidangRegistration(buildSavePayload());
-      const savedId = result?.data?.id ?? null;
-      if (savedId && !registrationId) setRegistrationId(savedId);
+      const savedId = result?.data?.id ?? result?.id ?? null;
+      if (savedId && !registrationId) {
+        setRegistrationId(savedId);
+        dispatch({ type: "SET_REGISTRATION_ID", id: savedId });
+      }
       setStep(2);
     } catch (e) {
-      const msg = e.response?.data?.message || "Gagal menyimpan data pendaftaran sidang. Silakan coba lagi.";
+      const serverErrors = e.response?.data?.errors;
+      const msg = Array.isArray(serverErrors) && serverErrors.length > 0
+        ? serverErrors.map((err) => err.message).join(", ")
+        : (e.response?.data?.message || "Gagal menyimpan data pendaftaran sidang. Silakan coba lagi.");
       setFormAlert({ type: "error", msg });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
@@ -195,7 +246,10 @@ function PendaftaranSidangContent() {
       localStorage.removeItem("sidang_form_draft");
       navigate("/mahasiswa/dashboard");
     } catch (error) {
-      const msg = error.response?.data?.message || "Gagal submit pendaftaran sidang. Silakan coba lagi.";
+      const serverErrors = error.response?.data?.errors;
+      const msg = Array.isArray(serverErrors) && serverErrors.length > 0
+        ? serverErrors.map((err) => err.message).join(", ")
+        : (error.response?.data?.message || "Gagal submit pendaftaran sidang. Silakan coba lagi.");
       setFormAlert({ type: "error", msg });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
@@ -215,9 +269,19 @@ function PendaftaranSidangContent() {
     dispatch({
       type: "SET_INITIAL_DATA",
       payload: {
+        id:                 registration.id                 || null,
+        mahasiswaId:        registration.mahasiswaId        || null,
         programType:        registration.programType        || "",
         sidangScheme:       registration.sidangScheme       || "",
         jalurNonSidang:     Array.isArray(registration.jalurNonSidang) ? registration.jalurNonSidang : [],
+        /*
+         * RESTORE TEST BAHASA DARI BE:
+         * Memetakan nilai testBahasaPersyaratan dari database jika backend sudah mendukung field ini.
+         * KNOWN LIMITATION: Jika backend belum mengembalikan field ini dalam response GET,
+         * nilainya akan menjadi null sehingga opsi radio belum terpilih saat halaman direload
+         * hingga endpoint backend selesai diperbarui.
+         */
+        testBahasaPersyaratan: registration.testBahasaPersyaratan || null,
         sks:                registration.sks               ?? "",
         ipk:                registration.ipk               ?? "",
         tak:                registration.tak               ?? "",
@@ -232,21 +296,25 @@ function PendaftaranSidangContent() {
 
   const initRegistration = async (id) => {
     setIsRegistrationLoading(true);
+    isHydrating.current = true;
     try {
-      // MEMPERBAIKI PEMANGGILAN API
       const response = await getSidangRegistrationByStudentId(id);
       const existing = response?.data ?? response;
 
       if (!existing) {
         const created = await saveSidangRegistration({ mahasiswaId: id });
-        const newId = created?.data?.id ?? null;
-        setRegistrationId(newId);
+        const newId = created?.data?.id ?? created?.id ?? null;
+        if (newId) {
+          setRegistrationId(newId);
+          dispatch({ type: "SET_REGISTRATION_ID", id: newId });
+        }
         applyRegistrationToForm(created?.data ?? created);
         setRegistrationMeta(created?.data ?? created ?? null);
         return;
       }
 
       setRegistrationId(existing.id);
+      dispatch({ type: "SET_REGISTRATION_ID", id: existing.id });
       applyRegistrationToForm(existing);
       setRegistrationMeta(existing);
       if (Array.isArray(existing.sidangRegistrationUploads) && existing.sidangRegistrationUploads.length > 0) {
@@ -267,7 +335,6 @@ function PendaftaranSidangContent() {
       return;
     }
     try {
-      // MEMPERBAIKI PEMANGGILAN API
       const response = await getSktaResponseUploadByStudentId(mahasiswaId);
       const hasSkta = Array.isArray(response) ? response.length > 0 : (!!response?.sktaDownloadUrl || !!response?.sktaUploadPath);
       setSkta(hasSkta);
@@ -282,11 +349,126 @@ function PendaftaranSidangContent() {
 
   useEffect(() => { setIsSktaChecking(true); checkSkta(); }, [mahasiswaId]);
 
+  // Fetch seluruh dosen terurut A-Z sekali saat mount
   useEffect(() => {
     let isMounted = true;
-    getLecturers().then((data) => { if (isMounted) setLecturers(data || []); }).catch(console.error);
+    setIsLecturersLoading(true);
+    getLecturers({ limit: "all", sortBy: "a-z" })
+      .then((data) => {
+        if (isMounted) {
+          const list = Array.isArray(data) ? data : (data?.data || []);
+          setLecturers(list);
+        }
+      })
+      .catch((err) => {
+        console.error("Gagal memuat data dosen:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLecturersLoading(false);
+      });
     return () => { isMounted = false; };
   }, []);
+
+  // Autosave Step 1 draft ke backend secara debounced
+  useEffect(() => {
+    if (isStep1Locked || !mahasiswaId) return;
+
+    if (isHydrating.current) {
+      isHydrating.current = false;
+      const initialPayload = {
+        ...(registrationId ? { id: registrationId } : {}),
+        mahasiswaId: String(mahasiswaId),
+        programType: data.programType || undefined,
+        sidangScheme: data.sidangScheme || undefined,
+        jalurNonSidang: Array.isArray(data.jalurNonSidang) ? data.jalurNonSidang : [],
+        testBahasaPersyaratan: data.testBahasaPersyaratan || undefined,
+        sks: data.sks !== "" && data.sks !== null && data.sks !== undefined ? Number(data.sks) : undefined,
+        ipk: data.ipk !== "" && data.ipk !== null && data.ipk !== undefined ? Number(data.ipk) : undefined,
+        tak: data.tak !== "" && data.tak !== null && data.tak !== undefined ? Number(data.tak) : undefined,
+        sktaExpDate: data.sktaExpDate || undefined,
+        thesisTitleId: data.thesisTitleId || undefined,
+        thesisTitleEn: data.thesisTitleEn || undefined,
+        dosenPembimbing1Id: data.dosenPembimbing1Id ? String(data.dosenPembimbing1Id) : undefined,
+        dosenPembimbing2Id: data.dosenPembimbing2Id ? String(data.dosenPembimbing2Id) : undefined,
+      };
+      lastSavedPayload.current = JSON.stringify(initialPayload);
+      return;
+    }
+
+    const hasData = Boolean(
+      data.programType ||
+      data.sidangScheme ||
+      (Array.isArray(data.jalurNonSidang) && data.jalurNonSidang.length > 0) ||
+      data.testBahasaPersyaratan ||
+      (data.sks !== "" && data.sks !== null && data.sks !== undefined) ||
+      (data.ipk !== "" && data.ipk !== null && data.ipk !== undefined) ||
+      (data.tak !== "" && data.tak !== null && data.tak !== undefined) ||
+      data.sktaExpDate ||
+      data.thesisTitleId ||
+      data.thesisTitleEn ||
+      data.dosenPembimbing1Id ||
+      data.dosenPembimbing2Id
+    );
+
+    if (!hasData) return;
+
+    const payload = {
+      ...(registrationId ? { id: registrationId } : {}),
+      mahasiswaId: String(mahasiswaId),
+      programType: data.programType || undefined,
+      sidangScheme: data.sidangScheme || undefined,
+      jalurNonSidang: Array.isArray(data.jalurNonSidang) ? data.jalurNonSidang : [],
+      testBahasaPersyaratan: data.testBahasaPersyaratan || undefined,
+      sks: data.sks !== "" && data.sks !== null && data.sks !== undefined ? Number(data.sks) : undefined,
+      ipk: data.ipk !== "" && data.ipk !== null && data.ipk !== undefined ? Number(data.ipk) : undefined,
+      tak: data.tak !== "" && data.tak !== null && data.tak !== undefined ? Number(data.tak) : undefined,
+      sktaExpDate: data.sktaExpDate || undefined,
+      thesisTitleId: data.thesisTitleId ? data.thesisTitleId.trim() : undefined,
+      thesisTitleEn: data.thesisTitleEn ? data.thesisTitleEn.trim() : undefined,
+      dosenPembimbing1Id: data.dosenPembimbing1Id ? String(data.dosenPembimbing1Id) : undefined,
+      dosenPembimbing2Id: data.dosenPembimbing2Id ? String(data.dosenPembimbing2Id) : undefined,
+    };
+
+    const payloadString = JSON.stringify(payload);
+    if (lastSavedPayload.current === payloadString) return;
+
+    const timer = setTimeout(async () => {
+      const currentReqId = ++latestRequestId.current;
+      setAutosaveStatus("saving");
+      try {
+        const result = await saveSidangRegistration(payload);
+        if (currentReqId !== latestRequestId.current) return;
+        const savedId = result?.data?.id ?? result?.id ?? null;
+        if (savedId && !registrationId) {
+          setRegistrationId(savedId);
+          dispatch({ type: "SET_REGISTRATION_ID", id: savedId });
+        }
+        lastSavedPayload.current = payloadString;
+        setAutosaveStatus("saved");
+      } catch (err) {
+        if (currentReqId !== latestRequestId.current) return;
+        console.error("Autosave draft sidang gagal:", err);
+        setAutosaveStatus("error");
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [
+    data.programType,
+    data.sidangScheme,
+    data.jalurNonSidang,
+    data.sks,
+    data.ipk,
+    data.tak,
+    data.sktaExpDate,
+    data.thesisTitleId,
+    data.thesisTitleEn,
+    data.dosenPembimbing1Id,
+    data.dosenPembimbing2Id,
+    mahasiswaId,
+    registrationId,
+    isStep1Locked,
+  ]);
 
   return (
     <div className="page-wrapper">
@@ -341,7 +523,14 @@ function PendaftaranSidangContent() {
 
             <main>
               {step === 1 ? (
-                <Step1 studentInfo={studentInfo} lecturers={lecturers} readOnly={isStep1Locked} schemeLocked={isRevisionActive} />
+                <Step1
+                  studentInfo={studentInfo}
+                  lecturers={lecturers}
+                  loadingLecturers={isLecturersLoading}
+                  autosaveStatus={autosaveStatus}
+                  readOnly={isStep1Locked}
+                  schemeLocked={isRevisionActive}
+                />
               ) : (
                 <Step2 registrationId={registrationId} />
               )}

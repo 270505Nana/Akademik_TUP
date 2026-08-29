@@ -21,13 +21,27 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/admin:
  *   get:
- *     summary: Get all admin data
+ *     summary: Get all admin data (paginated)
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Admin data retrieved successfully
+ *         description: Admin data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

@@ -28,13 +28,27 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/yudisium-registrations:
  *   get:
- *     summary: Get all yudisium registrations
+ *     summary: Get all yudisium registrations (paginated)
  *     tags: [Yudisium Registration]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Yudisium registrations data retrieved successfully
+ *         description: Yudisium registrations data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:

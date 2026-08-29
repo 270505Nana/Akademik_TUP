@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { sendValidationError, isNil } from '../utils/validationHelper.js';
 import { v4 as uuidv4 } from 'uuid';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 const mapMahasiswa = (mahasiswa) => {
   if (!mahasiswa) return null;
@@ -57,6 +58,7 @@ const transkripInclude = {
 
 // List all Transkrip uploads (from BerkasMahasiswa with category "Transkrip")
 const listTranskripUploads = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
   let whereClause = { deletedAt: null, category: "Transkrip" };
 
   // If user is MAHASISWA, they can only see their own Transkrip uploads
@@ -71,14 +73,21 @@ const listTranskripUploads = asyncHandler(async (req, res) => {
     whereClause.mahasiswaId = student.id;
   }
 
-  const transkripUploads = await prisma.berkasMahasiswa.findMany({
-    where: whereClause,
-    include: transkripInclude,
-    orderBy: { createdAt: "desc" },
-  });
+  const [total, transkripUploads] = await Promise.all([
+    prisma.berkasMahasiswa.count({
+      where: whereClause,
+    }),
+    prisma.berkasMahasiswa.findMany({
+      where: whereClause,
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      include: transkripInclude,
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   const data = transkripUploads.map((item) => mapTranskripUpload(item, req));
-  res.json({ data });
+  res.json(formatPaginationResponse(data, total, paginationParams));
 });
 
 // Get Transkrip upload by ID

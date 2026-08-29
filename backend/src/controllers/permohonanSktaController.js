@@ -3,6 +3,7 @@ import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
@@ -122,42 +123,49 @@ const mapPermohonanToFrontend = (item, req) => {
 
 // [Route] Mendapatkan Semua Permohonan SKTA
 const listPermohonanSkta = asyncHandler(async (req, res) => {
-  const data = await prisma.permohonanSkta.findMany({
-    include: {
-      mahasiswa: {
-        include: {
-          studyProgram: true,
-          user: true,
+  const paginationParams = getPaginationParams(req.query);
+
+  const [total, data] = await Promise.all([
+    prisma.permohonanSkta.count(),
+    prisma.permohonanSkta.findMany({
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      include: {
+        mahasiswa: {
+          include: {
+            studyProgram: true,
+            user: true,
+          },
         },
-      },
-      dosenPembimbing1: {
-        include: {
-          user: {
-            select: {
-              name: true,
+        dosenPembimbing1: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
             },
           },
         },
-      },
-      dosenPembimbing2: {
-        include: {
-          user: {
-            select: {
-              name: true,
+        dosenPembimbing2: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
             },
           },
         },
+        researchGroup: true,
+        admin: true,
       },
-      researchGroup: true,
-      admin: true,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+      orderBy: {
+        createdAt: 'desc',
+      },
+    }),
+  ]);
 
   const enriched = data.map((item) => mapPermohonanToFrontend(item, req));
-  res.json({ data: enriched });
+  res.json(formatPaginationResponse(enriched, total, paginationParams));
 });
 
 // [Route] Membuat Permohonan SKTA Baru

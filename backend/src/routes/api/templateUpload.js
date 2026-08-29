@@ -1,20 +1,22 @@
-import express from 'express';
+import express from "express";
 
 const router = express.Router();
 
-import { 
+import {
   listTemplateUploads,
   createTemplateUpload,
   findTemplateUploadByCode,
   updateTemplateUpload,
   deleteTemplateUpload,
   downloadTemplateUpload,
-  previewTemplateUpload, 
-} from '../../controllers/templateUploadController.js';
+  previewTemplateUpload,
+  togglePublishTemplate,
+  toggleRequiredTemplate,
+} from "../../controllers/templateUploadController.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { upload } from '../../middlewares/upload.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { upload } from "../../middlewares/upload.js";
+import { isAdmin } from "../../middlewares/authorize.js";
 
 /**
  * @swagger
@@ -27,7 +29,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/templates:
  *   get:
- *     summary: Get all template uploads
+ *     summary: Get all template uploads (with filter and pagination)
  *     tags: [Template Upload]
  *     security:
  *       - bearerAuth: []
@@ -37,6 +39,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *           enum:
+ *             - Permohonan SKTA
  *             - Sidang - Berkas Wajib
  *             - Sidang - Evidence Non Sidang Publikasi Jurnal
  *             - Sidang - Evidence Non Sidang Proceeding International
@@ -47,9 +50,22 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *             - Yudisium - Evidence Cumlaude Lomba
  *             - Yudisium - Evidence Cumlaude HKI
  *         description: Filter by category
+ *       - $ref: '#/components/parameters/pageQueryParam'
+ *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Template upload data retrieved successfully
+ *         description: Template upload data retrieved successfully with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:
@@ -76,7 +92,8 @@ router.get("/", verifyToken, listTemplateUploads);
  *             required:
  *               - name
  *               - category
- *               - templateFile
+ *               - isPublish
+ *               - isRequired
  *             properties:
  *               name:
  *                 type: string
@@ -84,6 +101,7 @@ router.get("/", verifyToken, listTemplateUploads);
  *               category:
  *                 type: string
  *                 enum:
+ *                   - Permohonan SKTA
  *                   - Sidang - Berkas Wajib
  *                   - Sidang - Evidence Non Sidang Publikasi Jurnal
  *                   - Sidang - Evidence Non Sidang Proceeding International
@@ -96,6 +114,9 @@ router.get("/", verifyToken, listTemplateUploads);
  *                 example: Sidang - Berkas Wajib
  *               isPublish:
  *                 type: boolean
+ *               isRequired:
+ *                 type: boolean
+ *                 example: true
  *               templateFile:
  *                 type: string
  *                 format: binary
@@ -213,6 +234,7 @@ router.get("/preview/:code", previewTemplateUpload);
  *               category:
  *                 type: string
  *                 enum:
+ *                   - Permohonan SKTA
  *                   - Sidang - Berkas Wajib
  *                   - Sidang - Evidence Non Sidang Publikasi Jurnal
  *                   - Sidang - Evidence Non Sidang Proceeding International
@@ -225,6 +247,9 @@ router.get("/preview/:code", previewTemplateUpload);
  *                 example: Yudisium - Berkas Wajib
  *               isPublish:
  *                 type: boolean
+ *               isRequired:
+ *                 type: boolean
+ *                 example: true
  *               templateFile:
  *                 type: string
  *                 format: binary
@@ -279,5 +304,55 @@ router.patch(
  *         description: Internal server error
  */
 router.delete("/:id", verifyToken, isAdmin, deleteTemplateUpload);
+
+/**
+ * @swagger
+ * /api/templates/{id}/toggle-publish:
+ *   patch:
+ *     summary: Toggle publish status of a template upload
+ *     tags: [Template Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Template publish status toggled successfully
+ */
+router.patch(
+  "/:id/toggle-publish",
+  verifyToken,
+  isAdmin,
+  togglePublishTemplate,
+);
+
+/**
+ * @swagger
+ * /api/templates/{id}/toggle-required:
+ *   patch:
+ *     summary: Toggle required status of a template upload
+ *     tags: [Template Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Template required status toggled successfully
+ */
+router.patch(
+  "/:id/toggle-required",
+  verifyToken,
+  isAdmin,
+  toggleRequiredTemplate,
+);
 
 export default router;

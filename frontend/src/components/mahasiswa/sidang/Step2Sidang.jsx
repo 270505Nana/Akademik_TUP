@@ -31,6 +31,7 @@ const DocUploadPanel = ({
   onUpdateLink,
   linkPaperValue,
   showLinkInput,
+  showTemplateBox = true,
   isUploading,
   onViewFile,
   viewingFileId,
@@ -158,50 +159,50 @@ const DocUploadPanel = ({
             <span style={{ color: "var(--text-grey)" }}>{activeDoc.name}</span>
           </div>
 
-          <div
-            style={{
-              border: "1px solid var(--border-grey)",
-              borderRadius: "12px",
-              padding: "1.5rem",
-              marginBottom: "2rem",
-            }}
-          >
+          {showTemplateBox && (
             <div
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: "1rem",
+                border: "1px solid var(--border-grey)",
+                borderRadius: "12px",
+                padding: "1.5rem",
+                marginBottom: "2rem",
               }}
             >
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontWeight: 700, marginBottom: "0.5rem" }}>
-                  Download Template
-                </h4>
-                <p style={{ fontSize: "0.85rem" }}>
-                  Pada tahap ini kamu membutuhkan menggunakan template.
-                  <br />
-                  Silahkan unduh dan isi template di samping ini.
-                </p>
-                {templateState.error && (
-                  <p style={{ fontSize: "0.8rem", color: "#DC2626", marginTop: "0.5rem", fontWeight: 600 }}>
-                    {templateState.error}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "1rem",
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ fontWeight: 700, marginBottom: "0.5rem" }}>
+                    Dokumen Persyaratan
+                  </h4>
+                  <p style={{ fontSize: "0.85rem" }}>
+                    Lihat contoh berkas sebagai panduan atau unduh template yang telah tersedia.
                   </p>
-                )}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem", flexShrink: 0 }}>
-                {/* Tombol preview — fetch blob dan buka di tab baru */}
-                <button
-                  className="download-btn"
-                  onClick={handlePreviewTemplate}
-                  disabled={templateState.isFetching}
-                >
-                  <Download size={16} />
-                  <span>{templateState.isFetching ? "Memuat..." : "Download Template Disini"}</span>
-                </button>
+                  {templateState.error && (
+                    <p style={{ fontSize: "0.8rem", color: "#DC2626", marginTop: "0.5rem", fontWeight: 600 }}>
+                      {templateState.error}
+                    </p>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem", flexShrink: 0 }}>
+                  {/* Tombol preview — fetch blob dan buka di tab baru */}
+                  <button
+                    className="download-btn"
+                    onClick={handlePreviewTemplate}
+                    disabled={templateState.isFetching}
+                  >
+                    <Download size={16} />
+                    <span>{templateState.isFetching ? "Memuat..." : "Lihat & Unduh Dokumen Disini"}</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div>
             <h4 style={{ fontWeight: 700, marginBottom: "1.5rem" }}>
@@ -481,11 +482,6 @@ export default function Step2({ registrationId }) {
   const getSectionDocs = (section) =>
     documents.filter((d) => d.section === section);
 
-  // Dokumen prasyarat Test Bahasa
-  const testBahasaDoc = documents.find(
-    (d) => d.section === SECTIONS.WAJIB && d.name.includes("TEST BAHASA"),
-  );
-
   const updateField = (field, value) => {
     dispatch({ type: "UPDATE_FIELD", field, value });
   };
@@ -653,105 +649,42 @@ export default function Step2({ registrationId }) {
         </span>
       </div>
 
-      <div className="step2-top-grid" style={{ marginBottom: "4rem" }}>
-        <div className="upload-container">
-          <label
-            style={{ fontWeight: 700, display: "block", marginBottom: "1rem" }}
-          >
-            Unggah Dokumen Prasyarat
-          </label>
-          <div
-            className="upload-box"
-            onClick={() =>
-              testBahasaDoc && handleManualUpload(testBahasaDoc.id)
-            }
-          >
-            <UploadCloud className="upload-icon" />
-            <p className="upload-text-main">
-              <span style={{ color: "#3182ce" }}>Choose File</span> To upload
-            </p>
-           
-            <div className="upload-text-formats">
-              <span className="format-badge">PDF</span>
-              <span className="format-badge">Max 3MB</span>
-            </div>
+      {/*
+        RENDER KONDISIONAL DOKUMEN TEST BAHASA:
+        - "Sudah": Menampilkan 1 dokumen (Berkas Sertifikat Test Bahasa Skor >= 450).
+        - "Belum": Menampilkan 4 dokumen (3 Berkas Sertifikat Test Bahasa + 1 Berkas Surat Pemakluman).
+        Fitur template preview & unduh otomatis tertangani via handlePreviewTemplate di dalam DocUploadPanel.
+      */}
+      {data.testBahasaPersyaratan === "Sudah" && (
+        <DocUploadPanel
+          sectionTitle="Dokumen Persyaratan Test Bahasa"
+          documents={getSectionDocs(SECTIONS.TEST_BAHASA_SUDAH)}
+          activeDocId={activeDocIds[SECTIONS.TEST_BAHASA_SUDAH]}
+          onSetActive={(id) => handleSetActive(SECTIONS.TEST_BAHASA_SUDAH, id)}
+          onUpload={handleManualUpload}
+          onSave={handleSaveDoc}
+          showLinkInput={false}
+          showTemplateBox={false}
+          isUploading={isUploading}
+          onViewFile={handleViewFile}
+          viewingFileId={viewingFileId}
+        />
+      )}
 
-          </div>
-        </div>
-
-        <div className="selected-files-section">
-          <label
-            style={{ fontWeight: 700, display: "block", marginBottom: "1rem" }}
-          >
-            File Terpilih
-          </label>
-          <div className="file-selected-list">
-            {testBahasaDoc && (testBahasaDoc.fileUrl || testBahasaDoc.error) ? (
-              <>
-                {testBahasaDoc.fileUrl && (
-                  <div className="file-card">
-                    <div className="file-card-icon">
-                      <FileText size={20} />
-                    </div>
-                    <div className="file-card-info">
-                      <div className="file-name">{testBahasaDoc.fileName}</div>
-                      <div className="file-meta">
-                        {testBahasaDoc.fileSize} • PDF
-                      </div>
-                    </div>
-                    <div
-                      className="status-badge"
-                      style={{ background: "#def7ec", color: "#03543f" }}
-                    >
-                      Siap
-                    </div>
-                  </div>
-                )}
-                {testBahasaDoc.error && (
-                  <div
-                    className="file-card"
-                    style={{
-                      borderColor: "var(--error-red)",
-                      backgroundColor: "#fff5f5",
-                    }}
-                  >
-                    <div
-                      className="file-card-icon"
-                      style={{ color: "var(--error-red)" }}
-                    >
-                      <AlertTriangle size={20} />
-                    </div>
-                    <div className="file-card-info">
-                      <div
-                        className="file-name"
-                        style={{ color: "var(--error-red)", fontWeight: 700 }}
-                      >
-                        Error: Ukuran File
-                      </div>
-                      <div
-                        className="file-meta"
-                        style={{ color: "var(--error-red)" }}
-                      >
-                        {testBahasaDoc.error}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <p
-                style={{
-                  color: "var(--text-grey)",
-                  fontSize: "0.85rem",
-                  fontStyle: "italic",
-                }}
-              >
-                Belum ada file terpilih.
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+      {data.testBahasaPersyaratan === "Belum" && (
+        <DocUploadPanel
+          sectionTitle="Dokumen Persyaratan Test Bahasa (Belum Memenuhi)"
+          documents={getSectionDocs(SECTIONS.TEST_BAHASA_BELUM)}
+          activeDocId={activeDocIds[SECTIONS.TEST_BAHASA_BELUM]}
+          onSetActive={(id) => handleSetActive(SECTIONS.TEST_BAHASA_BELUM, id)}
+          onUpload={handleManualUpload}
+          onSave={handleSaveDoc}
+          showLinkInput={false}
+          isUploading={isUploading}
+          onViewFile={handleViewFile}
+          viewingFileId={viewingFileId}
+        />
+      )}
 
       <div
         className="divider"

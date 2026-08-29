@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Menu, HelpCircle, Bell, Search, Lock,
   ChevronLeft, ChevronRight, Save, Info,
@@ -6,6 +6,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarDosen from '../../components/sidebar/SidebarDosen';
 import FooterDosen from '../../components/common/FooterDosen';
+import { getStudyPrograms } from '../../service/api';
 import '../dashboard.css';
 
 // ---------------------------------------------------------------------------
@@ -27,7 +28,7 @@ const MOCK_MAHASISWA = [
     id: 1,
     nama: 'Andi Pratama',
     nim: '2010400',
-    prodi: 'RPL',
+    prodi: 'S1 Rekayasa Perangkat Lunak',
     initials: 'AP',
     avatarBg: '#DBEAFE',
     avatarColor: '#1E40AF',
@@ -41,7 +42,7 @@ const MOCK_MAHASISWA = [
     id: 2,
     nama: 'Siti Nurhalliza',
     nim: '2010455',
-    prodi: 'SI',
+    prodi: 'S1 Sistem Informasi',
     initials: 'SN',
     avatarBg: '#FEE2E2',
     avatarColor: '#991B1B',
@@ -55,7 +56,7 @@ const MOCK_MAHASISWA = [
     id: 3,
     nama: 'Kevin Sanjaya',
     nim: '2010412',
-    prodi: 'Informatika',
+    prodi: 'S1 Informatika',
     initials: 'KS',
     avatarBg: '#D1FAE5',
     avatarColor: '#065F46',
@@ -69,7 +70,7 @@ const MOCK_MAHASISWA = [
     id: 4,
     nama: 'Diana Larasati',
     nim: '2010488',
-    prodi: 'RPL',
+    prodi: 'S1 Rekayasa Perangkat Lunak',
     initials: 'DL',
     avatarBg: '#FEF3C7',
     avatarColor: '#92400E',
@@ -83,7 +84,7 @@ const MOCK_MAHASISWA = [
     id: 5,
     nama: 'Fajar Setiawan',
     nim: '2010420',
-    prodi: 'SI',
+    prodi: 'S1 Sistem Informasi',
     initials: 'FA',
     avatarBg: '#E0E7FF',
     avatarColor: '#3730A3',
@@ -97,7 +98,7 @@ const MOCK_MAHASISWA = [
     id: 6,
     nama: 'Rizky Ramadhan',
     nim: '2010391',
-    prodi: 'Informatika',
+    prodi: 'S1 Informatika',
     initials: 'RR',
     avatarBg: '#FEE2E2',
     avatarColor: '#991B1B',
@@ -111,7 +112,7 @@ const MOCK_MAHASISWA = [
     id: 7,
     nama: 'Putri Ayu Lestari',
     nim: '2010377',
-    prodi: 'RPL',
+    prodi: 'S1 Rekayasa Perangkat Lunak',
     initials: 'PL',
     avatarBg: '#D1FAE5',
     avatarColor: '#065F46',
@@ -125,7 +126,7 @@ const MOCK_MAHASISWA = [
     id: 8,
     nama: 'Hendra Kurniawan',
     nim: '2010334',
-    prodi: 'SI',
+    prodi: 'S1 Sistem Informasi',
     initials: 'HK',
     avatarBg: '#DBEAFE',
     avatarColor: '#1E40AF',
@@ -137,19 +138,7 @@ const MOCK_MAHASISWA = [
   },
 ];
 
-// Opsi filter Program Studi
-const PRODI_OPTIONS = [
-  { value: '', label: 'Program Studi: Semua' },
-  { value: 'Informatika', label: 'S1 Informatika' },
-  { value: 'SI',           label: 'S1 Sistem Informasi' },
-  { value: 'RPL',          label: 'S1 Rekayasa Perangkat Lunak' },
-];
-
 const PAGE_SIZE = 5;
-
-// ---------------------------------------------------------------------------
-// Avatar inisial mahasiswa — konsisten dengan pola di MahasiswaBimbingan
-// ---------------------------------------------------------------------------
 const MahasiswaAvatar = ({ student }) => (
   <div
     style={{
@@ -171,10 +160,8 @@ const MahasiswaAvatar = ({ student }) => (
   </div>
 );
 
-// ---------------------------------------------------------------------------
 // Sel kolom read-only (Jadwal / Ruangan) dengan ikon gembok.
 // Klik → trigger toast "hanya Admin" melalui onLockedClick callback.
-// ---------------------------------------------------------------------------
 const LockedCell = ({ value, onLockedClick }) => (
   <div
     onClick={onLockedClick}
@@ -210,10 +197,7 @@ const LockedCell = ({ value, onLockedClick }) => (
   </div>
 );
 
-// ---------------------------------------------------------------------------
 // Dropdown pemilihan penguji.
-// Mem-filter daftar penguji agar satu penguji tidak bisa dipilih dua kali di baris yang sama.
-// ---------------------------------------------------------------------------
 const PengujiSelect = ({ value, placeholder, otherValue, onChange }) => {
   const available = MOCK_DAFTAR_PENGUJI.filter(p => p !== otherValue);
 
@@ -246,9 +230,6 @@ const PengujiSelect = ({ value, placeholder, otherValue, onChange }) => {
   );
 };
 
-// ---------------------------------------------------------------------------
-// Halaman utama Penjadwalan Sidang untuk role Dosen
-// ---------------------------------------------------------------------------
 const PenjadwalanSidang = () => {
   const [sidebarOpen, setSidebarOpen]     = useState(false);
   const [searchQuery, setSearchQuery]     = useState('');
@@ -256,10 +237,49 @@ const PenjadwalanSidang = () => {
   const [currentPage, setCurrentPage]     = useState(1);
   const [toasts, setToasts]               = useState([]);
 
-  // State utama daftar mahasiswa — update penguji di sini
+  const [prodiOptions, setProdiOptions]   = useState([
+    { value: '', label: 'All Major' }
+  ]);
+  const [prodiFetchError, setProdiFetchError] = useState(false);
+  const [isLoadingProdi, setIsLoadingProdi] = useState(true);
   const [mahasiswaList, setMahasiswaList] = useState(MOCK_MAHASISWA);
+  useEffect(() => {
+    let isMounted = true;
 
-  // Menampilkan toast notifikasi, auto-dismiss 3.5 detik
+    const fetchStudyPrograms = async () => {
+      try {
+        setIsLoadingProdi(true);
+        setProdiFetchError(false);
+        const res = await getStudyPrograms();
+        const data = Array.isArray(res) ? res : res?.data || [];
+        if (isMounted) {
+          const activeProdi = data.filter(sp => sp.isActive !== false);
+          const dynamicOptions = [
+            { value: '', label: 'All Major' },
+            ...activeProdi.map(sp => ({
+              value: sp.name,
+              label: sp.name,
+              id: sp.id,
+            })),
+          ];
+          setProdiOptions(dynamicOptions);
+          setProdiFetchError(false);
+        }
+      } catch (err) {
+        console.error('Gagal memuat program studi dari database API:', err);
+        if (isMounted) {
+          setProdiOptions([]);
+          setProdiFetchError(true);
+        }
+      } finally {
+        if (isMounted) setIsLoadingProdi(false);
+      }
+    };
+
+    fetchStudyPrograms();
+    return () => { isMounted = false; };
+  }, []);
+
   const showToast = (message, type = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -271,51 +291,55 @@ const PenjadwalanSidang = () => {
     showToast('Kolom ini hanya dapat diisi oleh Admin.', 'warning');
   };
 
-  // Handler perubahan penguji pada baris tertentu
   const handlePengujiChange = (id, field, value) => {
     setMahasiswaList(prev =>
       prev.map(m => m.id === id ? { ...m, [field]: value } : m)
     );
   };
 
-  // Handler tombol "Simpan Data"
   const handleSimpanData = () => {
-    // TODO: replace with API call — POST /api/dosen/penjadwalan-sidang
     console.log('[PenjadwalanSidang] Data yang akan disimpan:', mahasiswaList);
     showToast('Data penguji berhasil disimpan!', 'success');
   };
 
-  // Filter data berdasarkan search query dan prodi
   const filteredData = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
+    const prodiFilter = selectedProdi.toLowerCase().trim();
+
     return mahasiswaList.filter(m => {
       const matchSearch =
         !q ||
         m.nama.toLowerCase().includes(q) ||
         m.nim.toLowerCase().includes(q);
-      const matchProdi = !selectedProdi || m.prodi === selectedProdi;
+
+      const mProdi = (m.prodi || '').toLowerCase();
+      const matchProdi =
+        !selectedProdi ||
+        mProdi === prodiFilter ||
+        mProdi.includes(prodiFilter) ||
+        prodiFilter.includes(mProdi) ||
+        (selectedProdi === 'S1 Informatika' && (mProdi === 'informatika' || mProdi === 'if')) ||
+        (selectedProdi === 'S1 Sistem Informasi' && (mProdi === 'si' || mProdi === 'sistem informasi')) ||
+        (selectedProdi === 'S1 Rekayasa Perangkat Lunak' && (mProdi === 'rpl' || mProdi === 'rekayasa perangkat lunak'));
+
       return matchSearch && matchProdi;
     });
   }, [mahasiswaList, searchQuery, selectedProdi]);
 
-  // Kalkulasi pagination
   const totalEntries  = filteredData.length;
   const totalPages    = Math.ceil(totalEntries / PAGE_SIZE) || 1;
   const startIndex    = (currentPage - 1) * PAGE_SIZE;
   const endIndex      = Math.min(startIndex + PAGE_SIZE, totalEntries);
   const paginatedData = filteredData.slice(startIndex, endIndex);
 
-  // Reset ke halaman 1 saat filter berubah
   const handleSearchChange = (val) => { setSearchQuery(val); setCurrentPage(1); };
   const handleProdiChange  = (val) => { setSelectedProdi(val); setCurrentPage(1); };
 
   return (
     <>
-      {/* Sidebar Dosen — reuse komponen yang sudah ada */}
       <SidebarDosen isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div id="main-content">
-        {/* Top bar maroon — mengikuti pola topbar-dosen dari dashboard.css */}
         <header className="topbar topbar-dosen">
           <button
             className="topbar-toggle topbar-toggle-dosen"
@@ -418,31 +442,45 @@ const PenjadwalanSidang = () => {
               />
             </div>
 
-            {/* Filter Program Studi */}
-            <select
-              id="penjadwalan-filter-prodi"
-              value={selectedProdi}
-              onChange={e => handleProdiChange(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                border: '1.5px solid #E2E8F0',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 500,
-                color: '#374151',
-                background: '#FFFFFF',
-                outline: 'none',
-                cursor: 'pointer',
-                minWidth: 180,
-                transition: 'border-color 0.2s',
-              }}
-              onFocus={e => { e.target.style.borderColor = '#C0182A'; }}
-              onBlur={e => { e.target.style.borderColor = '#E2E8F0'; }}
-            >
-              {PRODI_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            {/* Filter Program Studi — Dinamis dari Database API */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <select
+                id="penjadwalan-filter-prodi"
+                value={selectedProdi}
+                onChange={e => handleProdiChange(e.target.value)}
+                disabled={isLoadingProdi || prodiFetchError}
+                style={{
+                  padding: '8px 12px',
+                  border: `1.5px solid ${prodiFetchError ? '#FCA5A5' : '#E2E8F0'}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: prodiFetchError ? '#991B1B' : '#374151',
+                  background: prodiFetchError ? '#FEF2F2' : isLoadingProdi ? '#F8FAFC' : '#FFFFFF',
+                  outline: 'none',
+                  cursor: (isLoadingProdi || prodiFetchError) ? 'not-allowed' : 'pointer',
+                  minWidth: 200,
+                  transition: 'border-color 0.2s',
+                }}
+                onFocus={e => { e.target.style.borderColor = '#C0182A'; }}
+                onBlur={e => { e.target.style.borderColor = '#E2E8F0'; }}
+              >
+                {isLoadingProdi ? (
+                  <option value="">Memuat program studi...</option>
+                ) : prodiFetchError ? (
+                  <option value="">Gagal memuat program studi</option>
+                ) : (
+                  prodiOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))
+                )}
+              </select>
+              {prodiFetchError && (
+                <span style={{ fontSize: 11, color: '#DC2626', lineHeight: 1.3 }}>
+                  Gagal memuat data program studi. Silakan muat ulang halaman.
+                </span>
+              )}
+            </div>
 
             {/* Tombol Simpan Data — reuse class btn-verif dari dashboard.css */}
             <button
@@ -579,7 +617,6 @@ const PenjadwalanSidang = () => {
                           />
                         </td>
 
-                        {/* Kolom: Jadwal (read-only — diisi Admin, klik tampilkan toast) */}
                         <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
                           <LockedCell value={m.jadwal} onLockedClick={handleLockedFieldClick} />
                         </td>
@@ -595,7 +632,6 @@ const PenjadwalanSidang = () => {
               </table>
             </div>
 
-            {/* Pagination Footer — mengikuti pola dari MahasiswaBimbingan.jsx */}
             <div
               style={{
                 padding: '14px 20px',
@@ -678,7 +714,6 @@ const PenjadwalanSidang = () => {
           </div>
         </main>
 
-        {/* Footer Dosen — reuse komponen FooterDosen yang sudah ada */}
         <FooterDosen />
 
         {/* Toast Notification — reuse .toast-container-custom & .simta-toast dari dashboard.css */}

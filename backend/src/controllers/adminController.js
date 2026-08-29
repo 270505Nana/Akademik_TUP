@@ -1,20 +1,31 @@
 import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import { sendValidationError, isNil } from '../utils/validationHelper.js';
+import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
 // Daftar Semua Admin
 const listAdmins = asyncHandler(async (req, res) => {
-  const admins = await prisma.admin.findMany({
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-          phone: true,
+  const paginationParams = getPaginationParams(req.query);
+
+  const [total, admins] = await Promise.all([
+    prisma.admin.count(),
+    prisma.admin.findMany({
+      skip: paginationParams.skip,
+      take: paginationParams.take,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   const mapped = admins.map((adm) => {
     const { user, ...rest } = adm;
@@ -26,9 +37,7 @@ const listAdmins = asyncHandler(async (req, res) => {
     };
   });
 
-  res.json({
-    data: mapped,
-  });
+  res.json(formatPaginationResponse(mapped, total, paginationParams));
 });
 
 // Update or Insert Admin

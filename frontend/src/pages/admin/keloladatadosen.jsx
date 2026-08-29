@@ -1,67 +1,42 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import {
+import React, { useState, useEffect, useCallback, useMemo } from 'react';import {
   Search, ChevronLeft, ChevronRight, Menu,
   Users, Settings2, X, AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-import SidebarAdmin  from '../../components/sidebar/SidebarAdmin';
-import CustomAlert   from '../../components/common/CustomAlert';
+import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
+import CustomAlert from '../../components/common/CustomAlert';
 import KelolaKKModal from '../../components/common/KelolaKKModal';
+import { getAllDosen, getResearchGroups, toggleDosenKetuaKK, updateDosenKK, createResearchGroup, updateResearchGroup, deleteResearchGroup } from '../../service/api';
 import '../../components/admin/css/keloladatadosen.css';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 10;
 
-const INITIAL_RESEARCH_GROUPS = [
-  { id: 1, name: 'Applied Artificial Intelligence' },
-  { id: 2, name: 'Bioengineering, Food Technology and Advance Material' },
-  { id: 3, name: 'Cyber Security, IOT, and Cloud System' },
-  { id: 4, name: 'Data Science and Optimization' },
-  { id: 5, name: 'Electronics and Telecommunications Science' },
-  { id: 6, name: 'Industrial Systems Engineering' },
-  { id: 7, name: 'Information System, Digital Business & Data Driven Solution' },
-  { id: 8, name: 'Media, Design and Creative Innovation' },
-  { id: 9, name: 'Software Engineering and Multimedia' },
-];
 
-const INITIAL_DOSEN = [
-  { id: 1, nama: 'Dr. Budi Santoso',                       nip: '198706152019031001', researchGroupId: 5, isKetuaKK: true  },
-  { id: 2, nama: 'Dr. Siti Rahmawati',                      nip: '197912042018022002', researchGroupId: 8, isKetuaKK: false },
-  { id: 6, nama: 'A. Magfirah Nugraheni, S.Ds., M.Ds.',     nip: '25000021',           researchGroupId: 8, isKetuaKK: false },
-  { id: 7, nama: 'Abednego Dwi Septiadi, S.Kom., M.Kom.',   nip: '22890018',           researchGroupId: 9, isKetuaKK: true  },
-  { id: 8, nama: 'Achmad Rizal Danisya, S.T., M.T.',        nip: '14830059',           researchGroupId: 6, isKetuaKK: false },
-  { id: 11, nama: 'Adanti Wido Paramadini, S.T., M.Eng',    nip: '22930002',           researchGroupId: 4, isKetuaKK: false },
-  { id: 12, nama: 'Ade Yanyan Ramdhani, S.T., M.T.',        nip: '23960028',           researchGroupId: 6, isKetuaKK: false },
-  { id: 13, nama: 'Aditya Dwi Putro W., S.Kom., M.Kom.',    nip: '17930052',           researchGroupId: 9, isKetuaKK: false },
-  { id: 15, nama: 'Aditya Wijayanto, S.Kom., M.Sc.',        nip: '20890004',           researchGroupId: 1, isKetuaKK: false },
-];
 
-const ToggleSwitch = ({ checked, onChange }) => (
+const ToggleSwitch = ({ checked, onChange, disabled }) => (
   <button
     type="button"
     className={`dd-switch ${checked ? 'on' : 'off'}`}
     onClick={() => onChange(!checked)}
+    disabled={disabled}
   >
     <span className="dd-switch-knob" />
   </button>
 );
 
-const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave }) => {
+// Catatan investigasi: BE sudah menangani aturan "satu ketua per KK" via Prisma transaction
+const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave, isSaving }) => {
+  const [isKetuaKK, setIsKetuaKK] = useState(dosen.isKetuaKK);
   const [researchGroupId, setResearchGroupId] = useState(dosen.researchGroupId);
-  const [isKetuaKK,       setIsKetuaKK]       = useState(dosen.isKetuaKK);
-  const [warning,         setWarning]         = useState(null);
-
+  const [warning, setWarning] = useState(null);
   const currentKetua = useMemo(() => {
     return dosenList.find(d =>
       d.id !== dosen.id &&
       d.researchGroupId === researchGroupId &&
       d.isKetuaKK
     ) || null;
-  }, [dosenList, researchGroupId, dosen.id]);
-
-  useEffect(() => {
-    setWarning(null);
-  }, [researchGroupId]);
+  }, [dosenList, dosen.id, researchGroupId]);
 
   const handleToggleKetua = (nextValue) => {
     if (nextValue && currentKetua) {
@@ -72,12 +47,18 @@ const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave }) =
     setIsKetuaKK(nextValue);
   };
 
+  const handleKKChange = (newGroupId) => {
+    setResearchGroupId(newGroupId);
+    setWarning(null);
+    if (isKetuaKK) setIsKetuaKK(false);
+  };
+
   const handleSubmit = () => {
     if (isKetuaKK && currentKetua) {
       setWarning(`Tidak bisa, KK ini sudah memiliki ketua: ${currentKetua.nama}`);
       return;
     }
-    onSave(dosen.id, { researchGroupId, isKetuaKK });
+    onSave(dosen.id, { isKetuaKK, researchGroupId });
   };
 
   return (
@@ -105,11 +86,14 @@ const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave }) =
 
           <div className="dd-form-group">
             <label className="dd-form-label">Kelompok Keahlian</label>
+            {/* PUT /api/dosen/:id kini dilindungi isAdmin — Admin bisa mengubah researchGroupId */}
             <select
-              className="dd-form-select"
-              value={researchGroupId}
-              onChange={(e) => setResearchGroupId(Number(e.target.value))}
+              className="dd-select"
+              value={researchGroupId ?? ''}
+              onChange={e => handleKKChange(e.target.value)}
+              disabled={isSaving}
             >
+              <option value="">— Pilih Kelompok Keahlian —</option>
               {researchGroups.map(g => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
@@ -122,7 +106,7 @@ const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave }) =
                 <div className="dd-toggle-label">Ketua KK</div>
                 <div className="dd-toggle-desc">Tandai dosen ini sebagai ketua kelompok keahlian</div>
               </div>
-              <ToggleSwitch checked={isKetuaKK} onChange={handleToggleKetua} />
+              <ToggleSwitch checked={isKetuaKK} onChange={handleToggleKetua} disabled={isSaving} />
             </div>
             {warning && (
               <div className="dd-toggle-warning">
@@ -134,8 +118,10 @@ const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave }) =
         </div>
 
         <div className="dd-modal-footer">
-          <button className="dd-btn-cancel" onClick={onClose}>Batal</button>
-          <button className="dd-btn-save" onClick={handleSubmit}>Simpan Perubahan</button>
+          <button className="dd-btn-cancel" onClick={onClose} disabled={isSaving}>Batal</button>
+          <button className="dd-btn-save" onClick={handleSubmit} disabled={isSaving}>
+            {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+          </button>
         </div>
       </motion.div>
     </div>
@@ -145,68 +131,172 @@ const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave }) =
 const KelolaDataDosen = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [dosenList,      setDosenList]      = useState(INITIAL_DOSEN);
-  const [researchGroups, setResearchGroups] = useState(INITIAL_RESEARCH_GROUPS);
+  const [dosenList, setDosenList] = useState([]);
+  const [researchGroups, setResearchGroups] = useState([]);
+  // Server-side pagination state
+  const [totalItems, setTotalItems] = useState(0);
 
-  const [search,          setSearch]          = useState('');
+  const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
-  const [filterKK,        setFilterKK]        = useState('');
-  const [currentPage,     setCurrentPage]     = useState(1);
+  const [filterKK, setFilterKK] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [editingDosen, setEditingDosen] = useState(null);
   const [showKelolaKK, setShowKelolaKK] = useState(false);
-  const [alert,        setAlert]        = useState({ show: false, type: '', title: '', message: '' });
+  const [alert, setAlert] = useState({ show: false, type: '', title: '', message: '' });
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const showAlert = useCallback((type, title, message) => {
     setAlert({ show: true, type, title, message });
     setTimeout(() => setAlert(p => ({ ...p, show: false })), 3500);
   }, []);
 
+
+  const fetchData = useCallback(async ({ page = 1, search: q = '', researchGroupId = '' } = {}) => {
+    setIsLoadingData(true);
+    try {
+      const params = {
+        page,
+        limit: PAGE_SIZE,
+        ...(q && { search: q }),
+        ...(researchGroupId && { researchGroupId }),
+      };
+      const [dosenRes, kkRaw] = await Promise.all([
+        getAllDosen(params),
+        getResearchGroups(),
+      ]);
+
+      const rawList = Array.isArray(dosenRes?.data) ? dosenRes.data : [];
+      const pagination = dosenRes?.pagination ?? {};
+
+      const mapped = rawList.map(d => ({
+        id: d.id,
+        nama: d.name,
+        nip: d.nip ?? d.nidn ?? '',
+        kodeDosen: d.kodeDosen ?? '',
+        researchGroupId: d.researchGroupId,
+        isKetuaKK: d.isKetuaKK ?? false,
+      }));
+
+      setDosenList(mapped);
+      setTotalItems(pagination.total ?? rawList.length);
+      setResearchGroups(Array.isArray(kkRaw) ? kkRaw : []);
+    } catch (err) {
+      showAlert('error', 'Gagal Memuat Data', 'Tidak dapat mengambil data dosen. Coba muat ulang halaman.');
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [showAlert]);
+
   useEffect(() => {
-    const t = setTimeout(() => setSearchDebounced(search.trim().toLowerCase()), 300);
+    fetchData({ page: 1 });
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearchDebounced(search.trim()), 400);
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => setCurrentPage(1), [searchDebounced, filterKK]);
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchData({ page: 1, search: searchDebounced, researchGroupId: filterKK });
+  }, [searchDebounced, filterKK]);
+
+  useEffect(() => {
+    fetchData({ page: currentPage, search: searchDebounced, researchGroupId: filterKK });
+  }, [currentPage]);
 
   const kkNameById = useCallback((id) => {
     return researchGroups.find(g => g.id === id)?.name ?? '—';
   }, [researchGroups]);
 
-  const filteredList = useMemo(() => {
-    return dosenList
-      .filter(d => {
-        if (!searchDebounced) return true;
-        return d.nama.toLowerCase().includes(searchDebounced) || d.nip.toLowerCase().includes(searchDebounced);
-      })
-      .filter(d => {
-        if (!filterKK) return true;
-        return d.researchGroupId === Number(filterKK);
-      });
-  }, [dosenList, searchDebounced, filterKK]);
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const paginated = dosenList;
 
-  const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
-  const paginated  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const handleSaveDosen = async (dosenId, { isKetuaKK, researchGroupId }) => {
+    const original = dosenList.find(d => d.id === dosenId);
+    if (!original) return;
 
-  const handleSaveDosen = (dosenId, { researchGroupId, isKetuaKK }) => {
-    setDosenList(prev => prev.map(d =>
-      d.id === dosenId ? { ...d, researchGroupId, isKetuaKK } : d
-    ));
-    setEditingDosen(null);
-    showAlert('success', 'Berhasil', 'Data dosen berhasil diperbarui.');
+    const kkChanged = original.researchGroupId !== researchGroupId;
+    const ketuaChanged = original.isKetuaKK !== isKetuaKK;
+
+    if (!kkChanged && !ketuaChanged) {
+      setEditingDosen(null);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (kkChanged) {
+        await updateDosenKK(dosenId, {
+          nip: original.nip,
+          name: original.nama,
+          researchGroupId: researchGroupId,
+          kodeDosen: original.kodeDosen,
+        });
+      }
+      if (ketuaChanged) {
+        await toggleDosenKetuaKK(dosenId);
+      }
+      await fetchData({ page: currentPage, search: searchDebounced, researchGroupId: filterKK });
+
+      setEditingDosen(null);
+      showAlert('success', 'Berhasil', 'Data dosen berhasil diperbarui.');
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 403) {
+        showAlert('error', 'Akses Ditolak', 'Anda tidak memiliki izin untuk mengubah data dosen.');
+      } else if (status === 404) {
+        showAlert('error', 'Data Tidak Ditemukan', 'Data dosen tidak ditemukan di server.');
+      } else if (status === 400) {
+        showAlert('error', 'Data Tidak Valid', 'Periksa kembali data yang diisi dan coba lagi.');
+      } else {
+        showAlert('error', 'Gagal Menyimpan', 'Terjadi kesalahan saat menyimpan perubahan. Silakan coba lagi.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleRenameKK = (groupId, newName) => {
-    setResearchGroups(prev => prev.map(g => g.id === groupId ? { ...g, name: newName } : g));
-    showAlert('success', 'Berhasil', 'Nama kelompok keahlian berhasil diperbarui.');
+  const handleRenameKK = async (groupId, newName) => {
+    try {
+      const updated = await updateResearchGroup(groupId, newName);
+      setResearchGroups(prev => prev.map(g => g.id === groupId ? { ...g, name: updated.name } : g));
+      showAlert('success', 'Berhasil', 'Nama kelompok keahlian berhasil diperbarui.');
+    } catch (err) {
+      const msg = err?.response?.data?.errors?.[0]?.message
+        ?? err?.response?.data?.message
+        ?? 'Terjadi kesalahan saat memperbarui nama KK.';
+      showAlert('error', 'Gagal Memperbarui', msg);
+    }
   };
 
-  const handleCreateKK = (name) => {
-    setResearchGroups(prev => {
-      const nextId = prev.length ? Math.max(...prev.map(g => g.id)) + 1 : 1;
-      return [...prev, { id: nextId, name }];
-    });
-    showAlert('success', 'Berhasil', 'Kelompok keahlian baru berhasil ditambahkan.');
+  
+  const handleCreateKK = async (name) => {
+    try {
+      const created = await createResearchGroup(name);
+      setResearchGroups(prev => [...prev, created]);
+      showAlert('success', 'Berhasil', 'Kelompok keahlian baru berhasil ditambahkan.');
+    } catch (err) {
+      const msg = err?.response?.data?.errors?.[0]?.message
+        ?? err?.response?.data?.message
+        ?? 'Terjadi kesalahan saat membuat KK baru.';
+      showAlert('error', 'Gagal Membuat KK', msg);
+    }
+  };
+
+  const handleDeleteKK = async (groupId) => {
+    try {
+      await deleteResearchGroup(groupId);
+      setResearchGroups(prev => prev.filter(g => g.id !== groupId));
+      if (filterKK === groupId) setFilterKK('');
+      showAlert('success', 'Berhasil', 'Kelompok keahlian berhasil dihapus.');
+    } catch (err) {
+      const msg = err?.response?.data?.message
+        ?? 'Terjadi kesalahan saat menghapus KK.';
+      showAlert('error', 'Gagal Menghapus', msg);
+    }
   };
 
   return (
@@ -272,7 +362,15 @@ const KelolaDataDosen = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginated.length === 0 ? (
+                    {isLoadingData ? (
+                      <tr>
+                        <td colSpan={6}>
+                          <div className="dd-empty-state">
+                            <span style={{ fontSize: 13, color: '#9CA3AF' }}>Memuat data dosen...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : paginated.length === 0 ? (
                       <tr>
                         <td colSpan={6}>
                           <div className="dd-empty-state">
@@ -315,13 +413,13 @@ const KelolaDataDosen = () => {
                 </table>
               </div>
 
-              {filteredList.length > 0 && (
+              {totalItems > 0 && (
                 <div className="dd-footer">
                   <span className="dd-page-info">
-                    Menampilkan {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredList.length)}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)} dari {filteredList.length} data
+                    Menampilkan {Math.min((currentPage - 1) * PAGE_SIZE + 1, totalItems)}–{Math.min(currentPage * PAGE_SIZE, totalItems)} dari {totalItems} data
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <button className="dd-btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                    <button className="dd-btn-page" disabled={currentPage === 1 || isLoadingData} onClick={() => setCurrentPage(p => p - 1)}>
                       <ChevronLeft size={14} />
                     </button>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
@@ -329,11 +427,12 @@ const KelolaDataDosen = () => {
                         key={p}
                         className={`dd-btn-page ${p === currentPage ? 'active' : ''}`}
                         onClick={() => setCurrentPage(p)}
+                        disabled={isLoadingData}
                       >
                         {p}
                       </button>
                     ))}
-                    <button className="dd-btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                    <button className="dd-btn-page" disabled={currentPage === totalPages || isLoadingData} onClick={() => setCurrentPage(p => p + 1)}>
                       <ChevronRight size={14} />
                     </button>
                   </div>
@@ -349,8 +448,8 @@ const KelolaDataDosen = () => {
           <motion.div
             style={{ position: 'fixed', top: 24, right: 24, zIndex: 9999, maxWidth: 380 }}
             initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0,   opacity: 1 }}
-            exit={{    x: 300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 300, opacity: 0 }}
           >
             <CustomAlert type={alert.type} title={alert.title} message={alert.message} />
           </motion.div>
@@ -363,8 +462,9 @@ const KelolaDataDosen = () => {
             dosen={editingDosen}
             researchGroups={researchGroups}
             dosenList={dosenList}
-            onClose={() => setEditingDosen(null)}
+            onClose={() => !isSaving && setEditingDosen(null)}
             onSave={handleSaveDosen}
+            isSaving={isSaving}
           />
         )}
       </AnimatePresence>
@@ -376,6 +476,7 @@ const KelolaDataDosen = () => {
             onClose={() => setShowKelolaKK(false)}
             onRename={handleRenameKK}
             onCreate={handleCreateKK}
+            onDelete={handleDeleteKK}
           />
         )}
       </AnimatePresence>
