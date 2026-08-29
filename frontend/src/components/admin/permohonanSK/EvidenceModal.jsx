@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Download, Eye, Loader, User, BookOpen, Hash, GraduationCap, Phone, Users } from 'lucide-react';
+import { X, FileText, Download, Eye, Loader } from 'lucide-react';
 import { motion } from 'motion/react';
 import { downloadEvidence, downloadFileFromUrl, getLecturers } from '../../../service/api';
 
@@ -10,23 +10,34 @@ const EvidenceModal = ({ item, onClose }) => {
   const [dosen1,           setDosen1]           = useState(null);
   const [dosen2,           setDosen2]           = useState(null);
 
-  const student         = item?.student || {};
-  const sktaRequest     = item?.sktaRequest || {};
+  // Ambil data langsung dari item atau dari hasil fetch sktaRequest
+  const sktaRequest = item?.sktaRequest || item || {};
+  const student = sktaRequest?.mahasiswa || sktaRequest?.student || item?.mahasiswa || item?.student || {};
+  
+  // Jika evidenceUploads kosong tapi ada evidenceDownloadUrl dari BE, kita buat array buatan
   const evidenceUploads = item?.evidenceUploads?.length
     ? item.evidenceUploads
-    : (sktaRequest.sktaRequestUploads || []);
+    : sktaRequest?.evidenceDownloadUrl
+      ? [{ 
+          id: sktaRequest.id, 
+          name: 'Dokumen_Evidence.pdf', 
+          downloadUrl: sktaRequest.evidenceDownloadUrl 
+        }]
+      : (sktaRequest.sktaRequestUploads || []);
 
-  // Resolve nama dosen pembimbing dari ID
+  // Fallback: Jika nama dosen tidak di-populate BE, fetch manual
   useEffect(() => {
     const d1Id = sktaRequest?.dosenPembimbing1Id;
     const d2Id = sktaRequest?.dosenPembimbing2Id;
+    // Jika data dosen sudah lengkap dari BE, lewati fetch
+    if (sktaRequest?.dosenPembimbing1?.name && sktaRequest?.dosenPembimbing2?.name) return;
     if (!d1Id && !d2Id) return;
 
     getLecturers().then(list => {
-      if (d1Id) setDosen1(list.find(d => String(d.id) === String(d1Id)) ?? null);
-      if (d2Id) setDosen2(list.find(d => String(d.id) === String(d2Id)) ?? null);
+      if (d1Id && !sktaRequest?.dosenPembimbing1) setDosen1(list.find(d => String(d.id) === String(d1Id)) ?? null);
+      if (d2Id && !sktaRequest?.dosenPembimbing2) setDosen2(list.find(d => String(d.id) === String(d2Id)) ?? null);
     }).catch(() => {});
-  }, [sktaRequest?.dosenPembimbing1Id, sktaRequest?.dosenPembimbing2Id]);
+  }, [sktaRequest]);
 
   if (!item) return null;
 
@@ -52,10 +63,10 @@ const EvidenceModal = ({ item, onClose }) => {
     setErrorMsg(prev => ({ ...prev, [uploadId]: null }));
     try {
       const blob     = await fetchBlob(upload);
-      const mimeType = blob.type || '';
-      const filename = upload.filename || upload.name || '';
+      const mimeType = blob.type || 'application/pdf'; // Default PDF
+      const filename = upload.filename || upload.name || 'Dokumen_Evidence.pdf';
       const isPdf    = mimeType.includes('pdf') || filename.toLowerCase().endsWith('.pdf');
-      setSelectedPreview({ url: URL.createObjectURL(blob), name: filename || 'Evidence', type: isPdf ? 'pdf' : 'image' });
+      setSelectedPreview({ url: URL.createObjectURL(blob), name: filename, type: isPdf ? 'pdf' : 'image' });
     } catch (err) {
       console.error('[EvidenceModal] openPreview error:', err);
       setErrorMsg(prev => ({ ...prev, [uploadId]: `Gagal memuat preview (${err.response?.status ?? err.message})` }));
@@ -72,7 +83,7 @@ const EvidenceModal = ({ item, onClose }) => {
       const blobUrl = URL.createObjectURL(blob);
       const a       = document.createElement('a');
       a.href        = blobUrl;
-      a.download    = upload.name || upload.filename || `evidence_${uploadId}`;
+      a.download    = upload.name || upload.filename || `evidence_${uploadId}.pdf`;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(blobUrl);
@@ -90,7 +101,6 @@ const EvidenceModal = ({ item, onClose }) => {
     setSelectedPreview(null);
   };
 
-  // Row helper untuk info grid
   const InfoRow = ({ label, value }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 0', borderBottom: '1px solid #F1F5F9' }}>
       <span style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
@@ -111,9 +121,7 @@ const EvidenceModal = ({ item, onClose }) => {
         >
 
           <div className="ev-modal-header">
-            <h3>Evidence — {student.name || 'Mahasiswa'}</h3>
-            {/* <button className="ev-modal-close" onClick={onClose}><X size={20} /></button> */}
-            {/* <button className="ev-modal-close" onClick={onClose}><X size={20} /></button> */}
+            <h3>Evidence — {student?.name || 'Mahasiswa'}</h3>
           </div>
 
           <div className="ev-modal-content scrollable">
@@ -123,9 +131,9 @@ const EvidenceModal = ({ item, onClose }) => {
                 Identitas Mahasiswa
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
-                <InfoRow label="Nama Lengkap"  value={student.name} />
-                <InfoRow label="NIM"           value={student.nim} />
-                <InfoRow label="Program Studi" value={item.prodiName} />
+                <InfoRow label="Nama Lengkap"  value={student?.name} />
+                <InfoRow label="NIM"           value={student?.nim} />
+                <InfoRow label="Program Studi" value={student?.studyProgram?.name || item?.prodiName} />
               </div>
             </div>
 
@@ -134,8 +142,8 @@ const EvidenceModal = ({ item, onClose }) => {
                 Informasi Tugas Akhir
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0 }}>
-                <InfoRow label="Judul TA (Bahasa Indonesia)" value={sktaRequest.proposalTitleId} />
-                <InfoRow label="Judul TA (Bahasa Inggris)"  value={sktaRequest.proposalTitleEn} />
+                <InfoRow label="Judul TA (Bahasa Indonesia)" value={sktaRequest?.judulProposalIndonesia || sktaRequest?.proposalTitleId} />
+                <InfoRow label="Judul TA (Bahasa Inggris)"  value={sktaRequest?.judulProposalInggris || sktaRequest?.proposalTitleEn} />
               </div>
             </div>
 
@@ -146,11 +154,11 @@ const EvidenceModal = ({ item, onClose }) => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
                 <InfoRow
                   label="Dosen Pembimbing 1"
-                  value={dosen1 ? formatDosen(dosen1) : (sktaRequest.dosenPembimbing1Id ? 'Memuat...' : '-')}
+                  value={sktaRequest?.dosenPembimbing1 ? formatDosen(sktaRequest.dosenPembimbing1) : dosen1 ? formatDosen(dosen1) : (sktaRequest?.dosenPembimbing1Id ? 'Memuat...' : '-')}
                 />
                 <InfoRow
                   label="Dosen Pembimbing 2"
-                  value={dosen2 ? formatDosen(dosen2) : (sktaRequest.dosenPembimbing2Id ? 'Memuat...' : '-')}
+                  value={sktaRequest?.dosenPembimbing2 ? formatDosen(sktaRequest.dosenPembimbing2) : dosen2 ? formatDosen(dosen2) : (sktaRequest?.dosenPembimbing2Id ? 'Memuat...' : '-')}
                 />
               </div>
             </div>
@@ -186,7 +194,6 @@ const EvidenceModal = ({ item, onClose }) => {
                           )}
                         </div>
                       </div>
-
 
                       <div className="ev-file-actions" style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
                         <button

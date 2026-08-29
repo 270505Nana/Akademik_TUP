@@ -102,7 +102,9 @@ const PermohonanSK = () => {
             ? processed.sort((a, b) => b.id - a.id)[0]   
             : withResponses.sort((a, b) => b.id - a.id)[0]; 
 
-          const prodiName = chosen.student?.studyProgramNama ?? '-';
+          // PERBAIKAN: Mapping prodiName dari BE JSON
+          const prodiName = chosen.mahasiswa?.studyProgram?.name ?? chosen.student?.studyProgram?.name ?? '-';
+          
           const tanggal =
             chosen.sktaRequestUploads?.[0]?.createdAt ??
             skUploads?.[0]?.createdAt ??
@@ -149,16 +151,18 @@ const PermohonanSK = () => {
     [...requests]
       .filter(r => {
         if (!searchDebounced) return true;
-        const name = (r.student?.name || '').toLowerCase();
-        const nim  = (r.student?.nim  || '').toLowerCase();
+        // PERBAIKAN: Mapping search untuk nama dan nim
+        const name = (r.mahasiswa?.name || r.student?.name || '').toLowerCase();
+        const nim  = (r.mahasiswa?.nim || r.student?.nim  || '').toLowerCase();
         return name.includes(searchDebounced) || nim.includes(searchDebounced);
       })
       .filter(r => !filterProdi  || r.prodiName === filterProdi)
       .filter(r => !filterStatus || getStatus(r) === filterStatus)
       .sort((a, b) => {
         if (sort.field === 'name') {
-          const na = (a.student?.name || '').toLowerCase();
-          const nb = (b.student?.name || '').toLowerCase();
+          // PERBAIKAN: Mapping sort
+          const na = (a.mahasiswa?.name || a.student?.name || '').toLowerCase();
+          const nb = (b.mahasiswa?.name || b.student?.name || '').toLowerCase();
           const cmp = na.localeCompare(nb, 'id');
           return sort.dir === 'asc' ? cmp : -cmp;
         }
@@ -234,12 +238,14 @@ const PermohonanSK = () => {
     if (!user?.id) return showAlert('error', 'Error', 'Staf Akademik ID tidak ditemukan');
     try {
       const permohonanId = payload.selectedPermohonan.id;
+      const mhsName = payload.selectedPermohonan.mahasiswa?.name || payload.selectedPermohonan.student?.name || 'Mahasiswa';
+
       if (payload.actionType === 'reject') {
         await rejectPermohonanSK(permohonanId, {
           message: payload.catatan,
           adminId: user.id,
         });
-        showAlert('success', 'Berhasil', `Pengajuan untuk ${payload.selectedPermohonan.student?.name} berhasil ditolak.`);
+        showAlert('success', 'Berhasil', `Pengajuan untuk ${mhsName} berhasil ditolak.`);
       } else {
         await approvePermohonanSK(permohonanId, {
           hasUploadedFinalProposal: payload.checks.proposal,
@@ -248,7 +254,7 @@ const PermohonanSK = () => {
           adminId: user.id,
           sktaFile: payload.uploadedFile,
         });
-        showAlert('success', 'Berhasil', `SK untuk ${payload.selectedPermohonan.student?.name} berhasil disetujui.`);
+        showAlert('success', 'Berhasil', `SK untuk ${mhsName} berhasil disetujui.`);
       }
       handleCloseVerifikasi();
       await fetchRequests();
@@ -406,7 +412,8 @@ const PermohonanSK = () => {
                       <tr><td colSpan={6} className="text-center py-12">Tidak ada data sesuai filter</td></tr>
                     ) : (
                       paginated.map((item, idx) => {
-                        const student = item.student || {};
+                        // PERBAIKAN: Mapping mahasiswa
+                        const student = item.mahasiswa || item.student || {};
                         const status = getStatus(item);
                         const actionLabel = status === 'sudah-terbit' ? 'Terverifikasi' :
                                           status === 'mengirim-revisi' ? 'Tinjau Revisi' : 'Verifikasi';
