@@ -88,10 +88,22 @@ const VerifikasiModal = ({
   };
 
   const handleSubmit = () => {
+    // Validasi Wajib Isi
     if (activeTab === 'reject' && !catatan.trim()) {
       alert('Catatan/Alasan penolakan wajib diisi.');
       return;
     }
+    if (activeTab === 'approve') {
+      if (!batasPerbaikan) {
+        alert('Tanggal Kedaluwarsa (Exp Date) wajib diisi.');
+        return;
+      }
+      if (!existingResponse?.sktaUploadPath && !uploadedFile) {
+        alert('File SK Final wajib diunggah.');
+        return;
+      }
+    }
+
     onSave({
       selectedPermohonan,
       checks,
@@ -104,7 +116,8 @@ const VerifikasiModal = ({
     });
   };
 
-  const studentName    = selectedPermohonan?.student?.name || 'Mahasiswa';
+  // Perbaikan mapping nama mahasiswa dari BE JSON
+  const studentName    = selectedPermohonan?.mahasiswa?.name || selectedPermohonan?.student?.name || 'Mahasiswa';
   const existingSkFile = existingResponse?.sktaUploadPath;
   const isExpired       = !!(existingResponse?.expDate && new Date(existingResponse.expDate) < new Date());
 
@@ -205,7 +218,7 @@ const VerifikasiModal = ({
 
               {/* Exp Date SKTA */}
               <div className="dm-section">
-                <div className="dm-section-label">Tanggal Kedaluwarsa SKTA (Exp Date)</div>
+                <div className="dm-section-label">Tanggal Kedaluwarsa SKTA (Exp Date) *</div>
                 {isReadOnly ? (
                   <div className="dm-readonly-field">
                     {batasPerbaikan
@@ -241,7 +254,7 @@ const VerifikasiModal = ({
 
                   {/* Upload SK */}
                   <div className="dm-section">
-                    <div className="dm-section-label">Upload File SK Final</div>
+                    <div className="dm-section-label">Upload File SK Final *</div>
                     {existingResponse?.sktaUploadPath && !uploadedFile && (
                       <div className="dm-file-exists-info">
                         <CheckCircle2 size={14} />

@@ -25,6 +25,7 @@ const generateDocuments = () => {
 export const initialFormState = {
   step: 1,
   data: {
+    registrationId: null,
     program: "",
     tak: "",
     judulTugasAkhirIndonesia: "",
@@ -61,10 +62,53 @@ export function formReducer(state, action) {
     case "SET_ACTIVE_DOC":
       return { ...state, activeDocIds: { ...state.activeDocIds, [action.section]: action.value } };
       
+    case "RESTORE_FROM_API": {
+      const draft = action.payload;
+      
+      const newData = {
+        ...state.data,
+        registrationId: draft.id,
+        program: draft.program || "",
+        tak: draft.tak || "",
+        judulTugasAkhirIndonesia: draft.judulTugasAkhirIndonesia || "",
+        judulTugasAkhirInggris: draft.judulTugasAkhirInggris || "",
+        skemaSidang: draft.skemaSidang || "",
+        pengajuanCumlaude: draft.pengajuanCumlaude || "Non Cumlaude",
+        skemaCumlaude: draft.skemaCumlaude ? draft.skemaCumlaude.split(", ") : [],
+        evidenCumlaude: draft.evidenCumlaude || "",
+        minatWirausaha: draft.berminatWirausaha ? "Ya" : "Tidak",
+        dosenPembimbing1Id: draft.dosenPembimbing1Id || "",
+        dosenPembimbing2Id: draft.dosenPembimbing2Id || "",
+        yudisiumRegistrationPeriodId: draft.yudisiumRegistrationPeriodId || "",
+      };
+
+      const updatedDocs = state.documents.map(doc => {
+        const uploaded = draft.yudisiumRegistrationUploads?.find(
+          u => u.category === doc.slug || (u.category === "undefined" && u.name.includes(doc.slug))
+        );
+        
+        if (uploaded) {
+          return { 
+            ...doc, 
+            status: "completed", 
+            fileUrl: uploaded.downloadUrl, 
+            fileName: uploaded.name 
+          };
+        }
+        return doc;
+      });
+
+      return {
+        ...state,
+        step: 2,
+        data: newData,
+        documents: updatedDocs
+      };
+    }
+
     case "SET_DYNAMIC_DOCUMENTS": {
       const apiDocs = action.payload.map((item, idx) => {
         const existingDoc = state.documents.find(d => d.slug === item.code);
-        
         return {
           id: `${SECTIONS.WAJIB}-${idx + 1}`,
           section: SECTIONS.WAJIB,
@@ -94,7 +138,7 @@ export function formReducer(state, action) {
 
     case "UPLOAD_DOCUMENT": {
       const updatedDocs = state.documents.map((doc) =>
-        doc.id === action.docId ? { ...doc, file: action.file, fileUrl: action.fileUrl, fileName: action.fileName, fileSize: action.fileSize, error: null } : doc
+        doc.id === action.docId ? { ...doc, file: action.file, fileUrl: action.fileUrl, fileName: action.fileName, fileSize: action.fileSize, error: null, status: "" } : doc
       );
       return { ...state, documents: updatedDocs };
     }
@@ -120,7 +164,7 @@ export function formReducer(state, action) {
       const restoredDocs = action.payload.documents ? action.payload.documents.map(doc => ({
         ...doc,
         file: null, 
-        fileUrl: null 
+        fileUrl: doc.status === 'completed' ? doc.fileUrl : null 
       })) : generateDocuments();
 
       return { ...action.payload, documents: restoredDocs };

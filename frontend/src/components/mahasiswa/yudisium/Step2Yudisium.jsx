@@ -68,9 +68,7 @@ const PreviewModal = ({ doc, onClose }) => {
   );
 };
 
-
 const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onUpload, onDropFile, onSave, isUploading, onPreview }) => {
-
   const activeDoc = documents.find((d) => d.id === activeDocId) || documents[0];
   const [isDragging, setIsDragging] = useState(false);
 
@@ -221,9 +219,14 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
               className="btn-primary"
               style={{ marginTop: "2rem" }}
               onClick={() => onSave(activeDoc.id)}
-              disabled={isUploading || activeDoc.status === "completed"}
+              disabled={isUploading || (!activeDoc.file && activeDoc.status === "completed")}
             >
-              {isUploading ? "Mengunggah..." : (activeDoc.status === "completed" ? "Sudah Diunggah" : "Simpan Dokumen")}
+              {isUploading 
+                ? "Mengunggah..." 
+                : activeDoc.file 
+                  ? (activeDoc.status === "completed" ? "Simpan Perubahan File" : "Simpan Dokumen") 
+                  : (activeDoc.status === "completed" ? "Sudah Diunggah" : "Simpan Dokumen")
+              }
             </button>
           </div>
         </div>
@@ -232,7 +235,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
   );
 };
 
-export default function Step2Yudisium({ registrationId }) {
+export default function Step2Yudisium({ registrationId, studentInfo }) {
   const { state, dispatch } = useYudisiumContext();
   const { data, documents, activeDocIds } = state;
   
@@ -295,13 +298,27 @@ export default function Step2Yudisium({ registrationId }) {
       alert("ID Registrasi tidak ditemukan. Silakan kembali ke Step 1 dan klik Simpan.");
       return;
     }
+    // Buat rename file, send ke BE nim-nama-slug
+    const safeName = (studentInfo?.nama || "mahasiswa")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    
+    const safeNim = studentInfo?.nim || "0000000000";
+    
+    const extension = file.name.split('.').pop();
+    
+    const formattedFileName = `${safeNim}-${safeName}-${doc.slug}.${extension}`;
+
+    const renamedFile = new File([file], formattedFileName, { type: file.type });
+
 
     try {
       setIsUploading(true);
       await uploadYudisiumRegistrationFile(registrationId, {
-        file,
+        file: renamedFile,       
         category: doc.slug,
-        name: doc.fileName || file.name,
+        name: formattedFileName,  
       });
       dispatch({ type: "COMPLETE_DOCUMENT", docId });
     } catch (error) {

@@ -7,8 +7,14 @@ import illustration from "../../assets/karakter-dashboard.png";
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
-import {getSKTARequest, getSidangPeriods, getYudisiumPeriods, getSidangRegistrationByStudentId, getSidangRegistrationResponse, downloadSK } from '../../service/api';
-import {determineSkStatus, STATUS_SK,} from '../../components/common/Skstatushelper';
+import {
+  getSKTARequest, 
+  getSidangPeriods, 
+  getYudisiumPeriods, 
+  getSidangRegistrationByStudentId, 
+  getSidangRegistrationResponse 
+} from '../../service/api';
+import {determineSkStatus, STATUS_SK} from '../../components/common/Skstatushelper';
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus} from '../../components/admin/sidang/Sidangstatushelper';
 
 const normalizeRegistration = (raw) => {
@@ -190,6 +196,7 @@ const DashboardMahasiswa = () => {
 
   const { user }    = useAuth();
   const { student } = useStudent();
+  const activeStudentId = student?.mahasiswaId || student?.id || user?.id;
 
   const namaDisplay      = student?.namaLengkap      || user?.username || 'Mahasiswa';
   const nimDisplay       = student?.nim              || null;
@@ -199,7 +206,6 @@ const DashboardMahasiswa = () => {
   const dosenWaliDisplay = student?.dosenWaliNama    || null;
 
   const [skStatus,    setSkStatus]    = useState(null);
-  const [skUploads,   setSkUploads]   = useState([]);
   const [sktaRequest, setSktaRequest] = useState(null);
   const [loadingSk,   setLoadingSk]   = useState(true);
 
@@ -212,39 +218,24 @@ const DashboardMahasiswa = () => {
   const [yudisiumPeriode, setYudisiumPeriode] = useState(null);
   const [loadingPeriode,  setLoadingPeriode]  = useState(true);
 
-  const [downloadingSk, setDownloadingSk] = useState(false);
-
-  const handleUnduhSK = async () => {
-    const uploadId = skUploads?.[0]?.id;
-    if (!uploadId) return;
-    setDownloadingSk(true);
-    try {
-      const blob = await downloadSK(uploadId);
-      const url  = window.URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = `SK_TA_${namaDisplay}_${new Date().toISOString().slice(0, 10)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error('Gagal unduh SK:', err);
-      alert('Gagal mengunduh SK. Coba lagi.');
-    } finally {
-      setDownloadingSk(false);
+  const handleUnduhSK = () => {
+    if (sktaRequest?.sktaDownloadUrl) {
+      window.open(sktaRequest.sktaDownloadUrl, '_blank');
     }
   };
 
   const fetchSkStatus = useCallback(async () => {
-    const studentId = student?.studentId;
-    if (!studentId) { setLoadingSk(false); return; }
+    if (!activeStudentId) { setLoadingSk(false); return; }
     setLoadingSk(true);
     try {
-      const request = await getSKTARequest(studentId);
-      if (!request) { setSkStatus(null); setSkUploads([]); setSktaRequest(null); setLoadingSk(false); return; }
+      const request = await getSKTARequest(activeStudentId);
+      if (!request) { 
+        setSkStatus(null); 
+        setSktaRequest(null); 
+        setLoadingSk(false); 
+        return; 
+      }
       setSktaRequest(request);
-      setSkUploads(request.sktaResponseUploads ?? []);
       setSkStatus(determineSkStatus(request));
     } catch (err) {
       console.error('Gagal fetch SK status:', err);
@@ -252,15 +243,14 @@ const DashboardMahasiswa = () => {
     } finally {
       setLoadingSk(false);
     }
-  }, [student?.studentId]);
+  }, [activeStudentId]);
 
   useEffect(() => { fetchSkStatus(); }, [fetchSkStatus]);
 
   useEffect(() => {
     const fetchSidangRegStatus = async () => {
-      const studentId = student?.studentId;
-
-      if (!studentId || skStatus !== STATUS_SK.SUDAH_TERBIT) {
+      // PERBAIKAN: Menggunakan activeStudentId
+      if (!activeStudentId || skStatus !== STATUS_SK.SUDAH_TERBIT) {
         setSidangRegStatus(STATUS_SIDANG.BELUM_DAFTAR);
         setSidangResponse(null);
         setSidangAssignedPeriode(null);
@@ -270,7 +260,7 @@ const DashboardMahasiswa = () => {
 
       setLoadingSidangReg(true);
       try {
-        const rawRegistrations = await getSidangRegistrationByStudentId(studentId);
+        const rawRegistrations = await getSidangRegistrationByStudentId(activeStudentId);
         const registration = normalizeRegistration(rawRegistrations);
 
         if (!registration) {
@@ -305,7 +295,7 @@ const DashboardMahasiswa = () => {
     };
 
     if (!loadingSk) fetchSidangRegStatus();
-  }, [skStatus, loadingSk, student?.studentId]);
+  }, [skStatus, loadingSk, activeStudentId]);
 
   useEffect(() => {
     const fetchPeriode = async () => {
@@ -326,9 +316,10 @@ const DashboardMahasiswa = () => {
     fetchPeriode();
   }, []);
 
-  const skTanggal = sktaRequest?.sktaRequestUploads?.[0]?.createdAt
-    ? formatDateShort(sktaRequest.sktaRequestUploads[0].createdAt)
+  const skTanggal = sktaRequest?.createdAt
+    ? formatDateShort(sktaRequest.createdAt)
     : null;
+    
   const deadlineSidang = sidangPeriode
     ? new Date(sidangPeriode.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
@@ -564,12 +555,9 @@ const DashboardMahasiswa = () => {
                               <BtnOutline onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
                                 Lihat Respon
                               </BtnOutline>
-                              {skUploads?.[0]?.id && (
-                                <BtnRed
-                                  onClick={handleUnduhSK}
-                                  disabled={downloadingSk}
-                                >
-                                  {downloadingSk ? 'Mengunduh...' : 'Unduh SK'}
+                              {sktaRequest?.sktaDownloadUrl && (
+                                <BtnRed onClick={handleUnduhSK} disabled={false}>
+                                  Unduh SK
                                 </BtnRed>
                               )}
                             </>
