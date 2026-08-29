@@ -91,7 +91,6 @@ router.get("/", verifyToken, listTemplateUploads);
  *             required:
  *               - name
  *               - category
- *               - templateFile
  *             properties:
  *               name:
  *                 type: string

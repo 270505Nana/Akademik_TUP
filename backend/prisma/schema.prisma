@@ -150,7 +150,7 @@ model DokumenPersyaratanBerkas {
   name      String // Nama Berkas
   code      String    @unique
   category  String // Sidang Reguler / Non Sidang Publikasi Jurnal / Non Sidang Proceeding International / Yudisium
-  filepath  String
+  filepath  String?
   isPublish Boolean   @default(false) @map("is_publish")
 
   @@map("dokumen_persyaratan_berkas")
