@@ -5,7 +5,7 @@ import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
 import { useAuth } from '../../context/AuthContext';
 import {getSidangPeriods,getAllSidangRegistrations,getAllSktaRequests,} from '../../service/api';
-import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/SidangStatusHelper.js';
+import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/Sidangstatushelper';
 import '../dashboard.css';
 
 const MONITORING_PAGE_SIZE = 25;

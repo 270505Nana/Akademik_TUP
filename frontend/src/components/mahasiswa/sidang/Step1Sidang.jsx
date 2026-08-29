@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, GraduationCap, Info, Mail, Phone, User } from "lucide-react";
+import { Check, ChevronDown, GraduationCap, Info, Mail, Phone, User, Loader, AlertCircle } from "lucide-react";
 import { useSidangContext } from "../../../context/SidangFormContext";
 import CustomAlert from "../../common/CustomAlert";
 
@@ -20,13 +20,7 @@ const kelompokKeilmuan = [
   { id: "kk8", researchGroupId: 8, label: "SOFTWARE ENGINEERING AND MULTIMEDIA" },
 ];
 
-const getKelompokLabel = (researchGroupId) => {
-  if (!researchGroupId) return null;
-  return kelompokKeilmuan.find((kk) => kk.researchGroupId === researchGroupId)?.label || null;
-};
-
 const getResearchGroupName = (lect) =>
-  getKelompokLabel(lect?.researchGroupId) ||
   lect?.researchGroup?.name ||
   (typeof lect?.researchGroup === "string" ? lect.researchGroup : null) ||
   lect?.researchGroupName ||
@@ -58,7 +52,10 @@ const StaticValue = ({ children }) => (
   <div className="static-field">{children ?? "-"}</div>
 );
 
-const LecturerDropdown = ({ lecturers, value, onChange, placeholder, excludeId }) => {
+// Potential improvement: Jika jumlah data dosen bertambah banyak (ratusan+),
+// pertimbangkan penggunaan virtualized list (seperti react-window atau @tanstack/react-virtual)
+// untuk optimasi rendering dropdown list.
+const LecturerDropdown = ({ lecturers = [], value, onChange, placeholder, excludeId, loading = false }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const wrapRef = useRef(null);
@@ -83,11 +80,18 @@ const LecturerDropdown = ({ lecturers, value, onChange, placeholder, excludeId }
     return label.includes(query.toLowerCase());
   });
 
+  const displayText = loading
+    ? "Memuat data dosen..."
+    : selected
+      ? formatLecturerShort(selected)
+      : placeholder || "Pilih Dosen";
+
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        disabled={loading}
+        onClick={() => !loading && setOpen((o) => !o)}
         className="input-field"
         style={{
           width: "100%",
@@ -96,20 +100,23 @@ const LecturerDropdown = ({ lecturers, value, onChange, placeholder, excludeId }
           alignItems: "center",
           justifyContent: "space-between",
           gap: 8,
-          background: "#fff",
-          cursor: "pointer",
+          background: loading ? "#F8FAFC" : "#fff",
+          cursor: loading ? "not-allowed" : "pointer",
+          opacity: loading ? 0.75 : 1,
         }}
       >
         <span style={{
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          color: selected ? "inherit" : "#94A3B8",
+          color: selected && !loading ? "inherit" : "#94A3B8",
+          display: "inline-flex", alignItems: "center", gap: 6,
         }}>
-          {selected ? formatLecturerShort(selected) : (placeholder || "Pilih Dosen")}
+          {loading && <Loader size={14} style={{ animation: "spin 1s linear infinite", flexShrink: 0 }} />}
+          {displayText}
         </span>
         <ChevronDown size={16} style={{ flexShrink: 0, color: "#94A3B8" }} />
       </button>
 
-      {open && (
+      {open && !loading && (
         <div
           style={{
             position: "absolute",
@@ -186,7 +193,14 @@ const LecturerDropdown = ({ lecturers, value, onChange, placeholder, excludeId }
   );
 };
 
-export default function Step1({ studentInfo = {}, lecturers = [], readOnly = false, schemeLocked = false }) {
+export default function Step1({
+  studentInfo = {},
+  lecturers = [],
+  loadingLecturers = false,
+  autosaveStatus = "idle",
+  readOnly = false,
+  schemeLocked = false,
+}) {
   const { state, dispatch } = useSidangContext();
   const { data } = state;
   const [takAlert, setTakAlert] = useState(null);
@@ -275,7 +289,7 @@ export default function Step1({ studentInfo = {}, lecturers = [], readOnly = fal
             <p>
               Data diri & akademik di tahap ini tidak bisa diubah lagi karena
               pendaftaran sidang sudah di submit. Jika ada kesalahan
-              data, silakan hubungi admin akademik. 
+              data, silakan hubungi admin akademik.
             </p>
           </div>
         </div>
@@ -478,6 +492,7 @@ export default function Step1({ studentInfo = {}, lecturers = [], readOnly = fal
                 {studentInfo.dosenWaliKode || "-"}
               </div>
             </div>
+            <span className="helper-text">Terverifikasi oleh sistem secara otomatis.</span>
           </div>
           <div className="input-group">
             <label>Dosen Pembimbing 1</label>
@@ -490,6 +505,7 @@ export default function Step1({ studentInfo = {}, lecturers = [], readOnly = fal
                 onChange={(id) => updateField("dosenPembimbing1Id", id)}
                 placeholder="Pilih Dosen Pembimbing 1"
                 excludeId={data.dosenPembimbing2Id}
+                loading={loadingLecturers}
               />
             )}
           </div>
@@ -500,6 +516,7 @@ export default function Step1({ studentInfo = {}, lecturers = [], readOnly = fal
                 {studentInfo.dosenWaliNama || "-"}
               </div>
             </div>
+            <span className="helper-text">Terverifikasi oleh sistem secara otomatis.</span>
           </div>
           <div className="input-group">
             <label>Dosen Pembimbing 2</label>
@@ -512,6 +529,7 @@ export default function Step1({ studentInfo = {}, lecturers = [], readOnly = fal
                 onChange={(id) => updateField("dosenPembimbing2Id", id)}
                 placeholder="Pilih Dosen Pembimbing 2"
                 excludeId={data.dosenPembimbing1Id}
+                loading={loadingLecturers}
               />
             )}
           </div>
@@ -522,6 +540,7 @@ export default function Step1({ studentInfo = {}, lecturers = [], readOnly = fal
                 {studentInfo.dosenWaliNip || "-"}
               </div>
             </div>
+            <span className="helper-text">Terverifikasi oleh sistem secara otomatis.</span>
           </div>
         </div>
 
@@ -535,7 +554,9 @@ export default function Step1({ studentInfo = {}, lecturers = [], readOnly = fal
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "10px" }}>
             {kelompokKeilmuan.map((item) => {
-              const isSelected = pembimbing1Group === item.label;
+              const isSelected =
+                pembimbing1Group !== "-" &&
+                pembimbing1Group.trim().toUpperCase() === item.label.trim().toUpperCase();
               return (
                 <div
                   key={item.id}
@@ -668,12 +689,17 @@ export default function Step1({ studentInfo = {}, lecturers = [], readOnly = fal
           {readOnly ? (
             <StaticValue>{data.thesisTitleId || "-"}</StaticValue>
           ) : (
+            <>
             <textarea
               className="textarea-field"
               placeholder="Masukan Judul Tugas Akhir (Bahasa Indonesia)"
               value={data.thesisTitleId}
               onChange={(e) => updateField("thesisTitleId", e.target.value)}
             ></textarea>
+            <span className="helper-text">
+                Pastikan judul sesuai dengan yang tertera di SK TA terakhir.
+              </span>
+            </>
           )}
         </div>
 
