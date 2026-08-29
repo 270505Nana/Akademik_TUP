@@ -79,31 +79,37 @@ export const getSKTARequest = async (studentId) => {
   }
 };
 
-export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, studentId, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
+export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, studentId, mahasiswaId, dosenPembimbing1Id, dosenPembimbing2Id, evidence, category }) => {
   const formData = new FormData();
-  formData.append("proposalTitleId", proposalTitleId);
-  formData.append("proposalTitleEn", proposalTitleEn);
-  formData.append("studentId", String(studentId));
+
+  formData.append("judulProposalIndonesia", proposalTitleId);
+  formData.append("judulProposalInggris", proposalTitleEn);
+  formData.append("mahasiswaId", String(mahasiswaId || studentId)); 
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   formData.append("evidence", evidence);
+  const endpoint = category 
+    ? `/api/permohonan-skta?category=${encodeURIComponent(category)}` 
+    : "/api/permohonan-skta";
 
-  const response = await api.post("/api/skta-requests", formData, {
+  const response = await api.post(endpoint, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
 };
 
-export const resubmitSKTARequest = async ({ sktaRequestId, studentId, proposalTitleId, proposalTitleEn, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
+export const resubmitSKTARequest = async ({ sktaRequestId, studentId, mahasiswaId, proposalTitleId, proposalTitleEn, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
   const formData = new FormData();
-  if (studentId) formData.append("studentId", String(studentId));
-  formData.append("proposalTitleId", proposalTitleId);
-  formData.append("proposalTitleEn", proposalTitleEn);
+  const activeStudentId = mahasiswaId || studentId;
+  if (activeStudentId) formData.append("mahasiswaId", String(activeStudentId));
+  formData.append("judulProposalIndonesia", proposalTitleId);
+  formData.append("judulProposalInggris", proposalTitleEn);
   formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
   formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
+  
   if (evidence) formData.append("evidence", evidence);
 
-  const response = await api.patch(`/api/skta-requests/${sktaRequestId}`, formData, {
+  const response = await api.patch(`/api/permohonan-skta/${sktaRequestId}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
@@ -138,7 +144,7 @@ export const getAcademicStaffData = async (userId) => {
 
 export const getAllSktaRequests = async (params = {}) => {
   try {
-    const response = await api.get("/api/skta-requests", { params });
+    const response = await api.get("/api/permohonan-skta", { params }); 
     return response.data?.data ?? response.data;            
   } catch (err) {
     console.error("Error fetching all SKTA requests:", err);
@@ -147,7 +153,7 @@ export const getAllSktaRequests = async (params = {}) => {
 };
 
 export const getSktaRequestById = async (id) => {
-  const response = await api.get(`/api/skta-requests/${id}`);
+  const response = await api.get(`/api/permohonan-skta/${id}`); 
   return response.data;
 };
 
@@ -212,10 +218,10 @@ export const downloadEvidence = async (uploadId) => {
   const response = await api.get(`/api/skta-requests/uploads/${uploadId}/download`, { responseType: 'blob' });
   return response.data;
 };
- 
+
 export const getEvidenceUploadsByStudentId = async (studentId) => {
   try {
-    const response = await api.get(`/api/skta-requests/${studentId}`);
+    const response = await api.get(`/api/permohonan-skta/${studentId}`); 
     const requestData = response.data?.data ?? response.data;
     return requestData?.sktaRequestUploads || [];
   } catch (err) {
@@ -239,14 +245,13 @@ export const uploadDokumenValidasi = async (studentId, pdfBlob, namaFile) => {
   return response.data?.data ?? response.data;
 };
 
-// Menambahkan fungsi Approve SK
 export const approvePermohonanSK = async (permohonanId, payload) => {
   const formData = new FormData();
   formData.append("sktaRequestId", permohonanId);
   formData.append("adminId", payload.adminId);
   formData.append("hasUploadedFinalProposal", payload.hasUploadedFinalProposal);
   formData.append("hasTakenLanguageTest", payload.hasTakenLanguageTest);
-  
+
   if (payload.expDate) formData.append("expDate", payload.expDate);
   if (payload.sktaFile) formData.append("file", payload.sktaFile);
 
@@ -256,7 +261,6 @@ export const approvePermohonanSK = async (permohonanId, payload) => {
   return response.data?.data ?? response.data;
 };
 
-// Menambahkan fungsi Reject SK
 export const rejectPermohonanSK = async (permohonanId, payload) => {
   const response = await api.post("/api/skta-responses", {
     sktaRequestId: permohonanId,
@@ -299,7 +303,6 @@ export const submitSidangRegistration = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
-
 // ------------------------------------------- YUDISIUM STUDENT -------------------------------------------
 export const saveYudisiumRegistration = async (payload) => {
   const response = await api.post("/api/yudisium-registrations/", payload);
@@ -325,7 +328,6 @@ export const submitYudisiumRegistration = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
-// template dinamis, tp baru by category
 export const getYudisiumTemplates = async () => {
   try {
     const response = await api.get('/api/templates?category=Yudisium');
@@ -337,7 +339,6 @@ export const getYudisiumTemplates = async () => {
   }
 };
 
-// Mengambil data registrasi / draft milik mahasiswa by idnya
 export const getMyYudisiumRegistrations = async (mahasiswaId) => {
   try {
     const response = await api.get(`/api/yudisium-registrations/student/${mahasiswaId}`);
@@ -395,7 +396,6 @@ export const getSidangRegistrationResponseById = async (id) => {
   return response.data?.data ?? response.data;
 };
 
-// Memperbaiki parameter agar sesuai dengan yang dikirim VerifikasiBerkasModal
 export const createSidangRegistrationResponse = async (sidangRegistrationId, payload) => {
   const response = await api.post('/api/sidang-registration-responses', {
     sidangRegistrationId, 
@@ -418,7 +418,7 @@ export const upsertSidangRegistrationResponse = async (payload, existingId) => {
   if (existingId) {
     return updateSidangRegistrationResponse(existingId, payload);
   }
-  return createSidangRegistrationResponse(payload.sidangRegistrationId, payload); // Disesuaikan
+  return createSidangRegistrationResponse(payload.sidangRegistrationId, payload);
 };
 
 export const approveSidangRegistration = async (registrationId, payload) => {
@@ -460,7 +460,7 @@ export const getYudisiumPeriods = async () => {
 export const getActiveYudisiumPeriod = async () => {
   const response = await api.get('/api/yudisium-periods?category=pendaftaran yudisium');
   const periods = response.data?.data ?? response.data;
-  
+
   const now = new Date();
 
   const activePeriod = periods.find(p => {
@@ -468,47 +468,46 @@ export const getActiveYudisiumPeriod = async () => {
     const end = new Date(p.endDate);
     return p.isOpen === true && now >= start && now <= end;
   });
-  
+
   return activePeriod || null;
 };
-
 
 export const createSidangPeriod = async ({ name, startDate, endDate }) => {
   const now = new Date();
   const start = new Date(`${startDate}T12:00:00`);
   const end = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
- 
+
   const response = await api.post("/api/sidang-periods", { name, startDate, endDate, isOpen });
   return response.data?.data ?? response.data;
 };
- 
+
 export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
   const now = new Date();
   const start = new Date(`${startDate}T12:00:00`);
   const end = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
- 
+
   const response = await api.patch(`/api/sidang-periods/${id}`, { name, startDate, endDate, isOpen });
   return response.data?.data ?? response.data;
 };
- 
+
 export const createYudisiumPeriod = async ({ name, startDate, endDate }) => {
   const now = new Date();
   const start = new Date(`${startDate}T12:00:00`);
   const end = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
- 
+
   const response = await api.post("/api/yudisium-periods", { name, startDate, endDate, isOpen });
   return response.data?.data ?? response.data;
 };
- 
+
 export const updateYudisiumPeriod = async (id, { name, startDate, endDate }) => {
   const now = new Date();
   const start = new Date(`${startDate}T12:00:00`);
   const end = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
- 
+
   const response = await api.patch(`/api/yudisium-periods/${id}`, { name, startDate, endDate, isOpen });
   return response.data?.data ?? response.data;
 };

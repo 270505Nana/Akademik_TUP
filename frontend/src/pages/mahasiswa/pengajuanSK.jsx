@@ -179,51 +179,39 @@ const kelompokKeilmuan = [
 ];
 
 const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, submissionMode }) => {
-  if (!judulIndo.trim())    return 'Judul Tugas Akhir (Bahasa Indonesia) wajib diisi.';
-  if (!judulInggris.trim()) return 'Judul Tugas Akhir (Bahasa Inggris) wajib diisi.';
-  if (!kode1)               return 'Dosen Pembimbing 1 wajib dipilih.';
-  if (!kode2)               return 'Dosen Pembimbing 2 wajib dipilih.';
-  if (kode1.value === kode2.value) return 'Dosen Pembimbing 1 dan 2 tidak boleh sama.';
-  if (submissionMode === 'create-baru' && !actualFile) return 'Dokumen evidence wajib diunggah.';
-  return null;
-};
-
-const friendlyErrorMessage = (field, rawMessage) => {
-  const msg = rawMessage?.toLowerCase() ?? '';
-  if (field === 'evidence' && (msg.includes('tipe') || msg.includes('type') || msg.includes('format'))) {
-    return 'File evidence harus berformat PDF.';
+  if (!judulIndo || !judulIndo.trim())    return 'Judul Tugas Akhir (Bahasa Indonesia) wajib diisi.';
+  if (!judulInggris || !judulInggris.trim()) return 'Judul Tugas Akhir (Bahasa Inggris) wajib diisi.';
+  if (!kode1 || !kode1.value)               return 'Dosen Pembimbing 1 wajib dipilih.';
+  if (!kode2 || !kode2.value)               return 'Dosen Pembimbing 2 wajib dipilih.';
+  if (String(kode1.value) === String(kode2.value)) return 'Dosen Pembimbing 1 dan 2 tidak boleh sama.';
+  
+  if ((submissionMode === 'create-baru' || submissionMode === 'create-perpanjangan') && !actualFile) {
+    return 'Dokumen evidence wajib diunggah.';
   }
-  if (field === 'evidence' && msg.includes('size'))  return 'Ukuran file evidence melebihi batas maksimal 3MB.';
-  if (field === 'evidence' && msg.includes('wajib')) return 'Dokumen evidence wajib diunggah.';
-  if (field === 'mahasiswaId') return null;
-  if (field === 'proposalTitleId' || field === 'proposalTitleEn' || field === 'judulProposalIndonesia' || field === 'judulProposalInggris') return 'Judul Tugas Akhir wajib diisi dengan benar.';
-  if (field === 'dosenPembimbing1Id' || field === 'dosenPembimbing2Id') return 'Dosen Pembimbing wajib dipilih.';
-  return rawMessage;
+  return null;
 };
 
 const parseBackendError = (err) => {
   const data = err.response?.data;
+  
   if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
-    const seen  = new Set();
-    const lines = data.errors
-      .map(e => friendlyErrorMessage(e.field, e.message))
-      .filter(msg => {
-        if (!msg) return false;
-        if (seen.has(msg)) return false;
-        seen.add(msg);
-        return true;
-      })
-      .map(msg => `• ${msg}`);
-
-    if (lines.length === 0) return { title: 'Gagal mengirim pengajuan', message: 'Terjadi kesalahan. Silakan coba lagi.' };
+    const lines = data.errors.map(e => `• ${e.message}`);
     return {
-      title: data.message === 'Validation error' ? 'Periksa kembali data pengajuanmu' : (data.message || 'Gagal mengirim pengajuan'),
+      title: data.message || 'Periksa kembali formulirmu',
       message: lines.join('\n'),
     };
   }
+  
+  if (data?.message) {
+    return {
+      title: 'Gagal mengirim pengajuan',
+      message: data.message,
+    };
+  }
+
   return {
     title: 'Gagal mengirim pengajuan',
-    message: data?.message || err.message || 'Terjadi kesalahan. Silakan coba lagi.',
+    message: err.message || 'Terjadi kesalahan pada sistem. Silakan coba lagi.',
   };
 };
 
@@ -246,7 +234,7 @@ const PengajuanSK = () => {
     kode2: null,  dosen2: '',
     kelompok: '',
   });
-
+  
   const [selectedFile, setSelectedFile] = useState(null);
   const [actualFile,   setActualFile]   = useState(null);
   const [fileError,    setFileError]    = useState(null);
@@ -278,7 +266,7 @@ const PengajuanSK = () => {
 
   useEffect(() => {
     const checkSKTAStatus = async () => {
-      const mahasiswaId = student?.mahasiswaId;
+      const mahasiswaId = student?.mahasiswaId || student?.studentId;
       if (!mahasiswaId) { navigate('/lengkapi-data', { replace: true }); return; }
 
       try {
@@ -367,9 +355,9 @@ const PengajuanSK = () => {
 
   const processFile = (file) => {
     if (!file) return;
-    const allowedTypes = ['application/pdf'];
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
-      setFileError('Format file tidak didukung. Gunakan PDF');
+      setFileError('Format file tidak didukung. Gunakan PDF, PNG, atau JPG');
       setSelectedFile(null); setActualFile(null);
       return;
     }
@@ -448,7 +436,7 @@ const PengajuanSK = () => {
       return;
     }
 
-    const mahasiswaId = student?.mahasiswaId;
+    const mahasiswaId = student?.mahasiswaId || student?.studentId;
     if (!mahasiswaId) {
       setSubmitError({ title: 'Data tidak ditemukan', message: 'Data mahasiswa tidak ditemukan. Silakan lengkapi profil terlebih dahulu.' });
       return;
@@ -461,29 +449,30 @@ const PengajuanSK = () => {
         const activeRequestId = sktaRequestId ?? permohonan?.id;
         await resubmitSKTARequest({
           sktaRequestId:      activeRequestId,
-          mahasiswaId,
+          studentId:          mahasiswaId,
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
-          dosenPembimbing1Id: formData.kode1.value,
-          dosenPembimbing2Id: formData.kode2.value,
+          dosenPembimbing1Id: formData.kode1?.value,
+          dosenPembimbing2Id: formData.kode2?.value,
           evidence:           actualFile,
         });
         setPageStatus('revision_sent');
 
       } else {
-        const category = submissionMode === 'create-perpanjangan'
+        const categoryString = submissionMode === 'create-perpanjangan'
           ? SKTA_CATEGORY.PERPANJANGAN_SK
           : SKTA_CATEGORY.PERMOHONAN_BARU;
 
         const result = await submitSKTARequest({
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
-          mahasiswaId,
-          dosenPembimbing1Id: formData.kode1.value,
-          dosenPembimbing2Id: formData.kode2.value,
+          studentId:          mahasiswaId,
+          dosenPembimbing1Id: formData.kode1?.value,
+          dosenPembimbing2Id: formData.kode2?.value,
           evidence:           actualFile,
-          category,
+          category:           categoryString,
         });
+        
         const newSktaRequestId = result?.data?.id;
         if (newSktaRequestId) updateSktaRequestId(newSktaRequestId);
         setPageStatus('success');
@@ -894,6 +883,7 @@ const PengajuanSK = () => {
           </div>
         </section>
 
+        {/* SECTION 3: Upload Dokumen */}
         <section className="form-section">
           <h2 className="section-title">
             Dokumen Evidence Sudah Di Approve Pengajuan Pembimbing Oleh Ketua KK Di iGracias
@@ -912,25 +902,20 @@ const PengajuanSK = () => {
 
           <div className="form-grid">
             <div className="form-group">
-              <label>Unggah Dokumen Prasyarat {(!isBelumTerbit && !isExpired) ? '*' : ''}</label>
+              <label>Unggah Dokumen Prasyarat {(!isBelumTerbit) ? '*' : ''}</label>
               <div 
-                className="upload-area" 
+                className={`upload-area ${isDragging ? 'dragging' : ''}`} 
                 onClick={() => fileInputRef.current.click()}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                style={{
-                  border: isDragging ? "2px dashed #c0182a" : "2px dashed #cbd5e1",
-                  background: isDragging ? "#fff1f2" : "transparent",
-                  transition: "0.2s"
-                }}
               >
-                <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf" />
+                <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf, .png, .jpg, .jpeg" />
                 <div className="upload-icon-circle"><UploadCloud size={48} color={isDragging ? "#c0182a" : "#6B7280"} /></div>
                 <div className="upload-text">
                   <p><strong>Pilih File</strong> atau Tarik dan Lepaskan di sini</p>
                   <div className="file-type-badges">
-                    <span>PDF</span><span>MAX 3MB</span>
+                    <span>PDF / PNG / JPG</span><span>MAX 3MB</span>
                   </div>
                 </div>
               </div>
@@ -959,8 +944,10 @@ const PengajuanSK = () => {
                 )}
                 {!selectedFile && !fileError && (
                   <div className="empty-file-state" style={{ padding: '20px', border: '1px dashed #E5E7EB', borderRadius: '8px', textAlign: 'center', color: '#9CA3AF', fontSize: '12px' }}>
-                    {isExpired || isBelumTerbit
-                        ? 'Opsional — kosongkan jika evidence lama masih berlaku'
+                    {isExpired
+                      ? 'Wajib upload dokumen evidence untuk perpanjangan SK'
+                      : isBelumTerbit
+                        ? 'Opsional kosongkan jika evidence lama masih berlaku'
                         : 'Belum ada file yang dipilih'}
                   </div>
                 )}
