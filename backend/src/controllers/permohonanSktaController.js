@@ -2,6 +2,7 @@ import asyncHandler from 'express-async-handler';
 import prisma from "../config/prisma.js";
 import fs from 'fs';
 import path from 'path';
+import { ZipArchive } from 'archiver';
 import { v4 as uuidv4 } from 'uuid';
 import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
@@ -770,6 +771,165 @@ const downloadValidasi = asyncHandler(async (req, res) => {
   res.download(filePath, upload.name);
 });
 
+// [Route] Export Berkas SKTA sebagai ZIP dengan Filter
+const exportSktaZip = asyncHandler(async (req, res) => {
+  const {
+    startDate,
+    endDate,
+    dateField = "createdAt",
+    studyProgram,
+    studyProgramId,
+    tahunAngkatan,
+    kelasAsal,
+    category,
+  } = req.query;
+
+  const where = {
+    sktaUploadPath: {
+      not: null,
+    },
+    deletedAt: null,
+  };
+
+  // Filter Kategori
+  if (category) {
+    where.category = category;
+  }
+
+  // Filter Tanggal
+  if (startDate || endDate) {
+    const validDateField = ["createdAt", "updatedAt", "expDate"].includes(dateField)
+      ? dateField
+      : "createdAt";
+
+    where[validDateField] = {};
+    if (startDate) {
+      where[validDateField].gte = new Date(startDate);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      if (!endDate.includes("T")) {
+        end.setHours(23, 59, 59, 999);
+      }
+      where[validDateField].lte = end;
+    }
+  }
+
+  // Filter Mahasiswa (StudyProgram, Tahun Angkatan, Kelas Asal)
+  const mahasiswaWhere = {};
+
+  if (tahunAngkatan) {
+    const parsedAngkatan = parseInt(tahunAngkatan, 10);
+    if (!isNaN(parsedAngkatan)) {
+      mahasiswaWhere.tahunAngkatan = parsedAngkatan;
+    }
+  }
+
+  if (kelasAsal) {
+    mahasiswaWhere.kelasAsal = {
+      contains: String(kelasAsal).trim(),
+      mode: "insensitive",
+    };
+  }
+
+  const spFilter = studyProgramId || studyProgram;
+  if (spFilter) {
+    mahasiswaWhere.OR = [
+      { studyProgramId: spFilter },
+      {
+        studyProgram: {
+          name: {
+            contains: String(spFilter).trim(),
+            mode: "insensitive",
+          },
+        },
+      },
+    ];
+  }
+
+  if (Object.keys(mahasiswaWhere).length > 0) {
+    where.mahasiswa = mahasiswaWhere;
+  }
+
+  const list = await prisma.permohonanSkta.findMany({
+    where,
+    include: {
+      mahasiswa: {
+        include: {
+          user: true,
+          studyProgram: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  if (!list || list.length === 0) {
+    res.status(404);
+    throw new Error("Tidak ada berkas SKTA yang sesuai dengan filter yang dipilih");
+  }
+
+  const validFiles = [];
+  const usedEntryNames = new Set();
+
+  for (const item of list) {
+    if (!item.sktaUploadPath) continue;
+    const fullPath = path.resolve(process.cwd(), item.sktaUploadPath);
+    if (fs.existsSync(fullPath)) {
+      const ext = path.extname(fullPath) || ".pdf";
+      const nim = sanitizeFilenamePart(item.mahasiswa?.nim || "nim");
+      const nama = sanitizeFilenamePart(item.mahasiswa?.user?.name || "nama");
+      const prodi = sanitizeFilenamePart(item.mahasiswa?.studyProgram?.name || "study_program");
+
+      let entryName = `SKTA_${nim}_${nama}_${prodi}${ext}`;
+
+      // Mencegah duplikasi nama di dalam zip yang sama
+      if (usedEntryNames.has(entryName)) {
+        const timePart = item.createdAt ? new Date(item.createdAt).getTime() : Date.now();
+        entryName = `SKTA_${nim}_${nama}_${prodi}_${timePart}${ext}`;
+        if (usedEntryNames.has(entryName)) {
+          entryName = `SKTA_${nim}_${nama}_${prodi}_${item.id.slice(0, 8)}${ext}`;
+        }
+      }
+      usedEntryNames.add(entryName);
+
+      validFiles.push({
+        fullPath,
+        entryName,
+      });
+    }
+  }
+
+  if (validFiles.length === 0) {
+    res.status(404);
+    throw new Error("Berkas fisik SKTA tidak ditemukan di server");
+  }
+
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const zipFileName = `Export_SKTA_${timestamp}.zip`;
+
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", `attachment; filename="${zipFileName}"`);
+
+  const archive = new ZipArchive({
+    zlib: { level: 6 },
+  });
+
+  archive.on("error", (err) => {
+    throw err;
+  });
+
+  archive.pipe(res);
+
+  for (const file of validFiles) {
+    archive.file(file.fullPath, { name: file.entryName });
+  }
+
+  await archive.finalize();
+});
+
 export {
   listPermohonanSkta,
   createPermohonanSkta,
@@ -782,4 +942,5 @@ export {
   rejectPermohonanSkta,
   generateDokumenValidasiSkta,
   downloadValidasi,
+  exportSktaZip,
 };
