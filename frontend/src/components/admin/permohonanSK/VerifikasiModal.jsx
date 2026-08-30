@@ -146,7 +146,7 @@ const VerifikasiModal = ({
       const url  = window.URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
-      a.download = `SK_TA_${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.download = blob.filename || `SKTA_${selectedPermohonan?.mahasiswa?.nim || 'Mahasiswa'}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

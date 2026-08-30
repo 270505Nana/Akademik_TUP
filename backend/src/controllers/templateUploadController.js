@@ -22,8 +22,9 @@ const sanitizeFilename = (value) =>
     .replace(/[\\/:*?"<>|]/g, "-")
     .replace(/\s+/g, " ");
 
-const generateCodeFromName = (text) => {
-  return String(text || "")
+const generateCodeFromCategoryAndName = (category, name) => {
+  const raw = `${category || ""} ${name || ""}`;
+  return raw
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
@@ -99,7 +100,7 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
 
     if (errors.length > 0) return sendValidationError(res, errors, req);
 
-    const autoCode = generateCodeFromName(name);
+    const autoCode = generateCodeFromCategoryAndName(category, name);
     const codeExists = await prisma.dokumenPersyaratanBerkas.findUnique({
       where: { code: autoCode },
     });
@@ -113,7 +114,8 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
         [
           {
             field: "name",
-            message: "nama dokumen sudah digunakan di dokumen lain",
+            message:
+              "Nama dan kategori dokumen sudah digunakan di dokumen lain",
           },
         ],
         req,
@@ -143,7 +145,10 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
         code: autoCode,
         category,
         isPublish: isPublish === "true" || isPublish === true,
-        isRequired: isRequired !== undefined ? (isRequired === "true" || isRequired === true) : true,
+        isRequired:
+          isRequired !== undefined
+            ? isRequired === "true" || isRequired === true
+            : true,
         filepath: relativePosixPath,
       },
     });
@@ -203,9 +208,16 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
       throw new Error("Unggahan template tidak ditemukan");
     }
 
+    const newCategory =
+      category !== undefined ? category : templateUpload.category;
+    const newName = name !== undefined ? name : templateUpload.name;
     let updatedCode = templateUpload.code;
-    if (name && name !== templateUpload.name) {
-      updatedCode = generateCodeFromName(name);
+
+    if (
+      newCategory !== templateUpload.category ||
+      newName !== templateUpload.name
+    ) {
+      updatedCode = generateCodeFromCategoryAndName(newCategory, newName);
 
       const codeExists = await prisma.dokumenPersyaratanBerkas.findUnique({
         where: { code: updatedCode },
@@ -219,7 +231,8 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
           [
             {
               field: "name",
-              message: "nama dokumen baru sudah digunakan di dokumen lain",
+              message:
+                "Nama dan kategori dokumen baru sudah digunakan di dokumen lain",
             },
           ],
           req,
@@ -256,12 +269,8 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
         }
         fs.renameSync(file.path, targetFilePath);
       }
-    } else if (
-      name &&
-      name !== templateUpload.name &&
-      templateUpload.filepath
-    ) {
-      // No new file, but name/code changed: rename existing file on disk if exists
+    } else if (updatedCode !== templateUpload.code && templateUpload.filepath) {
+      // No new file, but code changed: rename existing file on disk if exists
       const oldFullPath = path.resolve(process.cwd(), templateUpload.filepath);
       const ext = path.extname(templateUpload.filepath);
       const targetFileName = `${updatedCode}${ext}`;

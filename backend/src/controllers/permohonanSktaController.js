@@ -24,6 +24,15 @@ const removeUploadedFiles = (files) => {
   });
 };
 
+const sanitizeFilenamePart = (str) => {
+  if (!str) return "";
+  return String(str)
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+};
+
 // Helper untuk menyelaraskan model baru PermohonanSkta dengan format lama yang diharapkan Frontend
 const mapPermohonanToFrontend = (item, req) => {
   if (!item) return null;
@@ -471,6 +480,14 @@ const downloadSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const permohonan = await prisma.permohonanSkta.findUnique({
     where: { id },
+    include: {
+      mahasiswa: {
+        include: {
+          user: true,
+          studyProgram: true,
+        },
+      },
+    },
   });
 
   if (!permohonan || !permohonan.sktaUploadPath) {
@@ -484,7 +501,13 @@ const downloadSkta = asyncHandler(async (req, res) => {
     throw new Error("Berkas fisik SKTA tidak ditemukan di server");
   }
 
-  res.download(filePath, path.basename(filePath));
+  const ext = path.extname(filePath) || ".pdf";
+  const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || "nim");
+  const nama = sanitizeFilenamePart(permohonan.mahasiswa?.user?.name || "nama");
+  const prodi = sanitizeFilenamePart(permohonan.mahasiswa?.studyProgram?.name || "study_program");
+  const downloadName = `SKTA_${nim}_${nama}_${prodi}${ext}`;
+
+  res.download(filePath, downloadName);
 });
 
 // [Route] Unduh Berkas Evidence
@@ -512,7 +535,17 @@ const downloadEvidence = asyncHandler(async (req, res) => {
 const approvePermohonanSkta = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const permohonan = await prisma.permohonanSkta.findUnique({ where: { id } });
+    const permohonan = await prisma.permohonanSkta.findUnique({
+      where: { id },
+      include: {
+        mahasiswa: {
+          include: {
+            user: true,
+            studyProgram: true,
+          },
+        },
+      },
+    });
     if (!permohonan) {
       res.status(404);
       throw new Error("Permohonan SKTA tidak ditemukan");
@@ -546,7 +579,19 @@ const approvePermohonanSkta = asyncHandler(async (req, res) => {
       if (permohonan.sktaUploadPath && fs.existsSync(permohonan.sktaUploadPath)) {
         fs.unlink(permohonan.sktaUploadPath, () => {});
       }
-      updateData.sktaUploadPath = sktaFile.path;
+
+      const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || "nim");
+      const nama = sanitizeFilenamePart(permohonan.mahasiswa?.user?.name || "nama");
+      const prodi = sanitizeFilenamePart(permohonan.mahasiswa?.studyProgram?.name || "study_program");
+      const ext = path.extname(sktaFile.originalname || sktaFile.filename || ".pdf") || ".pdf";
+      const timestamp = Date.now();
+      const customFilename = `SKTA_${nim}_${nama}_${prodi}_${timestamp}${ext}`;
+
+      const targetDir = path.dirname(sktaFile.path);
+      const newFilePath = path.join(targetDir, customFilename);
+
+      fs.renameSync(sktaFile.path, newFilePath);
+      updateData.sktaUploadPath = newFilePath;
     }
 
     const data = await prisma.permohonanSkta.update({
