@@ -3,7 +3,6 @@ import { X, Download, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Document, Page, Text, View, Image, StyleSheet, pdf } from '@react-pdf/renderer';
-import { generateDokumenValidasiBlob, mapSktaDataToPDF } from './Dokumenvalidasipdf';
 import { generateDokumenValidasiSkta } from '../../../service/api';
 import logoTelkom from '../../../assets/logo-telkom.png';
 
@@ -14,16 +13,14 @@ const formatTanggal = (isoStr) => {
   });
 };
 
-const getResponseDate = (sktaResponse) => {
-  const created = sktaResponse?.createdAt;
-  const updated = sktaResponse?.updatedAt;
-  if (created && updated && new Date(updated) > new Date(created)) {
-    return updated;
-  }
-  return created || new Date().toISOString();
+const getResponseDate = (sktaResponse, item) => {
+  if (sktaResponse?.createdAt) return sktaResponse.createdAt;
+  if (item?.updatedAt) return item.updatedAt;
+  if (item?.createdAt) return item.createdAt;
+  return new Date().toISOString();
 };
 
-//  PDF Styles 
+// --- PDF STYLES ---
 const S = StyleSheet.create({
   page: {
     fontFamily: 'Helvetica',
@@ -88,7 +85,6 @@ const S = StyleSheet.create({
   ttdNip:    { fontSize: 9.5, textAlign: 'center' },
 });
 
-
 const CHECKMARK_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAIAAABuYg/PAAAAqklEQVR4nO3XsRKAIAgG4Oj939kGF0JApF+XcPBa5DtFOaLW2nVq3Mekwgp7DyI6hHVJeFswbvBvPCZ2w4sGGHMkPOZIYIxvSy25MGwqwbDxSe3C/EuBxOKSjgXPZFVSMLXMQCSJWWUGIklMrLG8nCSxuJeQFGy6PvJ4FzARxUpkogcMvbP4FU1ifvJyra23MytiuomeHOMY90u7Ps9Zj87n9KD6sSjsn9gDKzpXR7qfndgAAAAASUVORK5CYII=";
 
 const Centang = ({ checked }) => (
@@ -98,10 +94,10 @@ const Centang = ({ checked }) => (
 );
 
 const FormulirPDF = ({ item, sktaResponse, prodiName, qrDataUrl }) => {
-  const student     = item?.student || {};
+  const student     = item?.mahasiswa || item?.student || {};
   const hasProposal = sktaResponse?.hasUploadedFinalProposal === true;
   const hasBahasa   = sktaResponse?.hasTakenLanguageTest     === true;
-  const today       = formatTanggal(getResponseDate(sktaResponse));
+  const today       = formatTanggal(getResponseDate(sktaResponse, item));
 
   return (
     <Document>
@@ -170,7 +166,7 @@ const FormulirPDF = ({ item, sktaResponse, prodiName, qrDataUrl }) => {
           <View style={S.dmRowLast}>
             <Text style={S.dmLabel}>Judul Proposal TA</Text>
             <View style={{ flex: 1, padding: '5 7' }}>
-              <Text style={{ fontSize: 9 }}>{item?.proposalTitleId || '-'}</Text>
+              <Text style={{ fontSize: 9 }}>{item?.judulProposalIndonesia || item?.proposalTitleId || '-'}</Text>
             </View>
           </View>
         </View>
@@ -230,9 +226,7 @@ const FormulirPDF = ({ item, sktaResponse, prodiName, qrDataUrl }) => {
   );
 };
 
-const activeUploadPromises = new Map();
-
-//  Modal 
+//  Modal Formulir
 const FormulirSKModal = ({ item, existingResponse, onClose }) => {
   const qrCanvasRef = useRef(null);
 
@@ -247,38 +241,31 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
       setIsLoading(true);
       setError(null);
       try {
-        const mahasiswaId = item?.mahasiswaId || item?.mahasiswaId || item?.student?.id;
-        if (!mahasiswaId) throw new Error('mahasiswaId tidak ditemukan');
+        if (!item?.id) throw new Error('ID Permohonan SKTA tidak ditemukan');
 
-        const uploadKey = `${mahasiswaId}_Dokumen Validasi Skta`;
-        let uploadPromise = activeUploadPromises.get(uploadKey);
+        // Hit API Backend sesuai endpoint Swagger: GET /api/permohonan-skta/{id}/generate/dokumen-validasi-skta
+        const result = await generateDokumenValidasiSkta(item.id);
 
-        if (!uploadPromise) {
-          uploadPromise = generateDokumenValidasiSkta(item.id);
-          activeUploadPromises.set(uploadKey, uploadPromise);
+        const validasiUrl = result?.url || result?.downloadUrl || result?.fileUrl;
+
+        if (validasiUrl) {
+          setQrUrl(validasiUrl);
+        } else {
+          const fallbackUrl = `${window.location.origin}/validasi-skta/${item.id}`;
+          setQrUrl(fallbackUrl);
         }
 
-        const result = await uploadPromise;
-        const downloadUrl = result?.downloadUrl;
-        if (!downloadUrl) throw new Error('downloadUrl tidak ditemukan dari response BE');
-
-        setQrUrl(downloadUrl);
       } catch (err) {
         console.error('[FormulirSKModal] initQR error:', err);
-        setError(err.message || 'Gagal memproses dokumen validasi.');
+        const beMsg = err.response?.data?.message || err.message;
+        setError(`Gagal memproses QR Validasi: ${beMsg}`);
       } finally {
-        const mahasiswaId = item?.mahasiswaId || item?.mahasiswaId || item?.student?.id;
-        if (mahasiswaId) {
-          const uploadKey = `${mahasiswaId}_Dokumen Validasi Skta`;
-          activeUploadPromises.delete(uploadKey);
-        }
         setIsLoading(false);
       }
     };
     initQR();
-  }, [item?.mahasiswaId, item?.mahasiswaId, item?.student?.id]);
+  }, [item]);
 
-  // QR canvas render → ambil dataURL
   useEffect(() => {
     if (!qrUrl) return;
     const timer = setTimeout(() => {
@@ -293,11 +280,11 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
     return () => clearTimeout(timer);
   }, [qrUrl]);
 
-  // export PDF
+  // Action export PDF
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
-      const prodiName = item?.prodiName || item?.student?.studyProgram?.name || '-';
+      const prodiName = item?.mahasiswa?.studyProgram?.name || item?.prodiName || item?.student?.studyProgram?.name || '-';
       const blob = await pdf(
         <FormulirPDF
           item={item}
@@ -310,8 +297,8 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
       const url  = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href  = url;
-      const nim  = item?.student?.nim  || 'mahasiswa';
-      const nama = (item?.student?.name || '').replace(/\s+/g, '_');
+      const nim  = item?.mahasiswa?.nim || item?.student?.nim || 'mahasiswa';
+      const nama = (item?.mahasiswa?.name || item?.student?.name || '').replace(/\s+/g, '_');
       link.download = `Formulir_SK_TA_${nim}_${nama}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
@@ -324,11 +311,8 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
   };
 
   const canExport   = !isLoading && !isExporting && !error;
-  const student     = item?.student || {};
-  const hasProposal = existingResponse?.hasUploadedFinalProposal === true;
-  const hasBahasa   = existingResponse?.hasTakenLanguageTest     === true;
-  const today       = formatTanggal(getResponseDate(existingResponse));
-  const prodiName   = item?.prodiName || item?.student?.studyProgram?.name || '-';
+  const student     = item?.mahasiswa || item?.student || {};
+  const prodiName   = student?.studyProgram?.name || item?.prodiName || '-';
 
   return (
     <>
@@ -372,7 +356,7 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               {isLoading && (
                 <span style={{ fontSize: '11px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Memproses QR...
+                  <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Memproses...
                 </span>
               )}
               {!isLoading && qrUrl && !error && (
@@ -418,6 +402,9 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
                 maxWidth: '380px', textAlign: 'center', lineHeight: 1.6,
               }}>
                 <AlertCircle size={20} style={{ marginBottom: 8 }} /><br />{error}
+                <div style={{ marginTop: 12, fontSize: 11, color: '#991B1B' }}>
+                  Mohon periksa ketersediaan file di server backend.
+                </div>
               </div>
             ) : (
 
@@ -467,7 +454,7 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
                       { label: 'NIM',               value: student.nim           || '-' },
                       { label: 'Nama Mahasiswa',    value: student.name          || '-' },
                       { label: 'Program Studi',     value: prodiName             || '-' },
-                      { label: 'Judul Proposal TA', value: item?.proposalTitleId || '-' },
+                      { label: 'Judul Proposal TA', value: item?.judulProposalIndonesia || item?.proposalTitleId || '-' },
                     ].map(({ label, value }) => (
                       <tr key={label}>
                         <td style={{ border: '1px solid #000', padding: '5px 7px', fontWeight: 600, fontSize: '9px', verticalAlign: 'top' }}>{label}</td>
@@ -497,7 +484,7 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
                       <td style={{ border: '1px solid #000', padding: '5px 3px', textAlign: 'center', verticalAlign: 'middle' }}>
                         <div style={{
                           width: 12, height: 12, border: '1px solid #000',
-                          backgroundColor: hasProposal ? '#000' : 'transparent',
+                          backgroundColor: existingResponse?.hasUploadedFinalProposal ? '#000' : 'transparent',
                           margin: '0 auto',
                         }} />
                       </td>
@@ -511,7 +498,7 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
                       <td style={{ border: '1px solid #000', padding: '5px 3px', textAlign: 'center', verticalAlign: 'middle' }}>
                         <div style={{
                           width: 12, height: 12, border: '1px solid #000',
-                          backgroundColor: hasBahasa ? '#000' : 'transparent',
+                          backgroundColor: existingResponse?.hasTakenLanguageTest ? '#000' : 'transparent',
                           margin: '0 auto',
                         }} />
                       </td>
@@ -523,7 +510,7 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <div style={{ textAlign: 'center', width: '175px' }}>
-                    <p style={{ fontSize: '10px', margin: '0 0 2px 0' }}>Purwokerto, {today}</p>
+                    <p style={{ fontSize: '10px', margin: '0 0 2px 0' }}>Purwokerto, {formatTanggal(getResponseDate(existingResponse, item))}</p>
                     <p style={{ fontSize: '10px', margin: '0 0 14px 0' }}>Kepala Urusan Akademik,</p>
                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
                       {isLoading ? (
@@ -533,8 +520,8 @@ const FormulirSKModal = ({ item, existingResponse, onClose }) => {
                       ) : qrDataUrl ? (
                         <img src={qrDataUrl} alt="QR Code" style={{ width: 96, height: 96 }} />
                       ) : (
-                        <div style={{ width: 96, height: 96, border: '1px dashed #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#9CA3AF' }}>
-                          QR Error
+                        <div style={{ width: 96, height: 96, border: '1px dashed #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#9CA3AF', textAlign: 'center' }}>
+                          Menunggu<br/>Server
                         </div>
                       )}
                     </div>
