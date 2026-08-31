@@ -11,7 +11,7 @@ import Step1Yudisium from "../../components/mahasiswa/yudisium/Step1Yudisium";
 import Step2Yudisium from "../../components/mahasiswa/yudisium/Step2Yudisium";
 import CustomAlert from "../../components/common/CustomAlert";
 import SidebarMahasiswa from "../../components/sidebar/SidebarMahasiswa";
-import { SECTIONS } from "../../components/mahasiswa/yudisium/YudisiumDocument";
+import { SECTIONS } from "../../components/mahasiswa/yudisium/yudisiumDocument";
 
 import { 
   getLecturers, 
@@ -67,35 +67,39 @@ function PendaftaranYudisiumContent() {
   const [lecturers, setLecturers] = useState([]);
   const [formAlert, setFormAlert] = useState(null);
 
-  // Ambil dari context, BUKAN dari local state useState!
   const registrationId = data.registrationId;
   const mahasiswaId = student?.mahasiswaId || profile?.id || user?.id;
 
   const studentInfo = {
     nama: student?.namaLengkap || profile?.name || user?.username || "-",
     nim: student?.nim || profile?.nim || "-",
-    prodi: student?.studyProgramNama || profile?.studyProgram?.name || "-"
+    prodi: student?.studyProgramNama || profile?.studyProgram?.name || "-",
     phone: user?.phone || profile?.phone || user?.no_telp || "-",
   };
 
-  // FETCH DATA INITIAL (Dosen, Template, dan Draft dari BE berdasarkan Mahasiswa ID)
   useEffect(() => {
     getLecturers().then(res => setLecturers(res || [])).catch(console.error);
     
-    getYudisiumTemplates().then(templates => {
-      dispatch({ type: "SET_DYNAMIC_DOCUMENTS", payload: templates });
-    }).catch(console.error);
+    const initData = async () => {
+      try {
+        const templates = await getYudisiumTemplates();
+        dispatch({ type: "SET_DYNAMIC_DOCUMENTS", payload: templates });
 
-    if (mahasiswaId) {
-      getMyYudisiumRegistrations(mahasiswaId).then(drafts => {
-        if (drafts && drafts.length > 0) {
-          const latestDraft = drafts.find(d => d.isDraft);
-          if (latestDraft) {
-            dispatch({ type: "RESTORE_FROM_API", payload: latestDraft });
+        if (mahasiswaId) {
+          const drafts = await getMyYudisiumRegistrations(mahasiswaId);
+          if (drafts && drafts.length > 0) {
+            const latestDraft = drafts.find(d => d.isDraft) || drafts[0];
+            if (latestDraft) {
+              dispatch({ type: "RESTORE_FROM_API", payload: latestDraft });
+            }
           }
         }
-      }).catch(console.error);
-    }
+      } catch (err) {
+        console.error("Gagal inisialisasi data Yudisium:", err);
+      }
+    };
+
+    initData();
   }, [dispatch, mahasiswaId]); 
 
   useEffect(() => {
@@ -144,7 +148,7 @@ function PendaftaranYudisiumContent() {
     setFormAlert(null);
     const error = validateStep1(data);
     if (error) {
-      setFormAlert({ type: "error", msg: error });
+      setFormAlert({ type: "error", title: "Validasi Gagal", msg: error });
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -160,7 +164,7 @@ function PendaftaranYudisiumContent() {
       
       setStep(2);
     } catch (e) {
-      setFormAlert({ type: "error", msg: e.response?.data?.message || "Gagal menyimpan draft yudisium." });
+      setFormAlert({ type: "error", title: "Gagal Menyimpan", msg: e.response?.data?.message || "Gagal menyimpan draft yudisium." });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSavingStep1(false);
@@ -168,28 +172,39 @@ function PendaftaranYudisiumContent() {
   };
 
   const isStep2Complete = () => {
-    const mandatorySlugs = documents
-      .filter(doc => doc.section === SECTIONS.WAJIB)
-      .map(doc => doc.slug);
+    let requiredSections = [SECTIONS.WAJIB];
 
     if (data.pengajuanCumlaude !== "Non Cumlaude") {
-      if (data.skemaCumlaude.includes("Publikasi Jurnal")) mandatorySlugs.push("loa-publisher");
-      if (data.skemaCumlaude.includes("Pameran")) mandatorySlugs.push("sertifikat-pameran");
-      if (data.skemaCumlaude.includes("Prestasi Lomba")) mandatorySlugs.push("sertifikat-lomba");
-      if (data.skemaCumlaude.includes("HKI/Paten")) mandatorySlugs.push("sertifikat-hki");
+      if (data.skemaCumlaude.includes("Publikasi Jurnal")) requiredSections.push(SECTIONS.JURNAL);
+      if (data.skemaCumlaude.includes("Pameran")) requiredSections.push(SECTIONS.PAMERAN);
+      if (data.skemaCumlaude.includes("Prestasi Lomba")) requiredSections.push(SECTIONS.LOMBA);
+      if (data.skemaCumlaude.includes("HKI/Paten")) requiredSections.push(SECTIONS.HKI);
     }
 
     if (data.minatWirausaha === "Ya") {
-      mandatorySlugs.push("formulir-wirausaha");
+      requiredSections.push(SECTIONS.WIRAUSAHA);
     }
 
-    const missingDocs = documents.filter(doc => mandatorySlugs.includes(doc.slug) && doc.status !== "completed");
+    const missingDocs = documents.filter(doc => {
+      const isRequiredSection = requiredSections.includes(doc.section);
+      const isOptional = doc.name.toLowerCase().includes("opsional");
+      
+      return isRequiredSection && !isOptional && doc.status !== "completed";
+    });
+
     return missingDocs.length === 0;
   };
 
   const handleSaveDraft = () => {
-    alert("Draft berkas berhasil disimpan di sistem! Kamu bisa melanjutkan unggahan nanti.");
-    navigate("/mahasiswa/dashboard");
+    setFormAlert({ 
+      type: "success", 
+      title: "Draft Tersimpan", 
+      msg: "Draft berkas berhasil disimpan di sistem! Kamu bisa melanjutkan unggahan nanti." 
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => {
+      navigate("/mahasiswa/dashboard");
+    }, 2000);
   };
 
   const handleSubmit = async () => {
@@ -204,14 +219,17 @@ function PendaftaranYudisiumContent() {
         isConfirmed: true
       });
 
-      alert(
-        "Pendaftaran Berhasil!\n\n" +
-        "Apabila terdapat revisi berkas Mohon konfirmasi pembaruan ke Helpdesk.\n\n" +
-        "Sidang Yudisium dilaksanakan tertutup. SKL diterbitkan 2-3 minggu setelah diproses."
-      );
-      navigate("/mahasiswa/dashboard");
+      setFormAlert({ 
+        type: "success", 
+        title: "Pendaftaran Berhasil!", 
+        msg: "Apabila terdapat revisi berkas Mohon konfirmasi pembaruan ke Helpdesk. Sidang Yudisium dilaksanakan tertutup. SKL diterbitkan 2-3 minggu setelah diproses." 
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => {
+        navigate("/mahasiswa/dashboard");
+      }, 3500);
     } catch (e) {
-      setFormAlert({ type: "error", msg: e.response?.data?.message || "Gagal mengirim pendaftaran." });
+      setFormAlert({ type: "error", title: "Gagal Submit", msg: e.response?.data?.message || "Gagal mengirim pendaftaran." });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
@@ -244,7 +262,7 @@ function PendaftaranYudisiumContent() {
           <div className="simta-container">
             {formAlert && (
               <div style={{ padding: "16px 24px 0" }}>
-                <CustomAlert type={formAlert.type} message={formAlert.msg} />
+                <CustomAlert type={formAlert.type} title={formAlert.title} message={formAlert.msg} />
               </div>
             )}
 
@@ -252,7 +270,7 @@ function PendaftaranYudisiumContent() {
               {step === 1 ? (
                 <Step1Yudisium studentInfo={studentInfo} lecturers={lecturers} />
               ) : (
-                <Step2Yudisium registrationId={registrationId} studentInfo={studentInfo} />
+                <Step2Yudisium registrationId={registrationId} studentInfo={studentInfo} setFormAlert={setFormAlert} />
               )}
             </main>
 
@@ -289,9 +307,36 @@ function PendaftaranYudisiumContent() {
       </div>
 
       <style>{`
-        #yudisium-main { margin-left: var(--sidebar-width, 240px); width: calc(100% - var(--sidebar-width, 240px)); transition: margin-left 0.3s ease; display: flex; flex-direction: column; }
-        .yudisium-wrapper { width: 100% !important; max-width: 100% !important; margin: 0 !important; position: relative !important; min-height: 100vh !important; }
-        @media (max-width: 991.98px) { #yudisium-main { margin-left: 0; width: 100%; } }
+        #yudisium-main { 
+          margin-left: var(--sidebar-width, 240px); 
+          width: calc(100% - var(--sidebar-width, 240px)); 
+          transition: margin-left 0.3s ease; 
+          display: flex; 
+          flex-direction: column; 
+        }
+        
+        /* CSS Zoom untuk mengecilkan skala UI */
+        .yudisium-wrapper { 
+          width: 100% !important; 
+          max-width: 100% !important; 
+          margin: 0 !important; 
+          position: relative !important; 
+          min-height: 100vh !important; 
+          zoom: 0.8; 
+        }
+
+        /* Fallback untuk browser Firefox */
+        @-moz-document url-prefix() {
+          .yudisium-wrapper {
+             transform: scale(0.8);
+             transform-origin: top left;
+             width: 125% !important; 
+          }
+        }
+
+        @media (max-width: 991.98px) { 
+          #yudisium-main { margin-left: 0; width: 100%; } 
+        }
       `}</style>
     </div>
   );

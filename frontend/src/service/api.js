@@ -387,15 +387,15 @@ export const submitYudisiumRegistration = async (payload) => {
 
 export const getYudisiumTemplates = async () => {
   try {
-    const response = await api.get('/api/templates?category=Yudisium');
+    const response = await api.get('/api/templates?limit=all');
     const data = response.data?.data ?? response.data ?? response;
-    return Array.isArray(data) ? data : (data.data || []);
+    const arr = Array.isArray(data) ? data : (data.data || []);
+    return arr.filter(t => t.category && t.category.toLowerCase().includes('yudisium'));
   } catch (e) {
     console.error("Gagal mengambil template yudisium:", e);
     return [];
   }
 };
-
 export const getMyYudisiumRegistrations = async (mahasiswaId) => {
   try {
     const response = await api.get(`/api/yudisium-registrations/student/${mahasiswaId}`);
