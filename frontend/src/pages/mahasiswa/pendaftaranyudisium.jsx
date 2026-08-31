@@ -62,6 +62,7 @@ function PendaftaranYudisiumContent() {
   const { step, data, documents } = state;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // State baru untuk hide sidebar di desktop
   const [isSavingStep1, setIsSavingStep1] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lecturers, setLecturers] = useState([]);
@@ -237,16 +238,28 @@ function PendaftaranYudisiumContent() {
   };
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#F4F6FB" }}>
+    <div className={`flex min-h-screen ${sidebarCollapsed ? 'sidebar-hidden' : ''}`} style={{ background: "#F4F6FB" }}>
       <SidebarMahasiswa isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div id="yudisium-main" className="flex-1 relative">
         <div className="page-wrapper yudisium-wrapper">
           <div className="top-header-nav">
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <button className="topbar-toggle lg:hidden" onClick={() => setSidebarOpen(true)} style={{ border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
+              
+              <button 
+                className="topbar-toggle" 
+                onClick={() => {
+                  if (window.innerWidth < 992) {
+                    setSidebarOpen(!sidebarOpen); 
+                  } else {
+                    setSidebarCollapsed(!sidebarCollapsed); 
+                  }
+                }} 
+                style={{ border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}
+              >
                 <Menu size={20} />
               </button>
+              
               <button className="btn-back-square" onClick={() => navigate("/mahasiswa/dashboard")}>
                 <ArrowLeft size={18} />
                 <span className="hidden sm:inline">Kembali</span>
@@ -310,12 +323,23 @@ function PendaftaranYudisiumContent() {
         #yudisium-main { 
           margin-left: var(--sidebar-width, 240px); 
           width: calc(100% - var(--sidebar-width, 240px)); 
-          transition: margin-left 0.3s ease; 
+          transition: margin-left 0.3s ease, width 0.3s ease; 
           display: flex; 
           flex-direction: column; 
         }
+
+        .sidebar-hidden aside,
+        .sidebar-hidden #sidebar,
+        .sidebar-hidden .sidebar-mahasiswa {
+          transform: translateX(-100%) !important;
+          transition: transform 0.3s ease;
+        }
+
+        .sidebar-hidden #yudisium-main {
+          margin-left: 0 !important;
+          width: 100% !important;
+        }
         
-        /* CSS Zoom untuk mengecilkan skala UI */
         .yudisium-wrapper { 
           width: 100% !important; 
           max-width: 100% !important; 
@@ -324,8 +348,6 @@ function PendaftaranYudisiumContent() {
           min-height: 100vh !important; 
           zoom: 0.8; 
         }
-
-        /* Fallback untuk browser Firefox */
         @-moz-document url-prefix() {
           .yudisium-wrapper {
              transform: scale(0.8);
