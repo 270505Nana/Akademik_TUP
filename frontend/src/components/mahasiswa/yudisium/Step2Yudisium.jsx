@@ -7,7 +7,7 @@ import { uploadYudisiumRegistrationFile } from "../../../service/api";
 const PreviewModal = ({ doc, onClose }) => {
   if (!doc) return null;
   
-  const isPdf = doc.fileName?.toLowerCase().endsWith('.pdf') || doc.file?.type === 'application/pdf';
+  const isPdf = doc.fileName?.toLowerCase().endsWith('.pdf') || doc.fileUrl?.toLowerCase().includes('.pdf') || doc.file?.type === 'application/pdf';
 
   return (
     <div 
@@ -298,7 +298,7 @@ export default function Step2Yudisium({ registrationId, studentInfo }) {
       alert("ID Registrasi tidak ditemukan. Silakan kembali ke Step 1 dan klik Simpan.");
       return;
     }
-    // Buat rename file, send ke BE nim-nama-slug
+
     const safeName = (studentInfo?.nama || "mahasiswa")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -312,12 +312,11 @@ export default function Step2Yudisium({ registrationId, studentInfo }) {
 
     const renamedFile = new File([file], formattedFileName, { type: file.type });
 
-
     try {
       setIsUploading(true);
       await uploadYudisiumRegistrationFile(registrationId, {
         file: renamedFile,       
-        category: doc.slug,
+        slug: doc.slug, 
         name: formattedFileName,  
       });
       dispatch({ type: "COMPLETE_DOCUMENT", docId });

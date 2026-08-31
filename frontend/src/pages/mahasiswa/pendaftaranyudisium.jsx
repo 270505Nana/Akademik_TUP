@@ -11,7 +11,7 @@ import Step1Yudisium from "../../components/mahasiswa/yudisium/Step1Yudisium";
 import Step2Yudisium from "../../components/mahasiswa/yudisium/Step2Yudisium";
 import CustomAlert from "../../components/common/CustomAlert";
 import SidebarMahasiswa from "../../components/sidebar/SidebarMahasiswa";
-import { SECTIONS } from "../../components/mahasiswa/yudisium/YudisiumDocument";
+import { SECTIONS } from "../../components/mahasiswa/yudisium/yudisiumDocument";
 
 import { 
   getLecturers, 
@@ -67,35 +67,39 @@ function PendaftaranYudisiumContent() {
   const [lecturers, setLecturers] = useState([]);
   const [formAlert, setFormAlert] = useState(null);
 
-  // Ambil dari context, BUKAN dari local state useState!
   const registrationId = data.registrationId;
   const mahasiswaId = student?.mahasiswaId || profile?.id || user?.id;
 
   const studentInfo = {
     nama: student?.namaLengkap || profile?.name || user?.username || "-",
     nim: student?.nim || profile?.nim || "-",
-    prodi: student?.studyProgramNama || profile?.studyProgram?.name || "-"
+    prodi: student?.studyProgramNama || profile?.studyProgram?.name || "-",
     phone: user?.phone || profile?.phone || user?.no_telp || "-",
   };
 
-  // FETCH DATA INITIAL (Dosen, Template, dan Draft dari BE berdasarkan Mahasiswa ID)
   useEffect(() => {
     getLecturers().then(res => setLecturers(res || [])).catch(console.error);
     
-    getYudisiumTemplates().then(templates => {
-      dispatch({ type: "SET_DYNAMIC_DOCUMENTS", payload: templates });
-    }).catch(console.error);
+    const initData = async () => {
+      try {
+        const templates = await getYudisiumTemplates();
+        dispatch({ type: "SET_DYNAMIC_DOCUMENTS", payload: templates });
 
-    if (mahasiswaId) {
-      getMyYudisiumRegistrations(mahasiswaId).then(drafts => {
-        if (drafts && drafts.length > 0) {
-          const latestDraft = drafts.find(d => d.isDraft);
-          if (latestDraft) {
-            dispatch({ type: "RESTORE_FROM_API", payload: latestDraft });
+        if (mahasiswaId) {
+          const drafts = await getMyYudisiumRegistrations(mahasiswaId);
+          if (drafts && drafts.length > 0) {
+            const latestDraft = drafts.find(d => d.isDraft) || drafts[0];
+            if (latestDraft) {
+              dispatch({ type: "RESTORE_FROM_API", payload: latestDraft });
+            }
           }
         }
-      }).catch(console.error);
-    }
+      } catch (err) {
+        console.error("Gagal inisialisasi data Yudisium:", err);
+      }
+    };
+
+    initData();
   }, [dispatch, mahasiswaId]); 
 
   useEffect(() => {
@@ -168,22 +172,26 @@ function PendaftaranYudisiumContent() {
   };
 
   const isStep2Complete = () => {
-    const mandatorySlugs = documents
-      .filter(doc => doc.section === SECTIONS.WAJIB)
-      .map(doc => doc.slug);
+    let requiredSections = [SECTIONS.WAJIB];
 
     if (data.pengajuanCumlaude !== "Non Cumlaude") {
-      if (data.skemaCumlaude.includes("Publikasi Jurnal")) mandatorySlugs.push("loa-publisher");
-      if (data.skemaCumlaude.includes("Pameran")) mandatorySlugs.push("sertifikat-pameran");
-      if (data.skemaCumlaude.includes("Prestasi Lomba")) mandatorySlugs.push("sertifikat-lomba");
-      if (data.skemaCumlaude.includes("HKI/Paten")) mandatorySlugs.push("sertifikat-hki");
+      if (data.skemaCumlaude.includes("Publikasi Jurnal")) requiredSections.push(SECTIONS.JURNAL);
+      if (data.skemaCumlaude.includes("Pameran")) requiredSections.push(SECTIONS.PAMERAN);
+      if (data.skemaCumlaude.includes("Prestasi Lomba")) requiredSections.push(SECTIONS.LOMBA);
+      if (data.skemaCumlaude.includes("HKI/Paten")) requiredSections.push(SECTIONS.HKI);
     }
 
     if (data.minatWirausaha === "Ya") {
-      mandatorySlugs.push("formulir-wirausaha");
+      requiredSections.push(SECTIONS.WIRAUSAHA);
     }
 
-    const missingDocs = documents.filter(doc => mandatorySlugs.includes(doc.slug) && doc.status !== "completed");
+    const missingDocs = documents.filter(doc => {
+      const isRequiredSection = requiredSections.includes(doc.section);
+      const isOptional = doc.name.toLowerCase().includes("opsional");
+      
+      return isRequiredSection && !isOptional && doc.status !== "completed";
+    });
+
     return missingDocs.length === 0;
   };
 

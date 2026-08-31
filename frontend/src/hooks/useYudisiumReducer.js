@@ -1,4 +1,4 @@
-import { SECTIONS, DOCUMENT_CONFIG } from "../components/mahasiswa/yudisium/YudisiumDocument";
+import { SECTIONS, DOCUMENT_CONFIG } from "../components/mahasiswa/yudisium/yudisiumDocument";
 
 const generateDocuments = () => {
   const docs = [];
@@ -82,17 +82,19 @@ export function formReducer(state, action) {
         yudisiumRegistrationPeriodId: draft.yudisiumRegistrationPeriodId || "",
       };
 
+      const uploads = draft.yudisiumRegistrationUploads || draft.uploads || [];
+
       const updatedDocs = state.documents.map(doc => {
-        const uploaded = draft.yudisiumRegistrationUploads?.find(
-          u => u.category === doc.slug || (u.category === "undefined" && u.name.includes(doc.slug))
+        const uploaded = uploads.find(
+          u => u.category === doc.slug || u.slug === doc.slug || (u.name && u.name.includes(doc.slug))
         );
         
         if (uploaded) {
           return { 
             ...doc, 
             status: "completed", 
-            fileUrl: uploaded.downloadUrl, 
-            fileName: uploaded.name 
+            fileUrl: uploaded.downloadUrl || uploaded.previewUrl || uploaded.url, 
+            fileName: uploaded.name || uploaded.filename || "Dokumen Terunggah"
           };
         }
         return doc;
@@ -107,32 +109,66 @@ export function formReducer(state, action) {
     }
 
     case "SET_DYNAMIC_DOCUMENTS": {
-      const apiDocs = action.payload.map((item, idx) => {
-        const existingDoc = state.documents.find(d => d.slug === item.code);
-        return {
-          id: `${SECTIONS.WAJIB}-${idx + 1}`,
-          section: SECTIONS.WAJIB,
-          name: item.name,
-          slug: item.code, 
-          templateUrl: item.downloadUrl || null,
-          fileUrl: existingDoc ? existingDoc.fileUrl : null,
-          fileName: existingDoc ? existingDoc.fileName : "",
-          fileSize: existingDoc ? existingDoc.fileSize : "",
-          file: existingDoc ? existingDoc.file : null,
-          error: existingDoc ? existingDoc.error : null,
-          status: existingDoc ? existingDoc.status : "",
-        };
+      const apiDocs = [];
+      const sectionCounts = {};
+      const sectionsFromApi = new Set(); 
+
+      (action.payload || []).forEach(item => {
+        if (!item.category) return;
+        
+        const cat = item.category.toLowerCase();
+        let mappedSection = null;
+        
+        if (cat.includes("berkas wajib")) mappedSection = SECTIONS.WAJIB;
+        else if (cat.includes("publikasi jurnal")) mappedSection = SECTIONS.JURNAL;
+        else if (cat.includes("pameran")) mappedSection = SECTIONS.PAMERAN;
+        else if (cat.includes("lomba")) mappedSection = SECTIONS.LOMBA;
+        else if (cat.includes("kewirausahaan")) mappedSection = SECTIONS.WIRAUSAHA;
+
+
+        if (mappedSection) {
+          sectionsFromApi.add(mappedSection);
+          if (!sectionCounts[mappedSection]) sectionCounts[mappedSection] = 0;
+          sectionCounts[mappedSection]++;
+          
+          const existingDoc = state.documents.find(d => d.slug === item.code);
+          
+          apiDocs.push({
+            id: `${mappedSection}-${sectionCounts[mappedSection]}`,
+            section: mappedSection,
+            name: item.name,
+            slug: item.code, 
+            templateUrl: item.downloadUrl || item.url || null,
+            fileUrl: existingDoc ? existingDoc.fileUrl : null,
+            fileName: existingDoc ? existingDoc.fileName : "",
+            fileSize: existingDoc ? existingDoc.fileSize : "",
+            file: existingDoc ? existingDoc.file : null,
+            error: existingDoc ? existingDoc.error : null,
+            status: existingDoc ? existingDoc.status : "",
+          });
+        }
       });
 
-      const otherDocs = state.documents.filter(d => d.section !== SECTIONS.WAJIB);
       
+      const staticDocs = state.documents.filter(d => !sectionsFromApi.has(d.section));
+      const newDocuments = [...apiDocs, ...staticDocs];
+
+      const newActiveDocIds = { ...state.activeDocIds };
+      Object.values(SECTIONS).forEach(sec => {
+        const docsInSection = newDocuments.filter(d => d.section === sec);
+        if (docsInSection.length > 0) {
+          if (!docsInSection.find(d => d.id === newActiveDocIds[sec])) {
+            newActiveDocIds[sec] = docsInSection[0].id;
+          }
+        } else {
+          newActiveDocIds[sec] = "";
+        }
+      });
+
       return { 
         ...state, 
-        documents: [...apiDocs, ...otherDocs],
-        activeDocIds: {
-          ...state.activeDocIds,
-          [SECTIONS.WAJIB]: state.activeDocIds[SECTIONS.WAJIB] || (apiDocs.length > 0 ? apiDocs[0].id : "")
-        }
+        documents: newDocuments,
+        activeDocIds: newActiveDocIds
       };
     }
 
