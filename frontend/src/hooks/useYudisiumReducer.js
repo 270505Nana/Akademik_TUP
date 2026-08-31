@@ -125,18 +125,19 @@ export function formReducer(state, action) {
         else if (cat.includes("lomba")) mappedSection = SECTIONS.LOMBA;
         else if (cat.includes("kewirausahaan")) mappedSection = SECTIONS.WIRAUSAHA;
 
-
         if (mappedSection) {
           sectionsFromApi.add(mappedSection);
           if (!sectionCounts[mappedSection]) sectionCounts[mappedSection] = 0;
           sectionCounts[mappedSection]++;
           
           const existingDoc = state.documents.find(d => d.slug === item.code);
+          let cleanName = item.name ? item.name.replace(/^contoh\s+/i, '').trim() : "";
+          cleanName = cleanName ? cleanName.charAt(0).toUpperCase() + cleanName.slice(1) : cleanName;
           
           apiDocs.push({
             id: `${mappedSection}-${sectionCounts[mappedSection]}`,
             section: mappedSection,
-            name: item.name,
+            name: cleanName,
             slug: item.code, 
             templateUrl: item.downloadUrl || item.url || null,
             fileUrl: existingDoc ? existingDoc.fileUrl : null,
@@ -149,7 +150,6 @@ export function formReducer(state, action) {
         }
       });
 
-      
       const staticDocs = state.documents.filter(d => !sectionsFromApi.has(d.section));
       const newDocuments = [...apiDocs, ...staticDocs];
 

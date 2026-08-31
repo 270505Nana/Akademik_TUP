@@ -148,7 +148,7 @@ function PendaftaranYudisiumContent() {
     setFormAlert(null);
     const error = validateStep1(data);
     if (error) {
-      setFormAlert({ type: "error", msg: error });
+      setFormAlert({ type: "error", title: "Validasi Gagal", msg: error });
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -164,7 +164,7 @@ function PendaftaranYudisiumContent() {
       
       setStep(2);
     } catch (e) {
-      setFormAlert({ type: "error", msg: e.response?.data?.message || "Gagal menyimpan draft yudisium." });
+      setFormAlert({ type: "error", title: "Gagal Menyimpan", msg: e.response?.data?.message || "Gagal menyimpan draft yudisium." });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSavingStep1(false);
@@ -196,8 +196,15 @@ function PendaftaranYudisiumContent() {
   };
 
   const handleSaveDraft = () => {
-    alert("Draft berkas berhasil disimpan di sistem! Kamu bisa melanjutkan unggahan nanti.");
-    navigate("/mahasiswa/dashboard");
+    setFormAlert({ 
+      type: "success", 
+      title: "Draft Tersimpan", 
+      msg: "Draft berkas berhasil disimpan di sistem! Kamu bisa melanjutkan unggahan nanti." 
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => {
+      navigate("/mahasiswa/dashboard");
+    }, 2000);
   };
 
   const handleSubmit = async () => {
@@ -212,14 +219,17 @@ function PendaftaranYudisiumContent() {
         isConfirmed: true
       });
 
-      alert(
-        "Pendaftaran Berhasil!\n\n" +
-        "Apabila terdapat revisi berkas Mohon konfirmasi pembaruan ke Helpdesk.\n\n" +
-        "Sidang Yudisium dilaksanakan tertutup. SKL diterbitkan 2-3 minggu setelah diproses."
-      );
-      navigate("/mahasiswa/dashboard");
+      setFormAlert({ 
+        type: "success", 
+        title: "Pendaftaran Berhasil!", 
+        msg: "Apabila terdapat revisi berkas Mohon konfirmasi pembaruan ke Helpdesk. Sidang Yudisium dilaksanakan tertutup. SKL diterbitkan 2-3 minggu setelah diproses." 
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => {
+        navigate("/mahasiswa/dashboard");
+      }, 3500);
     } catch (e) {
-      setFormAlert({ type: "error", msg: e.response?.data?.message || "Gagal mengirim pendaftaran." });
+      setFormAlert({ type: "error", title: "Gagal Submit", msg: e.response?.data?.message || "Gagal mengirim pendaftaran." });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
@@ -252,7 +262,7 @@ function PendaftaranYudisiumContent() {
           <div className="simta-container">
             {formAlert && (
               <div style={{ padding: "16px 24px 0" }}>
-                <CustomAlert type={formAlert.type} message={formAlert.msg} />
+                <CustomAlert type={formAlert.type} title={formAlert.title} message={formAlert.msg} />
               </div>
             )}
 
@@ -260,7 +270,7 @@ function PendaftaranYudisiumContent() {
               {step === 1 ? (
                 <Step1Yudisium studentInfo={studentInfo} lecturers={lecturers} />
               ) : (
-                <Step2Yudisium registrationId={registrationId} studentInfo={studentInfo} />
+                <Step2Yudisium registrationId={registrationId} studentInfo={studentInfo} setFormAlert={setFormAlert} />
               )}
             </main>
 
@@ -297,9 +307,36 @@ function PendaftaranYudisiumContent() {
       </div>
 
       <style>{`
-        #yudisium-main { margin-left: var(--sidebar-width, 240px); width: calc(100% - var(--sidebar-width, 240px)); transition: margin-left 0.3s ease; display: flex; flex-direction: column; }
-        .yudisium-wrapper { width: 100% !important; max-width: 100% !important; margin: 0 !important; position: relative !important; min-height: 100vh !important; }
-        @media (max-width: 991.98px) { #yudisium-main { margin-left: 0; width: 100%; } }
+        #yudisium-main { 
+          margin-left: var(--sidebar-width, 240px); 
+          width: calc(100% - var(--sidebar-width, 240px)); 
+          transition: margin-left 0.3s ease; 
+          display: flex; 
+          flex-direction: column; 
+        }
+        
+        /* CSS Zoom untuk mengecilkan skala UI */
+        .yudisium-wrapper { 
+          width: 100% !important; 
+          max-width: 100% !important; 
+          margin: 0 !important; 
+          position: relative !important; 
+          min-height: 100vh !important; 
+          zoom: 0.8; 
+        }
+
+        /* Fallback untuk browser Firefox */
+        @-moz-document url-prefix() {
+          .yudisium-wrapper {
+             transform: scale(0.8);
+             transform-origin: top left;
+             width: 125% !important; 
+          }
+        }
+
+        @media (max-width: 991.98px) { 
+          #yudisium-main { margin-left: 0; width: 100%; } 
+        }
       `}</style>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Check, UploadCloud, FileText, AlertTriangle, ChevronRight, Info, Download, X } from "lucide-react";
 import { useYudisiumContext } from "../../../context/YudisiumFormContext";
-import { SECTIONS } from "./YudisiumDocument";
+import { SECTIONS } from "./yudisiumDocument";
 import { uploadYudisiumRegistrationFile } from "../../../service/api";
 
 const PreviewModal = ({ doc, onClose }) => {
@@ -29,13 +29,13 @@ const PreviewModal = ({ doc, onClose }) => {
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: '16px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <FileText size={18} color="#C0182A" />
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F172A' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <FileText size={18} color="#C0182A" style={{ flexShrink: 0 }} />
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Preview - {doc.fileName || doc.name}
             </h3>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', padding: 4 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', padding: 4, flexShrink: 0 }}>
             <X size={22} />
           </button>
         </div>
@@ -116,38 +116,39 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
         </div>
 
         <div className="doc-panel">
-          <div className="doc-panel-header">
-            <span style={{ fontWeight: 800 }}>{sectionTitle.split(' - ')[0]}</span>
-            <ChevronRight size={16} />
-            <span style={{ color: "var(--text-grey)" }}>{activeDoc.name}</span>
+          <div className="doc-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>{sectionTitle.split(' - ')[0]}</span>
+            <ChevronRight size={14} style={{ flexShrink: 0 }} />
+            <span style={{ color: "var(--text-grey)", fontSize: '0.95rem' }}>{activeDoc.name}</span>
           </div>
 
           <div>
             {activeDoc.templateUrl && (
-              <div style={{ border: "1px solid #E2E8F0", borderRadius: "12px", padding: "1.2rem 1.5rem", marginBottom: "2rem", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8FAFC" }}>
-                <div>
-                  <h4 style={{ fontWeight: 700, marginBottom: "0.25rem", color: "#1E293B" }}>Unduh Template Dokumen</h4>
-                  <p style={{ fontSize: "0.85rem", color: "#64748B", margin: 0 }}>Silahkan unduh dan isi template yang disediakan oleh admin.</p>
+              <div style={{ border: "1px solid #E2E8F0", borderRadius: "10px", padding: "1rem 1.25rem", marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8FAFC", flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <h4 style={{ fontWeight: 700, marginBottom: "0.25rem", color: "#1E293B", fontSize: '0.95rem' }}>Unduh Template Dokumen</h4>
+                  <p style={{ fontSize: "0.8rem", color: "#64748B", margin: 0 }}>Silahkan unduh dan isi template yang disediakan oleh admin.</p>
                 </div>
                 <a 
                   href={activeDoc.templateUrl} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', background: '#fff', border: '1px solid #CBD5E1', padding: '8px 16px', borderRadius: '8px', color: '#334155', fontWeight: 600, fontSize: '14px', transition: '0.2s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', background: '#fff', border: '1px solid #CBD5E1', padding: '6px 12px', borderRadius: '6px', color: '#334155', fontWeight: 600, fontSize: '12px', transition: '0.2s', whiteSpace: 'nowrap' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#94A3B8'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
                 >
-                  <Download size={16} />
+                  <Download size={14} />
                   <span>Download</span>
                 </a>
               </div>
             )}
 
-            <h4 style={{ fontWeight: 700, marginBottom: "1.5rem" }}>Pilih file atau Tarik ke sini</h4>
+            <h4 style={{ fontWeight: 700, marginBottom: "1rem", fontSize: '1rem' }}>Pilih file atau Tarik ke sini</h4>
 
             <div 
               style={{ 
-                padding: "2.5rem 1rem", border: isDragging ? "2px dashed #c0182a" : "2px dashed #cbd5e1", borderRadius: "12px", textAlign: "center", cursor: "pointer", background: isDragging ? "#fff1f2" : "#f8fafc", transition: "0.2s" 
+                padding: "2rem 1rem", border: isDragging ? "2px dashed #c0182a" : "2px dashed #cbd5e1", borderRadius: "10px", textAlign: "center", cursor: "pointer", background: isDragging ? "#fff1f2" : "#f8fafc", transition: "0.2s",
+                maxWidth: "600px"
               }}
               onMouseEnter={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#c0182a" }}
               onMouseLeave={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#cbd5e1" }}
@@ -156,58 +157,59 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <UploadCloud size={44} color={isDragging ? "#c0182a" : "#94a3b8"} style={{ margin: "0 auto 12px", transition: "0.2s" }} />
-              <p style={{ fontSize: "15px", fontWeight: 600, color: "#334155", marginBottom: '12px' }}>
+              <UploadCloud size={36} color={isDragging ? "#c0182a" : "#94a3b8"} style={{ margin: "0 auto 8px", transition: "0.2s" }} />
+              <p style={{ fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: '10px' }}>
                 <span style={{ color: "#3182ce" }}>Pilih File</span> atau Tarik dan Lepaskan di sini
               </p>
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                <span style={{ fontSize: '11px', padding: '4px 8px', background: '#E2E8F0', borderRadius: '4px', color: '#475569', fontWeight: 600 }}>PDF/JPG/PNG</span>
-                <span style={{ fontSize: '11px', padding: '4px 8px', background: '#E2E8F0', borderRadius: '4px', color: '#475569', fontWeight: 600 }}>Max 3MB</span>
+              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                <span style={{ fontSize: '10px', padding: '3px 6px', background: '#E2E8F0', borderRadius: '4px', color: '#475569', fontWeight: 600 }}>PDF/JPG/PNG</span>
+                <span style={{ fontSize: '10px', padding: '3px 6px', background: '#E2E8F0', borderRadius: '4px', color: '#475569', fontWeight: 600 }}>Max 3MB</span>
               </div>
             </div>
 
             {(activeDoc.fileUrl || activeDoc.error) && (
-              <div style={{ marginTop: "2rem" }}>
-                <h4 style={{ fontWeight: 700, marginBottom: "1rem" }}>File Terpilih</h4>
+              <div style={{ marginTop: "1.5rem", maxWidth: "600px" }}>
+                <h4 style={{ fontWeight: 700, marginBottom: "0.75rem", fontSize: '0.95rem' }}>File Terpilih</h4>
+                
                 {activeDoc.fileUrl ? (
-                  <div className="file-card" style={{ padding: "1.5rem", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flex: 1, minWidth: 0 }}>
-                      <div className="file-card-icon" style={{ width: "56px", height: "56px", borderRadius: "12px", flexShrink: 0 }}>
-                        <FileText size={28} />
+                  <div className="file-card" style={{ padding: "1rem", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", overflow: "hidden", gap: "1rem", border: "1px solid #E2E8F0", borderRadius: "10px", background: "#fff" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem", flex: 1, minWidth: 0 }}>
+                      <div className="file-card-icon" style={{ width: "40px", height: "40px", borderRadius: "8px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#F8FAFC" }}>
+                        <FileText size={20} color="#64748B" />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0, paddingRight: '1rem' }}>
-                        <div className="file-name" style={{ fontSize: "1rem", marginBottom: "4px", lineHeight: "1.4", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="file-name" style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1E293B", marginBottom: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                           {activeDoc.fileName}
                         </div>
-                        <div className="file-meta" style={{ fontSize: "0.85rem" }}>
+                        <div className="file-meta" style={{ fontSize: "0.75rem", color: "#64748B" }}>
                           {activeDoc.fileSize}
                         </div>
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <button 
                         onClick={() => onPreview(activeDoc)} 
-                        style={{ padding: "6px 12px", fontSize: "12px", fontWeight: 700, background: "#EFF6FF", color: "#1D4ED8", border: "none", borderRadius: "6px", cursor: "pointer", transition: "0.2s" }}
+                        style={{ padding: "5px 10px", fontSize: "11px", fontWeight: 700, background: "#EFF6FF", color: "#1D4ED8", border: "none", borderRadius: "6px", cursor: "pointer", transition: "0.2s" }}
                         onMouseEnter={(e) => e.currentTarget.style.background = "#DBEAFE"}
                         onMouseLeave={(e) => e.currentTarget.style.background = "#EFF6FF"}
                       >
                         Lihat Preview
                       </button>
-                      <div className="status-badge" style={{ padding: "6px 12px", fontSize: "12px", background: "#def7ec", color: "#03543f", fontWeight: 700 }}>
+                      <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#F0FDF4", color: "#15803D", fontWeight: 700, borderRadius: "6px", border: "1px solid #BBF7D0" }}>
                         {activeDoc.status === "completed" ? "Tersimpan" : "Siap Upload"}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="file-card" style={{ padding: "1.5rem", borderColor: "var(--error-red)", backgroundColor: "#fff5f5" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flex: 1 }}>
-                      <div className="file-card-icon" style={{ background: "transparent", color: "var(--error-red)", border: "2px solid var(--error-red)", borderRadius: "50%", width: "56px", height: "56px", flexShrink: 0 }}>
-                        <AlertTriangle size={32} />
+                  <div className="file-card" style={{ padding: "1rem", display: "flex", alignItems: "center", width: "100%", overflow: "hidden", gap: "1rem", border: "1px solid #FECACA", borderRadius: "10px", background: "#FEF2F2" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem", flex: 1, minWidth: 0 }}>
+                      <div className="file-card-icon" style={{ background: "transparent", color: "#DC2626", border: "2px solid #DC2626", borderRadius: "50%", width: "36px", height: "36px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <AlertTriangle size={18} />
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div className="file-name" style={{ color: "var(--error-red)", fontWeight: 800, fontSize: "1.1rem" }}>Error: Gagal Memilih</div>
-                        <div className="file-meta" style={{ color: "var(--error-red)" }}>{activeDoc.error}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="file-name" style={{ color: "#B91C1C", fontWeight: 800, fontSize: "0.85rem", marginBottom: "2px" }}>Error: Gagal Memilih</div>
+                        <div className="file-meta" style={{ color: "#DC2626", fontSize: "0.75rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeDoc.error}</div>
                       </div>
                     </div>
                   </div>
@@ -217,7 +219,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
 
             <button
               className="btn-primary"
-              style={{ marginTop: "2rem" }}
+              style={{ marginTop: "1.5rem" }}
               onClick={() => onSave(activeDoc.id)}
               disabled={isUploading || (!activeDoc.file && activeDoc.status === "completed")}
             >
@@ -235,7 +237,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
   );
 };
 
-export default function Step2Yudisium({ registrationId, studentInfo }) {
+export default function Step2Yudisium({ registrationId, studentInfo, setFormAlert }) {
   const { state, dispatch } = useYudisiumContext();
   const { data, documents, activeDocIds } = state;
   
@@ -250,6 +252,7 @@ export default function Step2Yudisium({ registrationId, studentInfo }) {
 
   const processFile = (file, targetId) => {
     if (!file || !targetId) return;
+    setFormAlert(null); 
 
     if (file.size > 3 * 1024 * 1024) {
       dispatch({ type: "SET_DOCUMENT_ERROR", docId: targetId, error: "Ukuran file maksimal 3MB." });
@@ -286,29 +289,34 @@ export default function Step2Yudisium({ registrationId, studentInfo }) {
   };
 
   const handleSaveDoc = async (docId) => {
+    setFormAlert(null);
     const doc = documents.find((d) => d.id === docId);
     const file = fileMapRef.current[docId];
 
     if (!doc?.fileUrl || !file) {
-      alert("Silahkan pilih file terlebih dahulu sebelum menyimpan.");
+      setFormAlert({ type: "warning", title: "Peringatan", msg: "Silahkan pilih file terlebih dahulu sebelum menyimpan." });
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
     if (!registrationId) {
-      alert("ID Registrasi tidak ditemukan. Silakan kembali ke Step 1 dan klik Simpan.");
+      setFormAlert({ type: "error", title: "Error", msg: "ID Registrasi tidak ditemukan. Silakan kembali ke Step 1 dan klik Simpan." });
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
-    const safeName = (studentInfo?.nama || "mahasiswa")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-    
     const safeNim = studentInfo?.nim || "0000000000";
-    
     const extension = file.name.split('.').pop();
     
-    const formattedFileName = `${safeNim}-${safeName}-${doc.slug}.${extension}`;
+    let sectionName = "Evidence";
+    if (doc.section === SECTIONS.WAJIB) sectionName = "KelengkapanDokYudisium";
+    else if (doc.section === SECTIONS.JURNAL) sectionName = "EvidenceJurnal";
+    else if (doc.section === SECTIONS.PAMERAN) sectionName = "EvidencePameran";
+    else if (doc.section === SECTIONS.LOMBA) sectionName = "EvidenceLomba";
+    else if (doc.section === SECTIONS.HKI) sectionName = "EvidenceHKI";
+    else if (doc.section === SECTIONS.WIRAUSAHA) sectionName = "EvidenceWirausaha";
+
+    const formattedFileName = `${safeNim}_${sectionName}_${doc.slug}.${extension}`;
 
     const renamedFile = new File([file], formattedFileName, { type: file.type });
 
@@ -320,9 +328,13 @@ export default function Step2Yudisium({ registrationId, studentInfo }) {
         name: formattedFileName,  
       });
       dispatch({ type: "COMPLETE_DOCUMENT", docId });
+      
+      setFormAlert({ type: "success", title: "Berhasil", msg: `File "${formattedFileName}" berhasil diunggah.` });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       console.error("Gagal upload dokumen:", error);
-      alert("Gagal mengunggah dokumen. Silakan coba lagi.");
+      setFormAlert({ type: "error", title: "Gagal Mengunggah", msg: "Gagal mengunggah dokumen. Silakan coba lagi." });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsUploading(false);
     }
