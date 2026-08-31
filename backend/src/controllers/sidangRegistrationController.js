@@ -1,6 +1,5 @@
 import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import fs from "fs";
 import path from "path";
 import {
   sendValidationError,
@@ -11,6 +10,11 @@ import {
   getPaginationParams,
   formatPaginationResponse,
 } from "../utils/paginationHelper.js";
+import {
+  uploadFile,
+  deleteFile,
+  serveDownload,
+} from "../services/storageService.js";
 
 // Constants for File Validation (Lama - dicomment)
 // const REQUIRED_SLUGS = [
@@ -942,23 +946,28 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
   }
 
   if (!fileCategory || !name) {
-    if (file.path) fs.unlink(file.path, () => {});
     res.status(400);
     throw new Error("Kategori (slug) dan nama berkas wajib diisi");
   }
 
   const editCheck = await checkSidangEditable(id);
   if (!editCheck.exists) {
-    if (file.path) fs.unlink(file.path, () => {});
     res.status(404);
     throw new Error(editCheck.reason);
   }
 
   if (!editCheck.editable) {
-    if (file.path) fs.unlink(file.path, () => {});
     res.status(403);
     throw new Error(editCheck.reason);
   }
+
+  // Upload file via Storage Service (R2 atau Local)
+  const uploaded = await uploadFile({
+    buffer: file.buffer,
+    originalname: file.originalname,
+    folder: "sidang-registrations",
+    mimetype: file.mimetype,
+  });
 
   const existingUpload = await prisma.sidangRegistrationUpload.findFirst({
     where: {
@@ -970,15 +979,15 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
   let uploadRecord;
 
   if (existingUpload) {
-    if (existingUpload.filepath && fs.existsSync(existingUpload.filepath)) {
-      fs.unlink(existingUpload.filepath, () => {});
+    if (existingUpload.filepath) {
+      await deleteFile(existingUpload.filepath);
     }
 
     uploadRecord = await prisma.sidangRegistrationUpload.update({
       where: { id: existingUpload.id },
       data: {
         name,
-        filepath: file.path,
+        filepath: uploaded.filepath,
         isValid: null,
       },
     });
@@ -987,7 +996,7 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
       data: {
         name,
         category: fileCategory,
-        filepath: file.path,
+        filepath: uploaded.filepath,
         sidangRegistrationId: id,
         isValid: null,
       },
@@ -1048,14 +1057,14 @@ const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
     throw new Error("Unggahan tidak ditemukan");
   }
 
-  const filePath = path.resolve(process.cwd(), upload.filepath);
+  const ext = path.extname(upload.filepath || "") || ".pdf";
+  const baseName = (upload.name || "").replace(/[\\/:*?"<>|]/g, "-").trim() || "dokumen-sidang";
+  const downloadName = baseName.toLowerCase().endsWith(ext.toLowerCase()) ? baseName : `${baseName}${ext}`;
 
-  if (!fs.existsSync(filePath)) {
-    res.status(404);
-    throw new Error("File tidak ditemukan");
-  }
-
-  res.download(filePath, path.basename(upload.filepath));
+  await serveDownload(res, {
+    filepath: upload.filepath,
+    downloadName,
+  });
 });
 
 // Approve Sidang Registration (Admin Response)
