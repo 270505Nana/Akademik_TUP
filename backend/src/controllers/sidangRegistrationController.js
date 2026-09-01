@@ -4,6 +4,7 @@ import path from "path";
 import {
   sendValidationError,
   isNil,
+  parseBoolean,
   isValidISO8601,
 } from "../utils/validationHelper.js";
 import {
@@ -164,6 +165,7 @@ const mapSidangRegistrationToFrontend = (item, req) => {
     researchGroupId: item.researchGroupId,
     skemaSidang: item.skemaSidang,
     jalurNonSidang: item.jalurNonSidang || [],
+    lulusTesBahasa: item.lulusTesBahasa,
     submittedAt: item.submittedAt,
     sidangRegistrationPeriodId: item.sidangRegistrationPeriodId,
     sidangPeriodId: item.sidangPeriodId,
@@ -367,6 +369,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     programType,
     sidangScheme,
     jalurNonSidang,
+    lulusTesBahasa,
     sks,
     ipk,
     tak,
@@ -377,6 +380,8 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     dosenPembimbing1Id,
     dosenPembimbing2Id,
   } = req.body;
+
+  const parsedLulusTesBahasa = parseBoolean(lulusTesBahasa);
 
   const errors = [];
 
@@ -395,6 +400,13 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     errors.push({
       field: "jalurNonSidang",
       message: "Jalur non sidang harus berupa array jika diisi",
+    });
+  }
+
+  if (!isNil(lulusTesBahasa) && parsedLulusTesBahasa === undefined) {
+    errors.push({
+      field: "lulusTesBahasa",
+      message: "lulusTesBahasa harus berupa boolean",
     });
   }
 
@@ -511,6 +523,10 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     program: programType !== undefined ? programType : undefined, // Prisma: program
     skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
+    lulusTesBahasa:
+      parsedLulusTesBahasa !== undefined
+        ? parsedLulusTesBahasa
+        : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
@@ -617,6 +633,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     programType,
     sidangScheme,
     jalurNonSidang,
+    lulusTesBahasa,
     sks,
     ipk,
     tak,
@@ -627,6 +644,8 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     dosenPembimbing1Id,
     dosenPembimbing2Id,
   } = req.body;
+
+  const parsedLulusTesBahasa = parseBoolean(lulusTesBahasa);
 
   const errors = [];
 
@@ -649,6 +668,13 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     errors.push({
       field: "jalurNonSidang",
       message: "Jalur non sidang harus berupa array jika diisi",
+    });
+  }
+
+  if (!isNil(lulusTesBahasa) && parsedLulusTesBahasa === undefined) {
+    errors.push({
+      field: "lulusTesBahasa",
+      message: "lulusTesBahasa harus berupa boolean",
     });
   }
 
@@ -767,6 +793,10 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     program: programType !== undefined ? programType : undefined, // Prisma: program
     skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
+    lulusTesBahasa:
+      parsedLulusTesBahasa !== undefined
+        ? parsedLulusTesBahasa
+        : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
@@ -889,6 +919,42 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     if (!d2) {
       res.status(404);
       throw new Error("Dosen pembimbing 2 tidak ditemukan");
+    }
+  }
+
+  // Jika lulusTesBahasa bernilai true, hapus semua berkas SidangRegistrationUpload milik SidangRegistration tersebut dengan category "Sidang - Berkas Tes Bahasa (Belum)"
+  if (mergedData.lulusTesBahasa === true) {
+    const tesBahasaBelumDocs = await prisma.dokumenPersyaratanBerkas.findMany({
+      where: {
+        category: "Sidang - Berkas Tes Bahasa (Belum)",
+        deletedAt: null,
+      },
+      select: { code: true },
+    });
+    const tesBahasaBelumCodes = tesBahasaBelumDocs.map((doc) => doc.code);
+    const categoriesToDelete = Array.from(
+      new Set(["Sidang - Berkas Tes Bahasa (Belum)", ...tesBahasaBelumCodes])
+    );
+
+    const uploadsToDelete = await prisma.sidangRegistrationUpload.findMany({
+      where: {
+        sidangRegistrationId: id,
+        category: { in: categoriesToDelete },
+      },
+    });
+
+    for (const upload of uploadsToDelete) {
+      if (upload.filepath) {
+        await deleteFile(upload.filepath);
+      }
+    }
+
+    if (uploadsToDelete.length > 0) {
+      await prisma.sidangRegistrationUpload.deleteMany({
+        where: {
+          id: { in: uploadsToDelete.map((u) => u.id) },
+        },
+      });
     }
   }
 

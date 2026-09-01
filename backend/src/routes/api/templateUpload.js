@@ -41,6 +41,8 @@ import { isAdmin } from "../../middlewares/authorize.js";
  *           enum:
  *             - Permohonan SKTA
  *             - Sidang - Berkas Wajib
+ *             - Sidang - Berkas Tes Bahasa (Sudah)
+ *             - Sidang - Berkas Tes Bahasa (Belum)
  *             - Sidang - Evidence Non Sidang Publikasi Jurnal
  *             - Sidang - Evidence Non Sidang Proceeding International
  *             - Sidang - Evidence Non Sidang HKI
@@ -49,6 +51,7 @@ import { isAdmin } from "../../middlewares/authorize.js";
  *             - Yudisium - Evidence Cumlaude Pameran
  *             - Yudisium - Evidence Cumlaude Lomba
  *             - Yudisium - Evidence Cumlaude HKI
+ *             - Yudisium - Evidence Wirausaha
  *         description: Filter by category
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'

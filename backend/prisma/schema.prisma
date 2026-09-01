@@ -143,16 +143,16 @@ model Mahasiswa {
 }
 
 model DokumenPersyaratanBerkas {
-  id        String    @id @default(uuid())
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-  name      String // Nama Berkas
-  code      String    @unique
-  category  String // Sidang Reguler / Non Sidang Publikasi Jurnal / Non Sidang Proceeding International / Yudisium
-  filepath  String?
-  isPublish Boolean   @default(false) @map("is_publish")
-  isRequired Boolean  @default(true) @map("is_required")
+  id         String    @id @default(uuid())
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+  name       String // Nama Berkas
+  code       String    @unique
+  category   String // Sidang Reguler / Non Sidang Publikasi Jurnal / Non Sidang Proceeding International / Yudisium
+  filepath   String?
+  isPublish  Boolean   @default(false) @map("is_publish")
+  isRequired Boolean   @default(true) @map("is_required")
 
   @@map("dokumen_persyaratan_berkas")
 }
@@ -235,6 +235,7 @@ model SidangRegistration {
   researchGroupId            String?                    @map("research_group_id")
   skemaSidang                String?                    @map("skema_sidang") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
   jalurNonSidang             String[]                   @map("jalur_non_sidang") // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
+  lulusTesBahasa             Boolean?                   @map("lulus_tes_bahasa")
   // submited
   submittedAt                DateTime?                  @map("submitted_at")
   sidangRegistrationPeriod   SidangPeriod?              @relation("SidangRegistrationPeriod", fields: [sidangRegistrationPeriodId], references: [id])
