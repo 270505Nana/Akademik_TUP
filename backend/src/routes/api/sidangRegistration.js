@@ -139,6 +139,8 @@ router.get(
  *                 type: array
  *                 items:
  *                   type: string
+ *               lulusTesBahasa:
+ *                 type: boolean
  *               sks:
  *                 type: integer
  *               ipk:
@@ -204,6 +206,8 @@ router.post(
  *                 type: array
  *                 items:
  *                   type: string
+ *               lulusTesBahasa:
+ *                 type: boolean
  *               sks:
  *                 type: integer
  *               ipk:

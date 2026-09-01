@@ -13,6 +13,7 @@ import {
   generateDokumenValidasiSkta,
   getLatestPermohonanSktaByMahasiswaId,
   downloadValidasi,
+  exportSktaZip,
 } from '../../controllers/permohonanSktaController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
@@ -59,6 +60,68 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         description: Internal server error
  */
 router.get("/", verifyToken, listPermohonanSkta);
+
+/**
+ * @swagger
+ * /api/permohonan-skta/export-skta:
+ *   get:
+ *     summary: Export multiple SKTA files bundled as ZIP with filters (Admin only)
+ *     tags: [Permohonan SKTA]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tanggal awal (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tanggal akhir (YYYY-MM-DD)
+ *       - in: query
+ *         name: dateField
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, updatedAt, expDate]
+ *         description: Kolom tanggal acuan (default adalah createdAt)
+ *       - in: query
+ *         name: studyProgram
+ *         schema:
+ *           type: string
+ *         description: Nama atau ID Program Studi
+ *       - in: query
+ *         name: tahunAngkatan
+ *         schema:
+ *           type: integer
+ *         description: Tahun Angkatan mahasiswa (contoh 2022)
+ *       - in: query
+ *         name: kelasAsal
+ *         schema:
+ *           type: string
+ *         description: Kelas Asal mahasiswa (contoh IF-44-01)
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Kategori Permohonan SKTA
+ *     responses:
+ *       200:
+ *         description: File ZIP berisi berkas-berkas SKTA berhasil diunduh
+ *         content:
+ *           application/zip:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       403:
+ *         description: Akses ditolak - Hanya Admin
+ *       404:
+ *         description: Tidak ada berkas SKTA yang sesuai dengan filter
+ */
+router.get("/export-skta", verifyToken, isAdmin, exportSktaZip);
 
 /**
  * @swagger

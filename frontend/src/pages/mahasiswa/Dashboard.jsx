@@ -218,9 +218,26 @@ const DashboardMahasiswa = () => {
   const [yudisiumPeriode, setYudisiumPeriode] = useState(null);
   const [loadingPeriode,  setLoadingPeriode]  = useState(true);
 
-  const handleUnduhSK = () => {
-    if (sktaRequest?.sktaDownloadUrl) {
-      window.open(sktaRequest.sktaDownloadUrl, '_blank');
+  const [downloadingSk, setDownloadingSk] = useState(false);
+
+  const handleUnduhSK = async () => {
+    if (!sktaRequest?.id) return;
+    setDownloadingSk(true);
+    try {
+      const blob = await downloadSK(sktaRequest.id);
+      const url  = window.URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = blob.filename || `SKTA_${namaDisplay}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Gagal unduh SK:', err);
+      alert('Gagal mengunduh SK. Coba lagi.');
+    } finally {
+      setDownloadingSk(false);
     }
   };
 

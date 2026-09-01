@@ -72,13 +72,22 @@ const SkStatusBanner = ({ status, permohonan }) => {
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
-    if (!permohonan?.sktaDownloadUrl) return;
+    if (!permohonan?.id) return;
     setDownloading(true);
     try {
-      window.open(permohonan.sktaDownloadUrl, '_blank');
+      const blob = await downloadSK(permohonan.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const fallbackName = `SKTA_${permohonan?.mahasiswa?.nim || permohonan.id}.pdf`;
+      a.download = blob.filename || fallbackName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (err) {
-      console.error('Gagal buka SK:', err);
-      alert('Gagal membuka file SK. Silakan coba lagi.');
+      console.error('Gagal unduh SK:', err);
+      alert('Gagal mengunduh SK. Silakan coba lagi.');
     } finally {
       setDownloading(false);
     }

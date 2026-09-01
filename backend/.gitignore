@@ -30,5 +30,4 @@ Thumbs.db
 *.sln
 *.sw?
 
-uploads/*
-!uploads/templates/
+uploads/

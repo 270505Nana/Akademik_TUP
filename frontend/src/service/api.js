@@ -279,7 +279,19 @@ export const getEvidenceUploadsByStudentId = async (studentId) => {
 
 export const downloadSK = async (id) => {
   const response = await api.get(`/api/permohonan-skta/${id}/download/skta`, { responseType: "blob" });
-  return response.data;
+  let filename = null;
+  const disposition = response.headers?.["content-disposition"];
+  if (disposition && disposition.includes("filename=")) {
+    const filenameMatch = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1].replace(/['"]/g, "").trim();
+    }
+  }
+  const blob = response.data;
+  if (blob && filename) {
+    blob.filename = filename;
+  }
+  return blob;
 };
 
 export const uploadDokumenValidasi = async (studentId, pdfBlob, namaFile) => {

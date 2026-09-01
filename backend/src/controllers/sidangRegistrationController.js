@@ -1,16 +1,21 @@
 import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import fs from "fs";
 import path from "path";
 import {
   sendValidationError,
   isNil,
+  parseBoolean,
   isValidISO8601,
 } from "../utils/validationHelper.js";
 import {
   getPaginationParams,
   formatPaginationResponse,
 } from "../utils/paginationHelper.js";
+import {
+  uploadFile,
+  deleteFile,
+  serveDownload,
+} from "../services/storageService.js";
 
 // Constants for File Validation (Lama - dicomment)
 // const REQUIRED_SLUGS = [
@@ -160,6 +165,7 @@ const mapSidangRegistrationToFrontend = (item, req) => {
     researchGroupId: item.researchGroupId,
     skemaSidang: item.skemaSidang,
     jalurNonSidang: item.jalurNonSidang || [],
+    lulusTesBahasa: item.lulusTesBahasa,
     submittedAt: item.submittedAt,
     sidangRegistrationPeriodId: item.sidangRegistrationPeriodId,
     sidangPeriodId: item.sidangPeriodId,
@@ -363,6 +369,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     programType,
     sidangScheme,
     jalurNonSidang,
+    lulusTesBahasa,
     sks,
     ipk,
     tak,
@@ -373,6 +380,8 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     dosenPembimbing1Id,
     dosenPembimbing2Id,
   } = req.body;
+
+  const parsedLulusTesBahasa = parseBoolean(lulusTesBahasa);
 
   const errors = [];
 
@@ -391,6 +400,13 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     errors.push({
       field: "jalurNonSidang",
       message: "Jalur non sidang harus berupa array jika diisi",
+    });
+  }
+
+  if (!isNil(lulusTesBahasa) && parsedLulusTesBahasa === undefined) {
+    errors.push({
+      field: "lulusTesBahasa",
+      message: "lulusTesBahasa harus berupa boolean",
     });
   }
 
@@ -507,6 +523,10 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     program: programType !== undefined ? programType : undefined, // Prisma: program
     skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
+    lulusTesBahasa:
+      parsedLulusTesBahasa !== undefined
+        ? parsedLulusTesBahasa
+        : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
@@ -613,6 +633,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     programType,
     sidangScheme,
     jalurNonSidang,
+    lulusTesBahasa,
     sks,
     ipk,
     tak,
@@ -623,6 +644,8 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     dosenPembimbing1Id,
     dosenPembimbing2Id,
   } = req.body;
+
+  const parsedLulusTesBahasa = parseBoolean(lulusTesBahasa);
 
   const errors = [];
 
@@ -645,6 +668,13 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     errors.push({
       field: "jalurNonSidang",
       message: "Jalur non sidang harus berupa array jika diisi",
+    });
+  }
+
+  if (!isNil(lulusTesBahasa) && parsedLulusTesBahasa === undefined) {
+    errors.push({
+      field: "lulusTesBahasa",
+      message: "lulusTesBahasa harus berupa boolean",
     });
   }
 
@@ -763,6 +793,10 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     program: programType !== undefined ? programType : undefined, // Prisma: program
     skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
     jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
+    lulusTesBahasa:
+      parsedLulusTesBahasa !== undefined
+        ? parsedLulusTesBahasa
+        : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
@@ -888,6 +922,42 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     }
   }
 
+  // Jika lulusTesBahasa bernilai true, hapus semua berkas SidangRegistrationUpload milik SidangRegistration tersebut dengan category "Sidang - Berkas Tes Bahasa (Belum)"
+  if (mergedData.lulusTesBahasa === true) {
+    const tesBahasaBelumDocs = await prisma.dokumenPersyaratanBerkas.findMany({
+      where: {
+        category: "Sidang - Berkas Tes Bahasa (Belum)",
+        deletedAt: null,
+      },
+      select: { code: true },
+    });
+    const tesBahasaBelumCodes = tesBahasaBelumDocs.map((doc) => doc.code);
+    const categoriesToDelete = Array.from(
+      new Set(["Sidang - Berkas Tes Bahasa (Belum)", ...tesBahasaBelumCodes])
+    );
+
+    const uploadsToDelete = await prisma.sidangRegistrationUpload.findMany({
+      where: {
+        sidangRegistrationId: id,
+        category: { in: categoriesToDelete },
+      },
+    });
+
+    for (const upload of uploadsToDelete) {
+      if (upload.filepath) {
+        await deleteFile(upload.filepath);
+      }
+    }
+
+    if (uploadsToDelete.length > 0) {
+      await prisma.sidangRegistrationUpload.deleteMany({
+        where: {
+          id: { in: uploadsToDelete.map((u) => u.id) },
+        },
+      });
+    }
+  }
+
   updateData.isDraft = false; // Finalize submit
   updateData.submittedAt = new Date(); // Record student submission time
 
@@ -942,23 +1012,28 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
   }
 
   if (!fileCategory || !name) {
-    if (file.path) fs.unlink(file.path, () => {});
     res.status(400);
     throw new Error("Kategori (slug) dan nama berkas wajib diisi");
   }
 
   const editCheck = await checkSidangEditable(id);
   if (!editCheck.exists) {
-    if (file.path) fs.unlink(file.path, () => {});
     res.status(404);
     throw new Error(editCheck.reason);
   }
 
   if (!editCheck.editable) {
-    if (file.path) fs.unlink(file.path, () => {});
     res.status(403);
     throw new Error(editCheck.reason);
   }
+
+  // Upload file via Storage Service (R2 atau Local)
+  const uploaded = await uploadFile({
+    buffer: file.buffer,
+    originalname: file.originalname,
+    folder: "sidang-registrations",
+    mimetype: file.mimetype,
+  });
 
   const existingUpload = await prisma.sidangRegistrationUpload.findFirst({
     where: {
@@ -970,15 +1045,15 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
   let uploadRecord;
 
   if (existingUpload) {
-    if (existingUpload.filepath && fs.existsSync(existingUpload.filepath)) {
-      fs.unlink(existingUpload.filepath, () => {});
+    if (existingUpload.filepath) {
+      await deleteFile(existingUpload.filepath);
     }
 
     uploadRecord = await prisma.sidangRegistrationUpload.update({
       where: { id: existingUpload.id },
       data: {
         name,
-        filepath: file.path,
+        filepath: uploaded.filepath,
         isValid: null,
       },
     });
@@ -987,7 +1062,7 @@ const uploadSidangRegistrationFile = asyncHandler(async (req, res) => {
       data: {
         name,
         category: fileCategory,
-        filepath: file.path,
+        filepath: uploaded.filepath,
         sidangRegistrationId: id,
         isValid: null,
       },
@@ -1048,14 +1123,14 @@ const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
     throw new Error("Unggahan tidak ditemukan");
   }
 
-  const filePath = path.resolve(process.cwd(), upload.filepath);
+  const ext = path.extname(upload.filepath || "") || ".pdf";
+  const baseName = (upload.name || "").replace(/[\\/:*?"<>|]/g, "-").trim() || "dokumen-sidang";
+  const downloadName = baseName.toLowerCase().endsWith(ext.toLowerCase()) ? baseName : `${baseName}${ext}`;
 
-  if (!fs.existsSync(filePath)) {
-    res.status(404);
-    throw new Error("File tidak ditemukan");
-  }
-
-  res.download(filePath, path.basename(upload.filepath));
+  await serveDownload(res, {
+    filepath: upload.filepath,
+    downloadName,
+  });
 });
 
 // Approve Sidang Registration (Admin Response)
