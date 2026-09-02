@@ -135,18 +135,18 @@ const listDosens = asyncHandler(async (req, res) => {
     }
   }
 
-  // Sort options: a-z, z-a, research_group_asc, research_group_desc, newest, oldest
+  // Sort options: nameAsc, nameDesc, researchGroupAsc, researchGroupDesc, newest, oldest
   const sortParam = (sortBy || sort || '').toLowerCase().trim();
 
   let orderBy = { createdAt: 'desc' };
 
-  if (sortParam === 'a-z') {
+  if (sortParam === 'nameasc' || sortParam === 'a-z') {
     orderBy = { user: { name: 'asc' } };
-  } else if (sortParam === 'z-a') {
+  } else if (sortParam === 'namedesc' || sortParam === 'z-a') {
     orderBy = { user: { name: 'desc' } };
-  } else if (sortParam === 'research_group_asc' || sortParam === 'researchgroup_asc') {
+  } else if (sortParam === 'researchgroupasc' || sortParam === 'research_group_asc') {
     orderBy = { researchGroup: { name: 'asc' } };
-  } else if (sortParam === 'research_group_desc' || sortParam === 'researchgroup_desc') {
+  } else if (sortParam === 'researchgroupdesc' || sortParam === 'research_group_desc') {
     orderBy = { researchGroup: { name: 'desc' } };
   } else if (sortParam === 'oldest') {
     orderBy = { createdAt: 'asc' };

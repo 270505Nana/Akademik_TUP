@@ -53,6 +53,12 @@ import { isAdmin } from "../../middlewares/authorize.js";
  *             - Yudisium - Evidence Cumlaude HKI
  *             - Yudisium - Evidence Wirausaha
  *         description: Filter by category
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [newest, oldest]
+ *         description: Sort templates by creation time (newest, oldest). Default sort is category & queue asc.
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -253,6 +259,10 @@ router.get("/preview/:code", previewTemplateUpload);
  *               isRequired:
  *                 type: boolean
  *                 example: true
+ *               queue:
+ *                 type: integer
+ *                 example: 1
+ *                 description: Urutan dokumen
  *               templateFile:
  *                 type: string
  *                 format: binary

@@ -44,8 +44,8 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [a-z, z-a, active-inactive, inactive-active, newest, oldest]
- *         description: Sort research groups by name (a-z, z-a), status (active-inactive, inactive-active), or creation time (newest, oldest)
+ *           enum: [nameAsc, nameDesc, activeInactive, inactiveActive, newest, oldest]
+ *         description: Sort research groups by name (nameAsc, nameDesc), status (activeInactive, inactiveActive), or creation time (newest, oldest)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:

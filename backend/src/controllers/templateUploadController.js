@@ -57,6 +57,7 @@ const withFileUrl = (req, data) => {
     name: data.name,
     code: data.code,
     category: data.category,
+    queue: data.queue,
     filepath: data.filepath,
     isPublish: data.isPublish,
     isRequired: data.isRequired,
@@ -69,10 +70,19 @@ const withFileUrl = (req, data) => {
 // Get all template uploads
 const listTemplateUploads = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { category } = req.query;
+  const { category, sortBy, sort } = req.query;
   const whereClause = {
     ...(category && { category }),
   };
+
+  let orderBy = [{ category: "asc" }, { queue: "asc" }];
+  const sortParam = (sortBy || sort || "").toLowerCase().trim();
+
+  if (sortParam === "newest") {
+    orderBy = [{ createdAt: "desc" }];
+  } else if (sortParam === "oldest") {
+    orderBy = [{ createdAt: "asc" }];
+  }
 
   const [total, templateUploads] = await Promise.all([
     prisma.dokumenPersyaratanBerkas.count({ where: whereClause }),
@@ -80,7 +90,7 @@ const listTemplateUploads = asyncHandler(async (req, res) => {
       where: whereClause,
       skip: paginationParams.skip,
       take: paginationParams.take,
-      orderBy: { createdAt: "desc" },
+      orderBy,
     }),
   ]);
 
@@ -123,6 +133,13 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
     );
   }
 
+  const lastDoc = await prisma.dokumenPersyaratanBerkas.findFirst({
+    where: { category },
+    orderBy: { queue: "desc" },
+    select: { queue: true },
+  });
+  const nextQueue = (lastDoc?.queue ?? 0) + 1;
+
   let savedFilePath = null;
 
   if (file) {
@@ -148,6 +165,7 @@ const createTemplateUpload = asyncHandler(async (req, res) => {
         isRequired !== undefined
           ? isRequired === "true" || isRequired === true
           : true,
+      queue: nextQueue,
       filepath: savedFilePath,
     },
   });
@@ -178,12 +196,23 @@ const findTemplateUploadByCode = asyncHandler(async (req, res) => {
 // Update template upload by ID (using PATCH)
 const updateTemplateUpload = asyncHandler(async (req, res) => {
   const id = req.params.id;
-  const { name, category, isPublish, isRequired } = req.body;
+  const { name, category, isPublish, isRequired, queue } = req.body;
   const file = req.file;
 
   const errors = [];
   if (file && !allowedMimeTypes.includes(file.mimetype)) {
     errors.push({ field: "templateFile", message: "Tipe file tidak valid" });
+  }
+
+  let parsedQueue;
+  if (queue !== undefined && queue !== null && queue !== "") {
+    parsedQueue = parseInt(queue, 10);
+    if (isNaN(parsedQueue) || parsedQueue < 1) {
+      errors.push({
+        field: "queue",
+        message: "queue harus berupa angka integer positif (minimal 1)",
+      });
+    }
   }
 
   if (errors.length > 0) return sendValidationError(res, errors, req);
@@ -257,6 +286,7 @@ const updateTemplateUpload = asyncHandler(async (req, res) => {
       ...(isRequired !== undefined && {
         isRequired: isRequired === "true" || isRequired === true,
       }),
+      ...(parsedQueue !== undefined && { queue: parsedQueue }),
       filepath: finalFilepath,
     },
   });

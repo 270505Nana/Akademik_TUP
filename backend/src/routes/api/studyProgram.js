@@ -49,8 +49,8 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [a-z, z-a, faculty_asc, faculty_desc, active-inactive, inactive-active, newest, oldest]
- *         description: Sort study programs by name (a-z, z-a), faculty (faculty_asc, faculty_desc), status (active-inactive, inactive-active), or creation time (newest, oldest)
+ *           enum: [nameAsc, nameDesc, facultyAsc, facultyDesc, activeInactive, inactiveActive, newest, oldest]
+ *         description: Sort study programs by name (nameAsc, nameDesc), faculty (facultyAsc, facultyDesc), status (activeInactive, inactiveActive), or creation time (newest, oldest)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:

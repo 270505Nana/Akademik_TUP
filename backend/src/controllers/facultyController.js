@@ -29,13 +29,13 @@ const listFaculties = asyncHandler(async (req, res) => {
   let orderBy = { name: 'asc' };
   const sortParam = (sortBy || sort || '').toLowerCase().trim();
 
-  if (sortParam === 'a-z') {
+  if (sortParam === 'nameasc' || sortParam === 'a-z') {
     orderBy = { name: 'asc' };
-  } else if (sortParam === 'z-a') {
+  } else if (sortParam === 'namedesc' || sortParam === 'z-a') {
     orderBy = { name: 'desc' };
-  } else if (sortParam === 'active-inactive' || sortParam === 'active') {
+  } else if (sortParam === 'activeinactive' || sortParam === 'active-inactive' || sortParam === 'active') {
     orderBy = [{ isActive: 'desc' }, { name: 'asc' }];
-  } else if (sortParam === 'inactive-active' || sortParam === 'inactive') {
+  } else if (sortParam === 'inactiveactive' || sortParam === 'inactive-active' || sortParam === 'inactive') {
     orderBy = [{ isActive: 'asc' }, { name: 'asc' }];
   } else if (sortParam === 'newest') {
     orderBy = { createdAt: 'desc' };
