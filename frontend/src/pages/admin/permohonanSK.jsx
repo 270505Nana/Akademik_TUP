@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin    from '../../components/sidebar/SidebarAdmin';
 import CustomAlert     from '../../components/common/CustomAlert';
 import VerifikasiModal from '../../components/admin/permohonanSK/VerifikasiModal';
-import FormulirSKModal from '../../components/admin/permohonanSK/FormulirskModal';
+import FormulirSKModal from '../../components/admin/permohonanSK/FormulirSKModal';
 import { determineStatus, unwrapResponse } from '../../components/admin/permohonanSK/skHelpers';
 
 import {

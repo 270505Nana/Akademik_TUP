@@ -13,30 +13,30 @@ import CustomAlert from "../../components/common/CustomAlert";
 
 import {
   getLecturers,
-  getSidangRegistrationByStudentId, 
-  getSktaResponseUploadByStudentId, 
+  getSidangRegistrationByStudentId,
+  getSktaResponseUploadByStudentId,
   saveSidangRegistration,
   submitSidangRegistration,
+  getTemplatesByCategory,
 } from "../../service/api";
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG } from "../../components/admin/sidang/Sidangstatushelper";
 import {
-  REQUIRED_SLUGS,
+  SECTIONS,
   NON_SIDANG_SLUGS,
-  TEST_BAHASA_SUDAH_SLUGS,
-  TEST_BAHASA_BELUM_SLUGS,
+  DYNAMIC_SECTION_CATEGORY_MAP,
 } from "../../requirement/sidangDocument";
 
 const STEP1_REQUIRED = [
-  { key: "programType",        label: "Program (Reguler / Alih Jenjang)" },
-  { key: "sks",                label: "Jumlah Total SKS Lulus" },
-  { key: "ipk",                label: "Nilai IPK Sebelum Sidang" },
-  { key: "tak",                label: "TAK" },
-  { key: "sktaExpDate",        label: "Tanggal Batas Akhir SKTA" },
+  { key: "programType", label: "Program (Reguler / Alih Jenjang)" },
+  { key: "sks", label: "Jumlah Total SKS Lulus" },
+  { key: "ipk", label: "Nilai IPK Sebelum Sidang" },
+  { key: "tak", label: "TAK" },
+  { key: "sktaExpDate", label: "Tanggal Batas Akhir SKTA" },
   { key: "dosenPembimbing1Id", label: "Dosen Pembimbing 1" },
   { key: "dosenPembimbing2Id", label: "Dosen Pembimbing 2" },
-  { key: "sidangScheme",       label: "Skema Sidang" },
-  { key: "thesisTitleId",      label: "Judul Tugas Akhir (Bahasa Indonesia)" },
-  { key: "thesisTitleEn",      label: "Judul Tugas Akhir (Bahasa Inggris)" },
+  { key: "sidangScheme", label: "Skema Sidang" },
+  { key: "thesisTitleId", label: "Judul Tugas Akhir (Bahasa Indonesia)" },
+  { key: "thesisTitleEn", label: "Judul Tugas Akhir (Bahasa Inggris)" },
 ];
 
 const TAK_MINIMUM = { Reguler: 60, "Alih Jenjang": 25, Diploma: 45 };
@@ -68,10 +68,8 @@ function validateStep1(data) {
 /*
  * VALIDASI STEP 2:
  * 1. Pilihan radio Test Bahasa ("Sudah" / "Belum") wajib diisi.
- * 2. Berkas Test Bahasa sesuai opsi yang dipilih wajib diunggah dan disimpan:
- *    - "Sudah": 1 berkas sertifikat (TEST_BAHASA_SUDAH_SLUGS)
- *    - "Belum": 3 berkas sertifikat + 1 surat pemakluman (TEST_BAHASA_BELUM_SLUGS)
- * 3. Berkas Wajib Sidang (REQUIRED_SLUGS) wajib diunggah dan disimpan.
+ * 2. Berkas Test Bahasa sesuai opsi yang dipilih wajib diunggah dan disimpan (secara dinamis dari state documents).
+ * 3. Berkas Wajib Sidang wajib diunggah dan disimpan.
  * 4. Berkas Jalur Non-Sidang (NON_SIDANG_SLUGS) wajib diunggah jika skema Non-Sidang dipilih.
  */
 function validateStep2(data, documents) {
@@ -81,12 +79,15 @@ function validateStep2(data, documents) {
 
   const completedSlugs = documents.filter((d) => d.status === "completed").map((d) => d.slug);
 
-  // Percabangan validasi dokumen Test Bahasa sesuai opsi "Sudah" / "Belum"
-  const testBahasaSlugs = data.testBahasaPersyaratan === "Sudah"
-    ? TEST_BAHASA_SUDAH_SLUGS
+  // Percabangan validasi dokumen Test Bahasa secara dinamis sesuai opsi "Sudah" / "Belum"
+  const activeSection = data.testBahasaPersyaratan === "Sudah"
+    ? SECTIONS.TEST_BAHASA_SUDAH
     : data.testBahasaPersyaratan === "Belum"
-      ? TEST_BAHASA_BELUM_SLUGS
-      : [];
+      ? SECTIONS.TEST_BAHASA_BELUM
+      : null;
+  const testBahasaSlugs = activeSection
+    ? documents.filter((d) => d.section === activeSection).map((d) => d.slug)
+    : [];
 
   const missingTestBahasaSlugs = testBahasaSlugs.filter((slug) => !completedSlugs.includes(slug));
   if (missingTestBahasaSlugs.length > 0) {
@@ -97,12 +98,12 @@ function validateStep2(data, documents) {
     return `Dokumen Test Bahasa belum lengkap diunggah: ${displayList}.`;
   }
 
-  // Validasi Berkas Wajib Sidang
-  const missingSlugs = REQUIRED_SLUGS.filter((slug) => !completedSlugs.includes(slug));
-  if (missingSlugs.length > 0) {
-    const missingNames = documents.filter((d) => missingSlugs.includes(d.slug) && d.status !== "completed").map((d) => d.name);
-    const displayList = missingNames.length > 0 ? missingNames.join(", ") : `${missingSlugs.length} dokumen wajib`;
-    return `Dokumen berikut belum diunggah dan disimpan: ${displayList}.`;
+  // Validasi Berkas Wajib Sidang (secara dinamis dari daftar dokumen SECTIONS.WAJIB di state)
+  const wajibDocs = documents.filter((d) => d.section === SECTIONS.WAJIB);
+  const missingWajibDocs = wajibDocs.filter((d) => d.status !== "completed");
+  if (missingWajibDocs.length > 0) {
+    const missingNames = missingWajibDocs.map((d) => d.name).join(", ");
+    return `Dokumen berikut belum diunggah dan disimpan: ${missingNames}.`;
   }
 
   // Validasi Berkas Jalur Non-Sidang (jika skema Non-Sidang dipilih)
@@ -126,22 +127,24 @@ function PendaftaranSidangContent() {
   const { student } = useStudent();
   const { step, data, documents } = state;
 
-  const [isSubmitting,          setIsSubmitting]          = useState(false);
-  const [skta,                  setSkta]                  = useState(false);
-  const [isSktaChecking,        setIsSktaChecking]        = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [skta, setSkta] = useState(false);
+  const [isSktaChecking, setIsSktaChecking] = useState(true);
   const [isRegistrationLoading, setIsRegistrationLoading] = useState(false);
-  const [isSavingStep1,         setIsSavingStep1]         = useState(false);
-  const [lecturers,             setLecturers]             = useState([]);
-  const [isLecturersLoading,    setIsLecturersLoading]    = useState(true);
-  const [registrationId,        setRegistrationId]        = useState(null);
-  const [registrationMeta,      setRegistrationMeta]      = useState(null);
-  const [sidangAdminResponse,   setSidangAdminResponse]   = useState(null);
-  const [formAlert,             setFormAlert]             = useState(null);
-  const [autosaveStatus,        setAutosaveStatus]        = useState("idle"); // "idle" | "saving" | "saved" | "error"
+  const [isSavingStep1, setIsSavingStep1] = useState(false);
+  const [lecturers, setLecturers] = useState([]);
+  const [isLecturersLoading, setIsLecturersLoading] = useState(true);
+  const [isTemplatesLoading, setIsTemplatesLoading] = useState(true);
+  const [registrationId, setRegistrationId] = useState(null);
+  const [registrationMeta, setRegistrationMeta] = useState(null);
+  const [sidangAdminResponse, setSidangAdminResponse] = useState(null);
+  const [formAlert, setFormAlert] = useState(null);
+  const [autosaveStatus, setAutosaveStatus] = useState("idle"); 
 
   const isHydrating = useRef(true);
   const lastSavedPayload = useRef(null);
   const latestRequestId = useRef(0);
+  const serverUploadsRef = useRef([]);
 
   const mahasiswaId = student?.mahasiswaId || profile?.id || user?.id;
   const isStep1Locked = Boolean(registrationMeta?.submittedAt);
@@ -153,13 +156,13 @@ function PendaftaranSidangContent() {
   const revisiCfg = SIDANG_STATUS_CONFIG[STATUS_SIDANG.PERLU_REVISI];
 
   const studentInfo = {
-    nama:          student?.namaLengkap || profile?.name || user?.username || "-",
-    nim:           student?.nim         || profile?.nim  || "-",
-    prodi:         student?.studyProgramNama || profile?.studyProgram?.name || "-",
-    phone:         user?.phone || profile?.phone || user?.no_telp || "-",
+    nama: student?.namaLengkap || profile?.name || user?.username || "-",
+    nim: student?.nim || profile?.nim || "-",
+    prodi: student?.studyProgramNama || profile?.studyProgram?.name || "-",
+    phone: user?.phone || profile?.phone || user?.no_telp || "-",
     dosenWaliKode: student?.dosenWaliKode || profile?.dosenWali?.lecturerCode || "-",
     dosenWaliNama: student?.dosenWaliNama || profile?.dosenWali?.name || "-",
-    dosenWaliNip:  student?.dosenWaliNip  || profile?.dosenWali?.nip  || "-",
+    dosenWaliNip: student?.dosenWaliNip || profile?.dosenWali?.nip || "-",
   };
 
   const setStep = (val) => {
@@ -168,25 +171,27 @@ function PendaftaranSidangContent() {
   };
 
   const buildSavePayload = () => ({
-    ...(registrationId ? { id: registrationId } : {}), 
-    programType:        data.programType,
-    sidangScheme:       data.sidangScheme,
-    jalurNonSidang:     Array.isArray(data.jalurNonSidang) ? data.jalurNonSidang : [],
-    /*
-     * KONTRAK FE -> BE (Persiapan Fitur Test Bahasa):
-     * Mengirimkan nilai pilihan radio testBahasaPersyaratan ("Sudah" | "Belum" | null).
-     * CATATAN STATUS BACKEND: Field ini dikirim sebagai persiapan kontrak FE-BE.
-     * Jika tabel/schema database backend belum memiliki kolom ini, BE akan mengabaikannya
-     * dengan aman tanpa menimbulkan error request.
-     */
+    ...(registrationId ? { id: registrationId } : {}),
+    programType: data.programType,
+    sidangScheme: data.sidangScheme,
+    jalurNonSidang:
+      data.sidangScheme === "Non Sidang" && Array.isArray(data.jalurNonSidang)
+        ? data.jalurNonSidang
+        : [],
+    lulusTesBahasa:
+      data.testBahasaPersyaratan === "Sudah"
+        ? true
+        : data.testBahasaPersyaratan === "Belum"
+          ? false
+          : null,
     testBahasaPersyaratan: data.testBahasaPersyaratan || null,
-    sks:                data.sks ? Number(data.sks) : 0,
-    ipk:                data.ipk ? Number(data.ipk) : 0,
-    tak:                data.tak ? Number(data.tak) : 0,
-    sktaExpDate:        data.sktaExpDate || null,
-    thesisTitleId:      data.thesisTitleId ? data.thesisTitleId.trim() : "",
-    thesisTitleEn:      data.thesisTitleEn ? data.thesisTitleEn.trim() : "",
-    mahasiswaId:        String(mahasiswaId),
+    sks: data.sks ? Number(data.sks) : 0,
+    ipk: data.ipk ? Number(data.ipk) : 0,
+    tak: data.tak ? Number(data.tak) : 0,
+    sktaExpDate: data.sktaExpDate || null,
+    thesisTitleId: data.thesisTitleId ? data.thesisTitleId.trim() : "",
+    thesisTitleEn: data.thesisTitleEn ? data.thesisTitleEn.trim() : "",
+    mahasiswaId: String(mahasiswaId),
     dosenPembimbing1Id: data.dosenPembimbing1Id ? String(data.dosenPembimbing1Id) : null,
     dosenPembimbing2Id: data.dosenPembimbing2Id ? String(data.dosenPembimbing2Id) : null,
   });
@@ -269,25 +274,23 @@ function PendaftaranSidangContent() {
     dispatch({
       type: "SET_INITIAL_DATA",
       payload: {
-        id:                 registration.id                 || null,
-        mahasiswaId:        registration.mahasiswaId        || null,
-        programType:        registration.programType        || "",
-        sidangScheme:       registration.sidangScheme       || "",
-        jalurNonSidang:     Array.isArray(registration.jalurNonSidang) ? registration.jalurNonSidang : [],
-        /*
-         * RESTORE TEST BAHASA DARI BE:
-         * Memetakan nilai testBahasaPersyaratan dari database jika backend sudah mendukung field ini.
-         * KNOWN LIMITATION: Jika backend belum mengembalikan field ini dalam response GET,
-         * nilainya akan menjadi null sehingga opsi radio belum terpilih saat halaman direload
-         * hingga endpoint backend selesai diperbarui.
-         */
-        testBahasaPersyaratan: registration.testBahasaPersyaratan || null,
-        sks:                registration.sks               ?? "",
-        ipk:                registration.ipk               ?? "",
-        tak:                registration.tak               ?? "",
-        sktaExpDate:        normalizeDateInput(registration.sktaExpDate),
-        thesisTitleId:      registration.thesisTitleId      || "",
-        thesisTitleEn:      registration.thesisTitleEn      || "",
+        id: registration.id || null,
+        mahasiswaId: registration.mahasiswaId || null,
+        programType: registration.program || "",
+        sidangScheme: registration.skemaSidang || "",
+        jalurNonSidang: Array.isArray(registration.jalurNonSidang) ? registration.jalurNonSidang : [],
+        testBahasaPersyaratan:
+          registration.lulusTesBahasa === true
+            ? "Sudah"
+            : registration.lulusTesBahasa === false
+              ? "Belum"
+              : null,
+        sks: registration.sks ?? "",
+        ipk: registration.ipk ?? "",
+        tak: registration.tak ?? "",
+        sktaExpDate: normalizeDateInput(registration.sktaExpDate),
+        thesisTitleId: registration.judulTugasAkhirIndonesia || "",
+        thesisTitleEn: registration.judulTugasAkhirInggris || "",
         dosenPembimbing1Id: registration.dosenPembimbing1Id ? String(registration.dosenPembimbing1Id) : "",
         dosenPembimbing2Id: registration.dosenPembimbing2Id ? String(registration.dosenPembimbing2Id) : "",
       },
@@ -317,8 +320,13 @@ function PendaftaranSidangContent() {
       dispatch({ type: "SET_REGISTRATION_ID", id: existing.id });
       applyRegistrationToForm(existing);
       setRegistrationMeta(existing);
-      if (Array.isArray(existing.sidangRegistrationUploads) && existing.sidangRegistrationUploads.length > 0) {
-        dispatch({ type: "RESTORE_SERVER_DOCUMENTS", uploads: existing.sidangRegistrationUploads });
+
+      const serverUploads = Array.isArray(existing.sidangRegistrationUploads)
+        ? existing.sidangRegistrationUploads
+        : [];
+      serverUploadsRef.current = serverUploads;
+      if (serverUploads.length > 0) {
+        dispatch({ type: "RESTORE_SERVER_DOCUMENTS", uploads: serverUploads });
       }
 
       setSidangAdminResponse(existing);
@@ -369,7 +377,59 @@ function PendaftaranSidangContent() {
     return () => { isMounted = false; };
   }, []);
 
-  // Autosave Step 1 draft ke backend secara debounced
+  useEffect(() => {
+    let isMounted = true;
+    setIsTemplatesLoading(true);
+
+    const dynamicEntries = Object.entries(DYNAMIC_SECTION_CATEGORY_MAP);
+    if (dynamicEntries.length === 0) {
+      setIsTemplatesLoading(false);
+      return;
+    }
+
+    Promise.all(
+      dynamicEntries.map(([section, category]) =>
+        getTemplatesByCategory(category)
+          .then((templates) => ({ section, templates }))
+          .catch((err) => {
+            console.error(`Gagal memuat template untuk section "${section}" (kategori: "${category}"):`, err);
+            return { section, templates: [] };
+          })
+      )
+    )
+      .then((results) => {
+        if (!isMounted) return;
+
+        let hasUpdated = false;
+        results.forEach(({ section, templates }) => {
+          if (Array.isArray(templates) && templates.length > 0) {
+            dispatch({
+              type: "SET_SECTION_TEMPLATES",
+              payload: {
+                section,
+                templates,
+              },
+            });
+            hasUpdated = true;
+          }
+        });
+
+        if (hasUpdated && serverUploadsRef.current.length > 0) {
+          dispatch({
+            type: "RESTORE_SERVER_DOCUMENTS",
+            uploads: serverUploadsRef.current,
+          });
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsTemplatesLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [dispatch]);
+
   useEffect(() => {
     if (isStep1Locked || !mahasiswaId) return;
 
@@ -380,7 +440,16 @@ function PendaftaranSidangContent() {
         mahasiswaId: String(mahasiswaId),
         programType: data.programType || undefined,
         sidangScheme: data.sidangScheme || undefined,
-        jalurNonSidang: Array.isArray(data.jalurNonSidang) ? data.jalurNonSidang : [],
+        jalurNonSidang:
+          data.sidangScheme === "Non Sidang" && Array.isArray(data.jalurNonSidang)
+            ? data.jalurNonSidang
+            : [],
+        lulusTesBahasa:
+          data.testBahasaPersyaratan === "Sudah"
+            ? true
+            : data.testBahasaPersyaratan === "Belum"
+              ? false
+              : undefined,
         testBahasaPersyaratan: data.testBahasaPersyaratan || undefined,
         sks: data.sks !== "" && data.sks !== null && data.sks !== undefined ? Number(data.sks) : undefined,
         ipk: data.ipk !== "" && data.ipk !== null && data.ipk !== undefined ? Number(data.ipk) : undefined,
@@ -398,7 +467,7 @@ function PendaftaranSidangContent() {
     const hasData = Boolean(
       data.programType ||
       data.sidangScheme ||
-      (Array.isArray(data.jalurNonSidang) && data.jalurNonSidang.length > 0) ||
+      (data.sidangScheme === "Non Sidang" && Array.isArray(data.jalurNonSidang) && data.jalurNonSidang.length > 0) ||
       data.testBahasaPersyaratan ||
       (data.sks !== "" && data.sks !== null && data.sks !== undefined) ||
       (data.ipk !== "" && data.ipk !== null && data.ipk !== undefined) ||
@@ -417,7 +486,16 @@ function PendaftaranSidangContent() {
       mahasiswaId: String(mahasiswaId),
       programType: data.programType || undefined,
       sidangScheme: data.sidangScheme || undefined,
-      jalurNonSidang: Array.isArray(data.jalurNonSidang) ? data.jalurNonSidang : [],
+      jalurNonSidang:
+        data.sidangScheme === "Non Sidang" && Array.isArray(data.jalurNonSidang)
+          ? data.jalurNonSidang
+          : [],
+      lulusTesBahasa:
+        data.testBahasaPersyaratan === "Sudah"
+          ? true
+          : data.testBahasaPersyaratan === "Belum"
+            ? false
+            : undefined,
       testBahasaPersyaratan: data.testBahasaPersyaratan || undefined,
       sks: data.sks !== "" && data.sks !== null && data.sks !== undefined ? Number(data.sks) : undefined,
       ipk: data.ipk !== "" && data.ipk !== null && data.ipk !== undefined ? Number(data.ipk) : undefined,
@@ -457,6 +535,7 @@ function PendaftaranSidangContent() {
     data.programType,
     data.sidangScheme,
     data.jalurNonSidang,
+    data.testBahasaPersyaratan,
     data.sks,
     data.ipk,
     data.tak,
@@ -528,11 +607,15 @@ function PendaftaranSidangContent() {
                   lecturers={lecturers}
                   loadingLecturers={isLecturersLoading}
                   autosaveStatus={autosaveStatus}
-                  readOnly={isStep1Locked}
+                  readOnly={isStep1Locked && !isRevisionActive}
                   schemeLocked={isRevisionActive}
                 />
               ) : (
-                <Step2 registrationId={registrationId} />
+                <Step2
+                  registrationId={registrationId}
+                  isTemplatesLoading={isTemplatesLoading}
+                  readOnly={isStep1Locked && !isRevisionActive}
+                />
               )}
             </main>
 

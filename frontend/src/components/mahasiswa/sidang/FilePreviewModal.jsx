@@ -1,23 +1,5 @@
 import React, { useEffect } from "react";
 import { X, Download, FileText } from "lucide-react";
-
-/**
- * FilePreviewModal — komponen modal reusable untuk preview dokumen (PDF/gambar).
- *
- * Dipakai bersama oleh dua alur berbeda di Step2Sidang:
- *   1. Preview template (tombol "Download Template Disini" di DocUploadPanel)
- *   2. Preview berkas yang sudah diupload mahasiswa (tombol "Lihat berkas")
- *
- * Blob URL di-revoke saat modal ditutup, bukan lewat setTimeout,
- * sehingga tidak ada URL yang menggantung di memori lebih lama dari yang diperlukan.
- *
- * Props:
- *   blobUrl    {string|null}  — ObjectURL blob yang akan di-preview, null jika modal tertutup
- *   title      {string}       — Judul yang ditampilkan di header modal
- *   onClose    {Function}     — Dipanggil saat user menutup modal (X, Tutup, atau overlay)
- *   onDownload {Function|null}— Dipanggil saat user klik "Unduh" di footer; null = tidak tampilkan tombol Unduh
- *   isDownloading {boolean}   — Jika true, tombol Unduh menunjukkan status loading
- */
 export default function FilePreviewModal({
   blobUrl,
   title,
@@ -25,7 +7,6 @@ export default function FilePreviewModal({
   onDownload,
   isDownloading = false,
 }) {
-  // Tutup modal dengan Escape key
   useEffect(() => {
     if (!blobUrl) return;
     const handleKeyDown = (e) => { if (e.key === "Escape") onClose(); };
@@ -33,7 +14,6 @@ export default function FilePreviewModal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [blobUrl, onClose]);
 
-  // Cegah scroll body saat modal terbuka
   useEffect(() => {
     if (blobUrl) {
       document.body.style.overflow = "hidden";
@@ -59,7 +39,6 @@ export default function FilePreviewModal({
         padding: "1rem",
       }}
     >
-      {/* Modal panel — stopPropagation agar klik di dalam tidak menutup modal */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -73,7 +52,6 @@ export default function FilePreviewModal({
           overflow: "hidden",
         }}
       >
-        {/* Header */}
         <div
           style={{
             display: "flex",

@@ -62,34 +62,45 @@ const NON_SIDANG_CATEGORY_MAP = {
   HKI: "Sidang - Evidence Non Sidang HKI",
 };
 
-// Ambil slug berkas wajib sidang dari database dokumen persyaratan berkas
-const getRequiredSlugsFromDb = async () => {
+// Helper dasar: ambil semua code dokumen persyaratan berkas untuk satu kategori
+const getSlugsByCategory = async (categoryName) => {
   const docs = await prisma.dokumenPersyaratanBerkas.findMany({
-    where: {
-      category: {
-        in: ["Sidang - Berkas Wajib"],
-      },
-      deletedAt: null,
-    },
+    where: { category: categoryName, deletedAt: null },
     select: { code: true },
   });
   return docs.map((doc) => doc.code);
 };
 
-// Ambil slug berkas evidence non sidang dari database dokumen persyaratan berkas sesuai jalur
-const getNonSidangSlugsFromDb = async (jalur) => {
+const getRequiredSlugsFromDb = () => getSlugsByCategory("Sidang - Berkas Wajib");
+
+const getNonSidangSlugsFromDb = (jalur) => {
   const categoryName =
     NON_SIDANG_CATEGORY_MAP[jalur] || `Sidang - Evidence Non Sidang ${jalur}`;
-  const docs = await prisma.dokumenPersyaratanBerkas.findMany({
-    where: {
-      category: {
-        in: [categoryName],
-      },
-      deletedAt: null,
-    },
-    select: { code: true },
+  return getSlugsByCategory(categoryName);
+};
+
+const getTestBahasaSlugsFromDb = (lulusTesBahasa) => {
+  const categoryName =
+    lulusTesBahasa === true
+      ? "Sidang - Berkas Tes Bahasa (Sudah)"
+      : "Sidang - Berkas Tes Bahasa (Belum)";
+  return getSlugsByCategory(categoryName);
+};
+
+// Helper: hapus berkas fisik dan record upload berdasarkan daftar kategori
+const deleteUploadsByCategory = async (registrationId, categories) => {
+  if (!categories || !categories.length) return;
+  const uploadsToDelete = await prisma.sidangRegistrationUpload.findMany({
+    where: { sidangRegistrationId: registrationId, category: { in: categories } },
   });
-  return docs.map((doc) => doc.code);
+  for (const upload of uploadsToDelete) {
+    if (upload.filepath) await deleteFile(upload.filepath);
+  }
+  if (uploadsToDelete.length > 0) {
+    await prisma.sidangRegistrationUpload.deleteMany({
+      where: { id: { in: uploadsToDelete.map((u) => u.id) } },
+    });
+  }
 };
 
 const mapMahasiswa = (mahasiswa) => {
@@ -518,11 +529,24 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     }
   }
 
+  const isNonSidangScheme =
+    sidangScheme !== undefined
+      ? String(sidangScheme).trim().toLowerCase() === "non sidang" ||
+        String(sidangScheme).trim().toLowerCase().includes("non")
+      : undefined;
+
+  const resolvedJalurNonSidang =
+    isNonSidangScheme === false
+      ? []
+      : jalurNonSidang !== undefined
+        ? (Array.isArray(jalurNonSidang) ? jalurNonSidang : [])
+        : undefined;
+
   // Map req.body field names → Prisma model field names (source of truth: schema.prisma)
   const upsertData = {
     program: programType !== undefined ? programType : undefined, // Prisma: program
     skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
-    jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
+    jalurNonSidang: resolvedJalurNonSidang,
     lulusTesBahasa:
       parsedLulusTesBahasa !== undefined
         ? parsedLulusTesBahasa
@@ -788,11 +812,26 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     throw new Error(editCheck.reason);
   }
 
+  const effectiveSkema =
+    sidangScheme !== undefined
+      ? sidangScheme
+      : existingRegistration.skemaSidang;
+
+  const isNonSidang =
+    String(effectiveSkema || "").trim().toLowerCase() === "non sidang" ||
+    String(effectiveSkema || "").trim().toLowerCase().includes("non");
+
+  const resolvedSubmitJalurNonSidang = !isNonSidang
+    ? []
+    : jalurNonSidang !== undefined
+      ? (Array.isArray(jalurNonSidang) ? jalurNonSidang : [])
+      : existingRegistration.jalurNonSidang;
+
   // Update field sebelum validasi (supaya merge) — gunakan nama field Prisma sebagai key
   const updateData = {
     program: programType !== undefined ? programType : undefined, // Prisma: program
     skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
-    jalurNonSidang: jalurNonSidang !== undefined ? jalurNonSidang : undefined,
+    jalurNonSidang: resolvedSubmitJalurNonSidang,
     lulusTesBahasa:
       parsedLulusTesBahasa !== undefined
         ? parsedLulusTesBahasa
@@ -876,8 +915,28 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
   }
 
-  // Jalur Non Sidang (ambil dari database dokumen persyaratan berkas sesuai jalur)
-  if (mergedData.jalurNonSidang && Array.isArray(mergedData.jalurNonSidang)) {
+  // Test Bahasa — wajib pilih status dulu, lalu validasi kelengkapan sesuai opsi
+  if (isNil(mergedData.lulusTesBahasa)) {
+    res.status(400);
+    throw new Error("Tidak dapat submit. Status Test Bahasa (Sudah/Belum) wajib dipilih.");
+  }
+
+  const testBahasaSlugs = await getTestBahasaSlugsFromDb(mergedData.lulusTesBahasa);
+
+  // Guard anti-overlap kategori (warning ke server log jika ada dokumen terdaftar di dua kategori sekaligus)
+  const overlappingSlugs = requiredSlugs.filter((slug) => testBahasaSlugs.includes(slug));
+  if (overlappingSlugs.length > 0) {
+    console.error(
+      `[Konfigurasi Bermasalah] Dokumen berikut terdaftar di kategori "Sidang - Berkas Wajib" DAN kategori Test Bahasa sekaligus: ${overlappingSlugs.join(", ")}. Periksa data di tabel dokumenPersyaratanBerkas.`
+    );
+  }
+
+  for (const slug of testBahasaSlugs) {
+    if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
+  }
+
+  // Jalur Non Sidang (ambil dari database dokumen persyaratan berkas sesuai jalur — HANYA jika skema Non Sidang)
+  if (isNonSidang && mergedData.jalurNonSidang && Array.isArray(mergedData.jalurNonSidang)) {
     for (const jalur of mergedData.jalurNonSidang) {
       const nonSidangSlugs = await getNonSidangSlugsFromDb(jalur);
       for (const slug of nonSidangSlugs) {
@@ -922,40 +981,10 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     }
   }
 
-  // Jika lulusTesBahasa bernilai true, hapus semua berkas SidangRegistrationUpload milik SidangRegistration tersebut dengan category "Sidang - Berkas Tes Bahasa (Belum)"
+  // Jika lulusTesBahasa bernilai true, hapus semua berkas SidangRegistrationUpload milik SidangRegistration tersebut dengan category "(Belum)"
   if (mergedData.lulusTesBahasa === true) {
-    const tesBahasaBelumDocs = await prisma.dokumenPersyaratanBerkas.findMany({
-      where: {
-        category: "Sidang - Berkas Tes Bahasa (Belum)",
-        deletedAt: null,
-      },
-      select: { code: true },
-    });
-    const tesBahasaBelumCodes = tesBahasaBelumDocs.map((doc) => doc.code);
-    const categoriesToDelete = Array.from(
-      new Set(["Sidang - Berkas Tes Bahasa (Belum)", ...tesBahasaBelumCodes])
-    );
-
-    const uploadsToDelete = await prisma.sidangRegistrationUpload.findMany({
-      where: {
-        sidangRegistrationId: id,
-        category: { in: categoriesToDelete },
-      },
-    });
-
-    for (const upload of uploadsToDelete) {
-      if (upload.filepath) {
-        await deleteFile(upload.filepath);
-      }
-    }
-
-    if (uploadsToDelete.length > 0) {
-      await prisma.sidangRegistrationUpload.deleteMany({
-        where: {
-          id: { in: uploadsToDelete.map((u) => u.id) },
-        },
-      });
-    }
+    const belumSlugs = await getTestBahasaSlugsFromDb(false);
+    await deleteUploadsByCategory(id, belumSlugs);
   }
 
   updateData.isDraft = false; // Finalize submit

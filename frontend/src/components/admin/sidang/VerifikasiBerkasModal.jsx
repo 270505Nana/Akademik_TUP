@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, ChevronRight, ChevronLeft, CheckCircle2, XCircle, User, Hash, BookOpen, GraduationCap, FileText, Calendar, MessageSquare, Clock, Check, Loader, AlertTriangle, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { downloadSidangRegistrationUpload, getSidangRegistrationById, createSidangRegistrationResponse } from '../../../service/api';
+import { downloadSidangRegistrationUpload, getSidangRegistrationById, approveSidangRegistration, rejectSidangRegistration, getTemplatesByCategory } from '../../../service/api';
 import { DOCUMENT_CONFIG, SECTIONS } from '../../../requirement/sidangDocument';
+import { humanizeDocName } from '../../../utils/textHelper';
 
 const BERKAS_STATUS = { SESUAI: 'sesuai', BERMASALAH: 'bermasalah', UNCHECKED: 'unchecked' };
 
@@ -10,9 +11,20 @@ const SLUG_TO_NAME = Object.values(DOCUMENT_CONFIG)
   .flat()
   .reduce((acc, doc) => { acc[doc.slug] = doc.name; return acc; }, {});
 
-// Helper: ambil nama resmi berkas dari slug, fallback ke upload.name
-const getBerkasName = (upload) =>
-  SLUG_TO_NAME[upload.slug] || upload.name || upload.filename || 'Berkas';
+const getBerkasName = (upload, templateMap = {}) => {
+  if (!upload) return 'Berkas';
+  const cat = upload.category || upload.slug;
+  if (templateMap && cat && templateMap[cat]) {
+    return templateMap[cat];
+  }
+  if (cat && SLUG_TO_NAME[cat]) {
+    return humanizeDocName(SLUG_TO_NAME[cat]);
+  }
+  if (cat) {
+    return humanizeDocName(cat);
+  }
+  return upload.name || upload.filename || 'Berkas';
+};
 
 const CLR = {
   red: '#C0182A',
@@ -68,6 +80,17 @@ const Step1 = ({ registration, prodiName }) => {
   const s = registration?.mahasiswa || registration?.student || {};
   const r = registration || {};
   const dosenInfo = [r.dosenPembimbing1?.name, r.dosenPembimbing2?.name].filter(Boolean).join(' & ') || '-';
+
+  // Format Skema dan Jalur Non-Sidang
+  const rawScheme = r.skemaSidang || r.sidangScheme || 'Sidang Reguler';
+  const isNonSidang = rawScheme.toLowerCase().includes('non');
+  const jalurList = isNonSidang && Array.isArray(r.jalurNonSidang) && r.jalurNonSidang.length > 0
+    ? ` (${r.jalurNonSidang.join(', ')})`
+    : '';
+  const schemeDisplay = `${rawScheme}${jalurList}`;
+  const judulIndonesia = r.judulTugasAkhirIndonesia || r.thesisTitleId || '-';
+  const judulInggris = r.judulTugasAkhirInggris || r.thesisTitleEn || '';
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, marginBottom: 20 }}>
@@ -78,10 +101,28 @@ const Step1 = ({ registration, prodiName }) => {
         <InfoCard label="Nama Lengkap Mahasiswa" icon={User} value={s.name} />
         <InfoCard label="Nomor Induk Mahasiswa (NIM)" icon={Hash} value={s.nim} />
         <InfoCard label="Program Studi Terdaftar" icon={BookOpen} value={prodiName} />
-        <InfoCard label="Skema / Jalur Tugas Akhir" icon={GraduationCap} value={r.sidangScheme || 'Sidang Reguler'} />
+        <InfoCard label="Skema / Jalur Tugas Akhir" icon={GraduationCap} value={schemeDisplay} />
         <div style={{ gridColumn: '1 / -1' }}>
-          <InfoCard label="Judul Tugas Akhir (TA)" icon={FileText} value={r.thesisTitleId} highlight />
+          <InfoCard
+            label="Status Test Bahasa"
+            icon={GraduationCap}
+            value={
+              r.lulusTesBahasa === true
+                ? "Sudah Memenuhi (≥450)"
+                : r.lulusTesBahasa === false
+                  ? "Belum Memenuhi"
+                  : "Belum Dipilih"
+            }
+          />
         </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <InfoCard label="Judul Tugas Akhir (Indonesia)" icon={FileText} value={judulIndonesia} highlight />
+        </div>
+        {judulInggris && (
+          <div style={{ gridColumn: '1 / -1' }}>
+            <InfoCard label="Judul Tugas Akhir (Inggris)" icon={FileText} value={judulInggris} />
+          </div>
+        )}
         <div style={{ gridColumn: '1 / -1' }}>
           <InfoCard label="Dosen Pembimbing" icon={User} value={dosenInfo} />
         </div>
@@ -90,10 +131,22 @@ const Step1 = ({ registration, prodiName }) => {
   );
 };
 
-const VerifButton = ({ active, onClick, color, label }) => (
-  <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, border: `1.5px solid ${active ? color : '#D1D5DB'}`, background: active ? (color === CLR.green ? '#DCFCE7' : '#FEE2E2') : '#fff', color: active ? color : '#6B7280', cursor: 'pointer', transition: 'all 0.15s' }}>
-    <div style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0, background: active ? color : 'transparent', border: `2px solid ${active ? color : '#D1D5DB'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {active && <Check size={8} color="#fff" strokeWidth={3} />}
+const VerifButton = ({ active, onClick, color, label, disabled = false }) => (
+  <button
+    onClick={disabled ? undefined : onClick}
+    disabled={disabled}
+    style={{
+      display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+      border: `1.5px solid ${disabled ? '#E2E8F0' : active ? color : '#D1D5DB'}`,
+      background: disabled ? '#F8FAFC' : active ? (color === CLR.green ? '#DCFCE7' : '#FEE2E2') : '#fff',
+      color: disabled ? '#94A3B8' : active ? color : '#6B7280',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.6 : 1,
+      transition: 'all 0.15s',
+    }}
+  >
+    <div style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0, background: disabled ? 'transparent' : active ? color : 'transparent', border: `2px solid ${disabled ? '#CBD5E1' : active ? color : '#D1D5DB'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {!disabled && active && <Check size={8} color="#fff" strokeWidth={3} />}
     </div>
     {label}
   </button>
@@ -105,7 +158,7 @@ const NavBtn = ({ onClick, disabled, children, title }) => (
   </button>
 );
 
-const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDownload, loadingFileId, loadingUploads, fileError }) => {
+const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDownload, loadingFileId, loadingUploads, fileError, templateMap }) => {
   const currentIdx = uploads.findIndex(u => u.id === previewFile?.id);
   const currentStatus = berkasStatuses[previewFile?.id];
 
@@ -126,20 +179,33 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
         {uploads.map((upload, idx) => {
           const status = berkasStatuses[upload.id] || BERKAS_STATUS.UNCHECKED;
           const isActive = previewFile?.id === upload.id;
-          const berkasName = getBerkasName(upload);
+          const berkasName = getBerkasName(upload, templateMap);
+          const isUploaded = upload.isUploaded !== false;
           return (
             <div key={upload.id} onClick={() => onPreview(upload)} style={{ padding: '8px 10px', cursor: 'pointer', background: isActive ? '#FEF2F2' : 'transparent', borderLeft: isActive ? `3px solid ${CLR.red}` : '3px solid transparent', transition: 'all 0.15s' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#374151', lineHeight: 1.3, marginBottom: 2 }}>{idx + 1}. {berkasName}</div>
-                  {status !== BERKAS_STATUS.UNCHECKED && (
+                  {!isUploaded ? (
+                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>
+                      BELUM DIUNGGAH
+                    </div>
+                  ) : status !== BERKAS_STATUS.UNCHECKED && (
                     <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: status === BERKAS_STATUS.SESUAI ? CLR.green : '#DC2626' }}>
                       {status === BERKAS_STATUS.SESUAI ? 'SESUAI' : 'BERMASALAH'}
                     </div>
                   )}
                 </div>
                 <div style={{ flexShrink: 0 }}>
-                  {status === BERKAS_STATUS.SESUAI ? <CheckCircle2 size={14} color={CLR.green} /> : status === BERKAS_STATUS.BERMASALAH ? <XCircle size={14} color="#DC2626" /> : <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #D1D5DB' }} />}
+                  {status === BERKAS_STATUS.SESUAI ? (
+                    <CheckCircle2 size={14} color={CLR.green} />
+                  ) : status === BERKAS_STATUS.BERMASALAH ? (
+                    <XCircle size={14} color="#DC2626" />
+                  ) : !isUploaded ? (
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', border: '1.5px dashed #CBD5E1' }} title="Belum diunggah mahasiswa" />
+                  ) : (
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #D1D5DB' }} />
+                  )}
                 </div>
               </div>
             </div>
@@ -152,14 +218,28 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
             <div style={{ padding: '8px 14px', borderBottom: `1px solid ${CLR.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FAFAFA', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                 <FileText size={13} color={CLR.red} flexShrink={0} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBerkasName(previewFile)}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBerkasName(previewFile, templateMap)}</span>
               </div>
-              <button onClick={() => onDownload(previewFile)} disabled={loadingFileId === previewFile.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, padding: '3px 9px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#fff', border: `1px solid ${CLR.border}`, cursor: 'pointer', color: '#374151' }}>
+              <button onClick={() => previewFile.isUploaded !== false && onDownload(previewFile)} disabled={previewFile.isUploaded === false || loadingFileId === previewFile.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, padding: '3px 9px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#fff', border: `1px solid ${CLR.border}`, cursor: previewFile.isUploaded === false ? 'not-allowed' : 'pointer', opacity: previewFile.isUploaded === false ? 0.5 : 1, color: '#374151' }}>
                 {loadingFileId === previewFile.id ? <Loader size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={11} />} Unduh
               </button>
             </div>
             <div style={{ flex: 1, minHeight: 0, background: '#F8FAFC', overflow: 'auto', position: 'relative' }}>
-              {fileError ? (
+              {previewFile.isUploaded === false ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, padding: 24, textAlign: 'center', color: '#64748B' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+                    <FileText size={26} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                      Berkas Belum Diunggah
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748B', maxWidth: 320, lineHeight: 1.5 }}>
+                      Mahasiswa belum mengunggah dokumen <strong>{getBerkasName(previewFile, templateMap)}</strong>.
+                    </div>
+                  </div>
+                </div>
+              ) : fileError ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#DC2626' }}>File Tidak Ditemukan.</span>
                 </div>
@@ -174,7 +254,7 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
               <NavBtn onClick={() => currentIdx < uploads.length - 1 && onPreview(uploads[currentIdx + 1])} disabled={currentIdx >= uploads.length - 1} title="Berkas selanjutnya">→</NavBtn>
               <div style={{ width: 1, height: 16, background: CLR.border, margin: '0 2px' }} />
               <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>Verifikasi:</span>
-              <VerifButton active={currentStatus === BERKAS_STATUS.SESUAI} onClick={() => onToggle(previewFile.id, BERKAS_STATUS.SESUAI)} color={CLR.green} label="Sesuai / Valid" />
+              <VerifButton active={currentStatus === BERKAS_STATUS.SESUAI} onClick={() => previewFile.isUploaded !== false && onToggle(previewFile.id, BERKAS_STATUS.SESUAI)} color={CLR.green} label="Sesuai / Valid" disabled={previewFile.isUploaded === false} />
               <VerifButton active={currentStatus === BERKAS_STATUS.BERMASALAH} onClick={() => onToggle(previewFile.id, BERKAS_STATUS.BERMASALAH)} color="#DC2626" label="Bermasalah" />
               <span style={{ marginLeft: 'auto', fontSize: 10, color: '#9CA3AF', whiteSpace: 'nowrap' }}>{currentIdx + 1} / {uploads.length}</span>
             </div>
@@ -187,7 +267,7 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
   );
 };
 
-const Step3Revisi = ({ berkasStatuses, uploads, dueDate, setDueDate, message, setMessage }) => {
+const Step3Revisi = ({ berkasStatuses, uploads, dueDate, setDueDate, message, setMessage, templateMap }) => {
   const bermasalah = uploads.filter(u => berkasStatuses[u.id] === BERKAS_STATUS.BERMASALAH);
   return (
     <div>
@@ -201,7 +281,7 @@ const Step3Revisi = ({ berkasStatuses, uploads, dueDate, setDueDate, message, se
           {bermasalah.map((u, i) => (
             <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 8 }}>
               <XCircle size={16} color="#DC2626" />
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#991B1B' }}>{i + 1}. {getBerkasName(u)}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#991B1B' }}>{i + 1}. {getBerkasName(u, templateMap)}</span>
             </div>
           ))}
         </div>
@@ -248,13 +328,11 @@ const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) =>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {periods
-            // Hanya tampilkan periode yang belum selesai (endDate >= hari ini)
             .filter(p => new Date(p.endDate) >= new Date())
             .map(p => {
               const now = new Date();
               const start = new Date(p.startDate);
               const end = new Date(p.endDate);
-              // Status murni dari rentang tanggal (isOpen di DB tidak auto-update)
               const status = now >= start && now <= end ? 'Aktif'
                 : now < start ? 'Mendatang'
                   : 'Selesai';
@@ -307,6 +385,7 @@ const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) =>
 const VerifikasiBerkasModal = ({
   registration,
   academicStaffId,
+  adminId,
   periodMap,
   onClose,
   onSaved,
@@ -321,42 +400,143 @@ const VerifikasiBerkasModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [existingResponseId, setExistingResponseId] = useState(null);
+  const [rawUploads, setRawUploads] = useState([]);
+  const [activeTemplates, setActiveTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [uploads, setUploads] = useState([]);
   const [loadingUploads, setLoadingUploads] = useState(false);
   const [fileError, setFileError] = useState(null);
+  const [templateMap, setTemplateMap] = useState({});
 
   const m = registration?.mahasiswa || registration?.student;
   const prodiName = m?.studyProgram?.name ?? '-';
   const periods = Object.values(periodMap ?? {});
 
+  // Fetch daftar template berkas wajib, test bahasa, dan non-sidang aktif dari backend
+  useEffect(() => {
+    let isMounted = true;
+    setLoadingTemplates(true);
+
+    const categoriesToFetch = ["Sidang - Berkas Wajib"];
+    if (registration?.lulusTesBahasa === true) {
+      categoriesToFetch.push("Sidang - Berkas Tes Bahasa (Sudah)");
+    } else if (registration?.lulusTesBahasa === false) {
+      categoriesToFetch.push("Sidang - Berkas Tes Bahasa (Belum)");
+    }
+
+    const isNonSidang =
+      String(registration?.skemaSidang || registration?.sidangScheme || "").toLowerCase().includes("non");
+
+    if (isNonSidang && Array.isArray(registration?.jalurNonSidang)) {
+      registration.jalurNonSidang.forEach((jalur) => {
+        if (jalur === "Publikasi Jurnal") categoriesToFetch.push("Sidang - Evidence Non Sidang Publikasi Jurnal");
+        else if (jalur === "Proceeding International") categoriesToFetch.push("Sidang - Evidence Non Sidang Proceeding International");
+        else if (jalur === "HKI") categoriesToFetch.push("Sidang - Evidence Non Sidang HKI");
+      });
+    }
+
+    Promise.all(
+      categoriesToFetch.map((cat) => getTemplatesByCategory(cat).catch(() => []))
+    )
+      .then((results) => {
+        if (!isMounted) return;
+        const list = results.flat().filter(Boolean);
+        setActiveTemplates(list);
+        const map = {};
+        list.forEach((t) => {
+          map[t.code] = humanizeDocName(t.name);
+        });
+        setTemplateMap(map);
+      })
+      .catch((err) => {
+        console.error("Gagal memuat template berkas di modal admin:", err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingTemplates(false);
+      });
+    return () => { isMounted = false; };
+  }, [registration?.lulusTesBahasa, registration?.jalurNonSidang]);
+
+  // Fetch raw uploads dari registrasi sidang mahasiswa
   useEffect(() => {
     const initial = registration?.sidangRegistrationUploads;
-    if (initial && initial.length > 0) { setUploads(initial); return; }
+    if (initial && initial.length > 0) { setRawUploads(initial); return; }
     if (!registration?.id) return;
     setLoadingUploads(true);
     getSidangRegistrationById(registration.id)
-      .then(detail => setUploads(detail?.sidangRegistrationUploads ?? []))
-      .catch(() => setUploads([]))
+      .then(detail => setRawUploads(detail?.sidangRegistrationUploads ?? []))
+      .catch(() => setRawUploads([]))
       .finally(() => setLoadingUploads(false));
   }, [registration?.id]);
 
   useEffect(() => {
+    if (activeTemplates.length === 0 && rawUploads.length === 0) return;
+
+    if (activeTemplates.length > 0) {
+      const uploadsByCode = {};
+      rawUploads.forEach((u) => {
+        const code = u.category;
+        if (!code) return;
+        const existing = uploadsByCode[code];
+        if (!existing || new Date(u.createdAt) > new Date(existing.createdAt)) {
+          uploadsByCode[code] = u;
+        }
+      });
+
+      const displayItems = activeTemplates.map((tpl) => {
+        const match = uploadsByCode[tpl.code];
+        if (match) {
+          return {
+            ...match,
+            templateCode: tpl.code,
+            officialName: humanizeDocName(tpl.name),
+            isUploaded: true,
+          };
+        }
+        return {
+          id: `unuploaded-${tpl.code}`,
+          category: tpl.code,
+          templateCode: tpl.code,
+          officialName: humanizeDocName(tpl.name),
+          name: "",
+          filename: "",
+          filepath: null,
+          isUploaded: false,
+          isValid: null,
+        };
+      });
+
+      setUploads(displayItems);
+
+      // Inisialisasi/restore berkasStatuses untuk dokumen yang relevan saja
+      const restored = {};
+      displayItems.forEach((u) => {
+        if (!u.isUploaded) {
+          restored[u.id] = BERKAS_STATUS.UNCHECKED;
+        } else if (u.isValid === true) {
+          restored[u.id] = BERKAS_STATUS.SESUAI;
+        } else if (u.isValid === false) {
+          restored[u.id] = BERKAS_STATUS.BERMASALAH;
+        } else {
+          restored[u.id] = BERKAS_STATUS.UNCHECKED;
+        }
+      });
+      setBerkasStatuses(restored);
+    } else {
+      setUploads(rawUploads);
+    }
+  }, [activeTemplates, rawUploads]);
+
+  useEffect(() => {
     if (!registration) return;
-    if (registration.isEdit) setDueDate(registration.isEdit.split('T')[0]);
+    if (registration.isEdit) {
+      const localDateString = new Date(registration.isEdit)
+        .toLocaleDateString('en-CA');
+      setDueDate(localDateString);
+    }
     if (registration.message) setMessage(registration.message);
     const pId = registration.sidangPeriodId ?? null;
     if (pId) setSelectedPeriodId(pId);
-
-    const existingUploads = registration.sidangRegistrationUploads ?? [];
-    if (existingUploads.length > 0) {
-      const restored = {};
-      existingUploads.forEach(u => {
-        if (u.isValid === true) restored[u.id] = BERKAS_STATUS.SESUAI;
-        else if (u.isValid === false) restored[u.id] = BERKAS_STATUS.BERMASALAH;
-        else restored[u.id] = BERKAS_STATUS.UNCHECKED;
-      });
-      setBerkasStatuses(restored);
-    }
   }, [registration]);
 
   useEffect(() => {
@@ -384,7 +564,7 @@ const VerifikasiBerkasModal = ({
   const handlePreview = useCallback(async (upload) => {
     setPreviewFile(prev => prev?.id === upload.id ? prev : upload);
     setFileError(null);
-    if (upload.blobUrl) return;
+    if (!upload.isUploaded || upload.blobUrl) return;
 
     setLoadingFileId(upload.id);
     try {
@@ -403,6 +583,7 @@ const VerifikasiBerkasModal = ({
   }, []);
 
   const handleDownload = useCallback(async (upload) => {
+    if (!upload.isUploaded) return;
     setLoadingFileId(upload.id);
     try {
       const blob = await downloadSidangRegistrationUpload(upload.id);
@@ -424,6 +605,12 @@ const VerifikasiBerkasModal = ({
   const handleSubmit = async () => {
     setSubmitError(null);
 
+    const currentAdminId = adminId || academicStaffId;
+    if (!currentAdminId) {
+      setSubmitError('ID staf akademik tidak ditemukan. Silakan login ulang.');
+      return;
+    }
+
     if (hasBermasalah) {
       if (!dueDate) { setSubmitError('Batas waktu perbaikan wajib diisi.'); return; }
       if (!message.trim()) { setSubmitError('Catatan perbaikan untuk mahasiswa wajib diisi.'); return; }
@@ -432,23 +619,22 @@ const VerifikasiBerkasModal = ({
     }
 
     const validUploadIds = uploads
-      .filter(u => berkasStatuses[u.id] === BERKAS_STATUS.SESUAI)
+      .filter(u => u.isUploaded && berkasStatuses[u.id] === BERKAS_STATUS.SESUAI)
       .map(u => u.id);
 
     setIsSubmitting(true);
     try {
       if (hasBermasalah) {
-
-        await createSidangRegistrationResponse(registration.id, {
-          academicStaffId,
+        const isEditDeadline = `${dueDate}T23:59:59+07:00`;
+        await rejectSidangRegistration(registration.id, {
+          adminId: currentAdminId,
           message: message.trim(),
-          isEdit: `${dueDate}T23:59:59.000Z`,
+          isEdit: isEditDeadline,
           sidangRegistrationUploadIds: validUploadIds,
         });
       } else {
-
-        await createSidangRegistrationResponse(registration.id, {
-          academicStaffId,
+        await approveSidangRegistration(registration.id, {
+          adminId: currentAdminId,
           sidangPeriodId: selectedPeriodId,
           sidangRegistrationUploadIds: validUploadIds,
         });
@@ -515,12 +701,12 @@ const VerifikasiBerkasModal = ({
             )}
             {step === 2 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
-                <Step2 uploads={uploads} loadingUploads={loadingUploads} berkasStatuses={berkasStatuses} onToggle={handleToggle} previewFile={previewFile} onPreview={handlePreview} onDownload={handleDownload} loadingFileId={loadingFileId} fileError={fileError} />
+                <Step2 uploads={uploads} loadingUploads={loadingUploads || loadingTemplates} berkasStatuses={berkasStatuses} onToggle={handleToggle} previewFile={previewFile} onPreview={handlePreview} onDownload={handleDownload} loadingFileId={loadingFileId} fileError={fileError} templateMap={templateMap} />
               </motion.div>
             )}
             {step === 3 && (
               <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ padding: '0 24px 24px' }}>
-                {hasBermasalah ? <Step3Revisi berkasStatuses={berkasStatuses} uploads={uploads} dueDate={dueDate} setDueDate={setDueDate} message={message} setMessage={setMessage} /> : <Step3Approve periods={periods} selectedPeriodId={selectedPeriodId} onSelectPeriod={setSelectedPeriodId} uploads={uploads} />}
+                {hasBermasalah ? <Step3Revisi berkasStatuses={berkasStatuses} uploads={uploads} dueDate={dueDate} setDueDate={setDueDate} message={message} setMessage={setMessage} templateMap={templateMap} /> : <Step3Approve periods={periods} selectedPeriodId={selectedPeriodId} onSelectPeriod={setSelectedPeriodId} uploads={uploads} />}
                 {submitError && <div style={{ marginTop: 16, padding: '10px 14px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 13, color: '#DC2626', display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={15} />{submitError}</div>}
               </motion.div>
             )}
