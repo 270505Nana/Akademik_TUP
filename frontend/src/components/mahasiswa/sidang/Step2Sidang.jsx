@@ -8,13 +8,11 @@ import {
   ChevronRight,
   Link as LinkIcon,
   CheckCircle2,
+  Loader,
 } from "lucide-react";
 import { useSidangContext } from "../../../context/SidangFormContext";
 import { SECTIONS, PATH_MAP } from "../../../requirement/sidangDocument";
-import {
-  uploadSidangRegistrationFile,
-  downloadSidangRegistrationUpload,
-} from "../../../service/api";
+import { uploadSidangRegistrationFile } from "../../../service/api";
 import {
   fetchTemplatePreviewBlob,
   triggerTemplateDownload,
@@ -33,8 +31,8 @@ const DocUploadPanel = ({
   showLinkInput,
   showTemplateBox = true,
   isUploading,
-  onViewFile,
-  viewingFileId,
+  isLoading = false,
+  readOnly = false,
 }) => {
   const activeDoc = documents.find((d) => d.id === activeDocId) || documents[0];
 
@@ -56,21 +54,20 @@ const DocUploadPanel = ({
   }, [activeDoc?.id]);
 
   const handleCloseTemplateModal = () => {
-    // Revoke segera saat modal ditutup — tidak perlu tunggu timeout
     if (templateModal.blobUrl) URL.revokeObjectURL(templateModal.blobUrl);
     setTemplateModal({ blobUrl: null, title: "" });
   };
 
   const handlePreviewTemplate = async () => {
-    if (!activeDoc?.slug) {
+    const templateCode = activeDoc?.templateCode || activeDoc?.slug;
+    if (!templateCode) {
       setTemplateState((prev) => ({ ...prev, error: "Template untuk dokumen ini belum tersedia." }));
       return;
     }
     setTemplateState((prev) => ({ ...prev, isFetching: true, error: null }));
     try {
-      const { blob, name } = await fetchTemplatePreviewBlob(activeDoc.slug);
+      const { blob, name } = await fetchTemplatePreviewBlob(templateCode);
       const blobUrl = URL.createObjectURL(blob);
-      // Tampilkan di modal — revoke dilakukan di handleCloseTemplateModal
       setTemplateModal({ blobUrl, title: name || activeDoc.name });
       setTemplateState({ isFetching: false, isDownloading: false, previewedDocId: activeDoc.id, error: null });
     } catch (err) {
@@ -87,10 +84,11 @@ const DocUploadPanel = ({
 
   // Trigger unduh final — re-fetch via downloadUrl endpoint
   const handleDownloadTemplate = async () => {
-    if (!activeDoc?.slug || templateState.isDownloading) return;
+    const templateCode = activeDoc?.templateCode || activeDoc?.slug;
+    if (!templateCode || templateState.isDownloading) return;
     setTemplateState((prev) => ({ ...prev, isDownloading: true, error: null }));
     try {
-      await triggerTemplateDownload(activeDoc.slug);
+      await triggerTemplateDownload(templateCode);
     } catch (err) {
       setTemplateState((prev) => ({
         ...prev,
@@ -102,6 +100,56 @@ const DocUploadPanel = ({
   };
 
   const isPreviewReady = templateState.previewedDocId === activeDoc?.id;
+
+  if (isLoading) {
+    return (
+      <div className="doc-section-container" style={{ marginBottom: "4rem" }}>
+        <h3
+          className="doc-path-title"
+          style={{
+            fontSize: "1.4rem",
+            fontWeight: 800,
+            marginBottom: "2rem",
+            color: "#1a202c",
+            textTransform: "uppercase",
+          }}
+        >
+          {sectionTitle}
+        </h3>
+        <div
+          style={{
+            padding: "3rem 2rem",
+            background: "#F8FAFC",
+            borderRadius: "12px",
+            border: "1.5px dashed #CBD5E1",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.75rem",
+            minHeight: "240px",
+            color: "#64748B",
+            textAlign: "center",
+          }}
+        >
+          <Loader
+            size={30}
+            style={{
+              color: "var(--primary-red, #DC2626)",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <p style={{ fontSize: "1rem", fontWeight: 700, margin: "0.25rem 0 0", color: "#1E293B" }}>
+            Memuat Berkas Persyaratan...
+          </p>
+          <span style={{ fontSize: "0.85rem", color: "#64748B" }}>
+            Mengambil daftar persyaratan dan template terbaru dari server.
+          </span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="doc-section-container" style={{ marginBottom: "4rem" }}>
@@ -235,27 +283,6 @@ const DocUploadPanel = ({
                       {activeDoc.fileName}
                     </div>
                   )}
-                  {activeDoc.uploadId && (
-                    <button
-                      type="button"
-                      onClick={() => onViewFile(activeDoc)}
-                      disabled={viewingFileId === activeDoc.id}
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#166534",
-                        fontWeight: 700,
-                        textDecoration: "underline",
-                        background: "none",
-                        border: "none",
-                        padding: 0,
-                        marginTop: 8,
-                        cursor: viewingFileId === activeDoc.id ? "not-allowed" : "pointer",
-                        display: "block",
-                      }}
-                    >
-                      {viewingFileId === activeDoc.id ? "Membuka berkas..." : "Lihat berkas"}
-                    </button>
-                  )}
                 </div>
               </div>
             ) : (
@@ -282,12 +309,17 @@ const DocUploadPanel = ({
                 )}
 
                 <div
-                  className="upload-box"
-                  style={{ padding: "2rem" }}
-                  onClick={() => onUpload(activeDoc.id)}
+                  className={`upload-box ${readOnly ? "disabled" : ""}`}
+                  style={{
+                    padding: "2rem",
+                    cursor: readOnly ? "not-allowed" : "pointer",
+                    opacity: readOnly ? 0.6 : 1,
+                  }}
+                  onClick={() => !readOnly && onUpload(activeDoc.id)}
                 >
                   <UploadCloud className="upload-icon" />
-                  <p className="upload-text-main">                <span style={{ color: "#3182ce" }}>Choose File</span> To upload
+                  <p className="upload-text-main">
+                    <span style={{ color: "#3182ce" }}>Choose File</span> To upload
                   </p>
                   <div className="upload-text-formats">
                     <span className="format-badge">PDF</span>
@@ -295,12 +327,12 @@ const DocUploadPanel = ({
                   </div>
                 </div>
 
-                {(activeDoc.fileUrl || activeDoc.error) && (
+                {(Boolean(activeDoc.fileUrl || activeDoc.fileName || activeDoc.downloadUrl || activeDoc.status === "completed") || activeDoc.error) && (
                   <div style={{ marginTop: "2rem" }}>
                     <h4 style={{ fontWeight: 700, marginBottom: "1rem" }}>
                       File Terpilih
                     </h4>
-                    {activeDoc.fileUrl ? (
+                    {(!activeDoc.error && (activeDoc.fileUrl || activeDoc.fileName || activeDoc.downloadUrl || activeDoc.status === "completed")) ? (
                       <div
                         className="file-card"
                         style={{
@@ -335,14 +367,14 @@ const DocUploadPanel = ({
                                 lineHeight: "1.4",
                               }}
                             >
-                              {activeDoc.fileName}
+                              {activeDoc.fileName || activeDoc.name}
                             </div>
                             <div
                               className="file-meta"
                               style={{ fontSize: "0.85rem" }}
                             >
-                              {activeDoc.fileSize} •{" "}
-                              {activeDoc.fileName.split(".").pop().toUpperCase()}
+                              {activeDoc.fileSize ? `${activeDoc.fileSize} • ` : ""}
+                              {((activeDoc.fileName || activeDoc.name || "").split(".").pop() || "").toUpperCase()}
                             </div>
                           </div>
                         </div>
@@ -431,6 +463,7 @@ const DocUploadPanel = ({
                         placeholder="Masukan Link Paper Anda"
                         value={linkPaperValue || ""}
                         onChange={(e) => onUpdateLink(e.target.value)}
+                        disabled={readOnly}
                       />
                     </div>
                   </div>
@@ -438,9 +471,13 @@ const DocUploadPanel = ({
 
                 <button
                   className="btn-primary"
-                  style={{ marginTop: "2rem" }}
-                  onClick={() => onSave(activeDoc.id)}
-                  disabled={isUploading}
+                  style={{
+                    marginTop: "2rem",
+                    cursor: readOnly ? "not-allowed" : "pointer",
+                    opacity: readOnly ? 0.6 : 1,
+                  }}
+                  onClick={() => !readOnly && onSave(activeDoc.id)}
+                  disabled={isUploading || readOnly}
                 >
                   {isUploading ? "Mengunggah..." : "Simpan dan Lanjutkan"}
                 </button>
@@ -461,22 +498,17 @@ const DocUploadPanel = ({
   );
 };
 
-export default function Step2({ registrationId }) {
+export default function Step2({
+  registrationId,
+  isTemplatesLoading = false,
+  readOnly = false,
+}) {
   const { state, dispatch } = useSidangContext();
   const { data, documents, activeDocIds } = state;
   const fileInputRef = useRef(null);
   const uploadTargetIdRef = useRef(null);
   const fileMapRef = useRef({});
   const [isUploading, setIsUploading] = useState(false);
-  const [viewingFileId, setViewingFileId] = useState(null);
-  // State modal preview untuk berkas yang sudah diupload mahasiswa
-  const [fileModal, setFileModal] = useState({ blobUrl: null, title: "" });
-
-  const handleCloseFileModal = () => {
-    // Revoke segera saat modal ditutup
-    if (fileModal.blobUrl) URL.revokeObjectURL(fileModal.blobUrl);
-    setFileModal({ blobUrl: null, title: "" });
-  };
 
   // Filter documents by section
   const getSectionDocs = (section) =>
@@ -530,6 +562,10 @@ export default function Step2({ registrationId }) {
     fileInputRef.current.click();
   };
 
+  const handleSetActive = (section, docId) => {
+    dispatch({ type: "SET_ACTIVE_DOC", section, value: docId });
+  };
+
   const handleSaveDoc = async (docId) => {
     const doc = documents.find((d) => d.id === docId);
     const file = fileMapRef.current[docId];
@@ -557,31 +593,19 @@ export default function Step2({ registrationId }) {
         name: doc.fileName || file.name,
       });
       dispatch({ type: "COMPLETE_DOCUMENT", docId });
+
+      // Otomatis pindah ke berkas berikutnya dalam section yang sama
+      const sectionDocs = documents.filter((d) => d.section === doc.section);
+      const currentIndex = sectionDocs.findIndex((d) => d.id === docId);
+      if (currentIndex !== -1 && currentIndex < sectionDocs.length - 1) {
+        const nextDoc = sectionDocs[currentIndex + 1];
+        handleSetActive(doc.section, nextDoc.id);
+      }
     } catch (error) {
       console.error("Gagal upload dokumen:", error);
       alert("Gagal mengunggah dokumen.");
     } finally {
       setIsUploading(false);
-    }
-  };
-
-  const handleSetActive = (section, docId) => {
-    dispatch({ type: "SET_ACTIVE_DOC", section, value: docId });
-  };
-
-  // Fetch blob dan tampilkan di modal — revoke saat modal ditutup via handleCloseFileModal
-  const handleViewFile = async (doc) => {
-    if (!doc.uploadId) return;
-    setViewingFileId(doc.id);
-    try {
-      const blob = await downloadSidangRegistrationUpload(doc.uploadId);
-      const blobUrl = URL.createObjectURL(blob);
-      setFileModal({ blobUrl, title: doc.fileName || doc.name });
-    } catch (error) {
-      console.error("Gagal membuka berkas:", error);
-      alert("Gagal membuka berkas. Silakan coba lagi.");
-    } finally {
-      setViewingFileId(null);
     }
   };
 
@@ -594,14 +618,6 @@ export default function Step2({ registrationId }) {
         style={{ display: "none" }}
         onChange={handleFileChange}
         accept=".pdf,.jpg,.jpeg,.png"
-      />
-
-      {/* Modal preview berkas yang sudah diupload mahasiswa */}
-      <FilePreviewModal
-        blobUrl={fileModal.blobUrl}
-        title={fileModal.title}
-        onClose={handleCloseFileModal}
-        onDownload={null}
       />
 
       <div className="step-title-container">
@@ -627,14 +643,16 @@ export default function Step2({ registrationId }) {
         >
           <div
             className={`radio-item ${data.testBahasaPersyaratan === "Sudah" ? "active" : ""}`}
-            onClick={() => updateField("testBahasaPersyaratan", "Sudah")}
+            onClick={() => !readOnly && updateField("testBahasaPersyaratan", "Sudah")}
+            style={readOnly ? { cursor: "not-allowed", opacity: 0.7 } : {}}
           >
             <div className="radio-visual"></div>
             <span>Sudah</span>
           </div>
           <div
             className={`radio-item ${data.testBahasaPersyaratan === "Belum" ? "active" : ""}`}
-            onClick={() => updateField("testBahasaPersyaratan", "Belum")}
+            onClick={() => !readOnly && updateField("testBahasaPersyaratan", "Belum")}
+            style={readOnly ? { cursor: "not-allowed", opacity: 0.7 } : {}}
           >
             <div className="radio-visual"></div>
             <span>Belum</span>
@@ -649,12 +667,6 @@ export default function Step2({ registrationId }) {
         </span>
       </div>
 
-      {/*
-        RENDER KONDISIONAL DOKUMEN TEST BAHASA:
-        - "Sudah": Menampilkan 1 dokumen (Berkas Sertifikat Test Bahasa Skor >= 450).
-        - "Belum": Menampilkan 4 dokumen (3 Berkas Sertifikat Test Bahasa + 1 Berkas Surat Pemakluman).
-        Fitur template preview & unduh otomatis tertangani via handlePreviewTemplate di dalam DocUploadPanel.
-      */}
       {data.testBahasaPersyaratan === "Sudah" && (
         <DocUploadPanel
           sectionTitle="Dokumen Persyaratan Test Bahasa"
@@ -666,8 +678,8 @@ export default function Step2({ registrationId }) {
           showLinkInput={false}
           showTemplateBox={false}
           isUploading={isUploading}
-          onViewFile={handleViewFile}
-          viewingFileId={viewingFileId}
+          isLoading={isTemplatesLoading}
+          readOnly={readOnly}
         />
       )}
 
@@ -681,8 +693,8 @@ export default function Step2({ registrationId }) {
           onSave={handleSaveDoc}
           showLinkInput={false}
           isUploading={isUploading}
-          onViewFile={handleViewFile}
-          viewingFileId={viewingFileId}
+          isLoading={isTemplatesLoading}
+          readOnly={readOnly}
         />
       )}
 
@@ -736,14 +748,14 @@ export default function Step2({ registrationId }) {
                     sectionId === SECTIONS.PROCEEDING
                   }
                   isUploading={isUploading}
-                  onViewFile={handleViewFile}
-                  viewingFileId={viewingFileId}
+                  isLoading={isTemplatesLoading}
+                  readOnly={readOnly}
                 />
               );
             })}
           </div>
         )}
-        
+
       <DocUploadPanel
         sectionTitle="Berkas Wajib Sidang"
         sectionId={SECTIONS.WAJIB}
@@ -754,8 +766,8 @@ export default function Step2({ registrationId }) {
         onSave={handleSaveDoc}
         showLinkInput={false}
         isUploading={isUploading}
-        onViewFile={handleViewFile}
-        viewingFileId={viewingFileId}
+        isLoading={isTemplatesLoading}
+        readOnly={readOnly}
       />
     </div>
   );

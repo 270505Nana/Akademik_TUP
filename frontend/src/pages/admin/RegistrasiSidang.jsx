@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import {Search, ChevronLeft, ChevronRight, Menu,GraduationCap, CheckCircle2, RefreshCw, Loader, ChevronDown,ArrowUp, ArrowDown, ArrowUpDown,} from 'lucide-react';
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  GraduationCap,
+  CheckCircle2,
+  RefreshCw,
+  Loader,
+  ChevronDown,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Download,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin          from '../../components/sidebar/SidebarAdmin';
 import CustomAlert           from '../../components/common/CustomAlert';
@@ -65,19 +79,30 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const SchemaBadge = ({ scheme }) => {
+const SchemaBadge = ({ scheme, jalur = [] }) => {
   if (!scheme) return <span style={{ color: '#9CA3AF', fontSize: 12 }}>-</span>;
   const isNonSidang = scheme.toLowerCase().includes('non');
+  
+  // Jika bukan skema Non Sidang (misal Sidang Reguler), tampilkan "-"
+  if (!isNonSidang) {
+    return <span style={{ color: '#9CA3AF', fontSize: 12 }}>-</span>;
+  }
+
+  const jalurText = Array.isArray(jalur) && jalur.length > 0
+    ? ` (${jalur.join(', ')})`
+    : '';
+  const labelText = `${scheme}${jalurText}`;
+
   return (
     <span style={{
       fontSize: 10, fontWeight: 700, padding: '3px 10px',
       borderRadius: 9999,
-      background: isNonSidang ? '#F5F3FF' : '#DBEAFE',
-      border:     `1.5px solid ${isNonSidang ? '#DDD6FE' : '#BFDBFE'}`,
-      color:      isNonSidang ? '#5B21B6' : '#1D4ED8',
+      background: '#F5F3FF',
+      border:     '1.5px solid #DDD6FE',
+      color:      '#5B21B6',
       whiteSpace: 'nowrap',
     }}>
-      {scheme}
+      {labelText}
     </span>
   );
 };
@@ -311,9 +336,9 @@ const RegistrasiSidang = () => {
 
   const handleSort = useCallback((field) => {
     setSort(prev => {
-      if (prev.field !== field) return { field, dir: 'asc' };       // kolom baru → mulai asc
-      if (prev.dir === 'asc')   return { field, dir: 'desc' };      // klik ke-2 → desc
-      return { field: null, dir: 'asc' };                            // klik ke-3 → netral (balik ke default status order)
+      if (prev.field !== field) return { field, dir: 'asc' };       
+      if (prev.dir === 'asc')   return { field, dir: 'desc' };     
+      return { field: null, dir: 'asc' };                           
     });
   }, []);
 
@@ -370,6 +395,71 @@ const RegistrasiSidang = () => {
     });
   };
 
+  // Unduh data registrasi sidang ke format CSV
+  const handleExportData = () => {
+    if (!filteredList || filteredList.length === 0) {
+      showAlert('warning', 'Export', 'Tidak ada data registrasi sidang untuk diekspor.');
+      return;
+    }
+
+    const headers = [
+      'No',
+      'NIM',
+      'Nama Mahasiswa',
+      'Program Studi',
+      'Jalur Sidang',
+      'Skema',
+      'Status',
+      'Periode Sidang',
+      'Tanggal Registrasi',
+      'Judul Tugas Akhir (Indonesia)',
+      'Judul Tugas Akhir (Inggris)',
+      'Dosen Pembimbing 1',
+      'Dosen Pembimbing 2',
+    ];
+
+    const rows = filteredList.map((reg, idx) => {
+      const m = reg.mahasiswa || reg.student || {};
+      const status = getStatus(reg);
+      const statusLabel = SIDANG_STATUS_CONFIG[status]?.label || status;
+      const periodName = reg.sidangPeriodId && periodMap[reg.sidangPeriodId]
+        ? periodMap[reg.sidangPeriodId].name
+        : '-';
+      const jalur = Array.isArray(reg.jalurNonSidang) && reg.jalurNonSidang.length > 0
+        ? reg.jalurNonSidang.join('; ')
+        : 'Reguler';
+      const skema = reg.skemaSidang || reg.sidangScheme || 'Sidang Reguler';
+      const submitDate = fmtDate(getSubmitDate(reg));
+
+      return [
+        idx + 1,
+        `"${m.nim || '-'}"`,
+        `"${m.name || '-'}"`,
+        `"${getProdiName(reg) || '-'}"`,
+        `"${jalur}"`,
+        `"${skema}"`,
+        `"${statusLabel}"`,
+        `"${periodName}"`,
+        `"${submitDate}"`,
+        `"${(reg.judulTugasAkhirIndonesia || reg.thesisTitleId || '-').replace(/"/g, '""')}"`,
+        `"${(reg.judulTugasAkhirInggris || reg.thesisTitleEn || '-').replace(/"/g, '""')}"`,
+        `"${(reg.dosenPembimbing1?.name || '-').replace(/"/g, '""')}"`,
+        `"${(reg.dosenPembimbing2?.name || '-').replace(/"/g, '""')}"`,
+      ];
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Rekapitulasi_Registrasi_Sidang_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showAlert('success', 'Export', 'Data registrasi sidang berhasil diekspor.');
+  };
+
   const handleModalSaved = useCallback(() => {
     setSelectedReg(null);
     fetchAll();
@@ -417,7 +507,7 @@ const RegistrasiSidang = () => {
                 </button>
               </div>
 
-              {/* Status tabs */}
+              {/* Status tabs & Actions */}
               <div className="vs-status-tabs">
                 {FILTER_TABS.map(({ key, label }) => {
                   const count = key === '' ? countAll : countStatus(key);
@@ -439,6 +529,10 @@ const RegistrasiSidang = () => {
                   onToggle={toggleProdiFilter}
                   onClear={clearProdiFilter}
                 />
+
+                <button className="btn-export-sk sm" onClick={handleExportData}>
+                  <Download size={13} /> Expor Reg Sidang MHS
+                </button>
               </div>
 
               <div className="vs-table-divider" />
@@ -510,7 +604,10 @@ const RegistrasiSidang = () => {
                               <JalurBadge jalur={reg.jalurNonSidang} />
                             </td>
                             <td>
-                              <SchemaBadge scheme={reg.sidangScheme} />
+                              <SchemaBadge
+                                scheme={reg.skemaSidang || reg.sidangScheme}
+                                jalur={reg.jalurNonSidang}
+                              />
                             </td>
                             <td className="vs-td-center">
                               <StatusBadge status={status} />
@@ -596,6 +693,7 @@ const RegistrasiSidang = () => {
         {selectedReg && (
           <VerifikasiBerkasModal
             registration={selectedReg}
+            adminId={profile?.id}
             academicStaffId={profile?.id}
             periodMap={periodMap}
             onClose={() => setSelectedReg(null)}

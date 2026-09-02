@@ -1,21 +1,3 @@
-/**
- * SidangStatusHelper.js
- *
- * Alur status (dari sudut pandang admin):
- *
- *   DALAM_PROSES
- *     ↓ (admin set revisi → response.isEdit = timestamp, registration.isDraft = true)
- *   PERLU_REVISI          (isDraft=true, response ada dengan isEdit not null, submittedAt null)
- *     ↓ (mahasiswa resubmit → BE clear isEdit jadi null, submittedAt terisi, isDraft = false)
- *   REVISI_DIPERBARUI     (submittedAt not null — cukup untuk deteksi, isEdit sudah di-clear BE)
- *     ↓ (admin approve semua dok → sidangPeriodId terisi di registration)
- *   SIAP_SIDANG           (sidangPeriod.isOpen === true)
- *   PENDAFTARAN_DITERIMA  (sidangPeriod.isOpen === false)
- *
-
- */
-
-
 export const STATUS_SIDANG = {
   BELUM_DAFTAR         : 'belum-daftar',
   PROSES_REGISTRASI    : 'proses-registrasi',
@@ -74,32 +56,45 @@ export const SIDANG_STATUS_CONFIG = {
 
 
 export const determineSidangStatus = (registration, response, period) => {
-
+  // 1. !registration → BELUM_DAFTAR
   if (!registration) return STATUS_SIDANG.BELUM_DAFTAR;
 
-  const isEdit = registration.isEdit !== undefined && registration.isEdit !== null
-    ? registration.isEdit
-    : (response ? response.isEdit : null);
+  const isEdit =
+    registration.isEdit !== undefined && registration.isEdit !== null
+      ? registration.isEdit
+      : (response ? response.isEdit : null);
 
-  if (registration.isDraft && !isEdit) return STATUS_SIDANG.PROSES_REGISTRASI;
+  const adminId =
+    registration.adminId ||
+    (response ? response.adminId : null) ||
+    (registration.admin ? registration.admin.id : null) ||
+    null;
 
-  if (!registration.isDraft && !isEdit) return STATUS_SIDANG.DALAM_PROSES;
+  const hasEdit = isEdit !== null && isEdit !== undefined && isEdit !== false && isEdit !== '';
 
-  if (isEdit !== null && isEdit !== undefined) {
+  // 2. isDraft === true, isEdit ada isinya → PERLU_REVISI
+  if (registration.isDraft && hasEdit) {
     return STATUS_SIDANG.PERLU_REVISI;
   }
 
-  if (registration.sidangPeriodId && period) {
-    const now       = new Date();
-    const startDate = new Date(period.startDate);
-    const endDate   = new Date(period.endDate);
-    const isActive  = now >= startDate && now <= endDate;
-    return isActive
+  // 3. isDraft === true, isEdit kosong → PROSES_REGISTRASI
+  if (registration.isDraft) {
+    return STATUS_SIDANG.PROSES_REGISTRASI;
+  }
+
+  // 4. isDraft === false, sidangPeriodId ada + period match → SIAP_SIDANG / PENDAFTARAN_DITERIMA
+  const matchedPeriod = period || registration.sidangPeriod;
+  if (!registration.isDraft && registration.sidangPeriodId && matchedPeriod) {
+    return matchedPeriod.isOpen
       ? STATUS_SIDANG.SIAP_SIDANG
       : STATUS_SIDANG.PENDAFTARAN_DITERIMA;
   }
 
-  if (registration.submittedAt && isEdit) return STATUS_SIDANG.REVISI_DIPERBARUI;
+  // 5. isDraft === false, adminId ada isinya (dan tidak masuk kondisi 4) → REVISI_DIPERBARUI
+  if (!registration.isDraft && adminId) {
+    return STATUS_SIDANG.REVISI_DIPERBARUI;
+  }
 
+  // 6. isDraft === false, sisanya → DALAM_PROSES
   return STATUS_SIDANG.DALAM_PROSES;
 };

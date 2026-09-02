@@ -184,10 +184,10 @@ export const deleteResearchGroup = async (id) => {
   return response.data;
 };
 
-// ------------------------------------------- ADMIN (Permohonan SK) -------------------------------------------
+// ------------------------------------------- ADMIN (Permohonan SK & Sidang) -------------------------------------------
 export const getAcademicStaffData = async (userId) => {
-  const response = await api.get(`/api/academic-staff/${userId}`);
-  return response.data;
+  const response = await api.get(`/api/admin/${userId}`);
+  return response.data?.data ?? response.data;
 };
 
 export const getAllSktaRequests = async (params = {}) => {
@@ -479,12 +479,12 @@ export const upsertSidangRegistrationResponse = async (payload, existingId) => {
 };
 
 export const approveSidangRegistration = async (registrationId, payload) => {
-  const response = await api.post(`/api/sidang-registrations/${registrationId}/approve`, payload);
+  const response = await api.put(`/api/sidang-registrations/${registrationId}/approve`, payload);
   return response.data?.data ?? response.data;
 };
 
 export const rejectSidangRegistration = async (registrationId, payload) => {
-  const response = await api.post(`/api/sidang-registrations/${registrationId}/reject`, payload);
+  const response = await api.put(`/api/sidang-registrations/${registrationId}/reject`, payload);
   return response.data?.data ?? response.data;
 };
 
@@ -571,6 +571,14 @@ export const updateYudisiumPeriod = async (id, { name, startDate, endDate }) => 
 };
 
 // ------------------------------------------- TEMPLATE -------------------------------------------
+export const getTemplatesByCategory = async (category) => {
+  const response = await api.get(`/api/templates?category=${encodeURIComponent(category)}&limit=all`);
+  const data = response.data?.data ?? response.data;
+  return Array.isArray(data) ? data : (data?.data || []);
+};
+
+export const getSidangWajibTemplates = () => getTemplatesByCategory("Sidang - Berkas Wajib");
+
 export const getTemplate = async (slug) => {
   const response = await api.get(`/api/templates/${slug}`);
   return response.data?.data ?? response.data;

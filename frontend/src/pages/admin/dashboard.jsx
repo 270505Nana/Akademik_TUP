@@ -51,7 +51,9 @@ const pickPrimaryRegistrationPerStudent = (registrations = []) => {
   });
 
   return Object.values(grouped).map((group) => {
-    const withSubmission = group.filter((r) => r.thesisTitleId);
+    const withSubmission = group.filter(
+      (r) => r.judulTugasAkhirIndonesia || r.thesisTitleId || r.submittedAt || !r.isDraft
+    );
     if (withSubmission.length > 0) {
       return withSubmission.sort(
         (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
@@ -158,7 +160,7 @@ const MonitoringProgress = ({ onShowToast }) => {
       const primaryList = pickPrimaryRegistrationPerStudent(allRegs);
 
       const computedRows = primaryList.map((r) => {
-        const hasSubmitted = !!r.thesisTitleId;
+        const hasSubmitted = !!(r.judulTugasAkhirIndonesia || r.thesisTitleId || r.submittedAt || !r.isDraft);
         const prodiName = r.student?.studyProgram?.name ?? '-';
 
         if (!hasSubmitted) {
@@ -348,6 +350,7 @@ const MonitoringProgress = ({ onShowToast }) => {
         {selectedReg && (
           <VerifikasiBerkasModal
             registration={selectedReg}
+            adminId={profile?.id}
             academicStaffId={profile?.id}
             periodMap={periodMap}
             onClose={() => setSelectedReg(null)}
@@ -402,7 +405,7 @@ const RecentActivity = () => {
       }
       if (sidangResult.status === 'fulfilled') {
         const list = sidangResult.value ?? [];
-        list.filter((r) => r.thesisTitleId).forEach((r) => {
+        list.filter((r) => r.judulTugasAkhirIndonesia || r.thesisTitleId || r.submittedAt || !r.isDraft).forEach((r) => {
           const name = r.student?.name || `Mahasiswa #${r.mahasiswaId}`;
           combined.push({
             key: `sidang-${r.id}`,

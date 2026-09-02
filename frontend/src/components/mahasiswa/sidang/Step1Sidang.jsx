@@ -52,9 +52,6 @@ const StaticValue = ({ children }) => (
   <div className="static-field">{children ?? "-"}</div>
 );
 
-// Potential improvement: Jika jumlah data dosen bertambah banyak (ratusan+),
-// pertimbangkan penggunaan virtualized list (seperti react-window atau @tanstack/react-virtual)
-// untuk optimasi rendering dropdown list.
 const LecturerDropdown = ({ lecturers = [], value, onChange, placeholder, excludeId, loading = false }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -603,7 +600,13 @@ export default function Step1({
               <select
                 className="input-field"
                 value={data.sidangScheme}
-                onChange={(e) => updateField("sidangScheme", e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateField("sidangScheme", val);
+                  if (val !== "Non Sidang") {
+                    updateField("jalurNonSidang", []);
+                  }
+                }}
               >
                 <option value="">Pilih Skema Sidang</option>
                 {skemas.map((s) => (
