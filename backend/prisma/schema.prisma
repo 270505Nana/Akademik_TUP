@@ -153,6 +153,7 @@ model DokumenPersyaratanBerkas {
   filepath   String?
   isPublish  Boolean   @default(false) @map("is_publish")
   isRequired Boolean   @default(true) @map("is_required")
+  queue      Int       @default(1)
 
   @@map("dokumen_persyaratan_berkas")
 }
