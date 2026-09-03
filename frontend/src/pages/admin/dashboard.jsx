@@ -160,15 +160,16 @@ const MonitoringProgress = ({ onShowToast }) => {
       const primaryList = pickPrimaryRegistrationPerStudent(allRegs);
 
       const computedRows = primaryList.map((r) => {
+        const student = r.mahasiswa || r.student;
         const hasSubmitted = !!(r.judulTugasAkhirIndonesia || r.thesisTitleId || r.submittedAt || !r.isDraft);
-        const prodiName = r.student?.studyProgram?.name ?? '-';
+        const prodiName = student?.studyProgram?.name ?? '-'; 
 
         if (!hasSubmitted) {
           return {
             id: r.id,
             mahasiswaId: r.mahasiswaId,
-            name: r.student?.name || `Mahasiswa #${r.mahasiswaId}`,
-            nim: r.student?.nim || '-',
+            name: student?.name || `Mahasiswa #${r.mahasiswaId}`,
+            nim: student?.nim || '-', 
             prodi: prodiName,
             tahap: 'Tahap 1',
             percent: 50,
@@ -185,8 +186,8 @@ const MonitoringProgress = ({ onShowToast }) => {
         return {
           id: r.id,
           mahasiswaId: r.mahasiswaId,
-          name: r.student?.name || `Mahasiswa #${r.mahasiswaId}`,
-          nim: r.student?.nim || '-',
+          name: student?.name || `Mahasiswa #${r.mahasiswaId}`,
+          nim: student?.nim || '-',
           prodi: prodiName,
           tahap: 'Tahap 2',
           percent: 100,
@@ -380,8 +381,7 @@ const RecentActivity = () => {
         const raw = skResult.value;
         const sktaList = raw?.data ?? raw ?? [];
         (Array.isArray(sktaList) ? sktaList : []).forEach((r) => {
-          const name = r.student?.name || `Mahasiswa #${r.mahasiswaId}`;
-
+          const name = (r.mahasiswa || r.student)?.name || `Mahasiswa #${r.mahasiswaId}`;
           const submittedAt =
             r.sktaRequestUploads?.[0]?.createdAt ??
             r.createdAt ??
@@ -406,7 +406,7 @@ const RecentActivity = () => {
       if (sidangResult.status === 'fulfilled') {
         const list = sidangResult.value ?? [];
         list.filter((r) => r.judulTugasAkhirIndonesia || r.thesisTitleId || r.submittedAt || !r.isDraft).forEach((r) => {
-          const name = r.student?.name || `Mahasiswa #${r.mahasiswaId}`;
+          const name = (r.mahasiswa || r.student)?.name || `Mahasiswa #${r.mahasiswaId}`;
           combined.push({
             key: `sidang-${r.id}`,
             name,
