@@ -41,6 +41,10 @@ export const initialFormState = {
     dosenPembimbing2Id: "",
     yudisiumPeriodId: null, 
     yudisiumRegistrationPeriodId: "", 
+    isDraft: true,
+    isEdit: null,
+    message: null,
+    submittedAt: null,
   },
   documents: generateDocuments(),
   activeDocIds: {
@@ -80,6 +84,11 @@ export function formReducer(state, action) {
         dosenPembimbing1Id: draft.dosenPembimbing1Id || "",
         dosenPembimbing2Id: draft.dosenPembimbing2Id || "",
         yudisiumRegistrationPeriodId: draft.yudisiumRegistrationPeriodId || "",
+        isDraft: draft.isDraft,
+        isEdit: draft.isEdit,
+        message: draft.message,
+        submittedAt: draft.submittedAt,
+        yudisiumPeriodId: draft.yudisiumPeriodId,
       };
 
       const uploads = draft.yudisiumRegistrationUploads || draft.uploads || [];
@@ -102,7 +111,7 @@ export function formReducer(state, action) {
 
       return {
         ...state,
-        step: 2,
+        step: 1, 
         data: newData,
         documents: updatedDocs
       };
@@ -131,6 +140,7 @@ export function formReducer(state, action) {
           sectionCounts[mappedSection]++;
           
           const existingDoc = state.documents.find(d => d.slug === item.code);
+          
           let cleanName = item.name ? item.name.replace(/^contoh\s+/i, '').trim() : "";
           cleanName = cleanName ? cleanName.charAt(0).toUpperCase() + cleanName.slice(1) : cleanName;
           

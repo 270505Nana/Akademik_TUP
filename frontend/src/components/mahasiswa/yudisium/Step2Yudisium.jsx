@@ -95,7 +95,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
 
   return (
     <div className="doc-section-container" style={{ marginBottom: "4rem" }}>
-      <h3 className="doc-path-title" style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "2rem", color: "#1a202c", textTransform: "uppercase" }}>
+      <h3 className="doc-path-title" style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "1.5rem", color: "#1a202c", textTransform: "uppercase" }}>
         {sectionTitle}
       </h3>
 
@@ -117,9 +117,9 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
 
         <div className="doc-panel">
           <div className="doc-panel-header" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>{sectionTitle.split(' - ')[0]}</span>
-            <ChevronRight size={14} style={{ flexShrink: 0 }} />
-            <span style={{ color: "var(--text-grey)", fontSize: '0.95rem' }}>{activeDoc.name}</span>
+            <span className="panel-header-main" style={{ fontWeight: 800, fontSize: '0.95rem' }}>{sectionTitle.split(' - ')[0]}</span>
+            <ChevronRight className="panel-header-icon" size={14} style={{ flexShrink: 0 }} />
+            <span className="panel-header-sub" style={{ color: "var(--text-grey)", fontSize: '0.95rem' }}>{activeDoc.name}</span>
           </div>
 
           <div>
@@ -187,7 +187,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <div className="action-buttons-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <button 
                         onClick={() => onPreview(activeDoc)} 
                         style={{ padding: "5px 10px", fontSize: "11px", fontWeight: 700, background: "#EFF6FF", color: "#1D4ED8", border: "none", borderRadius: "6px", cursor: "pointer", transition: "0.2s" }}
@@ -354,7 +354,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
       <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
       <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
       
-      <div className="info-banner" style={{ marginBottom: "3rem" }}>
+      <div className="info-banner" style={{ marginBottom: "2rem" }}>
         <div className="banner-icon-container"><Info color="#d69e2e" size={24} /></div>
         <div className="banner-content">
           <h4>Pemberitahuan Unggah Dokumen</h4>
@@ -445,6 +445,66 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
            onPreview={(doc) => setPreviewDoc(doc)}
          />
       )}
+
+      <style>{`
+        .doc-management-container {
+          display: flex;
+          gap: 2rem;
+          align-items: flex-start;
+        }
+        .doc-sidebar {
+          width: 320px;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        .doc-panel {
+          flex: 1;
+          min-width: 0;
+        }
+        
+        @media (max-width: 991px) {
+          .doc-management-container {
+            flex-direction: column !important;
+            gap: 1.5rem !important;
+          }
+          .doc-sidebar {
+            width: 100% !important;
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 8px;
+            background: #fff;
+          }
+          .doc-panel {
+            width: 100% !important;
+          }
+        }
+
+        @media (max-width: 576px) {
+          .file-card {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+          .file-card .action-buttons-wrap {
+            width: 100% !important;
+            justify-content: flex-end !important;
+            border-top: 1px solid #E2E8F0;
+            padding-top: 12px;
+          }
+          .doc-panel-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 4px !important;
+          }
+          .panel-header-icon {
+            display: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }

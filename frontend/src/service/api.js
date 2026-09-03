@@ -406,6 +406,36 @@ export const getMyYudisiumRegistrations = async (mahasiswaId) => {
     return [];
   }
 };
+// ---------------------------------------- YUDISIUM ADMIN -------------------------------------------
+export const getAllYudisiumRegistrations = async () => {
+  const response = await api.get('/api/yudisium-registrations?limit=all');
+  return response.data?.data || response.data || [];
+};
+
+export const getYudisiumRegistrationById = async (id) => {
+  const response = await api.get(`/api/yudisium-registrations/${id}`);
+  return response.data?.data ?? response.data;
+};
+
+// API Approve
+export const approveYudisiumRegistration = async (registrationId, payload) => {
+  // payload: { adminId, yudisiumPeriodId, yudisiumRegistrationUploadIds: [] }
+  const response = await api.put(`/api/yudisium-registrations/${registrationId}/approve`, payload);
+  return response.data?.data ?? response.data;
+};
+
+// API Reject 
+export const rejectYudisiumRegistration = async (registrationId, payload) => {
+  // payload: { adminId, message, isEdit, yudisiumRegistrationUploadIds: [] }
+  const response = await api.put(`/api/yudisium-registrations/${registrationId}/reject`, payload);
+  return response.data?.data ?? response.data;
+};
+
+// API file upload mahasiswa review
+export const downloadYudisiumRegistrationUpload = async (uploadId) => {
+  const response = await api.get(`/api/yudisium-registrations/uploads/${uploadId}/download`, { responseType: 'blob' });
+  return response.data;
+};
 
 // ------------------------------------------- SIDANG ADMIN -------------------------------------------
 export const getAllSidangRegistrations = async () => {
@@ -497,7 +527,7 @@ export const getStudyProgramById = async (id) => api.get(`/api/study-programs/${
 
 export const getSidangPeriods = async () => {
   try {
-    const response = await api.get("/api/sidang-periods");
+    const response = await api.get("/api/sidang-periods?limit=all");
     return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
@@ -505,10 +535,14 @@ export const getSidangPeriods = async () => {
   }
 };
 
-export const getYudisiumPeriods = async () => {
+export const getYudisiumPeriods = async (category = '') => {
   try {
-    const response = await api.get("/api/yudisium-periods");
-    return response.data?.data ?? response.data;
+    const url = category 
+      ? `/api/yudisium-periods?category=${encodeURIComponent(category)}&limit=all` 
+      : `/api/yudisium-periods?limit=all`;
+      
+    const response = await api.get(url);
+    return response.data?.data || response.data || [];
   } catch (err) {
     if (err.response?.status === 404) return [];
     throw err;
@@ -516,18 +550,22 @@ export const getYudisiumPeriods = async () => {
 };
 
 export const getActiveYudisiumPeriod = async () => {
-  const response = await api.get('/api/yudisium-periods?category=pendaftaran yudisium');
-  const periods = response.data?.data ?? response.data;
+  try {
+    const response = await api.get('/api/yudisium-periods?category=pendaftaran yudisium&limit=all');
+    const periods = response.data?.data ?? response.data;
 
-  const now = new Date();
+    const now = new Date();
 
-  const activePeriod = periods.find(p => {
-    const start = new Date(p.startDate);
-    const end = new Date(p.endDate);
-    return p.isOpen === true && now >= start && now <= end;
-  });
+    const activePeriod = periods.find(p => {
+      const start = new Date(p.startDate);
+      const end = new Date(p.endDate);
+      return p.isOpen === true && now >= start && now <= end;
+    });
 
-  return activePeriod || null;
+    return activePeriod || null;
+  } catch (err) {
+    return null;
+  }
 };
 
 export const createSidangPeriod = async ({ name, startDate, endDate }) => {
@@ -550,23 +588,22 @@ export const updateSidangPeriod = async (id, { name, startDate, endDate }) => {
   return response.data?.data ?? response.data;
 };
 
-export const createYudisiumPeriod = async ({ name, startDate, endDate }) => {
+export const createYudisiumPeriod = async ({ name, category, startDate, endDate }) => {
   const now = new Date();
   const start = new Date(`${startDate}T12:00:00`);
   const end = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
-
-  const response = await api.post("/api/yudisium-periods", { name, startDate, endDate, isOpen });
+  const response = await api.post("/api/yudisium-periods", { name, category, startDate, endDate, isOpen });
   return response.data?.data ?? response.data;
 };
 
-export const updateYudisiumPeriod = async (id, { name, startDate, endDate }) => {
+export const updateYudisiumPeriod = async (id, { name, category, startDate, endDate }) => {
   const now = new Date();
   const start = new Date(`${startDate}T12:00:00`);
   const end = new Date(`${endDate}T12:00:00`);
   const isOpen = now >= start && now <= end;
 
-  const response = await api.patch(`/api/yudisium-periods/${id}`, { name, startDate, endDate, isOpen });
+  const response = await api.patch(`/api/yudisium-periods/${id}`, { name, category, startDate, endDate, isOpen });
   return response.data?.data ?? response.data;
 };
 

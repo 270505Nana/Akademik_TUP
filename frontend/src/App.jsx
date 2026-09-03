@@ -22,7 +22,8 @@ import AturPeriodeSidang from "./pages/admin/aturperiodesidang";
 import AturPeriodeYudisium from "./pages/admin/aturperiodeyudisium";
 import AturBerkas          from "./pages/admin/requirementdocs";
 import UploadSKL           from "./pages/admin/skltranskrip";             
-import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";             
+import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";  
+import RegistrasiYudisium  from "./pages/admin/RegistrasiYudisium";           
 import ProtectedRoute      from "./components/common/protectedRoute";
 import PendaftaranSidang   from "./pages/mahasiswa/pendaftaransidang";
 import PendaftaranYudisium from "./pages/mahasiswa/pendaftaranyudisium";
@@ -87,6 +88,15 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["MAHASISWA"]} requireCompleteProfile={true}>
                 <PendaftaranYudisium />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/akademik/verifikasi-yudisium"
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <RegistrasiYudisium />
               </ProtectedRoute>
             }
           />
