@@ -44,7 +44,7 @@ const DocUploadPanel = ({
     error: null,
   });
   // Blob URL & judul untuk modal preview template
-  const [templateModal, setTemplateModal] = useState({ blobUrl: null, title: "" });
+  const [templateModal, setTemplateModal] = useState({ blobUrl: null, blob: null, title: "", mimeType: null });
 
   // Reset state template saat user berpindah ke dokumen lain
   useEffect(() => {
@@ -55,7 +55,7 @@ const DocUploadPanel = ({
 
   const handleCloseTemplateModal = () => {
     if (templateModal.blobUrl) URL.revokeObjectURL(templateModal.blobUrl);
-    setTemplateModal({ blobUrl: null, title: "" });
+    setTemplateModal({ blobUrl: null, blob: null, title: "", mimeType: null });
   };
 
   const handlePreviewTemplate = async () => {
@@ -68,10 +68,13 @@ const DocUploadPanel = ({
     try {
       const { blob, name } = await fetchTemplatePreviewBlob(templateCode);
       const blobUrl = URL.createObjectURL(blob);
-      setTemplateModal({ blobUrl, title: name || activeDoc.name });
+      setTemplateModal({ blobUrl, blob, title: name || activeDoc.name, mimeType: blob?.type || null });
       setTemplateState({ isFetching: false, isDownloading: false, previewedDocId: activeDoc.id, error: null });
     } catch (err) {
-      const isNotFound = err?.response?.status === 404;
+      const isNotFound =
+        err?.response?.status === 404 ||
+        err?.message === "URL preview tidak tersedia untuk template ini" ||
+        err?.message === "Template tidak ditemukan";
       setTemplateState((prev) => ({
         ...prev,
         isFetching: false,
@@ -90,9 +93,15 @@ const DocUploadPanel = ({
     try {
       await triggerTemplateDownload(templateCode);
     } catch (err) {
+      const isNotFound =
+        err?.response?.status === 404 ||
+        err?.message === "Download URL tidak ditemukan dalam response." ||
+        err?.message === "Template tidak ditemukan";
       setTemplateState((prev) => ({
         ...prev,
-        error: "Gagal mengunduh template. Silakan coba lagi.",
+        error: isNotFound
+          ? "Template untuk dokumen ini belum diunggah oleh admin."
+          : "Gagal mengunduh template. Silakan coba lagi.",
       }));
     } finally {
       setTemplateState((prev) => ({ ...prev, isDownloading: false }));
@@ -489,7 +498,9 @@ const DocUploadPanel = ({
       {/* Modal preview template — revoke URL dilakukan saat close, bukan setTimeout */}
       <FilePreviewModal
         blobUrl={templateModal.blobUrl}
+        blob={templateModal.blob}
         title={templateModal.title}
+        mimeType={templateModal.mimeType}
         onClose={handleCloseTemplateModal}
         onDownload={isPreviewReady ? handleDownloadTemplate : null}
         isDownloading={templateState.isDownloading}
