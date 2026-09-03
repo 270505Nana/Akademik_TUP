@@ -7,7 +7,8 @@ import CustomAlert from '../../components/common/CustomAlert';
 import { useAuth } from '../../context/AuthContext';
 import { getAllYudisiumRegistrations, getYudisiumPeriods } from '../../service/api';
 import { determineYudisiumStatus, STATUS_YUDISIUM, YUDISIUM_STATUS_CONFIG } from '../../components/admin/yudisium/Yudisiumstatushelper';
-import '../../components/admin/sidang/RegistrasiSidang.css'; // Kita pinjam CSS sidang karena strukturnya sama
+import VerifikasiYudisiumModal from '../../components/admin/yudisium/VerifikasiYudisiumModal';
+import '../../components/admin/sidang/RegistrasiSidang.css'; 
 
 const FILTER_TABS = [
   { key: '',                                   label: 'Semua'                },
@@ -151,11 +152,14 @@ const SortableHeader = ({ label, field, sort, onSort, style }) => {
 };
 
 const RegistrasiYudisium = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Data
   const [registrations, setRegistrations] = useState([]);
   const [periodMap,     setPeriodMap]     = useState({});
   const [prodiMap,      setProdiMap]      = useState({});
+
   const [loading,         setLoading]         = useState(true);
   const [search,          setSearch]          = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
@@ -164,12 +168,19 @@ const RegistrasiYudisium = () => {
   const [sort, setSort] = useState({ field: null, dir: 'asc' });
   const [currentPage,     setCurrentPage]     = useState(1);
   const [alert,           setAlert]           = useState({ show: false, type: '', title: '', message: '' });
+
   const [selectedReg, setSelectedReg] = useState(null);
 
   const showAlert = useCallback((type, title, message) => {
     setAlert({ show: true, type, title, message });
     setTimeout(() => setAlert(p => ({ ...p, show: false })), 4000);
   }, []);
+
+  const handleModalSaved = useCallback(() => {
+    setSelectedReg(null);
+    fetchAll();
+    showAlert('success', 'Berhasil', 'Verifikasi berkas berhasil disimpan.');
+  }, [showAlert]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search.trim().toLowerCase()), 300);
@@ -465,16 +476,18 @@ const RegistrasiYudisium = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {selectedReg && (
-          <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-             <div style={{background: '#fff', padding: 20, borderRadius: 8}}>
-                 <h3>Verifikasi Yudisium (Tahap Selanjutnya)</h3>
-                 <p>Modal detail verifikasi akan dibuat di langkah selanjutnya.</p>
-                 <button onClick={() => setSelectedReg(null)} style={{padding: '8px 16px', background: '#C0182A', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer'}}>Tutup</button>
-             </div>
-          </div>
-      )}
+
+      <AnimatePresence>
+        {selectedReg && (
+          <VerifikasiYudisiumModal
+            registration={selectedReg}
+            academicStaffId={profile?.id || user?.id}
+            periodMap={Object.fromEntries(Object.entries(periodMap).filter(([_, p]) => p.category === 'yudisium'))}
+            onClose={() => setSelectedReg(null)}
+            onSaved={handleModalSaved}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
