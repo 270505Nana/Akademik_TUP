@@ -138,13 +138,11 @@ export default function Step1Yudisium({ studentInfo, lecturers }) {
 
   return (
     <div className="step-content">
-      <div className="info-banner" style={{ marginBottom: "2rem" }}>
-        <div className="banner-icon-container">
-          <CheckCircle2 color="#16a34a" size={24} />
-        </div>
-        <div className="banner-content">
-          <h4>Informasi Mahasiswa</h4>
-          <p>Pastikan data diri kamu di bawah ini sudah sesuai sebelum melanjutkan pendaftaran yudisium.</p>
+      <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+        <CheckCircle2 color="#16a34a" style={{ flexShrink: 0, marginTop: '2px' }} size={20} />
+        <div>
+          <h4 style={{ margin: 0, color: '#92400E', fontWeight: 800, fontSize: '15px', marginBottom: '4px' }}>Informasi Mahasiswa</h4>
+          <p style={{ margin: 0, color: '#B45309', fontSize: '13px', lineHeight: '1.5' }}>Pastikan data diri kamu di bawah ini sudah sesuai sebelum melanjutkan pendaftaran yudisium.</p>
         </div>
       </div>
 
@@ -246,7 +244,7 @@ export default function Step1Yudisium({ studentInfo, lecturers }) {
           />
         </div>
 
-        {/*  CUMLAUDE */}
+        {/* CUMLAUDE */}
         <div className="form-group" style={{ gridColumn: "1 / -1", marginTop: "1rem", borderTop: "1px solid #e2e8f0", paddingTop: "1.5rem" }}>
           <label className="form-label" style={{ fontSize: "16px", color: "#0f172a" }}>
             Pengajuan Cumlaude / Summa Cumlaude

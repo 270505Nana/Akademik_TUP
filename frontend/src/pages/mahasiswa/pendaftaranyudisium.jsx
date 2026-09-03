@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, ArrowLeft, Menu } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Menu, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../../components/mahasiswa/sidang/sidang.css";
 import logoSimta from "../../assets/logo-simta.png";
@@ -62,7 +62,7 @@ function PendaftaranYudisiumContent() {
   const { step, data, documents } = state;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // State baru untuk hide sidebar di desktop
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); 
   const [isSavingStep1, setIsSavingStep1] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lecturers, setLecturers] = useState([]);
@@ -70,6 +70,8 @@ function PendaftaranYudisiumContent() {
 
   const registrationId = data.registrationId;
   const mahasiswaId = student?.mahasiswaId || profile?.id || user?.id;
+  
+  const isLocked = !data.isDraft && !data.isEdit;
 
   const studentInfo = {
     nama: student?.namaLengkap || profile?.name || user?.username || "-",
@@ -89,7 +91,8 @@ function PendaftaranYudisiumContent() {
         if (mahasiswaId) {
           const drafts = await getMyYudisiumRegistrations(mahasiswaId);
           if (drafts && drafts.length > 0) {
-            const latestDraft = drafts.find(d => d.isDraft) || drafts[0];
+            const sortedDrafts = drafts.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+            const latestDraft = sortedDrafts[0];
             if (latestDraft) {
               dispatch({ type: "RESTORE_FROM_API", payload: latestDraft });
             }
@@ -128,21 +131,20 @@ function PendaftaranYudisiumContent() {
     ...(registrationId ? { id: registrationId } : {}),
     program: data.program, 
     tak: Number(data.tak),
-    tglSidang: null,
     judulTugasAkhirIndonesia: data.judulTugasAkhirIndonesia,
     judulTugasAkhirInggris: data.judulTugasAkhirInggris,
-    isConfirmed: false,
+    isDraft: true,
+    tglSidang: new Date().toISOString(),
     skemaSidang: data.skemaSidang,
     pengajuanCumlaude: data.pengajuanCumlaude,
-    skemaCumlaude: data.pengajuanCumlaude !== "Non Cumlaude" ? data.skemaCumlaude.join(", ") : "",
+    skemaCumlaude: data.pengajuanCumlaude !== "Non Cumlaude" ? (Array.isArray(data.skemaCumlaude) ? data.skemaCumlaude.join(", ") : data.skemaCumlaude) : "",
     evidenCumlaude: data.pengajuanCumlaude !== "Non Cumlaude" ? data.evidenCumlaude : null,
     berminatWirausaha: data.minatWirausaha === "Ya",
     mahasiswaId: String(mahasiswaId),
-    dosenWaliId: data.dosenWaliId !== "-" ? data.dosenWaliId : null,
+    dosenWaliId: data.dosenWaliId && data.dosenWaliId !== "-" ? data.dosenWaliId : null,
     dosenPembimbing1Id: data.dosenPembimbing1Id ? String(data.dosenPembimbing1Id) : null,
     dosenPembimbing2Id: data.dosenPembimbing2Id ? String(data.dosenPembimbing2Id) : null,
-    yudisiumPeriodId: null, 
-    yudisiumRegistrationPeriodId: data.yudisiumRegistrationPeriodId
+    yudisiumRegistrationPeriodId: data.yudisiumRegistrationPeriodId || null
   });
 
   const handleSaveStep1 = async () => {
@@ -217,24 +219,80 @@ function PendaftaranYudisiumContent() {
       await submitYudisiumRegistration({
         ...buildSavePayload(),
         id: registrationId,
-        isConfirmed: true
+        isDraft: false
       });
 
       setFormAlert({ 
         type: "success", 
         title: "Pendaftaran Berhasil!", 
-        msg: "Apabila terdapat revisi berkas Mohon konfirmasi pembaruan ke Helpdesk. Sidang Yudisium dilaksanakan tertutup. SKL diterbitkan 2-3 minggu setelah diproses." 
+        msg: "Pendaftaran kamu berhasil dikirim. Tim akademik akan memverifikasi berkas yang telah kamu lampirkan." 
       });
       window.scrollTo({ top: 0, behavior: "smooth" });
       setTimeout(() => {
-        navigate("/mahasiswa/dashboard");
-      }, 3500);
+        window.location.reload(); 
+      }, 2500);
     } catch (e) {
       setFormAlert({ type: "error", title: "Gagal Submit", msg: e.response?.data?.message || "Gagal mengirim pendaftaran." });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const renderStatusBanner = () => {
+    if (!data.registrationId) return null;
+
+    if (data.yudisiumPeriodId) {
+      return (
+        <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+          <CheckCircle2 color="#16A34A" style={{ flexShrink: 0, marginTop: '2px' }} size={20} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <h4 style={{ margin: 0, color: '#166534', fontWeight: 800, fontSize: '15px' }}>Pendaftaran Yudisium Disetujui</h4>
+              <span style={{ background: '#DCFCE7', color: '#166534', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px' }}>DISETUJUI</span>
+            </div>
+            <p style={{ margin: 0, color: '#15803D', fontSize: '13px', lineHeight: '1.5' }}>Selamat! Pendaftaran yudisium kamu telah diverifikasi dan disetujui oleh admin akademik.</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (data.isEdit) {
+      return (
+        <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+          <AlertTriangle color="#D97706" style={{ flexShrink: 0, marginTop: '2px' }} size={20} />
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <h4 style={{ margin: 0, color: '#92400E', fontWeight: 800, fontSize: '15px' }}>Pendaftaran Memerlukan Perbaikan Dokumen</h4>
+              <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px' }}>PERLU PERBAIKAN</span>
+            </div>
+            <p style={{ margin: 0, color: '#B45309', fontSize: '13px', lineHeight: '1.5', marginBottom: '12px' }}>
+              Tim akademik memberikan catatan: <strong>"{data.message}"</strong>. Silakan perbaiki pengajuan kamu melalui formulir di bawah ini dan kirim ulang.
+            </p>
+            <div style={{ background: '#fff', padding: '10px 16px', borderRadius: '8px', border: '1px solid #FDE68A', display: 'inline-block' }}>
+              <div style={{ fontSize: '12px', color: '#92400E' }}><strong>Batas Waktu Perbaikan:</strong> {new Date(data.isEdit).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!data.isDraft) {
+      return (
+        <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+          <Clock color="#2563EB" style={{ flexShrink: 0, marginTop: '2px' }} size={20} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <h4 style={{ margin: 0, color: '#1E3A8A', fontWeight: 800, fontSize: '15px' }}>Pendaftaran Sedang Diproses</h4>
+              <span style={{ background: '#DBEAFE', color: '#1E40AF', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px' }}>MENUNGGU VERIFIKASI</span>
+            </div>
+            <p style={{ margin: 0, color: '#1D4ED8', fontSize: '13px', lineHeight: '1.5' }}>Pendaftaran yudisium kamu telah berhasil dikirim dan sedang menunggu proses verifikasi oleh tim akademik. Mohon pantau halaman ini secara berkala.</p>
+          </div>
+        </div>
+      );
+    }
+    
+    return null;
   };
 
   return (
@@ -245,7 +303,6 @@ function PendaftaranYudisiumContent() {
         <div className="page-wrapper yudisium-wrapper">
           <div className="top-header-nav">
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              
               <button 
                 className="topbar-toggle" 
                 onClick={() => {
@@ -259,7 +316,6 @@ function PendaftaranYudisiumContent() {
               >
                 <Menu size={20} />
               </button>
-              
               <button className="btn-back-square" onClick={() => navigate("/mahasiswa/dashboard")}>
                 <ArrowLeft size={18} />
                 <span className="hidden sm:inline">Kembali</span>
@@ -280,6 +336,7 @@ function PendaftaranYudisiumContent() {
             )}
 
             <main>
+              {renderStatusBanner()}
               {step === 1 ? (
                 <Step1Yudisium studentInfo={studentInfo} lecturers={lecturers} />
               ) : (
@@ -300,18 +357,26 @@ function PendaftaranYudisiumContent() {
               </div>
 
               {step === 1 ? (
-                <button className="btn-primary" onClick={handleSaveStep1} disabled={isSavingStep1}>
-                  {isSavingStep1 ? "Menyimpan..." : "Simpan & Lanjutkan"}
-                </button>
-              ) : (
-                isStep2Complete() ? (
-                  <button className="btn-primary" onClick={handleSubmit} disabled={isSubmitting || !registrationId}>
-                    {isSubmitting ? "Mengirim..." : "Submit Pendaftaran"}
+                isLocked ? (
+                  <button className="btn-primary" onClick={() => setStep(2)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Lanjut ke Dokumen <ChevronRight size={16} />
                   </button>
                 ) : (
-                  <button className="btn-primary" onClick={handleSaveDraft} style={{ background: '#F59E0B', color: '#fff', border: 'none' }}>
-                    Simpan Draft
+                  <button className="btn-primary" onClick={handleSaveStep1} disabled={isSavingStep1}>
+                    {isSavingStep1 ? "Menyimpan..." : "Simpan & Lanjutkan"}
                   </button>
+                )
+              ) : (
+                !isLocked && (
+                  isStep2Complete() ? (
+                    <button className="btn-primary" onClick={handleSubmit} disabled={isSubmitting || !registrationId}>
+                      {isSubmitting ? "Mengirim..." : "Submit Pendaftaran"}
+                    </button>
+                  ) : (
+                    <button className="btn-primary" onClick={handleSaveDraft} style={{ background: '#F59E0B', color: '#fff', border: 'none' }}>
+                      Simpan Draft
+                    </button>
+                  )
                 )
               )}
             </footer>
@@ -348,6 +413,7 @@ function PendaftaranYudisiumContent() {
           min-height: 100vh !important; 
           zoom: 0.8; 
         }
+
         @-moz-document url-prefix() {
           .yudisium-wrapper {
              transform: scale(0.8);
