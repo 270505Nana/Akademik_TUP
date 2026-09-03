@@ -249,12 +249,6 @@ export default function FilePreviewModal({
                 background: "#F1F5F9",
               }}
             >
-              {/* 
-                Catatan Keamanan: dangerouslySetInnerHTML digunakan di sini karena sumber berkas
-                adalah template dokumen resmi dari penyimpanan internal admin universitas,
-                bukan input pengguna/mahasiswa acak. Mammoth hanya menghasilkan elemen HTML semantik dasar
-                (p, table, h1-h6, strong, em) dari dokumen Office Open XML tanpa script.
-              */}
               <div
                 className="docx-preview-content"
                 style={{

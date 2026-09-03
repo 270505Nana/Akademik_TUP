@@ -135,9 +135,6 @@ export function formReducer(state, action) {
             isValid: null,
           };
         }
-
-        // SYNC LOGIC: If it's a "shared" document like LoA or Camera Ready
-        // between Jurnal and Proceeding (matching names)
         if (
           targetDoc &&
           (targetDoc.section === SECTIONS.JURNAL ||
@@ -236,7 +233,6 @@ export function formReducer(state, action) {
           existingDocsBySlug[d.slug] = d;
         });
 
-      // Bangun entri dokumen dinamis baru dari data template backend menggunakan helper terpusat
       const newSectionDocs = templates.map((tpl, idx) => {
         const slug = tpl.code;
         const existing = existingDocsBySlug[slug];
