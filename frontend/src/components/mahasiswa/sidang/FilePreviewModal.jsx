@@ -1,12 +1,21 @@
-import React, { useEffect } from "react";
-import { X, Download, FileText } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { X, Download, FileText, Loader } from "lucide-react";
+
 export default function FilePreviewModal({
   blobUrl,
+  blob = null,
   title,
+  mimeType,
   onClose,
   onDownload,
   isDownloading = false,
 }) {
+  const [docxState, setDocxState] = useState({
+    html: null,
+    isLoading: false,
+    isError: false,
+  });
+
   useEffect(() => {
     if (!blobUrl) return;
     const handleKeyDown = (e) => { if (e.key === "Escape") onClose(); };
@@ -22,6 +31,59 @@ export default function FilePreviewModal({
     }
     return () => { document.body.style.overflow = ""; };
   }, [blobUrl]);
+
+  const normalizedMime = (mimeType || "").toLowerCase();
+  const isPdf = !mimeType || normalizedMime.includes("pdf");
+  const isImage = normalizedMime.startsWith("image/");
+  const isDocx = Boolean(
+    normalizedMime &&
+    (normalizedMime.includes("wordprocessingml.document") || normalizedMime.includes("application/vnd.openxmlformats"))
+  );
+
+  useEffect(() => {
+    if (!blobUrl || !isDocx) {
+      setDocxState({ html: null, isLoading: false, isError: false });
+      return;
+    }
+
+    let isMounted = true;
+    setDocxState({ html: null, isLoading: true, isError: false });
+
+    const convertDocx = async () => {
+      try {
+        let arrayBuffer;
+        if (blob && typeof blob.arrayBuffer === "function") {
+          arrayBuffer = await blob.arrayBuffer();
+        } else {
+          const res = await fetch(blobUrl);
+          arrayBuffer = await res.arrayBuffer();
+        }
+
+        // Lazy-load mammoth secara dinamis hanya saat dibutuhkan untuk menghemat bundle size
+        const mammoth = await import("mammoth");
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+
+        if (isMounted) {
+          setDocxState({
+            html: result.value || "<p>Dokumen tidak memiliki konten teks.</p>",
+            isLoading: false,
+            isError: false,
+          });
+        }
+      } catch (err) {
+        console.error("Gagal mengonversi file .docx ke HTML:", err);
+        if (isMounted) {
+          setDocxState({ html: null, isLoading: false, isError: true });
+        }
+      }
+    };
+
+    convertDocx();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [blobUrl, blob, isDocx]);
 
   if (!blobUrl) return null;
 
@@ -117,13 +179,177 @@ export default function FilePreviewModal({
           </button>
         </div>
 
-        {/* Body — iframe preview */}
+        {/* Body — preview atau fallback */}
         <div style={{ flex: 1, overflow: "hidden", background: "#F8FAFC" }}>
-          <iframe
-            src={blobUrl}
-            title={title}
-            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-          />
+          {isPdf ? (
+            <iframe
+              src={blobUrl}
+              title={title}
+              style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+            />
+          ) : isImage ? (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "1.5rem",
+                overflow: "auto",
+              }}
+            >
+              <img
+                src={blobUrl}
+                alt={title}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
+                  borderRadius: "6px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                }}
+              />
+            </div>
+          ) : isDocx && docxState.isLoading ? (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.75rem",
+                color: "#64748B",
+              }}
+            >
+              <Loader
+                size={32}
+                style={{
+                  color: "#C0182A",
+                  animation: "spin 1s linear infinite",
+                }}
+              />
+              <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1E293B", margin: 0 }}>
+                Menyiapkan Pratinjau Dokumen Word...
+              </p>
+              <span style={{ fontSize: "0.8rem", color: "#64748B" }}>
+                Mengonversi file .docx ke tampilan dokumen
+              </span>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : isDocx && docxState.html && !docxState.isError ? (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                overflow: "auto",
+                padding: "2rem 1.5rem",
+                background: "#F1F5F9",
+              }}
+            >
+              {/* 
+                Catatan Keamanan: dangerouslySetInnerHTML digunakan di sini karena sumber berkas
+                adalah template dokumen resmi dari penyimpanan internal admin universitas,
+                bukan input pengguna/mahasiswa acak. Mammoth hanya menghasilkan elemen HTML semantik dasar
+                (p, table, h1-h6, strong, em) dari dokumen Office Open XML tanpa script.
+              */}
+              <div
+                className="docx-preview-content"
+                style={{
+                  maxWidth: "800px",
+                  margin: "0 auto",
+                  background: "#FFFFFF",
+                  padding: "3rem 3.5rem",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+                  minHeight: "100%",
+                  color: "#1E293B",
+                  fontSize: "0.95rem",
+                  lineHeight: 1.7,
+                  wordBreak: "break-word",
+                }}
+                dangerouslySetInnerHTML={{ __html: docxState.html }}
+              />
+              <style>{`
+                .docx-preview-content table {
+                  width: 100%;
+                  border-collapse: collapse;
+                  margin: 1.25rem 0;
+                }
+                .docx-preview-content th, .docx-preview-content td {
+                  border: 1px solid #CBD5E1;
+                  padding: 0.5rem 0.75rem;
+                  text-align: left;
+                }
+                .docx-preview-content th {
+                  background-color: #F8FAFC;
+                  font-weight: 700;
+                }
+                .docx-preview-content p {
+                  margin-bottom: 0.85rem;
+                }
+                .docx-preview-content h1, .docx-preview-content h2, .docx-preview-content h3 {
+                  margin-top: 1.5rem;
+                  margin-bottom: 0.75rem;
+                  font-weight: 700;
+                  color: #0F172A;
+                }
+              `}</style>
+            </div>
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                padding: "2rem",
+              }}
+            >
+              <div
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 16,
+                  background: "#FEF2F2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "1.25rem",
+                }}
+              >
+                <FileText size={36} color="#C0182A" />
+              </div>
+              <h4
+                style={{
+                  fontSize: "1.1rem",
+                  fontWeight: 700,
+                  color: "#1E293B",
+                  marginBottom: "0.5rem",
+                  maxWidth: "500px",
+                  wordBreak: "break-word",
+                }}
+              >
+                {title}
+              </h4>
+              <p
+                style={{
+                  fontSize: "0.875rem",
+                  color: "#64748B",
+                  lineHeight: 1.5,
+                  margin: 0,
+                  maxWidth: "460px",
+                }}
+              >
+                Pratinjau langsung tidak didukung untuk tipe berkas ini. Silakan unduh berkas untuk melihat isinya.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

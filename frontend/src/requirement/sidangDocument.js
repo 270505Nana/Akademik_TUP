@@ -9,17 +9,17 @@ export const SECTIONS = {
 };
 
 export const REQUIRED_SLUGS = [
-  "berkas-form-validasi-dosen-wali",
-  "berkas-rekomendasi-sidang-pembimbing",
-  "berkas-scan-pernyataan-biodata-ijazah-bermaterai",
-  "berkas-dummy-ijazah-bermaterai",
-  "berkas-scan-akta-kelahiran",
-  "berkas-scan-ijazah-terakhir",
-  "berkas-scan-khs-dengan-ttd-doswal-kaprodi",
-  "berkas-log-bimbingan",
-  "berkas-sertifikat-tak",
-  "berkas-rekomendasi-berkas-evidence-ta-pa-igracias-pembimbing",
-  "upload-draft-buku-ta-siap-sidang",
+  "sidang-berkas-wajib-berkasformvalidasidosenwali",
+  "sidang-berkas-wajib-berkasrekomendasisidangpembimbing",
+  "sidang-berkas-wajib-berkasscanpernyataanbiodataijazahbermaterai",
+  "sidang-berkas-wajib-berkasdummyijazahbermaterai",
+  "sidang-berkas-wajib-scan-akta-kelahiran",
+  "sidang-berkas-wajib-scan-ijazah-terakhir",
+  "sidang-berkas-wajib-berkasscankhsdenganttddoswalkaprodi",
+  "sidang-berkas-wajib-berkaslogbimbingan",
+  "sidang-berkas-wajib-berkassertifikattak",
+  "sidang-berkas-wajib-berkas-evidence-ta-pa-igracias",
+  "sidang-berkas-wajib-template-surat-ta",
 ];
 
 export const NON_SIDANG_SLUGS = {
@@ -47,35 +47,35 @@ export const NON_SIDANG_SLUGS = {
 
 const REQUIRED_DOCUMENTS = [
   {
-    slug: "berkas-form-validasi-dosen-wali",
+    slug: "sidang-berkas-wajib-berkasformvalidasidosenwali",
     name: "Berkas Form Validasi Dosen Wali",
   },
   {
-    slug: "berkas-rekomendasi-sidang-pembimbing",
+    slug: "sidang-berkas-wajib-berkasrekomendasisidangpembimbing",
     name: "Berkas Rekomendasi Sidang Pembimbing",
   },
   {
-    slug: "berkas-scan-pernyataan-biodata-ijazah-bermaterai",
+    slug: "sidang-berkas-wajib-berkasscanpernyataanbiodataijazahbermaterai",
     name: "Berkas Scan Pernyataan Biodata Ijazah Bermaterai",
   },
   {
-    slug: "berkas-dummy-ijazah-bermaterai",
+    slug: "sidang-berkas-wajib-berkasdummyijazahbermaterai",
     name: "Berkas Dummy Ijazah Bermaterai",
   },
-  { slug: "berkas-scan-akta-kelahiran", name: "Berkas Scan Akta Kelahiran" },
-  { slug: "berkas-scan-ijazah-terakhir", name: "Berkas Scan Ijazah Terakhir" },
+  { slug: "sidang-berkas-wajib-scan-akta-kelahiran", name: "Berkas Scan Akta Kelahiran" },
+  { slug: "sidang-berkas-wajib-scan-ijazah-terakhir", name: "Berkas Scan Ijazah Terakhir" },
   {
-    slug: "berkas-scan-khs-dengan-ttd-doswal-kaprodi",
+    slug: "sidang-berkas-wajib-berkasscankhsdenganttddoswalkaprodi",
     name: "Berkas Scan KHS dengan TTD Doswal/Kaprodi",
   },
-  { slug: "berkas-log-bimbingan", name: "Berkas Log Bimbingan" },
-  { slug: "berkas-sertifikat-tak", name: "Berkas Sertifikat TAK" },
+  { slug: "sidang-berkas-wajib-berkaslogbimbingan", name: "Berkas Log Bimbingan" },
+  { slug: "sidang-berkas-wajib-berkassertifikattak", name: "Berkas Sertifikat TAK" },
   {
-    slug: "berkas-rekomendasi-berkas-evidence-ta-pa-igracias-pembimbing",
+    slug: "sidang-berkas-wajib-berkas-evidence-ta-pa-igracias",
     name: "Berkas Rekomendasi Evidence TA/PA iGracias Pembimbing",
   },
   {
-    slug: "upload-draft-buku-ta-siap-sidang",
+    slug: "sidang-berkas-wajib-template-surat-ta",
     name: "Upload Draft Buku TA Siap Sidang",
   },
 ];
