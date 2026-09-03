@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import {
-  Award, BookOpen, ClipboardCheck, FilePlus2, Gavel, GraduationCap, Mic2,
+  Award, BookOpen, ClipboardCheck, FilePlus2, Gavel, GraduationCap, Mic2, MapPin,
 } from "lucide-react";
 import CountdownBanner from "../../components/landing/CountdownBanner";
 import DocumentCard from "../../components/landing/DocumentCard";
@@ -88,13 +88,23 @@ const LandingPage = () => {
               <a href="#pusat-informasi" className="lp-btn lp-btn-primary">Panduan PDF</a>
             </div>
             <div className="lp-hero-visual">
-              <img
-                src={heroImage}
-                alt="Gedung Telkom University Purwokerto"
-                loading="eager"
-                fetchPriority="high"
-                style={{ objectFit: "cover" }}
-              />
+              <div className="lp-hero-visual-frame">
+                <img
+                  src={heroImage}
+                  alt="Gedung Telkom University Purwokerto"
+                  loading="eager"
+                  fetchPriority="high"
+                />
+                <div className="lp-hero-badge">
+                  <span className="lp-hero-badge-icon">
+                    <MapPin size={16} />
+                  </span>
+                  <span className="lp-hero-badge-text">
+                    <span className="lp-hero-badge-title">Telkom University</span>
+                    <span className="lp-hero-badge-sub">Purwokerto</span>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
