@@ -556,23 +556,33 @@ export const getActiveYudisiumPeriod = async () => {
   }
 };
 
-export const createSidangPeriod = async (payload) => {
-  const now = new Date();
-  const start = new Date(`${payload.startDate}T00:00:00`);
-  const end = new Date(`${payload.endDate}T23:59:59`);
-  const isOpen = now >= start && now <= end;
+// export const createSidangPeriod = async (payload) => {
+//   const now = new Date();
+//   const start = new Date(`${payload.startDate}T00:00:00`);
+//   const end = new Date(`${payload.endDate}T23:59:59`);
+//   const isOpen = now >= start && now <= end;
 
-  const response = await api.post("/api/sidang-periods", { ...payload, isOpen });
+//   const response = await api.post("/api/sidang-periods", { ...payload, isOpen });
+//   return response.data?.data ?? response.data;
+// };
+
+// export const updateSidangPeriod = async (id, payload) => {
+//   const now = new Date();
+//   const start = new Date(`${payload.startDate}T00:00:00`);
+//   const end = new Date(`${payload.endDate}T23:59:59`);
+//   const isOpen = now >= start && now <= end;
+
+//   const response = await api.patch(`/api/sidang-periods/${id}`, { ...payload, isOpen });
+//   return response.data?.data ?? response.data;
+// };
+
+export const createSidangPeriod = async (payload) => {
+  const response = await api.post("/api/sidang-periods", payload);
   return response.data?.data ?? response.data;
 };
 
 export const updateSidangPeriod = async (id, payload) => {
-  const now = new Date();
-  const start = new Date(`${payload.startDate}T00:00:00`);
-  const end = new Date(`${payload.endDate}T23:59:59`);
-  const isOpen = now >= start && now <= end;
-
-  const response = await api.patch(`/api/sidang-periods/${id}`, { ...payload, isOpen });
+  const response = await api.put(`/api/sidang-periods/${id}`, payload);
   return response.data?.data ?? response.data;
 };
 
