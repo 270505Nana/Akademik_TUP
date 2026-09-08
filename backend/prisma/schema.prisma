@@ -246,7 +246,8 @@ model SidangRegistration {
   sidangPeriodId             String?                    @map("sidang_period_id")
   // Penjadwalan
   tglSidang                  DateTime?                  @map("tgl_sidang")
-  ruanganSidang              DateTime?                  @map("ruangan_sidang")
+  ruanganSidang              Ruangan?                   @relation(fields: [ruanganSidangId], references: [id])
+  ruanganSidangId            String?                    @map("ruangan_sidang_id")
   // Tolak Permohonan
   message                    String?
   isEdit                     DateTime?                  @map("is_edit")
@@ -366,4 +367,18 @@ model BerkasMahasiswa {
   mahasiswaId String    @map("mahasiswa_id")
 
   @@map("berkas_mahasiswa")
+}
+
+model Ruangan {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  name        String
+  gedung      String
+  isActive    Boolean   @default(true) @map("is_active")
+
+  sidangRegistrations SidangRegistration[]
+
+  @@map("ruangan")
 }
