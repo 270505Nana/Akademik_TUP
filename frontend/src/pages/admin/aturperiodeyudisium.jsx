@@ -245,7 +245,18 @@ const AturPeriodeYudisium = () => {
       const startObj = new Date(`${form.startDate}T00:00:00.000Z`);
       const endObj = new Date(`${form.endDate}T23:59:59.000Z`);
       const now = new Date();
-      const autoOpen = now >= startObj && now <= endObj;
+      
+      let autoOpen = now >= startObj && now <= endObj;
+      let autoOpenPrevented = false;
+
+      // CEK OVERLAP: Jika harusnya autoOpen, pastikan tidak ada grup lain yang sedang aktif
+      if (autoOpen) {
+        const hasOtherActive = groupedPeriods.some(g => g.pendaftaran?.isOpen || g.yudisium?.isOpen);
+        if (hasOtherActive) {
+          autoOpen = false;
+          autoOpenPrevented = true;
+        }
+      }
 
       await createYudisiumPeriod({
         name: form.name,
@@ -256,7 +267,12 @@ const AturPeriodeYudisium = () => {
         isOpen: autoOpen
       });
       
-      showAlert('success', 'Berhasil', 'Data periode yudisium telah berhasil disimpan.');
+      if (autoOpenPrevented) {
+        showAlert('success', 'Berhasil', 'Jadwal disimpan. Status diset Nonaktif karena masih ada periode lain yang sedang aktif.');
+      } else {
+        showAlert('success', 'Berhasil', 'Data periode yudisium telah berhasil disimpan.');
+      }
+      
       setForm({ name: '', category: 'pendaftaran yudisium', period: '', startDate: '', endDate: '' });
       setIsCreateModalOpen(false);
       fetchPeriods();
@@ -265,29 +281,42 @@ const AturPeriodeYudisium = () => {
     } finally { setSubmitting(false); }
   };
 
-  const handleToggleActive = async (group, isActive) => {
-    const newStatus = !isActive;
+  const handleToggleActive = async (group, currentToggleState) => {
+    const isTurningOn = !currentToggleState;
+    
+    // PROTEKSI SILANG: Jika ingin menghidupkan periode, pastikan tidak ada periode lain yang sedang ON
+    if (isTurningOn) {
+      const hasOtherActive = groupedPeriods.some(g => g.id !== group.id && (g.pendaftaran?.isOpen || g.yudisium?.isOpen));
+      if (hasOtherActive) {
+        showAlert('error', 'Gagal Mengaktifkan', 'Terdapat periode lain yang masih Aktif. Nonaktifkan periode tersebut terlebih dahulu!');
+        return;
+      }
+    }
+
+    setSubmitting(true);
     try {
       if (group.pendaftaran) {
         await updateYudisiumPeriod(group.pendaftaran.id, {
           ...group.pendaftaran, 
           startDate: new Date(`${group.pendaftaran.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${group.pendaftaran.endDate}T00:00:00.000Z`).toISOString(),
-          isOpen: newStatus 
+          endDate: new Date(`${group.pendaftaran.endDate}T23:59:59.000Z`).toISOString(),
+          isOpen: isTurningOn 
         });
       }
       if (group.yudisium) {
         await updateYudisiumPeriod(group.yudisium.id, {
           ...group.yudisium, 
           startDate: new Date(`${group.yudisium.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${group.yudisium.endDate}T00:00:00.000Z`).toISOString(),
-          isOpen: newStatus 
+          endDate: new Date(`${group.yudisium.endDate}T23:59:59.000Z`).toISOString(),
+          isOpen: isTurningOn 
         });
       }
-      fetchPeriods();
-      showAlert('success', 'Berhasil', `Status Periode TA ${group.period} diubah menjadi ${newStatus ? 'Aktif' : 'Nonaktif'}.`);
+      await fetchPeriods();
+      showAlert('success', 'Berhasil', `Status Periode TA ${group.period} diubah menjadi ${isTurningOn ? 'Aktif' : 'Nonaktif'}.`);
     } catch (err) {
       showAlert('error', 'Gagal', 'Gagal mengubah status periode.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -329,14 +358,14 @@ const AturPeriodeYudisium = () => {
         await updateYudisiumPeriod(editForm.pendaftaran.id, {
           ...editForm.pendaftaran,
           startDate: new Date(`${editForm.pendaftaran.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${editForm.pendaftaran.endDate}T00:00:00.000Z`).toISOString()
+          endDate: new Date(`${editForm.pendaftaran.endDate}T23:59:59.000Z`).toISOString()
         });
       }
       if (editForm.yudisium) {
         await updateYudisiumPeriod(editForm.yudisium.id, {
           ...editForm.yudisium,
           startDate: new Date(`${editForm.yudisium.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${editForm.yudisium.endDate}T00:00:00.000Z`).toISOString()
+          endDate: new Date(`${editForm.yudisium.endDate}T23:59:59.000Z`).toISOString()
         });
       }
       showAlert('success', 'Berhasil', `Periode TA ${editingGroup.period} telah diperbarui.`);
@@ -464,9 +493,7 @@ const AturPeriodeYudisium = () => {
                       </h3>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#3B82F6', backgroundColor: '#EFF6FF', padding: '4px 8px', borderRadius: 6 }}>Durasi: {getDuration(activeGroup.pendaftaran.startDate, activeGroup.pendaftaran.endDate)} Hari</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: pStatMain === 'Aktif' ? '#16A34A' : (pStatMain === 'Mendatang' ? '#64748B' : '#991B1B') }}>
-                          {pStatMain === 'Aktif' ? 'Pendaftaran Dibuka' : (pStatMain === 'Mendatang' ? 'Pendaftaran Mendatang' : 'Pendaftaran Ditutup')}
-                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: textPendMain.color }}>{textPendMain.text}</span>
                       </div>
                     </div>
                   ) : <p style={{ margin: 0, fontSize: 13, color: '#94A3B8' }}>Belum dijadwalkan</p>}
@@ -486,9 +513,7 @@ const AturPeriodeYudisium = () => {
                       </h3>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#9333EA', backgroundColor: '#FAF5FF', padding: '4px 8px', borderRadius: 6 }}>Durasi: {getDuration(activeGroup.yudisium.startDate, activeGroup.yudisium.endDate)} Hari</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: yStatMain === 'Aktif' ? '#16A34A' : (yStatMain === 'Mendatang' ? '#64748B' : '#991B1B') }}>
-                          {yStatMain === 'Aktif' ? 'Yudisium Berjalan' : (yStatMain === 'Mendatang' ? 'Yudisium Mendatang' : 'Yudisium Selesai')}
-                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: textYudisiumMain.color }}>{textYudisiumMain.text}</span>
                       </div>
                     </div>
                   ) : <p style={{ margin: 0, fontSize: 13, color: '#94A3B8' }}>Belum dijadwalkan</p>}
@@ -515,7 +540,7 @@ const AturPeriodeYudisium = () => {
               </div>
             </div>
 
-            {/* Data Rendering */}
+            {/* Data Rendering (HANYA TABLE VIEW) */}
             {loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Memuat data...</div>
             ) : filteredGroups.length === 0 ? (
@@ -540,7 +565,8 @@ const AturPeriodeYudisium = () => {
                       const yStat = group.yudisium ? getStatus(group.yudisium.startDate, group.yudisium.endDate, group.yudisium.isOpen) : null;
                       
                       const mainName = group.semester !== 'Umum' ? `Semester ${group.semester} ${group.period}` : (group.pendaftaran?.name || group.yudisium?.name || `Tahun Ajaran ${group.period}`);
-                      
+                      const isToggleOn = Boolean(group.pendaftaran?.isOpen || group.yudisium?.isOpen);
+
                       return (
                         <tr key={idx}>
                           <td>
@@ -569,8 +595,8 @@ const AturPeriodeYudisium = () => {
                             </span>
                           </td>
                           <td>
-                            <div className="pc-toggle" style={{ justifyContent: 'flex-start' }} onClick={() => handleToggleActive(group, isActive)}>
-                              <div className={`toggle-switch ${isActive ? 'on' : ''}`} />
+                            <div className="pc-toggle" style={{ justifyContent: 'flex-start', opacity: submitting ? 0.5 : 1, pointerEvents: submitting ? 'none' : 'auto' }} onClick={() => handleToggleActive(group, isToggleOn)}>
+                              <div className={`toggle-switch ${isToggleOn ? 'on' : ''}`} />
                             </div>
                           </td>
                           <td>
@@ -590,7 +616,7 @@ const AturPeriodeYudisium = () => {
         </div>
       </div>
 
-      {/* MODAL CREATE OTOMATIS */}
+      {/* MODAL CREATE DENGAN FITUR RELASI OTOMATIS */}
       <AnimatePresence>
         {isCreateModalOpen && (
           <div className="modal-overlay" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.5)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
