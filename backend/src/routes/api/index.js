@@ -14,6 +14,7 @@ import yudisiumPeriodRouter from './yudisiumPeriod.js';
 import yudisiumRegistrationRouter from './yudisiumRegistration.js';
 import sklUploadRouter from './sklUpload.js';
 import transkripUploadRouter from './transkripUpload.js';
+import dashboardRouter from './dashboard.js';
 
 const router = express.Router();
 
@@ -32,5 +33,6 @@ router.use("/yudisium-periods", yudisiumPeriodRouter);
 router.use("/yudisium-registrations", yudisiumRegistrationRouter);
 router.use("/skl", sklUploadRouter);
 router.use("/transkrip", transkripUploadRouter);
+router.use("/dashboard", dashboardRouter);
 
 export default router;
