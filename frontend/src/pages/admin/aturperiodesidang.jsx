@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ClipboardList, Save, Edit3, LayoutPanelLeft, Menu, X, RefreshCw, Calendar, Clock, AlertTriangle, Eye, Plus, Search, Grid, List, FileText, GraduationCap } from 'lucide-react';
+import { ClipboardList, Save, Edit3, LayoutPanelLeft, Menu, X, RefreshCw, Calendar, Clock, AlertTriangle, Eye, Plus, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert  from '../../components/common/CustomAlert';
@@ -58,28 +58,6 @@ const checkGroupStatus = (group) => {
   };
 };
 
-const getBadgeProps = (stat, type) => {
-  if (!stat) return { text: '-', bg: 'bg-gray' };
-  if (stat === 'Aktif') return { text: type === 'pend' ? 'Buka' : 'Berjalan', bg: 'bg-blue' };
-  if (stat === 'Mendatang') return { text: 'Mendatang', bg: 'bg-gray' };
-  if (stat === 'Selesai') return { text: type === 'pend' ? 'Tutup' : 'Selesai', bg: 'bg-red' };
-  return { text: 'Nonaktif', bg: 'bg-red' };
-};
-
-const getStatusTextProps = (stat, type) => {
-  if (!stat) return { text: 'Belum dijadwalkan', color: '#94A3B8' };
-  if (stat === 'Aktif') return { text: type === 'pend' ? 'Pendaftaran Dibuka' : 'Sidang Berjalan', color: '#16A34A' };
-  if (stat === 'Mendatang') return { text: type === 'pend' ? 'Pendaftaran Mendatang' : 'Sidang Mendatang', color: '#64748B' };
-  if (stat === 'Selesai') return { text: type === 'pend' ? 'Pendaftaran Ditutup' : 'Sidang Selesai', color: '#991B1B' };
-  return { text: 'Nonaktif', color: '#991B1B' };
-};
-
-const getInnerBadgeStyle = (stat) => {
-  if (!stat || stat === 'Mendatang') return { bg: '#F1F5F9', color: '#475569' };
-  if (stat === 'Aktif') return { bg: '#DBEAFE', color: '#1E40AF' };
-  return { bg: '#FEE2E2', color: '#991B1B' };
-};
-
 const formatDate = (dateStr) => {
   if (!dateStr) return '-';
   return new Date(`${dateStr}T12:00:00`).toLocaleDateString('id-ID', {
@@ -112,7 +90,7 @@ const AturPeriodeSidang = () => {
   const [isEditModalOpen,   setIsEditModalOpen]   = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('grid'); 
+  const [activeFilter, setActiveFilter] = useState('Semua Periode');
   
   const [form, setForm] = useState({ 
     name: '', category: 'pendaftaran sidang', period: '', startDate: '', endDate: '' 
@@ -165,24 +143,41 @@ const AturPeriodeSidang = () => {
   }, [periods]);
 
   const filteredGroups = useMemo(() => {
-    if (!searchQuery) return groupedPeriods;
-    return groupedPeriods.filter(g => {
+    let result = groupedPeriods;
+
+    // Filter Logic by Tab
+    if (activeFilter === 'Periode Aktif') {
+      result = result.filter(g => checkGroupStatus(g).isActive);
+    } else if (activeFilter === 'Pendaftaran Dibuka') {
+      result = result.filter(g => g.pendaftaran && getStatus(g.pendaftaran.startDate, g.pendaftaran.endDate, g.pendaftaran.isOpen) === 'Aktif');
+    } else if (activeFilter === 'Pelaksanaan Sidang') {
+      result = result.filter(g => g.sidang && getStatus(g.sidang.startDate, g.sidang.endDate, g.sidang.isOpen) === 'Aktif');
+    } else if (activeFilter === 'Akan Datang') {
+      result = result.filter(g => {
+        const { isActive, isDone } = checkGroupStatus(g);
+        return !isActive && !isDone;
+      });
+    }
+
+    // Search Logic
+    if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      const nameMatch = (g.pendaftaran?.name || g.sidang?.name || '').toLowerCase().includes(q);
-      const periodMatch = g.period.toLowerCase().includes(q);
-      return nameMatch || periodMatch;
-    });
-  }, [groupedPeriods, searchQuery]);
+      result = result.filter(g => {
+        const nameMatch = (g.pendaftaran?.name || g.sidang?.name || '').toLowerCase().includes(q);
+        const periodMatch = g.period.toLowerCase().includes(q);
+        return nameMatch || periodMatch;
+      });
+    }
+
+    return result;
+  }, [groupedPeriods, searchQuery, activeFilter]);
 
   const activeGroup = useMemo(() => {
     if (groupedPeriods.length === 0) return null;
-
     const trulyActive = groupedPeriods.find(g => checkGroupStatus(g).isActive);
     if (trulyActive) return trulyActive;
-
     const anyOpen = groupedPeriods.find(g => g.pendaftaran?.isOpen || g.sidang?.isOpen);
     if (anyOpen) return anyOpen;
-
     return groupedPeriods[0];
   }, [groupedPeriods]);
 
@@ -190,11 +185,6 @@ const AturPeriodeSidang = () => {
 
   const pStatMain = activeGroup?.pendaftaran ? getStatus(activeGroup.pendaftaran.startDate, activeGroup.pendaftaran.endDate, activeGroup.pendaftaran.isOpen) : null;
   const sStatMain = activeGroup?.sidang ? getStatus(activeGroup.sidang.startDate, activeGroup.sidang.endDate, activeGroup.sidang.isOpen) : null;
-
-  const badgePendMain = getBadgeProps(pStatMain, 'pend');
-  const badgeSidangMain = getBadgeProps(sStatMain, 'sidang');
-  const textPendMain = getStatusTextProps(pStatMain, 'pend');
-  const textSidangMain = getStatusTextProps(sStatMain, 'sidang');
 
   const validateDates = (start, end) => {
     const s = new Date(start).getTime();
@@ -207,7 +197,7 @@ const AturPeriodeSidang = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.startDate || !form.endDate || !form.category || !form.period.trim()) {
-      showAlert('error', 'Validasi', 'Harap lengkapi semua bidang input (termasuk referensi Pendaftaran jika memilih Pelaksanaan Sidang).'); return;
+      showAlert('error', 'Validasi', 'Harap lengkapi semua bidang input.'); return;
     }
     
     const dateError = validateDates(form.startDate, form.endDate);
@@ -217,8 +207,7 @@ const AturPeriodeSidang = () => {
       const pend = periods.find(p => p.category === 'pendaftaran sidang' && p.period === form.period && p.name === form.name);
 
       if (!pend) { 
-        showAlert('error', 'Validasi Gagal', `Data Pendaftaran Sidang rujukan tidak valid atau tidak ditemukan.`); 
-        return; 
+        showAlert('error', 'Validasi Gagal', `Data Pendaftaran Sidang rujukan tidak valid.`); return; 
       }
       
       const pendEndDate = new Date(pend.endDate).getTime();
@@ -226,8 +215,7 @@ const AturPeriodeSidang = () => {
       const diffDays = (sidangStartDate - pendEndDate) / (1000 * 3600 * 24);
       
       if (diffDays < 14) { 
-        showAlert('error', 'Pelanggaran Aturan', `Jadwal Pelaksanaan Sidang wajib berjarak MINIMAL 14 HARI setelah penutupan Pendaftaran (${formatDate(pend.endDate)}).`); 
-        return; 
+        showAlert('error', 'Pelanggaran Aturan', `Jadwal Pelaksanaan Sidang wajib berjarak MINIMAL 14 HARI setelah penutupan Pendaftaran (${formatDate(pend.endDate)}).`); return; 
       }
     }
 
@@ -343,7 +331,7 @@ const AturPeriodeSidang = () => {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F8FAFC', margin: 0, padding: 0 }}>
       <style>{`
-        body, html { margin: 0; padding: 0; background-color: #F8FAFC; font-family: sans-serif; }
+        body, html { margin: 0; padding: 0; background-color: #F8FAFC; }
         .main-content-area { margin-left: var(--sidebar-width, 260px); width: calc(100% - var(--sidebar-width, 260px)); display: flex; flex-direction: column; min-height: 100vh; }
         .zoom-wrapper { zoom: 0.8; width: 100%; display: flex; flex-direction: column; flex: 1; }
         .top-bar-red { width: 100%; box-sizing: border-box; background-color: #C0182A; height: 80px; display: flex; align-items: center; padding: 0 40px; color: white; }
@@ -351,16 +339,15 @@ const AturPeriodeSidang = () => {
 
         .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
         .summary-card { background-color: #fff; border: 1px solid #E2E8F0; border-radius: 16px; padding: 20px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; }
-        .summary-card.main-active { border: 1px solid #FECACA; background-color: #FFFAFA; }
-        
+        .summary-card.main-active { position: relative; overflow: hidden; background-color: #fff; border: 1px solid #E2E8F0; }
+        .summary-card.main-active::before { content: ''; position: absolute; top: -60px; right: -40px; width: 180px; height: 180px; background-color: #FFF1F2; border-radius: 50%; z-index: 0; }
+        .summary-card.main-active > div { position: relative; z-index: 1; }
+
         .badge-pill { padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
         .bg-green { background-color: #DCFCE7; color: #166534; }
         .bg-gray { background-color: #F1F5F9; color: #475569; }
         .bg-blue { background-color: #DBEAFE; color: #1E40AF; }
         .bg-red { background-color: #FEE2E2; color: #991B1B; }
-        
-        .text-blue { color: #2563EB; }
-        .text-purple { color: #7C3AED; }
 
         .btn-add { background-color: #C0182A; color: #fff; padding: 10px 20px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; }
         .btn-add:hover { background-color: #9F1222; }
@@ -375,26 +362,12 @@ const AturPeriodeSidang = () => {
         .search-box input { padding: 8px 16px 8px 36px; border-radius: 99px; border: 1px solid #E2E8F0; font-size: 13px; outline: none; width: 200px; transition: 0.2s; }
         .search-box input:focus { border-color: #C0182A; width: 240px; }
         .search-icon { position: absolute; left: 12px; color: #94A3B8; }
-        .view-toggle { display: flex; background-color: #F1F5F9; border-radius: 8px; padding: 4px; }
-        .view-btn { padding: 6px 10px; border-radius: 6px; border: none; background-color: transparent; color: #64748B; cursor: pointer; transition: 0.2s; }
-        .view-btn.active { background-color: #fff; color: #C0182A; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
-        .period-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 24px; }
-        .period-card { background-color: #fff; border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); transition: 0.2s; }
-        .period-card:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border-color: #CBD5E1; }
-        .period-card.card-active { border: 2px solid #FECACA; background-color: #FFFAFA; }
-
-        .pc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .pc-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #64748B; cursor: pointer; }
         .toggle-switch { width: 36px; height: 20px; border-radius: 20px; background-color: #E2E8F0; position: relative; transition: 0.3s; }
         .toggle-switch.on { background-color: #1E293B; }
         .toggle-switch::after { content: ''; position: absolute; width: 14px; height: 14px; background-color: #fff; border-radius: 50%; top: 3px; left: 3px; transition: 0.2s; }
         .toggle-switch.on::after { left: 19px; }
-
-        .pc-inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0 0 0; }
-        .pc-inner-card { border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; background-color: #fff; }
-        .pc-inner-card.bg-blue-light { border-color: #BFDBFE; background-color: #F8FAFC; }
-        .pc-inner-card.bg-purple-light { border-color: #E9D5FF; background-color: #FAF5FF; }
 
         .table-wrap { background-color: #fff; border: 1px solid #E2E8F0; border-radius: 16px; overflow: hidden; }
         .data-table { width: 100%; border-collapse: collapse; }
@@ -409,8 +382,6 @@ const AturPeriodeSidang = () => {
           .zoom-wrapper { zoom: 1; }
           .top-bar-red { display: none; }
           .dashboard-grid { grid-template-columns: 1fr; }
-          .period-cards-grid { grid-template-columns: 1fr; }
-          .pc-inner-grid { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -428,6 +399,7 @@ const AturPeriodeSidang = () => {
           </div>
 
           <div className="content-container">
+            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
               <div>
                 <h2 style={{ margin: '0 0 8px 0', fontSize: 28, fontWeight: 800, color: '#0F172A' }}>Atur Periode & Jadwal Sidang</h2>
@@ -438,14 +410,15 @@ const AturPeriodeSidang = () => {
               </button>
             </div>
 
+            {/* Dashboard Summary Cards */}
             {activeGroup && (
               <div className="dashboard-grid">
                 <div className="summary-card main-active">
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1 }}>PERIODE AKTIF</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1 }}>PERIODE AKTIF UTAMA</span>
                     <span className={`badge-pill ${isActiveMain ? 'bg-green' : (isDoneMain ? 'bg-gray' : 'bg-red')}`}>
-                      {isActiveMain && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#16A34A' }}/>} 
-                      {isActiveMain ? ' Aktif' : isDoneMain ? ' Selesai' : ' Mendatang/Nonaktif'}
+                      {isActiveMain && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#16A34A', marginRight: 4 }}/>} 
+                      {isActiveMain ? 'Aktif' : isDoneMain ? 'Selesai' : 'Mendatang/Nonaktif'}
                     </span>
                   </div>
                   <div>
@@ -458,19 +431,21 @@ const AturPeriodeSidang = () => {
 
                 <div className="summary-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Calendar size={14} className="text-blue" /> MASA PENDAFTARAN
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1 }}>MASA PENDAFTARAN</span>
+                    <span className={`badge-pill ${pStatMain === 'Aktif' ? 'bg-blue' : (pStatMain === 'Mendatang' ? 'bg-gray' : 'bg-red')}`}>
+                      {pStatMain === 'Aktif' ? 'Buka' : (pStatMain === 'Mendatang' ? 'Mendatang' : 'Tutup')}
                     </span>
-                    <span className={`badge-pill ${badgePendMain.bg}`}>{badgePendMain.text}</span>
                   </div>
                   {activeGroup.pendaftaran ? (
                     <div>
-                      <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Calendar size={18} className="text-blue" /> {formatDate(activeGroup.pendaftaran.startDate)} – {formatDate(activeGroup.pendaftaran.endDate)}
+                      <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 800, color: '#1E293B' }}>
+                        {formatDate(activeGroup.pendaftaran.startDate)} – {formatDate(activeGroup.pendaftaran.endDate)}
                       </h3>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#3B82F6', backgroundColor: '#EFF6FF', padding: '4px 8px', borderRadius: 6 }}>Durasi: {getDuration(activeGroup.pendaftaran.startDate, activeGroup.pendaftaran.endDate)} Hari</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: textPendMain.color }}>{textPendMain.text}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: pStatMain === 'Aktif' ? '#16A34A' : (pStatMain === 'Mendatang' ? '#64748B' : '#991B1B') }}>
+                          {pStatMain === 'Aktif' ? 'Pendaftaran Dibuka' : (pStatMain === 'Mendatang' ? 'Pendaftaran Mendatang' : 'Pendaftaran Ditutup')}
+                        </span>
                       </div>
                     </div>
                   ) : <p style={{ margin: 0, fontSize: 13, color: '#94A3B8' }}>Belum dijadwalkan</p>}
@@ -478,19 +453,21 @@ const AturPeriodeSidang = () => {
 
                 <div className="summary-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Clock size={14} className="text-purple" /> MASA PELAKSANAAN SIDANG
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1 }}>MASA PELAKSANAAN SIDANG</span>
+                    <span className={`badge-pill ${sStatMain === 'Aktif' ? 'bg-blue' : (sStatMain === 'Mendatang' ? 'bg-gray' : 'bg-red')}`}>
+                      {sStatMain === 'Aktif' ? 'Berjalan' : (sStatMain === 'Mendatang' ? 'Mendatang' : 'Selesai')}
                     </span>
-                    <span className={`badge-pill ${badgeSidangMain.bg}`}>{badgeSidangMain.text}</span>
                   </div>
                   {activeGroup.sidang ? (
                     <div>
-                      <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Clock size={18} className="text-purple" /> {formatDate(activeGroup.sidang.startDate)} – {formatDate(activeGroup.sidang.endDate)}
+                      <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 800, color: '#1E293B' }}>
+                        {formatDate(activeGroup.sidang.startDate)} – {formatDate(activeGroup.sidang.endDate)}
                       </h3>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#9333EA', backgroundColor: '#FAF5FF', padding: '4px 8px', borderRadius: 6 }}>Durasi: {getDuration(activeGroup.sidang.startDate, activeGroup.sidang.endDate)} Hari</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: textSidangMain.color }}>{textSidangMain.text}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: sStatMain === 'Aktif' ? '#16A34A' : (sStatMain === 'Mendatang' ? '#64748B' : '#991B1B') }}>
+                          {sStatMain === 'Aktif' ? 'Sidang Berjalan' : (sStatMain === 'Mendatang' ? 'Sidang Mendatang' : 'Sidang Selesai')}
+                        </span>
                       </div>
                     </div>
                   ) : <p style={{ margin: 0, fontSize: 13, color: '#94A3B8' }}>Belum dijadwalkan</p>}
@@ -498,111 +475,31 @@ const AturPeriodeSidang = () => {
               </div>
             )}
 
+            {/* Filter & View Controls */}
             <div className="filter-bar-container">
               <div className="filter-tabs">
-                <button className="filter-btn active">Semua Periode <span style={{ backgroundColor: '#fff', color: '#C0182A', padding: '2px 6px', borderRadius: 20, marginLeft: 6, fontSize: 11 }}>{filteredGroups.length}</span></button>
-                <button className="filter-btn">Periode Aktif <span style={{ backgroundColor: '#F1F5F9', color: '#64748B', padding: '2px 6px', borderRadius: 20, marginLeft: 6, fontSize: 11 }}>1</span></button>
-                <button className="filter-btn">Pendaftaran Dibuka</button>
-                <button className="filter-btn">Pelaksanaan Sidang</button>
-                <button className="filter-btn">Akan Datang</button>
+                <button className={`filter-btn ${activeFilter === 'Semua Periode' ? 'active' : ''}`} onClick={() => setActiveFilter('Semua Periode')}>
+                  Semua Periode <span style={{ backgroundColor: activeFilter === 'Semua Periode' ? '#fff' : '#F1F5F9', color: activeFilter === 'Semua Periode' ? '#C0182A' : '#64748B', padding: '2px 6px', borderRadius: 20, marginLeft: 6, fontSize: 11 }}>{groupedPeriods.length}</span>
+                </button>
+                <button className={`filter-btn ${activeFilter === 'Periode Aktif' ? 'active' : ''}`} onClick={() => setActiveFilter('Periode Aktif')}>Periode Aktif</button>
+                <button className={`filter-btn ${activeFilter === 'Pendaftaran Dibuka' ? 'active' : ''}`} onClick={() => setActiveFilter('Pendaftaran Dibuka')}>Pendaftaran Dibuka</button>
+                <button className={`filter-btn ${activeFilter === 'Pelaksanaan Sidang' ? 'active' : ''}`} onClick={() => setActiveFilter('Pelaksanaan Sidang')}>Pelaksanaan Sidang</button>
+                <button className={`filter-btn ${activeFilter === 'Akan Datang' ? 'active' : ''}`} onClick={() => setActiveFilter('Akan Datang')}>Akan Datang</button>
               </div>
               <div className="search-view-wrap">
                 <div className="search-box">
                   <Search className="search-icon" size={16} />
                   <input type="text" placeholder="Cari nama periode..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                 </div>
-                <div className="view-toggle">
-                  <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}><Grid size={18} /></button>
-                  <button className={`view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}><List size={18} /></button>
-                </div>
               </div>
             </div>
 
-            {/* Data Rendering (Grid / List) */}
+            {/* Data Rendering */}
             {loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Memuat data...</div>
             ) : filteredGroups.length === 0 ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Tidak ada periode yang ditemukan.</div>
-            ) : viewMode === 'grid' ? (
-              <div className="period-cards-grid">
-                {filteredGroups.map((group, idx) => {
-                  const { isActive, isDone } = checkGroupStatus(group);
-
-                  const pStat = group.pendaftaran ? getStatus(group.pendaftaran.startDate, group.pendaftaran.endDate, group.pendaftaran.isOpen) : null;
-                  const sStat = group.sidang ? getStatus(group.sidang.startDate, group.sidang.endDate, group.sidang.isOpen) : null;
-                  
-                  const badgePend = getBadgeProps(pStat, 'pend');
-                  const textPend = getStatusTextProps(pStat, 'pend');
-                  const stylePend = getInnerBadgeStyle(pStat);
-
-                  const badgeSidang = getBadgeProps(sStat, 'sidang');
-                  const textSidang = getStatusTextProps(sStat, 'sidang');
-                  const styleSidang = getInnerBadgeStyle(sStat);
-
-                  const mainName = group.semester !== 'Umum' ? `Semester ${group.semester} ${group.period}` : (group.pendaftaran?.name || group.sidang?.name || `Tahun Ajaran ${group.period}`);
-
-                  return (
-                    <div key={idx} className={`period-card ${isActive ? 'card-active' : ''}`}>
-                      <div className="pc-header">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ backgroundColor: isActive ? '#C0182A' : '#F1F5F9', color: isActive ? '#fff' : '#475569', padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            {isActive && <span style={{ width: 6, height: 6, backgroundColor: '#fff', borderRadius: '50%' }}/>} 
-                            {isActive ? 'Periode Aktif' : isDone ? 'Periode Selesai' : 'Nonaktif / Mendatang'}
-                          </span>
-                        </div>
-                        <div className="pc-toggle" onClick={() => handleToggleActive(group, isActive)}>
-                          {isActive ? 'Aktif' : 'Nonaktif'}
-                          <div className={`toggle-switch ${isActive ? 'on' : ''}`} />
-                        </div>
-                      </div>
-
-                      <h3 style={{ margin: '0 0 4px 0', fontSize: 20, fontWeight: 800, color: '#0F172A' }}>{mainName}</h3>
-                      <p style={{ margin: 0, fontSize: 13, color: '#64748B' }}>Periode sidang Tugas Akhir Telkom University.</p>
-
-                      <div className="pc-inner-grid">
-                        <div className="pc-inner-card bg-blue-light">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                            <span style={{ fontSize: 10, fontWeight: 800, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: 6 }}><FileText size={14} /> MASA PENDAFTARAN</span>
-                            <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: stylePend.bg, color: stylePend.color, padding: '2px 8px', borderRadius: 4 }}>{badgePend.text}</span>
-                          </div>
-                          {group.pendaftaran ? (
-                            <>
-                              <div style={{ fontSize: 13, fontWeight: 800, color: '#1E293B', marginBottom: 12 }}>{formatDate(group.pendaftaran.startDate)} s/d {formatDate(group.pendaftaran.endDate)}</div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600 }}>
-                                <span style={{ color: '#64748B' }}>Durasi: {getDuration(group.pendaftaran.startDate, group.pendaftaran.endDate)} Hari</span>
-                                <span style={{ color: textPend.color }}>{textPend.text}</span>
-                              </div>
-                            </>
-                          ) : <div style={{ fontSize: 12, color: '#94A3B8' }}>Belum dikonfigurasi</div>}
-                        </div>
-
-                        <div className="pc-inner-card bg-purple-light">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                            <span style={{ fontSize: 10, fontWeight: 800, color: '#6B21A8', display: 'flex', alignItems: 'center', gap: 6 }}><GraduationCap size={14} /> MASA SIDANG</span>
-                            <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: styleSidang.bg, color: styleSidang.color, padding: '2px 8px', borderRadius: 4 }}>{badgeSidang.text}</span>
-                          </div>
-                          {group.sidang ? (
-                            <>
-                              <div style={{ fontSize: 13, fontWeight: 800, color: '#1E293B', marginBottom: 12 }}>{formatDate(group.sidang.startDate)} s/d {formatDate(group.sidang.endDate)}</div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600 }}>
-                                <span style={{ color: '#64748B' }}>Durasi: {getDuration(group.sidang.startDate, group.sidang.endDate)} Hari</span>
-                                <span style={{ color: textSidang.color }}>{textSidang.text}</span>
-                              </div>
-                            </>
-                          ) : <div style={{ fontSize: 12, color: '#94A3B8' }}>Belum dikonfigurasi</div>}
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24, gap: 12, paddingTop: 16, borderTop: '1px solid #E2E8F0' }}>
-                        <button className="btn-outline" onClick={() => alert('Fitur Detail Mahasiswa akan segera hadir!')}><Eye size={14}/> Detail</button>
-                        <button className="btn-outline btn-outline-blue" onClick={() => openEditModal(group)}><Edit3 size={14}/> Edit</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             ) : (
-              /* --- LIST / TABLE VIEW --- */
               <div className="table-wrap">
                 <table className="data-table">
                   <thead>
@@ -672,7 +569,7 @@ const AturPeriodeSidang = () => {
         </div>
       </div>
 
-      {/* MODAL CREATE RELASI OTOMATIS */}
+      {/* MODAL CREATE DENGAN FITUR RELASI OTOMATIS */}
       <AnimatePresence>
         {isCreateModalOpen && (
           <div className="modal-overlay" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.5)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
