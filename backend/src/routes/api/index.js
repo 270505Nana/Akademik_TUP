@@ -15,6 +15,7 @@ import yudisiumRegistrationRouter from './yudisiumRegistration.js';
 import sklUploadRouter from './sklUpload.js';
 import transkripUploadRouter from './transkripUpload.js';
 import dashboardRouter from './dashboard.js';
+import ruanganRouter from './ruangan.js';
 
 const router = express.Router();
 
@@ -34,5 +35,6 @@ router.use("/yudisium-registrations", yudisiumRegistrationRouter);
 router.use("/skl", sklUploadRouter);
 router.use("/transkrip", transkripUploadRouter);
 router.use("/dashboard", dashboardRouter);
+router.use("/ruangan", ruanganRouter);
 
 export default router;
