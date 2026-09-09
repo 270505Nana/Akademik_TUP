@@ -6,6 +6,8 @@ import { listAdmins,
   upsertAdmin,
   findAdminById, } from '../../controllers/adminController.js';
 
+import {getAdminDashboard} from '../../controllers/dashboardController.js';
+
 import { verifyToken } from '../../middlewares/auth.js';
 
 import { isAdmin } from '../../middlewares/authorize.js';
@@ -48,6 +50,20 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         description: Invalid token
  */
 router.get("/", verifyToken, isAdmin, listAdmins);
+
+/**
+ * @swagger
+ * /api/admin/dashboard:
+ *   get:
+ *     summary: Mengambil ringkasan data dashboard untuk Admin
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Berhasil mengambil data dashboard admin
+ */
+router.get("/dashboard", verifyToken, isAdmin, getAdminDashboard);
 
 /**
  * @swagger

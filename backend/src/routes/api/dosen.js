@@ -7,6 +7,8 @@ import { listDosens,
   findDosenById,
   toggleKetuaKK, } from '../../controllers/dosenController.js';
 
+import {getDosenDashboard} from '../../controllers/dashboardController.js';
+
 import { verifyToken } from '../../middlewares/auth.js';
 
 import { isAdmin } from '../../middlewares/authorize.js';
@@ -65,6 +67,20 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         description: Invalid token
  */
 router.get("/", verifyToken, listDosens);
+
+/**
+ * @swagger
+ * /api/dosen/dashboard:
+ *   get:
+ *     summary: Mengambil ringkasan data dashboard untuk Dosen
+ *     tags: [Dosen]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Berhasil mengambil data dashboard dosen
+ */
+router.get('/dashboard', verifyToken, getDosenDashboard);
 
 /**
  * @swagger

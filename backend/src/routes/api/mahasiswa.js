@@ -6,6 +6,8 @@ import { listMahasiswa,
   upsertMahasiswa,
   findMahasiswaById, } from '../../controllers/mahasiswaController.js';
 
+import {getMahasiswaDashboard} from '../../controllers/dashboardController.js';
+
 import { verifyToken } from '../../middlewares/auth.js';
 
 import { isMahasiswa } from '../../middlewares/authorize.js';
@@ -48,6 +50,20 @@ import { isMahasiswa } from '../../middlewares/authorize.js';
  *         description: Invalid token
  */
 router.get("/", verifyToken, listMahasiswa);
+
+/**
+ * @swagger
+ * /api/mahasiswa/dashboard:
+ *   get:
+ *     summary: Mengambil ringkasan data dashboard untuk Mahasiswa
+ *     tags: [Mahasiswa]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Berhasil mengambil data dashboard mahasiswa
+ */
+router.get('/dashboard', verifyToken, getMahasiswaDashboard);
 
 /**
  * @swagger
