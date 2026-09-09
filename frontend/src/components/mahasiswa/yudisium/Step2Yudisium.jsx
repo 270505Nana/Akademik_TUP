@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Check, UploadCloud, FileText, AlertTriangle, ChevronRight, Info, Download, X } from "lucide-react";
+import { Check, UploadCloud, FileText, AlertTriangle, ChevronRight, Info, Download, X, CheckCircle2 } from "lucide-react";
 import { useYudisiumContext } from "../../../context/YudisiumFormContext";
 import { SECTIONS } from "./yudisiumDocument";
 import { uploadYudisiumRegistrationFile } from "../../../service/api";
@@ -13,18 +13,15 @@ const PreviewModal = ({ doc, onClose }) => {
     <div 
       style={{ 
         position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, 
-        zIndex: 9999, 
-        background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', 
-        display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        padding: 16 
+        zIndex: 9999, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', 
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 
       }} 
       onClick={onClose}
     >
       <div 
         style={{ 
           background: '#fff', borderRadius: 16, width: '100%', maxWidth: 850, height: '88vh', 
-          display: 'flex', flexDirection: 'column', overflow: 'hidden', 
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' 
+          display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' 
         }} 
         onClick={e => e.stopPropagation()}
       >
@@ -68,26 +65,23 @@ const PreviewModal = ({ doc, onClose }) => {
   );
 };
 
-const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onUpload, onDropFile, onSave, isUploading, onPreview }) => {
+// Menerima prop isEditMode
+const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onUpload, onDropFile, onSave, isUploading, onPreview, isEditMode }) => {
   const activeDoc = documents.find((d) => d.id === activeDocId) || documents[0];
   const [isDragging, setIsDragging] = useState(false);
 
   if (!activeDoc) return null;
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
+  // Logika Read-Only dan Ditolak
+  const isRejected = isEditMode && activeDoc.isValid === false;
+  const isReadOnly = isEditMode && activeDoc.fileUrl && !isRejected;
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (!isReadOnly && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       onDropFile(activeDoc.id, e.dataTransfer.files[0]);
       e.dataTransfer.clearData();
     }
@@ -101,18 +95,22 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
 
       <div className="doc-management-container">
         <div className="doc-sidebar">
-          {documents.map((doc, index) => (
-            <button
-              key={doc.id}
-              className={`doc-item ${activeDoc.id === doc.id ? "active" : ""} ${doc.status === "completed" ? "completed" : ""}`}
-              onClick={() => onSetActive(doc.id)}
-            >
-              <div className="doc-number">
-                {doc.status === "completed" ? <Check size={14} strokeWidth={3} /> : index + 1}
-              </div>
-              <span className="doc-name">{doc.name}</span>
-            </button>
-          ))}
+          {documents.map((doc, index) => {
+            const docRejected = isEditMode && doc.isValid === false;
+            return (
+              <button
+                key={doc.id}
+                className={`doc-item ${activeDoc.id === doc.id ? "active" : ""} ${doc.status === "completed" ? "completed" : ""}`}
+                style={docRejected ? { borderColor: '#FECACA', background: activeDoc.id === doc.id ? '#FEF2F2' : '#fff' } : {}}
+                onClick={() => onSetActive(doc.id)}
+              >
+                <div className="doc-number" style={docRejected ? { background: '#DC2626', color: '#fff', borderColor: '#DC2626' } : {}}>
+                  {docRejected ? <AlertTriangle size={14} /> : doc.status === "completed" ? <Check size={14} strokeWidth={3} /> : index + 1}
+                </div>
+                <span className="doc-name" style={docRejected ? { color: '#DC2626', fontWeight: 700 } : {}}>{doc.name}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="doc-panel">
@@ -143,33 +141,51 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
               </div>
             )}
 
-            <h4 style={{ fontWeight: 700, marginBottom: "1rem", fontSize: '1rem' }}>Pilih file atau Tarik ke sini</h4>
-
-            <div 
-              style={{ 
-                padding: "2rem 1rem", border: isDragging ? "2px dashed #c0182a" : "2px dashed #cbd5e1", borderRadius: "10px", textAlign: "center", cursor: "pointer", background: isDragging ? "#fff1f2" : "#f8fafc", transition: "0.2s",
-                maxWidth: "600px"
-              }}
-              onMouseEnter={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#c0182a" }}
-              onMouseLeave={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#cbd5e1" }}
-              onClick={() => onUpload(activeDoc.id)}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <UploadCloud size={36} color={isDragging ? "#c0182a" : "#94a3b8"} style={{ margin: "0 auto 8px", transition: "0.2s" }} />
-              <p style={{ fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: '10px' }}>
-                <span style={{ color: "#3182ce" }}>Pilih File</span> atau Tarik dan Lepaskan di sini
-              </p>
-              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                <span style={{ fontSize: '10px', padding: '3px 6px', background: '#E2E8F0', borderRadius: '4px', color: '#475569', fontWeight: 600 }}>PDF/JPG/PNG</span>
-                <span style={{ fontSize: '10px', padding: '3px 6px', background: '#E2E8F0', borderRadius: '4px', color: '#475569', fontWeight: 600 }}>Max 3MB</span>
+            {isRejected && (
+              <div style={{ padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", marginBottom: "1.5rem", display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                <AlertTriangle size={18} color="#DC2626" style={{ marginTop: '2px' }} />
+                <div>
+                  <div style={{ fontSize: "13px", color: "#991B1B", fontWeight: 700, marginBottom: "4px" }}>Perbaikan Diperlukan</div>
+                  <div style={{ fontSize: "12px", color: "#B91C1C", lineHeight: "1.4" }}>Berkas yang kamu unggah sebelumnya ditolak. Silakan lihat catatan perbaikan di atas dan unggah dokumen yang baru.</div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {isReadOnly ? (
+              <div style={{ padding: "12px 16px", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "8px", marginBottom: "1.5rem", display: "flex", gap: "10px", alignItems: "center" }}>
+                <CheckCircle2 size={18} color="#16A34A" />
+                <span style={{ fontSize: "13px", color: "#166534", fontWeight: 600 }}>Berkas ini sudah divalidasi dan disetujui. Tidak perlu diunggah ulang.</span>
+              </div>
+            ) : (
+              <>
+                <h4 style={{ fontWeight: 700, marginBottom: "1rem", fontSize: '1rem' }}>Pilih file atau Tarik ke sini</h4>
+                <div 
+                  style={{ 
+                    padding: "2rem 1rem", border: isDragging ? "2px dashed #c0182a" : "2px dashed #cbd5e1", borderRadius: "10px", textAlign: "center", cursor: "pointer", background: isDragging ? "#fff1f2" : "#f8fafc", transition: "0.2s",
+                    maxWidth: "600px"
+                  }}
+                  onMouseEnter={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#c0182a" }}
+                  onMouseLeave={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#cbd5e1" }}
+                  onClick={() => onUpload(activeDoc.id)}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <UploadCloud size={36} color={isDragging ? "#c0182a" : "#94a3b8"} style={{ margin: "0 auto 8px", transition: "0.2s" }} />
+                  <p style={{ fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: '10px' }}>
+                    <span style={{ color: "#3182ce" }}>Pilih File</span> atau Tarik dan Lepaskan di sini
+                  </p>
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '10px', padding: '3px 6px', background: '#E2E8F0', borderRadius: '4px', color: '#475569', fontWeight: 600 }}>PDF/JPG/PNG</span>
+                    <span style={{ fontSize: '10px', padding: '3px 6px', background: '#E2E8F0', borderRadius: '4px', color: '#475569', fontWeight: 600 }}>Max 3MB</span>
+                  </div>
+                </div>
+              </>
+            )}
 
             {(activeDoc.fileUrl || activeDoc.error) && (
               <div style={{ marginTop: "1.5rem", maxWidth: "600px" }}>
-                <h4 style={{ fontWeight: 700, marginBottom: "0.75rem", fontSize: '0.95rem' }}>File Terpilih</h4>
+                <h4 style={{ fontWeight: 700, marginBottom: "0.75rem", fontSize: '0.95rem' }}>{isReadOnly ? "File yang Disetujui" : "File Terpilih"}</h4>
                 
                 {activeDoc.fileUrl ? (
                   <div className="file-card" style={{ padding: "1rem", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", overflow: "hidden", gap: "1rem", border: "1px solid #E2E8F0", borderRadius: "10px", background: "#fff" }}>
@@ -182,7 +198,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
                           {activeDoc.fileName}
                         </div>
                         <div className="file-meta" style={{ fontSize: "0.75rem", color: "#64748B" }}>
-                          {activeDoc.fileSize}
+                          {activeDoc.fileSize || "File tersimpan"}
                         </div>
                       </div>
                     </div>
@@ -196,8 +212,8 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
                       >
                         Lihat Preview
                       </button>
-                      <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#F0FDF4", color: "#15803D", fontWeight: 700, borderRadius: "6px", border: "1px solid #BBF7D0" }}>
-                        {activeDoc.status === "completed" ? "Tersimpan" : "Siap Upload"}
+                      <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: isReadOnly ? "#DCFCE7" : "#F0FDF4", color: "#15803D", fontWeight: 700, borderRadius: "6px", border: "1px solid #BBF7D0" }}>
+                        {isReadOnly ? "Valid" : activeDoc.status === "completed" ? "Tersimpan" : "Siap Upload"}
                       </div>
                     </div>
                   </div>
@@ -208,7 +224,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
                         <AlertTriangle size={18} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="file-name" style={{ color: "#B91C1C", fontWeight: 800, fontSize: "0.85rem", marginBottom: "2px" }}>Error: Gagal Memilih</div>
+                        <div className="file-name" style={{ color: "#B91C1C", fontWeight: 800, fontSize: "0.85rem", marginBottom: "2px" }}>Error: Berkas Ditolak</div>
                         <div className="file-meta" style={{ color: "#DC2626", fontSize: "0.75rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeDoc.error}</div>
                       </div>
                     </div>
@@ -217,19 +233,21 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
               </div>
             )}
 
-            <button
-              className="btn-primary"
-              style={{ marginTop: "1.5rem" }}
-              onClick={() => onSave(activeDoc.id)}
-              disabled={isUploading || (!activeDoc.file && activeDoc.status === "completed")}
-            >
-              {isUploading 
-                ? "Mengunggah..." 
-                : activeDoc.file 
-                  ? (activeDoc.status === "completed" ? "Simpan Perubahan File" : "Simpan Dokumen") 
-                  : (activeDoc.status === "completed" ? "Sudah Diunggah" : "Simpan Dokumen")
-              }
-            </button>
+            {!isReadOnly && (
+              <button
+                className="btn-primary"
+                style={{ marginTop: "1.5rem" }}
+                onClick={() => onSave(activeDoc.id)}
+                disabled={isUploading || (!activeDoc.file && activeDoc.status === "completed")}
+              >
+                {isUploading 
+                  ? "Mengunggah..." 
+                  : activeDoc.file 
+                    ? (activeDoc.status === "completed" ? "Simpan Perubahan File" : "Simpan Dokumen") 
+                    : (activeDoc.status === "completed" ? "Sudah Diunggah" : "Simpan Dokumen")
+                }
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -246,6 +264,8 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
   const fileMapRef = useRef({});
   const [isUploading, setIsUploading] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
+
+  const isEditMode = !!data.isEdit;
 
   const getSectionDocs = (section) => documents.filter((d) => d.section === section);
   const wajibDocs = getSectionDocs(SECTIONS.WAJIB);
@@ -373,6 +393,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
           onSave={handleSaveDoc}
           isUploading={isUploading}
           onPreview={(doc) => setPreviewDoc(doc)}
+          isEditMode={isEditMode}
         />
       )}
 
@@ -387,6 +408,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
           onSave={handleSaveDoc}
           isUploading={isUploading}
           onPreview={(doc) => setPreviewDoc(doc)}
+          isEditMode={isEditMode}
         />
       )}
 
@@ -401,6 +423,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
            onSave={handleSaveDoc}
            isUploading={isUploading}
            onPreview={(doc) => setPreviewDoc(doc)}
+           isEditMode={isEditMode}
          />
       )}
 
@@ -415,6 +438,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
            onSave={handleSaveDoc}
            isUploading={isUploading}
            onPreview={(doc) => setPreviewDoc(doc)}
+           isEditMode={isEditMode}
          />
       )}
 
@@ -429,6 +453,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
            onSave={handleSaveDoc}
            isUploading={isUploading}
            onPreview={(doc) => setPreviewDoc(doc)}
+           isEditMode={isEditMode}
          />
       )}
 
@@ -443,6 +468,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
            onSave={handleSaveDoc}
            isUploading={isUploading}
            onPreview={(doc) => setPreviewDoc(doc)}
+           isEditMode={isEditMode}
          />
       )}
 
