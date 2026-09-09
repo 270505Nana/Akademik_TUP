@@ -1,30 +1,62 @@
-import React, { useRef, useState } from "react";
-import { Check, UploadCloud, FileText, AlertTriangle, ChevronRight, Info, Download, X, CheckCircle2 } from "lucide-react";
+import React, { useRef, useState, useEffect } from "react";
+import { Check, UploadCloud, FileText, AlertTriangle, ChevronRight, Info, Download, X, CheckCircle2, Loader } from "lucide-react";
 import { useYudisiumContext } from "../../../context/YudisiumFormContext";
 import { SECTIONS } from "./yudisiumDocument";
-import { uploadYudisiumRegistrationFile } from "../../../service/api";
+import api, { uploadYudisiumRegistrationFile, downloadFileFromUrl } from "../../../service/api";
 
 const PreviewModal = ({ doc, onClose }) => {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchBlob = async () => {
+      if (!doc || !doc.fileUrl) return;
+
+      if (doc.fileUrl.startsWith('blob:')) {
+        setBlobUrl(doc.fileUrl);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      try {
+        const blobData = await downloadFileFromUrl(doc.fileUrl);
+        if (active) {
+          const url = URL.createObjectURL(blobData);
+          setBlobUrl(url);
+        }
+      } catch (err) {
+        if (active) {
+          console.error("Gagal memuat preview:", err);
+          setError("Sesi telah habis atau file tidak ditemukan.");
+        }
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+
+    fetchBlob();
+
+    return () => {
+      active = false;
+      if (blobUrl && !blobUrl.startsWith('blob:') && doc?.fileUrl !== blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [doc]);
+
   if (!doc) return null;
-  
+
   const isPdf = doc.fileName?.toLowerCase().endsWith('.pdf') || doc.fileUrl?.toLowerCase().includes('.pdf') || doc.file?.type === 'application/pdf';
 
   return (
     <div 
-      style={{ 
-        position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, 
-        zIndex: 9999, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', 
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 
-      }} 
+      style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 9999, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} 
       onClick={onClose}
     >
-      <div 
-        style={{ 
-          background: '#fff', borderRadius: 16, width: '100%', maxWidth: 850, height: '88vh', 
-          display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' 
-        }} 
-        onClick={e => e.stopPropagation()}
-      >
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 850, height: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             <FileText size={18} color="#C0182A" style={{ flexShrink: 0 }} />
@@ -32,28 +64,34 @@ const PreviewModal = ({ doc, onClose }) => {
               Preview - {doc.fileName || doc.name}
             </h3>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', padding: 4, flexShrink: 0 }}>
-            <X size={22} />
-          </button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', padding: 4, flexShrink: 0 }}><X size={22} /></button>
         </div>
         
-        <div style={{ flex: 1, background: '#F8FAFC', overflow: 'auto', position: 'relative' }}>
-          {isPdf ? (
-            <iframe src={doc.fileUrl} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} title="Preview Dokumen" />
-          ) : (
-            <img src={doc.fileUrl} alt="Preview Dokumen" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', margin: 'auto', display: 'block', padding: 16 }} />
-          )}
+        <div style={{ flex: 1, background: '#F8FAFC', overflow: 'auto', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {isLoading ? (
+            <div style={{ textAlign: 'center', color: '#64748B' }}>
+              <Loader size={30} style={{ color: '#DC2626', animation: 'spin 1s linear infinite', margin: '0 auto 10px' }} />
+              <div>Memuat Dokumen...</div>
+            </div>
+          ) : error ? (
+            <div style={{ color: '#DC2626', fontWeight: 600, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+               <AlertTriangle size={32} />
+               <span>{error}</span>
+            </div>
+          ) : blobUrl ? (
+             isPdf ? (
+              <iframe src={blobUrl} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} title="Preview Dokumen" />
+            ) : (
+              <img src={blobUrl} alt="Preview Dokumen" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block', padding: 16 }} />
+            )
+          ) : null}
         </div>
         
         <div style={{ padding: '16px 24px', borderTop: '1px solid #E2E8F0', background: '#FAFAFA', display: 'flex', justifyContent: 'flex-end' }}>
           <a 
-            href={doc.fileUrl} 
+            href={blobUrl || doc.fileUrl} 
             download={doc.fileName || 'dokumen_yudisium'} 
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, 
-              fontSize: 13, fontWeight: 700, border: '1px solid #E2E8F0', background: '#fff', 
-              color: '#374151', textDecoration: 'none', transition: '0.2s', cursor: 'pointer' 
-            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: '1px solid #E2E8F0', background: '#fff', color: '#374151', textDecoration: 'none', transition: '0.2s', cursor: 'pointer' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = '#F1F5F9'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
           >
@@ -65,16 +103,50 @@ const PreviewModal = ({ doc, onClose }) => {
   );
 };
 
-// Menerima prop isEditMode
-const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onUpload, onDropFile, onSave, isUploading, onPreview, isEditMode }) => {
+const TemplatePreviewModal = ({ blobUrl, title, mimeType, onClose, onDownload, isDownloading }) => {
+  if (!blobUrl) return null;
+  const isPdf = mimeType === 'application/pdf' || (title && title.toLowerCase().endsWith('.pdf'));
+
+  return (
+    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 9999, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 850, height: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '16px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <FileText size={18} color="#C0182A" style={{ flexShrink: 0 }} />
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Preview Template - {title}</h3>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', padding: 4 }}><X size={22} /></button>
+        </div>
+        <div style={{ flex: 1, background: '#F8FAFC', overflow: 'auto', position: 'relative' }}>
+          {isPdf ? (
+            <iframe src={blobUrl} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} title="Preview Template" />
+          ) : (
+            <img src={blobUrl} alt="Preview Template" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', margin: 'auto', display: 'block', padding: 16 }} />
+          )}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #E2E8F0', background: '#FAFAFA', display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onDownload} disabled={isDownloading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: '1px solid #E2E8F0', background: '#fff', color: '#374151', cursor: isDownloading ? 'not-allowed' : 'pointer' }}>
+            {isDownloading ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={16} />} {isDownloading ? 'Mengunduh...' : 'Unduh Template'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onUpload, onDropFile, onSave, isUploading, onPreview, isEditMode, showTemplateBox = true }) => {
   const activeDoc = documents.find((d) => d.id === activeDocId) || documents[0];
   const [isDragging, setIsDragging] = useState(false);
 
+  const [templateState, setTemplateState] = useState({ isFetching: false, isDownloading: false, error: null });
+  const [templateModal, setTemplateModal] = useState({ blobUrl: null, title: "", mimeType: null });
+
   if (!activeDoc) return null;
 
-  // Logika Read-Only dan Ditolak
   const isRejected = isEditMode && activeDoc.isValid === false;
-  const isReadOnly = isEditMode && activeDoc.fileUrl && !isRejected;
+  const isReadOnly = isEditMode && activeDoc.fileUrl && !isRejected && !activeDoc.file;
+
+  const hasLocalUploadError = activeDoc.error && !activeDoc.error.toLowerCase().includes("ditolak");
 
   const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
@@ -84,6 +156,57 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
     if (!isReadOnly && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       onDropFile(activeDoc.id, e.dataTransfer.files[0]);
       e.dataTransfer.clearData();
+    }
+  };
+
+  const handleCloseTemplateModal = () => {
+    if (templateModal.blobUrl) URL.revokeObjectURL(templateModal.blobUrl);
+    setTemplateModal({ blobUrl: null, title: "", mimeType: null });
+  };
+
+  const handlePreviewTemplate = async () => {
+    const templateCode = activeDoc?.slug;
+    if (!templateCode) return;
+
+    setTemplateState({ isFetching: true, isDownloading: false, error: null });
+    try {
+      const res = await api.get(`/api/templates/preview/${templateCode}`, { responseType: 'blob' });
+      const blob = res.data;
+      const blobUrl = URL.createObjectURL(blob);
+      setTemplateModal({ blobUrl, title: activeDoc.name, mimeType: blob?.type || null });
+      setTemplateState({ isFetching: false, isDownloading: false, error: null });
+    } catch (err) {
+      setTemplateState({ isFetching: false, isDownloading: false, error: "Template belum tersedia dari admin." });
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    const templateCode = activeDoc?.slug;
+    if (!templateCode || templateState.isDownloading) return;
+    
+    setTemplateState(prev => ({ ...prev, isDownloading: true, error: null }));
+    try {
+      const res = await api.get(`/api/templates/download/${templateCode}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      let filename = `Template_${activeDoc.name}.pdf`;
+      const disposition = res.headers?.["content-disposition"];
+      if (disposition && disposition.includes("filename=")) {
+         const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+         if (match && match[1]) filename = match[1].replace(/['"]/g, "").trim();
+      }
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setTemplateState(prev => ({ ...prev, error: "Gagal mengunduh template." }));
+    } finally {
+      setTemplateState(prev => ({ ...prev, isDownloading: false }));
     }
   };
 
@@ -121,27 +244,35 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
           </div>
 
           <div>
-            {activeDoc.templateUrl && (
-              <div style={{ border: "1px solid #E2E8F0", borderRadius: "10px", padding: "1rem 1.25rem", marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8FAFC", flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ flex: 1, minWidth: '200px' }}>
-                  <h4 style={{ fontWeight: 700, marginBottom: "0.25rem", color: "#1E293B", fontSize: '0.95rem' }}>Unduh Template Dokumen</h4>
-                  <p style={{ fontSize: "0.8rem", color: "#64748B", margin: 0 }}>Silahkan unduh dan isi template yang disediakan oleh admin.</p>
+            {showTemplateBox && (
+              <div style={{ border: "1px solid #E2E8F0", borderRadius: "12px", padding: "1.5rem", marginBottom: "2rem", background: "#fff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <h4 style={{ fontWeight: 700, marginBottom: "0.5rem", color: "#1E293B", fontSize: "1rem" }}>Dokumen Persyaratan</h4>
+                    <p style={{ fontSize: "0.85rem", color: "#64748B", margin: 0, lineHeight: 1.5 }}>Lihat contoh berkas sebagai panduan atau unduh template yang telah tersedia.</p>
+                    {templateState.error && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: "#DC2626", marginTop: "0.75rem", fontSize: "0.8rem", fontWeight: 600, background: '#FEF2F2', padding: '6px 10px', borderRadius: 6, border: '1px solid #FECACA', width: 'fit-content' }}>
+                        <AlertTriangle size={14} /> {templateState.error}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flexShrink: 0 }}>
+                    <button
+                      onClick={handlePreviewTemplate}
+                      disabled={templateState.isFetching}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: '1px solid #CBD5E1', background: '#fff', color: '#334155', cursor: templateState.isFetching ? 'not-allowed' : 'pointer', transition: '0.2s', whiteSpace: 'nowrap' }}
+                      onMouseEnter={(e) => !templateState.isFetching && (e.currentTarget.style.background = '#F1F5F9')}
+                      onMouseLeave={(e) => !templateState.isFetching && (e.currentTarget.style.background = '#fff')}
+                    >
+                      {templateState.isFetching ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <FileText size={16} />}
+                      <span>{templateState.isFetching ? "Memuat..." : "Lihat & Unduh Dokumen Disini"}</span>
+                    </button>
+                  </div>
                 </div>
-                <a 
-                  href={activeDoc.templateUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', background: '#fff', border: '1px solid #CBD5E1', padding: '6px 12px', borderRadius: '6px', color: '#334155', fontWeight: 600, fontSize: '12px', transition: '0.2s', whiteSpace: 'nowrap' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#94A3B8'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
-                >
-                  <Download size={14} />
-                  <span>Download</span>
-                </a>
               </div>
             )}
 
-            {isRejected && (
+            {isRejected && !activeDoc.file && (
               <div style={{ padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", marginBottom: "1.5rem", display: "flex", gap: "10px", alignItems: "flex-start" }}>
                 <AlertTriangle size={18} color="#DC2626" style={{ marginTop: '2px' }} />
                 <div>
@@ -160,10 +291,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
               <>
                 <h4 style={{ fontWeight: 700, marginBottom: "1rem", fontSize: '1rem' }}>Pilih file atau Tarik ke sini</h4>
                 <div 
-                  style={{ 
-                    padding: "2rem 1rem", border: isDragging ? "2px dashed #c0182a" : "2px dashed #cbd5e1", borderRadius: "10px", textAlign: "center", cursor: "pointer", background: isDragging ? "#fff1f2" : "#f8fafc", transition: "0.2s",
-                    maxWidth: "600px"
-                  }}
+                  style={{ padding: "2rem 1rem", border: isDragging ? "2px dashed #c0182a" : "2px dashed #cbd5e1", borderRadius: "10px", textAlign: "center", cursor: "pointer", background: isDragging ? "#fff1f2" : "#f8fafc", transition: "0.2s", maxWidth: "600px" }}
                   onMouseEnter={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#c0182a" }}
                   onMouseLeave={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#cbd5e1" }}
                   onClick={() => onUpload(activeDoc.id)}
@@ -183,11 +311,13 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
               </>
             )}
 
-            {(activeDoc.fileUrl || activeDoc.error) && (
+            {(activeDoc.fileUrl || activeDoc.fileName || activeDoc.error) && (
               <div style={{ marginTop: "1.5rem", maxWidth: "600px" }}>
-                <h4 style={{ fontWeight: 700, marginBottom: "0.75rem", fontSize: '0.95rem' }}>{isReadOnly ? "File yang Disetujui" : "File Terpilih"}</h4>
+                <h4 style={{ fontWeight: 700, marginBottom: "0.75rem", fontSize: '0.95rem' }}>
+                  {isReadOnly ? "File yang Disetujui" : isRejected && !activeDoc.file ? "File Sebelumnya (Ditolak)" : "File Terpilih"}
+                </h4>
                 
-                {activeDoc.fileUrl ? (
+                {(!hasLocalUploadError && (activeDoc.fileUrl || activeDoc.fileName)) ? (
                   <div className="file-card" style={{ padding: "1rem", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", overflow: "hidden", gap: "1rem", border: "1px solid #E2E8F0", borderRadius: "10px", background: "#fff" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "1rem", flex: 1, minWidth: 0 }}>
                       <div className="file-card-icon" style={{ width: "40px", height: "40px", borderRadius: "8px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#F8FAFC" }}>
@@ -212,24 +342,39 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
                       >
                         Lihat Preview
                       </button>
-                      <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: isReadOnly ? "#DCFCE7" : "#F0FDF4", color: "#15803D", fontWeight: 700, borderRadius: "6px", border: "1px solid #BBF7D0" }}>
-                        {isReadOnly ? "Valid" : activeDoc.status === "completed" ? "Tersimpan" : "Siap Upload"}
-                      </div>
+                      
+                      {activeDoc.isValid === true ? (
+                         <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#DCFCE7", color: "#15803D", fontWeight: 700, borderRadius: "6px", border: "1px solid #BBF7D0" }}>
+                           Valid
+                         </div>
+                      ) : isRejected && !activeDoc.file ? (
+                         <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#FEF2F2", color: "#DC2626", fontWeight: 700, borderRadius: "6px", border: "1px solid #FECACA" }}>
+                           Ditolak
+                         </div>
+                      ) : activeDoc.status === "completed" ? (
+                         <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#F0FDF4", color: "#15803D", fontWeight: 700, borderRadius: "6px", border: "1px solid #BBF7D0" }}>
+                           Tersimpan
+                         </div>
+                      ) : (
+                         <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#F1F5F9", color: "#475569", fontWeight: 700, borderRadius: "6px", border: "1px solid #E2E8F0" }}>
+                           Siap Upload
+                         </div>
+                      )}
                     </div>
                   </div>
-                ) : (
+                ) : hasLocalUploadError ? (
                   <div className="file-card" style={{ padding: "1rem", display: "flex", alignItems: "center", width: "100%", overflow: "hidden", gap: "1rem", border: "1px solid #FECACA", borderRadius: "10px", background: "#FEF2F2" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "1rem", flex: 1, minWidth: 0 }}>
                       <div className="file-card-icon" style={{ background: "transparent", color: "#DC2626", border: "2px solid #DC2626", borderRadius: "50%", width: "36px", height: "36px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <AlertTriangle size={18} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="file-name" style={{ color: "#B91C1C", fontWeight: 800, fontSize: "0.85rem", marginBottom: "2px" }}>Error: Berkas Ditolak</div>
+                        <div className="file-name" style={{ color: "#B91C1C", fontWeight: 800, fontSize: "0.85rem", marginBottom: "2px" }}>Error: Upload Dibatalkan</div>
                         <div className="file-meta" style={{ color: "#DC2626", fontSize: "0.75rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeDoc.error}</div>
                       </div>
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
 
@@ -238,19 +383,28 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
                 className="btn-primary"
                 style={{ marginTop: "1.5rem" }}
                 onClick={() => onSave(activeDoc.id)}
-                disabled={isUploading || (!activeDoc.file && activeDoc.status === "completed")}
+                disabled={isUploading || activeDoc.status === "completed"}
               >
                 {isUploading 
                   ? "Mengunggah..." 
-                  : activeDoc.file 
-                    ? (activeDoc.status === "completed" ? "Simpan Perubahan File" : "Simpan Dokumen") 
-                    : (activeDoc.status === "completed" ? "Sudah Diunggah" : "Simpan Dokumen")
+                  : activeDoc.status === "completed" 
+                    ? "Tersimpan" 
+                    : "Simpan Dokumen"
                 }
               </button>
             )}
           </div>
         </div>
       </div>
+
+      <TemplatePreviewModal 
+        blobUrl={templateModal.blobUrl} 
+        title={templateModal.title} 
+        mimeType={templateModal.mimeType} 
+        onClose={handleCloseTemplateModal} 
+        onDownload={handleDownloadTemplate} 
+        isDownloading={templateState.isDownloading} 
+      />
     </div>
   );
 };
@@ -289,7 +443,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
     const fileSize = (file.size / (1024 * 1024)).toFixed(2) + " MB";
     fileMapRef.current[targetId] = file;
 
-    dispatch({ type: "UPLOAD_DOCUMENT", docId: targetId, fileUrl, fileName: file.name, fileSize });
+    dispatch({ type: "UPLOAD_DOCUMENT", docId: targetId, file: file, fileUrl, fileName: file.name, fileSize });
   };
 
   const handleFileChange = (e) => {
@@ -337,7 +491,6 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
     else if (doc.section === SECTIONS.WIRAUSAHA) sectionName = "EvidenceWirausaha";
 
     const formattedFileName = `${safeNim}_${sectionName}_${doc.slug}.${extension}`;
-
     const renamedFile = new File([file], formattedFileName, { type: file.type });
 
     try {
@@ -371,6 +524,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
 
   return (
     <div className="step-content">
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
       <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
       
@@ -394,6 +548,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
           isUploading={isUploading}
           onPreview={(doc) => setPreviewDoc(doc)}
           isEditMode={isEditMode}
+          showTemplateBox={true}
         />
       )}
 
@@ -409,6 +564,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
           isUploading={isUploading}
           onPreview={(doc) => setPreviewDoc(doc)}
           isEditMode={isEditMode}
+          showTemplateBox={true}
         />
       )}
 
@@ -424,6 +580,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
            isUploading={isUploading}
            onPreview={(doc) => setPreviewDoc(doc)}
            isEditMode={isEditMode}
+           showTemplateBox={true}
          />
       )}
 
@@ -439,6 +596,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
            isUploading={isUploading}
            onPreview={(doc) => setPreviewDoc(doc)}
            isEditMode={isEditMode}
+           showTemplateBox={true}
          />
       )}
 
@@ -454,6 +612,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
            isUploading={isUploading}
            onPreview={(doc) => setPreviewDoc(doc)}
            isEditMode={isEditMode}
+           showTemplateBox={true}
          />
       )}
 
@@ -469,6 +628,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
            isUploading={isUploading}
            onPreview={(doc) => setPreviewDoc(doc)}
            isEditMode={isEditMode}
+           showTemplateBox={true}
          />
       )}
 
