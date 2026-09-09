@@ -6,8 +6,18 @@ import { downloadYudisiumRegistrationUpload, getYudisiumRegistrationById, approv
 const BERKAS_STATUS = { SESUAI: 'sesuai', BERMASALAH: 'bermasalah', UNCHECKED: 'unchecked' };
 
 const getBerkasName = (upload) => {
-  if (upload.name) return upload.name;
-  return upload.slug || upload.category || 'Berkas';
+  const slugStr = upload.category || upload.slug || "";
+  if (!slugStr) return upload.name || 'Berkas';
+  
+  let clean = slugStr
+    .replace(/^yudisium-berkas-wajib-contoh-scan-/i, '')
+    .replace(/^yudisium-berkas-wajib-contoh-/i, '')
+    .replace(/^yudisium-berkas-wajib-/i, '')
+    .replace(/^yudisium-evidence-cumlaude-[^-]+-/i, '')
+    .replace(/^yudisium-/i, '')
+    .replace(/[-_]/g, ' ');
+    
+  return clean.replace(/\b\w/g, l => l.toUpperCase()).trim();
 };
 
 const CLR = {
@@ -328,7 +338,8 @@ const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onC
   useEffect(() => {
     const initial = registration?.yudisiumRegistrationUploads;
     if (initial && initial.length > 0) { 
-      setUploads(initial); 
+      const sorted = [...initial].sort((a, b) => (a.category || a.slug || '').localeCompare(b.category || b.slug || ''));
+      setUploads(sorted); 
       return; 
     }
     
@@ -336,7 +347,8 @@ const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onC
     setLoadingUploads(true);
     getYudisiumRegistrationById(registration.id)
       .then(detail => {
-        setUploads(detail?.yudisiumRegistrationUploads ?? []);
+        const sorted = (detail?.yudisiumRegistrationUploads ?? []).sort((a, b) => (a.category || a.slug || '').localeCompare(b.category || b.slug || ''));
+        setUploads(sorted);
       })
       .catch(() => setUploads([]))
       .finally(() => setLoadingUploads(false));
