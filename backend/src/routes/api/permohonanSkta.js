@@ -11,6 +11,7 @@ import {
   approvePermohonanSkta,
   rejectPermohonanSkta,
   generateDokumenValidasiSkta,
+  uploadDokumenValidasiSkta,
   getLatestPermohonanSktaByMahasiswaId,
   downloadValidasi,
   exportSktaZip,
@@ -411,7 +412,7 @@ router.put(
  * @swagger
  * /api/permohonan-skta/{id}/generate/dokumen-validasi-skta:
  *   get:
- *     summary: Generate or retrieve existing Dokumen Validasi SKTA
+ *     summary: Retrieve existing Dokumen Validasi SKTA from database
  *     tags: [Permohonan SKTA]
  *     security:
  *       - bearerAuth: []
@@ -424,14 +425,59 @@ router.put(
  *     responses:
  *       200:
  *         description: Retrieve existing Dokumen Validasi SKTA
+ *       404:
+ *         description: Berkas validasi SKTA not found
+ *   post:
+ *     summary: Upload and store generated Dokumen Validasi SKTA file in berkasMahasiswa
+ *     tags: [Permohonan SKTA]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - dokumenFile
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Custom display name for the document
+ *               dokumenFile:
+ *                 type: string
+ *                 format: binary
+ *                 description: PDF file of the validation document
+ *     responses:
  *       201:
- *         description: Successfully generated new placeholder Dokumen Validasi SKTA
+ *         description: Dokumen validasi SKTA uploaded successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Permohonan SKTA not found
  */
 router.get(
   "/:id/generate/dokumen-validasi-skta",
   verifyToken,
   isAdmin,
   generateDokumenValidasiSkta
+);
+
+router.post(
+  "/:id/generate/dokumen-validasi-skta",
+  verifyToken,
+  isAdmin,
+  upload("berkas-mahasiswa").fields([
+    { name: "dokumenFile", maxCount: 1 },
+    { name: "file", maxCount: 1 },
+  ]),
+  uploadDokumenValidasiSkta
 );
 
 /**

@@ -632,7 +632,7 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Generate Dokumen Validasi SKTA
+// [Route] Get Existing Dokumen Validasi SKTA
 const generateDokumenValidasiSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -666,69 +666,107 @@ const generateDokumenValidasiSkta = asyncHandler(async (req, res) => {
     return `${req.protocol}://${req.get("host")}/api/permohonan-skta/download/validasi/${berkasId}`;
   };
 
-  if (existingBerkas) {
-    return res.json({
-      message: "Berkas validasi SKTA berhasil ditemukan (existing)",
-      data: {
-        ...existingBerkas,
-        downloadUrl: buildDownloadUrl(req, existingBerkas.id),
-      },
-    });
+  if (!existingBerkas) {
+    res.status(404);
+    throw new Error("Berkas validasi SKTA belum ditemukan di database");
   }
 
-  // Buffer PDF minimal yang valid
-  const minimalPDFBuffer = Buffer.from(
-    '%PDF-1.4\n' +
-    '1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
-    '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
-    '3 0 obj<</Type/Page/Parent 2 0 R/Resources<<>>/MediaBox[0 0 595 842]/Contents 4 0 R>>endobj\n' +
-    '4 0 obj<</Length 49>>stream\n' +
-    'BT\n' +
-    '/F1 12 Tf\n' +
-    '72 712 Td\n' +
-    '(Dokumen Validasi SKTA Mahasiswa) Tj\n' +
-    'ET\n' +
-    'endstream\n' +
-    'endobj\n' +
-    'xref\n' +
-    '0 5\n' +
-    '0000000000 65535 f\n' +
-    '0000000009 00000 n\n' +
-    '0000000052 00000 n\n' +
-    '0000000101 00000 n\n' +
-    '0000000196 00000 n\n' +
-    'trailer<</Size 5/Root 1 0 R>>\n' +
-    'startxref\n' +
-    '296\n' +
-    '%%EOF'
-  );
+  res.json({
+    message: "Berkas validasi SKTA berhasil ditemukan",
+    data: {
+      ...existingBerkas,
+      downloadUrl: buildDownloadUrl(req, existingBerkas.id),
+    },
+  });
+});
+
+// [Route] Upload Dokumen Validasi SKTA (dibuat dari Frontend)
+const uploadDokumenValidasiSkta = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const permohonan = await prisma.permohonanSkta.findUnique({
+    where: { id },
+    include: {
+      mahasiswa: true,
+    },
+  });
+
+  if (!permohonan) {
+    res.status(404);
+    throw new Error("Permohonan SKTA tidak ditemukan");
+  }
+
+  const file = getUploadedFile(req.files, "dokumenFile") || getUploadedFile(req.files, "file") || req.file;
+
+  if (!file) {
+    res.status(400);
+    throw new Error("File dokumen validasi wajib diunggah");
+  }
+
+  if (file.mimetype !== "application/pdf") {
+    res.status(400);
+    throw new Error("Tipe file tidak valid (hanya diperbolehkan PDF)");
+  }
+
+  const mahasiswaId = permohonan.mahasiswaId;
+  const category = "Dokumen Validasi Skta";
+
+  const existingBerkas = await prisma.berkasMahasiswa.findFirst({
+    where: {
+      mahasiswaId,
+      category,
+      deletedAt: null,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (existingBerkas && existingBerkas.filepath) {
+    await deleteFile(existingBerkas.filepath);
+  }
 
   const filename = `${uuidv4()}.pdf`;
   const uploaded = await uploadFile({
-    buffer: minimalPDFBuffer,
+    buffer: file.buffer,
     customFilename: filename,
     folder: "berkas-mahasiswa",
     mimetype: "application/pdf",
   });
 
-  const nim = permohonan.mahasiswa?.nim || mahasiswaId;
-  const name = `Dokumen_Validasi_SKTA_${nim}.pdf`;
+  const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || mahasiswaId);
+  const name = req.body.name || `Dokumen_Validasi_SKTA_${nim}.pdf`;
 
-  const createdUpload = await prisma.berkasMahasiswa.create({
-    data: {
-      id: uuidv4(),
-      name,
-      category,
-      filepath: uploaded.filepath,
-      mahasiswaId,
-    },
-  });
+  let berkasRecord;
+  if (existingBerkas) {
+    berkasRecord = await prisma.berkasMahasiswa.update({
+      where: { id: existingBerkas.id },
+      data: {
+        name,
+        filepath: uploaded.filepath,
+        updatedAt: new Date(),
+      },
+    });
+  } else {
+    berkasRecord = await prisma.berkasMahasiswa.create({
+      data: {
+        id: uuidv4(),
+        name,
+        category,
+        filepath: uploaded.filepath,
+        mahasiswaId,
+      },
+    });
+  }
+
+  const buildDownloadUrl = (req, berkasId) => {
+    if (!berkasId) return null;
+    return `${req.protocol}://${req.get("host")}/api/permohonan-skta/download/validasi/${berkasId}`;
+  };
 
   res.status(201).json({
-    message: "Berkas validasi SKTA berhasil di-generate",
+    message: "Berkas validasi SKTA berhasil diunggah",
     data: {
-      ...createdUpload,
-      downloadUrl: buildDownloadUrl(req, createdUpload.id),
+      ...berkasRecord,
+      downloadUrl: buildDownloadUrl(req, berkasRecord.id),
     },
   });
 });
@@ -925,6 +963,7 @@ export {
   approvePermohonanSkta,
   rejectPermohonanSkta,
   generateDokumenValidasiSkta,
+  uploadDokumenValidasiSkta,
   downloadValidasi,
   exportSktaZip,
 };
