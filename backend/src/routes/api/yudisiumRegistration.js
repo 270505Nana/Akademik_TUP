@@ -28,11 +28,94 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/yudisium-registrations:
  *   get:
- *     summary: Get all yudisium registrations (paginated)
+ *     summary: Get all yudisium registrations (with search, filter, sort, and pagination)
  *     tags: [Yudisium Registration]
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search keyword across mahasiswa name, NIM, or judul tugas akhir
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [draft, submitted, approved, rejected, revision]
+ *         description: Filter by status (draft, submitted, approved, rejected, revision)
+ *       - in: query
+ *         name: isDraft
+ *         schema:
+ *           type: boolean
+ *         description: Filter explicitly by draft status (true/false)
+ *       - in: query
+ *         name: yudisiumRegistrationPeriodId
+ *         schema:
+ *           type: string
+ *         description: Filter by Yudisium Registration Period ID
+ *       - in: query
+ *         name: yudisiumPeriodId
+ *         schema:
+ *           type: string
+ *         description: Filter by Yudisium Period ID
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: string
+ *         description: Filter by Study Program ID
+ *       - in: query
+ *         name: facultyId
+ *         schema:
+ *           type: string
+ *         description: Filter by Faculty ID
+ *       - in: query
+ *         name: tahunAngkatan
+ *         schema:
+ *           type: integer
+ *         description: Filter by student cohort year (tahun angkatan)
+ *       - in: query
+ *         name: program
+ *         schema:
+ *           type: string
+ *         description: Filter by program type (e.g. Reguler, Alih Jenjang)
+ *       - in: query
+ *         name: skemaSidang
+ *         schema:
+ *           type: string
+ *         description: Filter by skema sidang (e.g. Reguler, Non Sidang, Capstone, Sidang Khusus Prodi)
+ *       - in: query
+ *         name: pengajuanCumlaude
+ *         schema:
+ *           type: string
+ *         description: Filter by cumlaude application
+ *       - in: query
+ *         name: skemaCumlaude
+ *         schema:
+ *           type: string
+ *         description: Filter by cumlaude scheme (e.g. Publikasi Jurnal, Pameran, Lomba, HKI)
+ *       - in: query
+ *         name: berminatWirausaha
+ *         schema:
+ *           type: boolean
+ *         description: Filter by entrepreneurship interest (true/false)
+ *       - in: query
+ *         name: dosenWaliId
+ *         schema:
+ *           type: string
+ *         description: Filter by Dosen Wali ID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [name, nim, ipk, tak, tglSidang, submittedAt, createdAt, updatedAt]
+ *         description: Sort field (default createdAt)
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *         description: Sort order direction (asc or desc, default desc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:

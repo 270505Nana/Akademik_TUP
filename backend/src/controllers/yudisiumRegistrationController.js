@@ -258,19 +258,203 @@ const checkYudisiumEditable = async (registrationId) => {
   return { exists: true, editable: true };
 };
 
-// Yudisium Registration List
+// Yudisium Registration List (with search, filter, sort, and pagination)
 const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
+  const {
+    search,
+    status,
+    isDraft,
+    yudisiumRegistrationPeriodId,
+    yudisiumPeriodId,
+    studyProgramId,
+    facultyId,
+    tahunAngkatan,
+    program,
+    skemaSidang,
+    pengajuanCumlaude,
+    skemaCumlaude,
+    berminatWirausaha,
+    dosenWaliId,
+    sortBy,
+    sortOrder,
+  } = req.query;
+
+  const where = {
+    deletedAt: null,
+  };
+
+  // 1. Global Search across mahasiswa name, nim, and thesis title
+  const searchTerm = (search || "").trim();
+  if (searchTerm) {
+    where.OR = [
+      {
+        mahasiswa: {
+          user: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+        },
+      },
+      {
+        mahasiswa: {
+          nim: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+      },
+      {
+        judulTugasAkhirIndonesia: {
+          contains: searchTerm,
+          mode: "insensitive",
+        },
+      },
+      {
+        judulTugasAkhirInggris: {
+          contains: searchTerm,
+          mode: "insensitive",
+        },
+      },
+    ];
+  }
+
+  // 2. Status Filter
+  if (status && typeof status === "string" && status.trim() !== "") {
+    const s = status.trim().toLowerCase();
+    if (s === "draft") {
+      where.isDraft = true;
+      where.isEdit = null;
+    } else if (s === "submitted") {
+      where.isDraft = false;
+      where.yudisiumPeriodId = null;
+      where.message = null;
+      where.isEdit = null;
+    } else if (s === "approved") {
+      where.yudisiumPeriodId = { not: null };
+    } else if (s === "rejected") {
+      where.message = { not: null };
+      where.isEdit = null;
+      where.yudisiumPeriodId = null;
+    } else if (s === "revision") {
+      where.isEdit = { not: null };
+    }
+  }
+
+  // Explicit isDraft filter if provided
+  const parsedIsDraft = parseBoolean(isDraft);
+  if (parsedIsDraft !== undefined) {
+    where.isDraft = parsedIsDraft;
+  }
+
+  // 3. Periode Yudisium (Pendaftaran dan Pelaksanaan)
+  if (yudisiumRegistrationPeriodId && typeof yudisiumRegistrationPeriodId === "string" && yudisiumRegistrationPeriodId.trim() !== "") {
+    where.yudisiumRegistrationPeriodId = yudisiumRegistrationPeriodId.trim();
+  }
+
+  if (yudisiumPeriodId && typeof yudisiumPeriodId === "string" && yudisiumPeriodId.trim() !== "") {
+    where.yudisiumPeriodId = yudisiumPeriodId.trim();
+  }
+
+  // 4. Akademik & Program Studi Mahasiswa
+  if (studyProgramId && typeof studyProgramId === "string" && studyProgramId.trim() !== "") {
+    where.mahasiswa = where.mahasiswa || {};
+    where.mahasiswa.studyProgramId = studyProgramId.trim();
+  }
+
+  if (facultyId && typeof facultyId === "string" && facultyId.trim() !== "") {
+    where.mahasiswa = where.mahasiswa || {};
+    where.mahasiswa.studyProgram = {
+      ...where.mahasiswa.studyProgram,
+      facultyId: facultyId.trim(),
+    };
+  }
+
+  if (tahunAngkatan !== undefined && tahunAngkatan !== null && String(tahunAngkatan).trim() !== "") {
+    const parsedAngkatan = parseInt(tahunAngkatan, 10);
+    if (!isNaN(parsedAngkatan)) {
+      where.mahasiswa = where.mahasiswa || {};
+      where.mahasiswa.tahunAngkatan = parsedAngkatan;
+    }
+  }
+
+  // Program (Reguler / Alih Jenjang)
+  if (program && typeof program === "string" && program.trim() !== "") {
+    where.program = {
+      contains: program.trim(),
+      mode: "insensitive",
+    };
+  }
+
+  // Skema Sidang
+  if (skemaSidang && typeof skemaSidang === "string" && skemaSidang.trim() !== "") {
+    where.skemaSidang = {
+      contains: skemaSidang.trim(),
+      mode: "insensitive",
+    };
+  }
+
+  // Dosen Wali
+  if (dosenWaliId && typeof dosenWaliId === "string" && dosenWaliId.trim() !== "") {
+    where.dosenWaliId = dosenWaliId.trim();
+  }
+
+  // 5. Cumlaude & Wirausaha
+  if (pengajuanCumlaude && typeof pengajuanCumlaude === "string" && pengajuanCumlaude.trim() !== "") {
+    where.pengajuanCumlaude = {
+      contains: pengajuanCumlaude.trim(),
+      mode: "insensitive",
+    };
+  }
+
+  if (skemaCumlaude && typeof skemaCumlaude === "string" && skemaCumlaude.trim() !== "") {
+    where.skemaCumlaude = {
+      contains: skemaCumlaude.trim(),
+      mode: "insensitive",
+    };
+  }
+
+  const parsedWirausaha = parseBoolean(berminatWirausaha);
+  if (parsedWirausaha !== undefined) {
+    where.berminatWirausaha = parsedWirausaha;
+  }
+
+  // 6. Sorting
+  const sortField = (sortBy || "").trim();
+  const sortDirection = ((sortOrder || "").toLowerCase().trim() === "asc") ? "asc" : "desc";
+
+  let orderBy = { createdAt: "desc" };
+
+  if (sortField) {
+    if (sortField === "name") {
+      orderBy = { mahasiswa: { user: { name: sortDirection } } };
+    } else if (sortField === "nim") {
+      orderBy = { mahasiswa: { nim: sortDirection } };
+    } else if (sortField === "ipk") {
+      orderBy = { mahasiswa: { ipk: sortDirection } };
+    } else if (sortField === "tak") {
+      orderBy = { tak: sortDirection };
+    } else if (sortField === "tglSidang") {
+      orderBy = { tglSidang: sortDirection };
+    } else if (sortField === "submittedAt") {
+      orderBy = { submittedAt: sortDirection };
+    } else if (sortField === "createdAt") {
+      orderBy = { createdAt: sortDirection };
+    } else if (sortField === "updatedAt") {
+      orderBy = { updatedAt: sortDirection };
+    }
+  }
 
   const [total, yudisiumRegistrations] = await Promise.all([
-    prisma.yudisiumRegistration.count(),
+    prisma.yudisiumRegistration.count({ where }),
     prisma.yudisiumRegistration.findMany({
+      where,
       skip: paginationParams.skip,
       take: paginationParams.take,
       include: yudisiumInclude,
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy,
     }),
   ]);
 
