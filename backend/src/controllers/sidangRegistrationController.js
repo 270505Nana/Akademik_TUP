@@ -59,23 +59,31 @@ const NON_SIDANG_CATEGORY_MAP = {
   "Publikasi Jurnal": "Sidang - Evidence Non Sidang Publikasi Jurnal",
   "Proceeding International":
     "Sidang - Evidence Non Sidang Proceeding International",
+  "Proceeding Internasional":
+    "Sidang - Evidence Non Sidang Proceeding International",
   HKI: "Sidang - Evidence Non Sidang HKI",
 };
 
 // Helper dasar: ambil semua code dokumen persyaratan berkas untuk satu kategori
 const getSlugsByCategory = async (categoryName) => {
   const docs = await prisma.dokumenPersyaratanBerkas.findMany({
-    where: { category: categoryName, deletedAt: null },
+    where: { category: categoryName, isRequired: true, deletedAt: null },
     select: { code: true },
   });
   return docs.map((doc) => doc.code);
 };
 
-const getRequiredSlugsFromDb = () => getSlugsByCategory("Sidang - Berkas Wajib");
+const getRequiredSlugsFromDb = () =>
+  getSlugsByCategory("Sidang - Berkas Wajib");
 
 const getNonSidangSlugsFromDb = (jalur) => {
-  const categoryName =
-    NON_SIDANG_CATEGORY_MAP[jalur] || `Sidang - Evidence Non Sidang ${jalur}`;
+  const normalized = String(jalur || "").trim();
+  const matchedKey = Object.keys(NON_SIDANG_CATEGORY_MAP).find(
+    (key) => key.toLowerCase() === normalized.toLowerCase(),
+  );
+  const categoryName = matchedKey
+    ? NON_SIDANG_CATEGORY_MAP[matchedKey]
+    : `Sidang - Evidence Non Sidang ${normalized}`;
   return getSlugsByCategory(categoryName);
 };
 
@@ -91,7 +99,10 @@ const getTestBahasaSlugsFromDb = (lulusTesBahasa) => {
 const deleteUploadsByCategory = async (registrationId, categories) => {
   if (!categories || !categories.length) return;
   const uploadsToDelete = await prisma.sidangRegistrationUpload.findMany({
-    where: { sidangRegistrationId: registrationId, category: { in: categories } },
+    where: {
+      sidangRegistrationId: registrationId,
+      category: { in: categories },
+    },
   });
   for (const upload of uploadsToDelete) {
     if (upload.filepath) await deleteFile(upload.filepath);
@@ -539,7 +550,9 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     isNonSidangScheme === false
       ? []
       : jalurNonSidang !== undefined
-        ? (Array.isArray(jalurNonSidang) ? jalurNonSidang : [])
+        ? Array.isArray(jalurNonSidang)
+          ? jalurNonSidang
+          : []
         : undefined;
 
   // Map req.body field names → Prisma model field names (source of truth: schema.prisma)
@@ -548,9 +561,7 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
     skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
     jalurNonSidang: resolvedJalurNonSidang,
     lulusTesBahasa:
-      parsedLulusTesBahasa !== undefined
-        ? parsedLulusTesBahasa
-        : undefined,
+      parsedLulusTesBahasa !== undefined ? parsedLulusTesBahasa : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
@@ -817,15 +828,29 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
       ? sidangScheme
       : existingRegistration.skemaSidang;
 
+  const currentJalurNonSidang =
+    jalurNonSidang !== undefined
+      ? Array.isArray(jalurNonSidang)
+        ? jalurNonSidang
+        : []
+      : existingRegistration.jalurNonSidang || [];
+
+  const hasJalurNonSidang =
+    Array.isArray(currentJalurNonSidang) && currentJalurNonSidang.length > 0;
+
   const isNonSidang =
-    String(effectiveSkema || "").trim().toLowerCase() === "non sidang" ||
-    String(effectiveSkema || "").trim().toLowerCase().includes("non");
+    String(effectiveSkema || "")
+      .trim()
+      .toLowerCase() === "non sidang" ||
+    String(effectiveSkema || "")
+      .trim()
+      .toLowerCase()
+      .includes("non") ||
+    hasJalurNonSidang;
 
   const resolvedSubmitJalurNonSidang = !isNonSidang
     ? []
-    : jalurNonSidang !== undefined
-      ? (Array.isArray(jalurNonSidang) ? jalurNonSidang : [])
-      : existingRegistration.jalurNonSidang;
+    : currentJalurNonSidang;
 
   // Update field sebelum validasi (supaya merge) — gunakan nama field Prisma sebagai key
   const updateData = {
@@ -833,9 +858,7 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     skemaSidang: sidangScheme !== undefined ? sidangScheme : undefined, // Prisma: skemaSidang
     jalurNonSidang: resolvedSubmitJalurNonSidang,
     lulusTesBahasa:
-      parsedLulusTesBahasa !== undefined
-        ? parsedLulusTesBahasa
-        : undefined,
+      parsedLulusTesBahasa !== undefined ? parsedLulusTesBahasa : undefined,
     sks: sks !== undefined ? parseInt(sks) : undefined,
     ipk: ipk !== undefined ? parseFloat(ipk) : undefined,
     tak: tak !== undefined ? parseInt(tak) : undefined,
@@ -918,16 +941,22 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   // Test Bahasa — wajib pilih status dulu, lalu validasi kelengkapan sesuai opsi
   if (isNil(mergedData.lulusTesBahasa)) {
     res.status(400);
-    throw new Error("Tidak dapat submit. Status Test Bahasa (Sudah/Belum) wajib dipilih.");
+    throw new Error(
+      "Tidak dapat submit. Status Test Bahasa (Sudah/Belum) wajib dipilih.",
+    );
   }
 
-  const testBahasaSlugs = await getTestBahasaSlugsFromDb(mergedData.lulusTesBahasa);
+  const testBahasaSlugs = await getTestBahasaSlugsFromDb(
+    mergedData.lulusTesBahasa,
+  );
 
   // Guard anti-overlap kategori (warning ke server log jika ada dokumen terdaftar di dua kategori sekaligus)
-  const overlappingSlugs = requiredSlugs.filter((slug) => testBahasaSlugs.includes(slug));
+  const overlappingSlugs = requiredSlugs.filter((slug) =>
+    testBahasaSlugs.includes(slug),
+  );
   if (overlappingSlugs.length > 0) {
     console.error(
-      `[Konfigurasi Bermasalah] Dokumen berikut terdaftar di kategori "Sidang - Berkas Wajib" DAN kategori Test Bahasa sekaligus: ${overlappingSlugs.join(", ")}. Periksa data di tabel dokumenPersyaratanBerkas.`
+      `[Konfigurasi Bermasalah] Dokumen berikut terdaftar di kategori "Sidang - Berkas Wajib" DAN kategori Test Bahasa sekaligus: ${overlappingSlugs.join(", ")}. Periksa data di tabel dokumenPersyaratanBerkas.`,
     );
   }
 
@@ -936,7 +965,11 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   // Jalur Non Sidang (ambil dari database dokumen persyaratan berkas sesuai jalur — HANYA jika skema Non Sidang)
-  if (isNonSidang && mergedData.jalurNonSidang && Array.isArray(mergedData.jalurNonSidang)) {
+  if (
+    isNonSidang &&
+    mergedData.jalurNonSidang &&
+    Array.isArray(mergedData.jalurNonSidang)
+  ) {
     for (const jalur of mergedData.jalurNonSidang) {
       const nonSidangSlugs = await getNonSidangSlugsFromDb(jalur);
       for (const slug of nonSidangSlugs) {
@@ -982,9 +1015,13 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   // Jika lulusTesBahasa bernilai true, hapus semua berkas SidangRegistrationUpload milik SidangRegistration tersebut dengan category "(Belum)"
+  // Sebaliknya jika false, hapus semua berkas dengan category "(Sudah)"
   if (mergedData.lulusTesBahasa === true) {
     const belumSlugs = await getTestBahasaSlugsFromDb(false);
     await deleteUploadsByCategory(id, belumSlugs);
+  } else if (mergedData.lulusTesBahasa === false) {
+    const sudahSlugs = await getTestBahasaSlugsFromDb(true);
+    await deleteUploadsByCategory(id, sudahSlugs);
   }
 
   updateData.isDraft = false; // Finalize submit
@@ -1153,8 +1190,12 @@ const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
   }
 
   const ext = path.extname(upload.filepath || "") || ".pdf";
-  const baseName = (upload.name || "").replace(/[\\/:*?"<>|]/g, "-").trim() || "dokumen-sidang";
-  const downloadName = baseName.toLowerCase().endsWith(ext.toLowerCase()) ? baseName : `${baseName}${ext}`;
+  const baseName =
+    (upload.name || "").replace(/[\\/:*?"<>|]/g, "-").trim() ||
+    "dokumen-sidang";
+  const downloadName = baseName.toLowerCase().endsWith(ext.toLowerCase())
+    ? baseName
+    : `${baseName}${ext}`;
 
   await serveDownload(res, {
     filepath: upload.filepath,
