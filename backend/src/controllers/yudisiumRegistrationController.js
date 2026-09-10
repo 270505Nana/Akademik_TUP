@@ -17,18 +17,52 @@ import {
   serveDownload,
 } from "../services/storageService.js";
 
-// Ambil slug berkas wajib yudisium dari database dokumen persyaratan berkas
-const getRequiredSlugsFromDb = async () => {
+const CUMLAUDE_CATEGORY_MAP = {
+  "Publikasi Jurnal": "Yudisium - Evidence Cumlaude Publikasi Jurnal",
+  Pameran: "Yudisium - Evidence Cumlaude Pameran",
+  Lomba: "Yudisium - Evidence Cumlaude Lomba",
+  HKI: "Yudisium - Evidence Cumlaude HKI",
+};
+
+// Helper dasar: ambil semua code dokumen persyaratan berkas untuk satu kategori
+const getSlugsByCategory = async (categoryName) => {
   const docs = await prisma.dokumenPersyaratanBerkas.findMany({
-    where: {
-      category: {
-        in: ["Yudisium - Berkas Wajib"],
-      },
-      deletedAt: null,
-    },
+    where: { category: categoryName, isRequired: true, deletedAt: null },
     select: { code: true },
   });
   return docs.map((doc) => doc.code);
+};
+
+const getRequiredSlugsFromDb = () =>
+  getSlugsByCategory("Yudisium - Berkas Wajib");
+
+const getWirausahaSlugsFromDb = () =>
+  getSlugsByCategory("Yudisium - Evidence Wirausaha");
+
+const getCumlaudeSlugsFromDb = (skemaCumlaude) => {
+  const categoryName =
+    CUMLAUDE_CATEGORY_MAP[skemaCumlaude] ||
+    `Yudisium - Evidence Cumlaude ${skemaCumlaude}`;
+  return getSlugsByCategory(categoryName);
+};
+
+// Helper: hapus berkas fisik dan record upload berdasarkan daftar kategori/slug
+const deleteUploadsByCategory = async (registrationId, categories) => {
+  if (!categories || !categories.length) return;
+  const uploadsToDelete = await prisma.yudisiumRegistrationUpload.findMany({
+    where: {
+      yudisiumRegistrationId: registrationId,
+      category: { in: categories },
+    },
+  });
+  for (const upload of uploadsToDelete) {
+    if (upload.filepath) await deleteFile(upload.filepath);
+  }
+  if (uploadsToDelete.length > 0) {
+    await prisma.yudisiumRegistrationUpload.deleteMany({
+      where: { id: { in: uploadsToDelete.map((u) => u.id) } },
+    });
+  }
 };
 
 const mapMahasiswa = (mahasiswa) => {
@@ -951,9 +985,28 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
 
   const missingFiles = [];
 
+  // 1. Yudisium - Berkas Wajib
   const requiredSlugs = await getRequiredSlugsFromDb();
   for (const slug of requiredSlugs) {
     if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
+  }
+
+  // 2. Yudisium - Evidence Wirausaha (wajib jika berminatWirausaha bernilai true)
+  if (mergedData.berminatWirausaha === true) {
+    const wirausahaSlugs = await getWirausahaSlugsFromDb();
+    for (const slug of wirausahaSlugs) {
+      if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
+    }
+  }
+
+  // 3. Yudisium - Evidence Cumlaude (wajib sesuai skemaCumlaude: Publikasi Jurnal, Pameran, Lomba, HKI)
+  if (mergedData.skemaCumlaude) {
+    const cumlaudeSlugs = await getCumlaudeSlugsFromDb(
+      mergedData.skemaCumlaude,
+    );
+    for (const slug of cumlaudeSlugs) {
+      if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
+    }
   }
 
   if (missingFiles.length > 0) {
@@ -961,6 +1014,14 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     throw new Error(
       `Tidak dapat submit. Berkas wajib belum lengkap: ${missingFiles.join(", ")}`,
     );
+  }
+
+  // Bersihkan berkas wirausaha jika berminatWirausaha false
+  if (mergedData.berminatWirausaha === false) {
+    const wirausahaSlugs = await getSlugsByCategory(
+      "Yudisium - Evidence Wirausaha",
+    );
+    await deleteUploadsByCategory(id, wirausahaSlugs);
   }
 
   if (mergedData.mahasiswaId) {
