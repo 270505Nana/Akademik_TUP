@@ -144,7 +144,8 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
   if (!activeDoc) return null;
 
   const isRejected = isEditMode && activeDoc.isValid === false;
-  const isReadOnly = isEditMode && activeDoc.fileUrl && !isRejected && !activeDoc.file;
+  const hasNewFileToUpload = !!activeDoc.file; 
+  const isReadOnly = isEditMode && activeDoc.fileUrl && !isRejected && !hasNewFileToUpload && activeDoc.isValid !== null;
 
   const hasLocalUploadError = activeDoc.error && !activeDoc.error.toLowerCase().includes("ditolak");
 
@@ -378,19 +379,14 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
               </div>
             )}
 
-            {!isReadOnly && (
+            {!isReadOnly && activeDoc.status !== "completed" && (
               <button
                 className="btn-primary"
                 style={{ marginTop: "1.5rem" }}
                 onClick={() => onSave(activeDoc.id)}
-                disabled={isUploading || activeDoc.status === "completed"}
+                disabled={isUploading}
               >
-                {isUploading 
-                  ? "Mengunggah..." 
-                  : activeDoc.status === "completed" 
-                    ? "Tersimpan" 
-                    : "Simpan Dokumen"
-                }
+                {isUploading ? "Mengunggah..." : "Simpan Dokumen"}
               </button>
             )}
           </div>
