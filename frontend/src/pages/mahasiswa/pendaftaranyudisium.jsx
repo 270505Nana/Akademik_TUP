@@ -244,14 +244,16 @@ function PendaftaranYudisiumContent() {
 
     if (data.yudisiumPeriodId) {
       return (
-        <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-          <CheckCircle2 color="#16A34A" style={{ flexShrink: 0, marginTop: '2px' }} size={20} />
-          <div>
+        <div className="info-banner" style={{ marginBottom: '24px', background: '#F0FDF4', borderColor: '#BBF7D0' }}>
+          <div className="banner-icon-container" style={{ background: '#DCFCE7' }}>
+            <CheckCircle2 color="#16A34A" size={24} />
+          </div>
+          <div className="banner-content">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <h4 style={{ margin: 0, color: '#166534', fontWeight: 800, fontSize: '15px' }}>Pendaftaran Yudisium Disetujui</h4>
+              <h4 style={{ color: '#166534', margin: 0, fontSize: '16px', fontWeight: 800 }}>Pendaftaran Yudisium Disetujui</h4>
               <span style={{ background: '#DCFCE7', color: '#166534', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px' }}>DISETUJUI</span>
             </div>
-            <p style={{ margin: 0, color: '#15803D', fontSize: '13px', lineHeight: '1.5' }}>Selamat! Pendaftaran yudisium kamu telah diverifikasi dan disetujui oleh admin akademik.</p>
+            <p style={{ color: '#15803D', margin: 0, fontSize: '13px' }}>Selamat! Pendaftaran yudisium kamu telah diverifikasi dan disetujui oleh admin akademik.</p>
           </div>
         </div>
       );
@@ -259,14 +261,16 @@ function PendaftaranYudisiumContent() {
 
     if (data.isEdit) {
       return (
-        <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-          <AlertTriangle color="#D97706" style={{ flexShrink: 0, marginTop: '2px' }} size={20} />
-          <div style={{ flex: 1 }}>
+        <div className="info-banner" style={{ marginBottom: '24px', background: '#FFFBEB', borderColor: '#FDE68A' }}>
+          <div className="banner-icon-container" style={{ background: '#FEF3C7' }}>
+            <AlertTriangle color="#D97706" size={24} />
+          </div>
+          <div className="banner-content">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <h4 style={{ margin: 0, color: '#92400E', fontWeight: 800, fontSize: '15px' }}>Pendaftaran Memerlukan Perbaikan Dokumen</h4>
+              <h4 style={{ color: '#92400E', margin: 0, fontSize: '16px', fontWeight: 800 }}>Pendaftaran Memerlukan Perbaikan Dokumen</h4>
               <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px' }}>PERLU PERBAIKAN</span>
             </div>
-            <p style={{ margin: 0, color: '#B45309', fontSize: '13px', lineHeight: '1.5', marginBottom: '12px' }}>
+            <p style={{ color: '#B45309', margin: 0, marginBottom: '12px', fontSize: '13px' }}>
               Tim akademik memberikan catatan: <strong>"{data.message}"</strong>. Silakan perbaiki pengajuan kamu melalui formulir di bawah ini dan kirim ulang.
             </p>
             <div style={{ background: '#fff', padding: '10px 16px', borderRadius: '8px', border: '1px solid #FDE68A', display: 'inline-block' }}>
@@ -279,14 +283,16 @@ function PendaftaranYudisiumContent() {
 
     if (!data.isDraft) {
       return (
-        <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-          <Clock color="#2563EB" style={{ flexShrink: 0, marginTop: '2px' }} size={20} />
-          <div>
+        <div className="info-banner" style={{ marginBottom: '24px', background: '#EFF6FF', borderColor: '#BFDBFE' }}>
+          <div className="banner-icon-container" style={{ background: '#DBEAFE' }}>
+            <Clock color="#2563EB" size={24} />
+          </div>
+          <div className="banner-content">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <h4 style={{ margin: 0, color: '#1E3A8A', fontWeight: 800, fontSize: '15px' }}>Pendaftaran Sedang Diproses</h4>
+              <h4 style={{ color: '#1E3A8A', margin: 0, fontSize: '16px', fontWeight: 800 }}>Pendaftaran Sedang Diproses</h4>
               <span style={{ background: '#DBEAFE', color: '#1E40AF', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px' }}>MENUNGGU VERIFIKASI</span>
             </div>
-            <p style={{ margin: 0, color: '#1D4ED8', fontSize: '13px', lineHeight: '1.5' }}>Pendaftaran yudisium kamu telah berhasil dikirim dan sedang menunggu proses verifikasi oleh tim akademik. Mohon pantau halaman ini secara berkala.</p>
+            <p style={{ color: '#1D4ED8', margin: 0, fontSize: '13px' }}>Pendaftaran yudisium kamu telah berhasil dikirim dan sedang menunggu proses verifikasi oleh tim akademik. Mohon pantau halaman ini secara berkala.</p>
           </div>
         </div>
       );
@@ -363,7 +369,7 @@ function PendaftaranYudisiumContent() {
                   </button>
                 ) : (
                   <button className="btn-primary" onClick={handleSaveStep1} disabled={isSavingStep1}>
-                    {isSavingStep1 ? "Menyimpan..." : "Simpan & Lanjutkan"}
+                    {isSavingStep1 ? "Menyimpan..." : "Lanjutkan"}
                   </button>
                 )
               ) : (

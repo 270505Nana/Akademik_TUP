@@ -58,6 +58,22 @@ const checkGroupStatus = (group) => {
   };
 };
 
+const getBadgeProps = (stat, type) => {
+  if (!stat) return { text: '-', bg: 'bg-gray' };
+  if (stat === 'Aktif') return { text: type === 'pend' ? 'Buka' : 'Berjalan', bg: 'bg-blue' };
+  if (stat === 'Mendatang') return { text: 'Mendatang', bg: 'bg-gray' };
+  if (stat === 'Selesai') return { text: type === 'pend' ? 'Tutup' : 'Selesai', bg: 'bg-red' };
+  return { text: 'Nonaktif', bg: 'bg-red' };
+};
+
+const getStatusTextProps = (stat, type) => {
+  if (!stat) return { text: 'Belum dijadwalkan', color: '#94A3B8' };
+  if (stat === 'Aktif') return { text: type === 'pend' ? 'Pendaftaran Dibuka' : 'Sidang Berjalan', color: '#16A34A' };
+  if (stat === 'Mendatang') return { text: type === 'pend' ? 'Pendaftaran Mendatang' : 'Sidang Mendatang', color: '#64748B' };
+  if (stat === 'Selesai') return { text: type === 'pend' ? 'Pendaftaran Ditutup' : 'Sidang Selesai', color: '#991B1B' };
+  return { text: 'Nonaktif', color: '#991B1B' };
+};
+
 const formatDate = (dateStr) => {
   if (!dateStr) return '-';
   return new Date(`${dateStr}T12:00:00`).toLocaleDateString('id-ID', {
@@ -145,7 +161,6 @@ const AturPeriodeSidang = () => {
   const filteredGroups = useMemo(() => {
     let result = groupedPeriods;
 
-    // Filter Logic by Tab
     if (activeFilter === 'Periode Aktif') {
       result = result.filter(g => checkGroupStatus(g).isActive);
     } else if (activeFilter === 'Pendaftaran Dibuka') {
@@ -159,7 +174,6 @@ const AturPeriodeSidang = () => {
       });
     }
 
-    // Search Logic
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(g => {
@@ -186,6 +200,11 @@ const AturPeriodeSidang = () => {
   const pStatMain = activeGroup?.pendaftaran ? getStatus(activeGroup.pendaftaran.startDate, activeGroup.pendaftaran.endDate, activeGroup.pendaftaran.isOpen) : null;
   const sStatMain = activeGroup?.sidang ? getStatus(activeGroup.sidang.startDate, activeGroup.sidang.endDate, activeGroup.sidang.isOpen) : null;
 
+  const badgePendMain = getBadgeProps(pStatMain, 'pend');
+  const badgeSidangMain = getBadgeProps(sStatMain, 'sidang');
+  const textPendMain = getStatusTextProps(pStatMain, 'pend');
+  const textSidangMain = getStatusTextProps(sStatMain, 'sidang');
+
   const validateDates = (start, end) => {
     const s = new Date(start).getTime();
     const e = new Date(end).getTime();
@@ -207,7 +226,8 @@ const AturPeriodeSidang = () => {
       const pend = periods.find(p => p.category === 'pendaftaran sidang' && p.period === form.period && p.name === form.name);
 
       if (!pend) { 
-        showAlert('error', 'Validasi Gagal', `Data Pendaftaran Sidang rujukan tidak valid.`); return; 
+        showAlert('error', 'Validasi Gagal', `Data Pendaftaran Sidang rujukan tidak valid atau tidak ditemukan.`); 
+        return; 
       }
       
       const pendEndDate = new Date(pend.endDate).getTime();
@@ -215,7 +235,8 @@ const AturPeriodeSidang = () => {
       const diffDays = (sidangStartDate - pendEndDate) / (1000 * 3600 * 24);
       
       if (diffDays < 14) { 
-        showAlert('error', 'Pelanggaran Aturan', `Jadwal Pelaksanaan Sidang wajib berjarak MINIMAL 14 HARI setelah penutupan Pendaftaran (${formatDate(pend.endDate)}).`); return; 
+        showAlert('error', 'Pelanggaran Aturan', `Jadwal Pelaksanaan Sidang wajib berjarak MINIMAL 14 HARI setelah penutupan Pendaftaran (${formatDate(pend.endDate)}).`); 
+        return; 
       }
     }
 
@@ -224,7 +245,18 @@ const AturPeriodeSidang = () => {
       const startObj = new Date(`${form.startDate}T00:00:00.000Z`);
       const endObj = new Date(`${form.endDate}T23:59:59.000Z`);
       const now = new Date();
-      const autoOpen = now >= startObj && now <= endObj;
+      
+      let autoOpen = now >= startObj && now <= endObj;
+      let autoOpenPrevented = false;
+
+      // CEK OVERLAP: Jika harusnya autoOpen, pastikan tidak ada grup lain yang sedang aktif
+      if (autoOpen) {
+        const hasOtherActive = groupedPeriods.some(g => g.pendaftaran?.isOpen || g.sidang?.isOpen);
+        if (hasOtherActive) {
+          autoOpen = false;
+          autoOpenPrevented = true;
+        }
+      }
 
       await createSidangPeriod({
         name: form.name,
@@ -235,7 +267,12 @@ const AturPeriodeSidang = () => {
         isOpen: autoOpen
       });
       
-      showAlert('success', 'Berhasil', 'Data periode sidang telah berhasil disimpan.');
+      if (autoOpenPrevented) {
+        showAlert('success', 'Berhasil', 'Jadwal disimpan. Status diset Nonaktif karena masih ada periode lain yang sedang aktif.');
+      } else {
+        showAlert('success', 'Berhasil', 'Data periode sidang telah berhasil disimpan.');
+      }
+      
       setForm({ name: '', category: 'pendaftaran sidang', period: '', startDate: '', endDate: '' });
       setIsCreateModalOpen(false);
       fetchPeriods();
@@ -244,29 +281,42 @@ const AturPeriodeSidang = () => {
     } finally { setSubmitting(false); }
   };
 
-  const handleToggleActive = async (group, isActive) => {
-    const newStatus = !isActive;
+  const handleToggleActive = async (group, currentToggleState) => {
+    const isTurningOn = !currentToggleState;
+    
+    // PROTEKSI SILANG: Jika ingin menghidupkan periode, pastikan tidak ada periode lain yang sedang ON
+    if (isTurningOn) {
+      const hasOtherActive = groupedPeriods.some(g => g.id !== group.id && (g.pendaftaran?.isOpen || g.sidang?.isOpen));
+      if (hasOtherActive) {
+        showAlert('error', 'Gagal Mengaktifkan', 'Terdapat periode lain yang masih Aktif. Nonaktifkan periode tersebut terlebih dahulu!');
+        return;
+      }
+    }
+
+    setSubmitting(true);
     try {
       if (group.pendaftaran) {
         await updateSidangPeriod(group.pendaftaran.id, {
           ...group.pendaftaran, 
           startDate: new Date(`${group.pendaftaran.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${group.pendaftaran.endDate}T00:00:00.000Z`).toISOString(),
-          isOpen: newStatus 
+          endDate: new Date(`${group.pendaftaran.endDate}T23:59:59.000Z`).toISOString(),
+          isOpen: isTurningOn 
         });
       }
       if (group.sidang) {
         await updateSidangPeriod(group.sidang.id, {
           ...group.sidang, 
           startDate: new Date(`${group.sidang.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${group.sidang.endDate}T00:00:00.000Z`).toISOString(),
-          isOpen: newStatus 
+          endDate: new Date(`${group.sidang.endDate}T23:59:59.000Z`).toISOString(),
+          isOpen: isTurningOn 
         });
       }
-      fetchPeriods();
-      showAlert('success', 'Berhasil', `Status Periode TA ${group.period} diubah menjadi ${newStatus ? 'Aktif' : 'Nonaktif'}.`);
+      await fetchPeriods();
+      showAlert('success', 'Berhasil', `Status Periode TA ${group.period} diubah menjadi ${isTurningOn ? 'Aktif' : 'Nonaktif'}.`);
     } catch (err) {
       showAlert('error', 'Gagal', 'Gagal mengubah status periode.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -308,14 +358,14 @@ const AturPeriodeSidang = () => {
         await updateSidangPeriod(editForm.pendaftaran.id, {
           ...editForm.pendaftaran,
           startDate: new Date(`${editForm.pendaftaran.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${editForm.pendaftaran.endDate}T00:00:00.000Z`).toISOString()
+          endDate: new Date(`${editForm.pendaftaran.endDate}T23:59:59.000Z`).toISOString()
         });
       }
       if (editForm.sidang) {
         await updateSidangPeriod(editForm.sidang.id, {
           ...editForm.sidang,
           startDate: new Date(`${editForm.sidang.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${editForm.sidang.endDate}T00:00:00.000Z`).toISOString()
+          endDate: new Date(`${editForm.sidang.endDate}T23:59:59.000Z`).toISOString()
         });
       }
       showAlert('success', 'Berhasil', `Periode TA ${editingGroup.period} telah diperbarui.`);
@@ -399,7 +449,6 @@ const AturPeriodeSidang = () => {
           </div>
 
           <div className="content-container">
-            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
               <div>
                 <h2 style={{ margin: '0 0 8px 0', fontSize: 28, fontWeight: 800, color: '#0F172A' }}>Atur Periode & Jadwal Sidang</h2>
@@ -410,7 +459,6 @@ const AturPeriodeSidang = () => {
               </button>
             </div>
 
-            {/* Dashboard Summary Cards */}
             {activeGroup && (
               <div className="dashboard-grid">
                 <div className="summary-card main-active">
@@ -443,9 +491,7 @@ const AturPeriodeSidang = () => {
                       </h3>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#3B82F6', backgroundColor: '#EFF6FF', padding: '4px 8px', borderRadius: 6 }}>Durasi: {getDuration(activeGroup.pendaftaran.startDate, activeGroup.pendaftaran.endDate)} Hari</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: pStatMain === 'Aktif' ? '#16A34A' : (pStatMain === 'Mendatang' ? '#64748B' : '#991B1B') }}>
-                          {pStatMain === 'Aktif' ? 'Pendaftaran Dibuka' : (pStatMain === 'Mendatang' ? 'Pendaftaran Mendatang' : 'Pendaftaran Ditutup')}
-                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: textPendMain.color }}>{textPendMain.text}</span>
                       </div>
                     </div>
                   ) : <p style={{ margin: 0, fontSize: 13, color: '#94A3B8' }}>Belum dijadwalkan</p>}
@@ -465,9 +511,7 @@ const AturPeriodeSidang = () => {
                       </h3>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#9333EA', backgroundColor: '#FAF5FF', padding: '4px 8px', borderRadius: 6 }}>Durasi: {getDuration(activeGroup.sidang.startDate, activeGroup.sidang.endDate)} Hari</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: sStatMain === 'Aktif' ? '#16A34A' : (sStatMain === 'Mendatang' ? '#64748B' : '#991B1B') }}>
-                          {sStatMain === 'Aktif' ? 'Sidang Berjalan' : (sStatMain === 'Mendatang' ? 'Sidang Mendatang' : 'Sidang Selesai')}
-                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: textSidangMain.color }}>{textSidangMain.text}</span>
                       </div>
                     </div>
                   ) : <p style={{ margin: 0, fontSize: 13, color: '#94A3B8' }}>Belum dijadwalkan</p>}
@@ -475,7 +519,6 @@ const AturPeriodeSidang = () => {
               </div>
             )}
 
-            {/* Filter & View Controls */}
             <div className="filter-bar-container">
               <div className="filter-tabs">
                 <button className={`filter-btn ${activeFilter === 'Semua Periode' ? 'active' : ''}`} onClick={() => setActiveFilter('Semua Periode')}>
@@ -494,7 +537,6 @@ const AturPeriodeSidang = () => {
               </div>
             </div>
 
-            {/* Data Rendering */}
             {loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Memuat data...</div>
             ) : filteredGroups.length === 0 ? (
@@ -519,7 +561,8 @@ const AturPeriodeSidang = () => {
                       const sStat = group.sidang ? getStatus(group.sidang.startDate, group.sidang.endDate, group.sidang.isOpen) : null;
                       
                       const mainName = group.semester !== 'Umum' ? `Semester ${group.semester} ${group.period}` : (group.pendaftaran?.name || group.sidang?.name || `Tahun Ajaran ${group.period}`);
-                      
+                      const isToggleOn = Boolean(group.pendaftaran?.isOpen || group.sidang?.isOpen);
+
                       return (
                         <tr key={idx}>
                           <td>
@@ -548,8 +591,8 @@ const AturPeriodeSidang = () => {
                             </span>
                           </td>
                           <td>
-                            <div className="pc-toggle" style={{ justifyContent: 'flex-start' }} onClick={() => handleToggleActive(group, isActive)}>
-                              <div className={`toggle-switch ${isActive ? 'on' : ''}`} />
+                            <div className="pc-toggle" style={{ justifyContent: 'flex-start', opacity: submitting ? 0.5 : 1, pointerEvents: submitting ? 'none' : 'auto' }} onClick={() => handleToggleActive(group, isToggleOn)}>
+                              <div className={`toggle-switch ${isToggleOn ? 'on' : ''}`} />
                             </div>
                           </td>
                           <td>

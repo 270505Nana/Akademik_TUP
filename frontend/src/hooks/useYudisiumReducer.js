@@ -16,6 +16,7 @@ const generateDocuments = () => {
         file: null, 
         error: null,
         status: "", 
+        isValid: null,
       });
     });
   });
@@ -45,6 +46,7 @@ export const initialFormState = {
     isEdit: null,
     message: null,
     submittedAt: null,
+    uploads: [], 
   },
   documents: generateDocuments(),
   activeDocIds: {
@@ -68,6 +70,7 @@ export function formReducer(state, action) {
       
     case "RESTORE_FROM_API": {
       const draft = action.payload;
+      const uploads = draft.yudisiumRegistrationUploads || draft.uploads || [];
       
       const newData = {
         ...state.data,
@@ -89,38 +92,75 @@ export function formReducer(state, action) {
         message: draft.message,
         submittedAt: draft.submittedAt,
         yudisiumPeriodId: draft.yudisiumPeriodId,
+        uploads: uploads,
       };
 
-      const uploads = draft.yudisiumRegistrationUploads || draft.uploads || [];
+      let currentDocs = [...state.documents];
+      const hasWajib = currentDocs.some(d => d.section === SECTIONS.WAJIB);
 
-      const updatedDocs = state.documents.map(doc => {
+      if (!hasWajib && uploads.length > 0) {
+        const nonWajibSlugs = currentDocs.filter(d => d.slug).map(d => d.slug);
+        const wajibUploads = uploads.filter(u => {
+          const uSlug = u.category || u.slug;
+          return !nonWajibSlugs.includes(uSlug);
+        });
+
+        wajibUploads.forEach((u, idx) => {
+          const slugStr = u.category || u.slug || "dokumen_wajib";
+          const cleanName = slugStr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+          currentDocs.push({
+            id: `${SECTIONS.WAJIB}-${idx + 1}`,
+            section: SECTIONS.WAJIB,
+            name: cleanName,
+            slug: slugStr,
+            templateUrl: null,
+            fileUrl: null,
+            fileName: "",
+            fileSize: "",
+            file: null,
+            error: null,
+            status: "",
+            isValid: null,
+          });
+        });
+      }
+
+      const updatedDocs = currentDocs.map(doc => {
         const uploaded = uploads.find(
           u => u.category === doc.slug || u.slug === doc.slug || (u.name && u.name.includes(doc.slug))
         );
         
         if (uploaded) {
+          const isRejected = draft.isEdit && uploaded.isValid === false;
           return { 
             ...doc, 
-            status: "completed", 
+            status: isRejected ? "" : "completed", 
             fileUrl: uploaded.downloadUrl || uploaded.previewUrl || uploaded.url, 
-            fileName: uploaded.name || uploaded.filename || "Dokumen Terunggah"
+            fileName: uploaded.name || uploaded.filename || "Dokumen Terunggah",
+            isValid: uploaded.isValid,
+            error: isRejected ? "Berkas ditolak. Silakan unggah dokumen yang baru." : null
           };
         }
         return doc;
       });
 
-      return {
-        ...state,
-        step: 1, 
-        data: newData,
-        documents: updatedDocs
-      };
+      updatedDocs.sort((a, b) => (a.slug || '').localeCompare(b.slug || ''));
+
+      const newActiveDocIds = { ...state.activeDocIds };
+      const wajibAfter = updatedDocs.filter(d => d.section === SECTIONS.WAJIB);
+      if (wajibAfter.length > 0 && !newActiveDocIds[SECTIONS.WAJIB]) {
+         newActiveDocIds[SECTIONS.WAJIB] = wajibAfter[0].id;
+      }
+
+      return { ...state, step: 1, data: newData, documents: updatedDocs, activeDocIds: newActiveDocIds };
     }
 
     case "SET_DYNAMIC_DOCUMENTS": {
       const apiDocs = [];
       const sectionCounts = {};
       const sectionsFromApi = new Set(); 
+      const uploads = state.data.uploads || []; 
 
       (action.payload || []).forEach(item => {
         if (!item.category) return;
@@ -140,9 +180,14 @@ export function formReducer(state, action) {
           sectionCounts[mappedSection]++;
           
           const existingDoc = state.documents.find(d => d.slug === item.code);
+          const uploaded = uploads.find(
+            u => u.category === item.code || u.slug === item.code || (u.name && u.name.includes(item.code))
+          );
           
           let cleanName = item.name ? item.name.replace(/^contoh\s+/i, '').trim() : "";
           cleanName = cleanName ? cleanName.charAt(0).toUpperCase() + cleanName.slice(1) : cleanName;
+
+          const isRejected = state.data.isEdit && uploaded?.isValid === false;
           
           apiDocs.push({
             id: `${mappedSection}-${sectionCounts[mappedSection]}`,
@@ -150,18 +195,21 @@ export function formReducer(state, action) {
             name: cleanName,
             slug: item.code, 
             templateUrl: item.downloadUrl || item.url || null,
-            fileUrl: existingDoc ? existingDoc.fileUrl : null,
-            fileName: existingDoc ? existingDoc.fileName : "",
+            fileUrl: uploaded ? (uploaded.downloadUrl || uploaded.previewUrl || uploaded.url) : (existingDoc ? existingDoc.fileUrl : null),
+            fileName: uploaded ? (uploaded.name || uploaded.filename || "Dokumen Terunggah") : (existingDoc ? existingDoc.fileName : ""),
             fileSize: existingDoc ? existingDoc.fileSize : "",
             file: existingDoc ? existingDoc.file : null,
-            error: existingDoc ? existingDoc.error : null,
-            status: existingDoc ? existingDoc.status : "",
+            error: isRejected ? "Berkas ditolak. Silakan unggah dokumen yang baru." : (existingDoc ? existingDoc.error : null),
+            status: uploaded ? (isRejected ? "" : "completed") : (existingDoc ? existingDoc.status : ""),
+            isValid: uploaded ? uploaded.isValid : (existingDoc ? existingDoc.isValid : null),
           });
         }
       });
 
       const staticDocs = state.documents.filter(d => !sectionsFromApi.has(d.section));
       const newDocuments = [...apiDocs, ...staticDocs];
+
+      newDocuments.sort((a, b) => (a.slug || '').localeCompare(b.slug || ''));
 
       const newActiveDocIds = { ...state.activeDocIds };
       Object.values(SECTIONS).forEach(sec => {
@@ -175,16 +223,21 @@ export function formReducer(state, action) {
         }
       });
 
-      return { 
-        ...state, 
-        documents: newDocuments,
-        activeDocIds: newActiveDocIds
-      };
+      return { ...state, documents: newDocuments, activeDocIds: newActiveDocIds };
     }
 
     case "UPLOAD_DOCUMENT": {
       const updatedDocs = state.documents.map((doc) =>
-        doc.id === action.docId ? { ...doc, file: action.file, fileUrl: action.fileUrl, fileName: action.fileName, fileSize: action.fileSize, error: null, status: "" } : doc
+        doc.id === action.docId ? { 
+          ...doc, 
+          file: action.file, 
+          fileUrl: action.fileUrl, 
+          fileName: action.fileName, 
+          fileSize: action.fileSize, 
+          error: null, 
+          status: "",
+          isValid: null
+        } : doc
       );
       return { ...state, documents: updatedDocs };
     }
