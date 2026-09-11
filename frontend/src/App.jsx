@@ -21,12 +21,14 @@ import PermohonanSK from "./pages/admin/permohonanSK";
 import AturPeriodeSidang from "./pages/admin/aturperiodesidang";
 import AturPeriodeYudisium from "./pages/admin/aturperiodeyudisium";
 import AturBerkas          from "./pages/admin/requirementdocs";
-import UploadSKL           from "./pages/admin/skltranskrip";             
+import UploadSKL           from "./pages/admin/UploadSKL";             
+import UploadTranskrip     from "./pages/admin/UploadTranskrip";             
 import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";  
 import RegistrasiYudisium  from "./pages/admin/RegistrasiYudisium";           
 import ProtectedRoute      from "./components/common/protectedRoute";
 import PendaftaranSidang   from "./pages/mahasiswa/pendaftaransidang";
 import PendaftaranYudisium from "./pages/mahasiswa/pendaftaranyudisium";
+import UnduhBerkasKelulusan from "./pages/mahasiswa/UnduhBerkasKelulusan";
 import KelolaDataDosen      from "./pages/admin/keloladatadosen";
 
 const Placeholder = ({ title }) => (
@@ -88,6 +90,22 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["MAHASISWA"]} requireCompleteProfile={true}>
                 <PendaftaranYudisium />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mahasiswa/unduh-berkas"
+            element={
+              <ProtectedRoute allowedRoles={["MAHASISWA"]} requireCompleteProfile={true}>
+                <UnduhBerkasKelulusan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mahasiswa/unduh-skl-transkrip"
+            element={
+              <ProtectedRoute allowedRoles={["MAHASISWA"]} requireCompleteProfile={true}>
+                <UnduhBerkasKelulusan />
               </ProtectedRoute>
             }
           />
@@ -222,6 +240,15 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["ADMIN"]}>
                 <UploadSKL />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/akademik/upload-transkrip"
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <UploadTranskrip />
               </ProtectedRoute>
             }
           />
