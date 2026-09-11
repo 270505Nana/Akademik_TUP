@@ -58,7 +58,7 @@ router.get("/", verifyToken, listTranskripUploads);
  * @swagger
  * /api/transkrip/{id}:
  *   get:
- *     summary: Get details of an transkrip upload by ID
+ *     summary: Get details of a transkrip upload by transkrip upload ID or Mahasiswa ID
  *     tags: [Transkrip Upload]
  *     security:
  *       - bearerAuth: []
@@ -68,7 +68,7 @@ router.get("/", verifyToken, listTranskripUploads);
  *         required: true
  *         schema:
  *           type: string
- *         description: Transkrip upload ID (UUID)
+ *         description: Transkrip upload ID or Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: Transkrip upload details retrieved successfully
@@ -149,7 +149,7 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
- *         description: Transkrip upload ID (UUID)
+ *         description: Transkrip upload ID or Mahasiswa ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -204,7 +204,7 @@ router.patch(
  *         required: true
  *         schema:
  *           type: string
- *         description: Transkrip upload ID (UUID)
+ *         description: Transkrip upload ID or Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: Transkrip deleted successfully
@@ -221,19 +221,19 @@ router.delete("/:id", verifyToken, isAdmin, deleteTranskripUpload);
 
 /**
  * @swagger
- * /api/transkrip/uploads/:uploadId/download:
+ * /api/transkrip/uploads/{id}/download:
  *   get:
- *     summary: Download an transkrip upload file
+ *     summary: Download a transkrip upload file by transkrip upload ID or Mahasiswa ID
  *     tags: [Transkrip Upload]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: uploadId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Transkrip upload ID (UUID)
+ *         description: Transkrip upload ID or Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: File downloaded successfully
@@ -246,6 +246,6 @@ router.delete("/:id", verifyToken, isAdmin, deleteTranskripUpload);
  *       500:
  *         description: Internal server error
  */
-router.get("/uploads/:uploadId/download", verifyToken, downloadTranskripUpload);
+router.get("/uploads/:id/download", verifyToken, downloadTranskripUpload);
 
 export default router;

@@ -90,13 +90,21 @@ const listTranskripUploads = asyncHandler(async (req, res) => {
   res.json(formatPaginationResponse(data, total, paginationParams));
 });
 
-// Get Transkrip upload by ID
+// Get Transkrip upload by ID or Mahasiswa ID
 const getTranskripUploadById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const transkripUpload = await prisma.berkasMahasiswa.findFirst({
-    where: { id, deletedAt: null, category: "Transkrip" },
+    where: {
+      deletedAt: null,
+      category: "Transkrip",
+      OR: [
+        { id },
+        { mahasiswaId: id },
+      ],
+    },
     include: transkripInclude,
+    orderBy: { createdAt: "desc" },
   });
 
   if (!transkripUpload) {
@@ -221,7 +229,15 @@ const updateTranskripUpload = asyncHandler(async (req, res) => {
   }
 
   const transkripUpload = await prisma.berkasMahasiswa.findFirst({
-    where: { id, deletedAt: null, category: "Transkrip" },
+    where: {
+      deletedAt: null,
+      category: "Transkrip",
+      OR: [
+        { id },
+        { mahasiswaId: id },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
   });
 
   if (!transkripUpload) {
@@ -255,7 +271,7 @@ const updateTranskripUpload = asyncHandler(async (req, res) => {
   }
 
   const updatedTranskripUpload = await prisma.berkasMahasiswa.update({
-    where: { id },
+    where: { id: transkripUpload.id },
     data: {
       name: name !== undefined ? name : transkripUpload.name,
       mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : transkripUpload.mahasiswaId,
@@ -279,7 +295,15 @@ const deleteTranskripUpload = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const transkripUpload = await prisma.berkasMahasiswa.findFirst({
-    where: { id, deletedAt: null, category: "Transkrip" },
+    where: {
+      deletedAt: null,
+      category: "Transkrip",
+      OR: [
+        { id },
+        { mahasiswaId: id },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
   });
 
   if (!transkripUpload) {
@@ -288,7 +312,7 @@ const deleteTranskripUpload = asyncHandler(async (req, res) => {
   }
 
   await prisma.berkasMahasiswa.update({
-    where: { id },
+    where: { id: transkripUpload.id },
     data: { deletedAt: new Date() },
   });
 
@@ -297,10 +321,18 @@ const deleteTranskripUpload = asyncHandler(async (req, res) => {
 
 // Download Transkrip upload file
 const downloadTranskripUpload = asyncHandler(async (req, res) => {
-  const { uploadId } = req.params;
+  const { id } = req.params;
 
   const upload = await prisma.berkasMahasiswa.findFirst({
-    where: { id: uploadId, deletedAt: null, category: "Transkrip" },
+    where: {
+      deletedAt: null,
+      category: "Transkrip",
+      OR: [
+        { id },
+        { mahasiswaId: id },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
   });
 
   if (!upload) {
