@@ -84,8 +84,9 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
           label: 'Layanan SK & SKL',
           icon: <FileText className="nav-icon" />,
           subItems: [
-            { label: 'Permohonan SK TA',             path: '/akademik/permohonan-sk' },
-            { label: 'Upload SKL & transkrip nilai', path: '/akademik/upload-skl'    }
+            { label: 'Permohonan SK TA',   path: '/akademik/permohonan-sk'    },
+            { label: 'Upload SKL',         path: '/akademik/upload-skl'       },
+            { label: 'Upload Transkrip',   path: '/akademik/upload-transkrip' },
           ]
         }
       ]
