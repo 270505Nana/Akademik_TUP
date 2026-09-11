@@ -417,7 +417,7 @@ export const approveYudisiumRegistration = async (registrationId, payload) => {
 
 export const rejectYudisiumRegistration = async (registrationId, payload) => {
   const response = await api.put(`/api/yudisium-registrations/${registrationId}/reject`, payload);
-  return response.data?.data ?? response.data;
+  return response.data?.data ?? response. data;
 };
 
 export const downloadYudisiumRegistrationUpload = async (uploadId) => {
@@ -608,6 +608,118 @@ export const downloadTemplate = async (slug) => {
 export const generateDokumenValidasiSkta = async (permohonanId) => {
   const response = await api.get(`/api/permohonan-skta/${permohonanId}/generate/dokumen-validasi-skta`);
   return response.data?.data ?? response.data;
+};
+
+// ------------------------------------------- YUDISIUM REGISTRATIONS (ADMIN) -------------------------------------------
+
+/**
+ * Ambil daftar registrasi yudisium dengan filter server-side.
+ * Gunakan yudisiumPeriodId untuk menampilkan hanya mahasiswa dengan periode yudisium ter-assign.
+ * @param {Object} params - Query params: { yudisiumPeriodId, studyProgramId, search, status, page, limit, ... }
+ */
+export const getYudisiumRegistrations = async (params = {}) => {
+  const response = await api.get('/api/yudisium-registrations', { params });
+  return response.data?.data ?? response.data;
+};
+
+// ------------------------------------------- SKL UPLOAD (ADMIN) -------------------------------------------
+
+/**
+ * Ambil daftar semua SKL yang sudah diupload (dengan paginasi).
+ * @param {Object} params - { page, limit }
+ */
+export const listSklUploads = async (params = {}) => {
+  const response = await api.get('/api/skl', { params });
+  return response.data;
+};
+
+/**
+ * Upload SKL untuk mahasiswa (upsert — jika sudah ada akan otomatis diperbarui).
+ * @param {{ mahasiswaId: string, name: string, sklFile: File }} payload
+ */
+export const uploadSkl = async ({ mahasiswaId, name, sklFile }) => {
+  const formData = new FormData();
+  formData.append('mahasiswaId', mahasiswaId);
+  formData.append('name', name);
+  formData.append('sklFile', sklFile);
+  const response = await api.post('/api/skl', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data?.data ?? response.data;
+};
+
+/**
+ * Download file SKL sebagai Blob (untuk preview inline).
+ * @param {string} uploadId - ID record SKL
+ */
+export const downloadSklFile = async (uploadId) => {
+  const response = await api.get(`/api/skl/uploads/${uploadId}/download`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+// ------------------------------------------- TRANSKRIP UPLOAD (ADMIN) -------------------------------------------
+
+/**
+ * Ambil daftar semua Transkrip yang sudah diupload (dengan paginasi).
+ * @param {Object} params - { page, limit }
+ */
+export const listTranskripUploads = async (params = {}) => {
+  const response = await api.get('/api/transkrip', { params });
+  return response.data;
+};
+
+/**
+ * Upload Transkrip untuk mahasiswa (upsert — jika sudah ada akan otomatis diperbarui).
+ * @param {{ mahasiswaId: string, name: string, transkripFile: File }} payload
+ */
+export const uploadTranskrip = async ({ mahasiswaId, name, transkripFile }) => {
+  const formData = new FormData();
+  formData.append('mahasiswaId', mahasiswaId);
+  formData.append('name', name);
+  formData.append('transkripFile', transkripFile);
+  const response = await api.post('/api/transkrip', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data?.data ?? response.data;
+};
+
+/**
+ * Download file Transkrip sebagai Blob (untuk preview inline).
+ * @param {string} uploadId - ID record Transkrip
+ */
+export const downloadTranskripFile = async (uploadId) => {
+  const response = await api.get(`/api/transkrip/uploads/${uploadId}/download`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+// ------------------------------------------- MAHASISWA SKL & TRANSKRIP -------------------------------------------
+
+/**
+ * Ambil data unggahan SKL milik mahasiswa yang sedang login.
+ * @param {string} [mahasiswaId]
+ */
+export const getMySklUpload = async (mahasiswaId) => {
+  const params = { limit: 'all' };
+  if (mahasiswaId) params.mahasiswaId = mahasiswaId;
+  const response = await api.get('/api/skl', { params });
+  const list = response.data?.data || response.data || [];
+  return Array.isArray(list) ? (list[0] || null) : null;
+};
+
+/**
+ * Ambil data unggahan Transkrip milik mahasiswa yang sedang login.
+ * @param {string} [mahasiswaId]
+ */
+export const getMyTranskripUpload = async (mahasiswaId) => {
+  const params = { limit: 'all' };
+  if (mahasiswaId) params.mahasiswaId = mahasiswaId;
+  const response = await api.get('/api/transkrip', { params });
+  const list = response.data?.data || response.data || [];
+  return Array.isArray(list) ? (list[0] || null) : null;
 };
 
 export default api;

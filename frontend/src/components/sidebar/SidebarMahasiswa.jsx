@@ -57,7 +57,8 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
           icon: <Calendar className="nav-icon" />,
           subItems: [
             "Registrasi Sidang",
-            'Registrasi Yudisium'
+            "Registrasi Yudisium",
+            "Unduh SKL & Transkrip",
           ],
         },
       ],
@@ -68,6 +69,7 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
     if (sub === "Permohonan Penerbitan SK") return "/mahasiswa/pengajuan-sk";
     if (sub === "Registrasi Sidang") return "/mahasiswa/pendaftaran-sidang";
     if (sub === "Registrasi Yudisium") return "/mahasiswa/pendaftaran-yudisium";
+    if (sub === "Unduh SKL & Transkrip" || sub === "Unduh SKL dan Transkrip") return "/mahasiswa/unduh-berkas";
     return "#";
   };
 
