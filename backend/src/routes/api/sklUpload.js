@@ -58,7 +58,7 @@ router.get("/", verifyToken, listSklUploads);
  * @swagger
  * /api/skl/{id}:
  *   get:
- *     summary: Get details of an SKL upload by ID
+ *     summary: Get details of an SKL upload by SKL upload ID or Mahasiswa ID
  *     tags: [SKL Upload]
  *     security:
  *       - bearerAuth: []
@@ -68,7 +68,7 @@ router.get("/", verifyToken, listSklUploads);
  *         required: true
  *         schema:
  *           type: string
- *         description: SKL upload ID (UUID)
+ *         description: SKL upload ID or Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: SKL upload details retrieved successfully
@@ -149,7 +149,7 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
- *         description: SKL upload ID (UUID)
+ *         description: SKL upload ID or Mahasiswa ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -204,7 +204,7 @@ router.patch(
  *         required: true
  *         schema:
  *           type: string
- *         description: SKL upload ID (UUID)
+ *         description: SKL upload ID or Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: SKL deleted successfully
@@ -221,19 +221,19 @@ router.delete("/:id", verifyToken, isAdmin, deleteSklUpload);
 
 /**
  * @swagger
- * /api/skl/uploads/:uploadId/download:
+ * /api/skl/uploads/{id}/download:
  *   get:
- *     summary: Download an SKL upload file
+ *     summary: Download an SKL upload file by SKL upload ID or Mahasiswa ID
  *     tags: [SKL Upload]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: uploadId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: SKL upload ID (UUID)
+ *         description: SKL upload ID or Mahasiswa ID (UUID)
  *     responses:
  *       200:
  *         description: File downloaded successfully
@@ -246,6 +246,6 @@ router.delete("/:id", verifyToken, isAdmin, deleteSklUpload);
  *       500:
  *         description: Internal server error
  */
-router.get("/uploads/:uploadId/download", verifyToken, downloadSklUpload);
+router.get("/uploads/:id/download", verifyToken, downloadSklUpload);
 
 export default router;

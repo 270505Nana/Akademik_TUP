@@ -90,13 +90,21 @@ const listSklUploads = asyncHandler(async (req, res) => {
   res.json(formatPaginationResponse(data, total, paginationParams));
 });
 
-// Get SKL upload by ID
+// Get SKL upload by ID or Mahasiswa ID
 const getSklUploadById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const sklUpload = await prisma.berkasMahasiswa.findFirst({
-    where: { id, deletedAt: null, category: "SKL" },
+    where: {
+      deletedAt: null,
+      category: "SKL",
+      OR: [
+        { id },
+        { mahasiswaId: id },
+      ],
+    },
     include: sklInclude,
+    orderBy: { createdAt: "desc" },
   });
 
   if (!sklUpload) {
@@ -221,7 +229,15 @@ const updateSklUpload = asyncHandler(async (req, res) => {
   }
 
   const sklUpload = await prisma.berkasMahasiswa.findFirst({
-    where: { id, deletedAt: null, category: "SKL" },
+    where: {
+      deletedAt: null,
+      category: "SKL",
+      OR: [
+        { id },
+        { mahasiswaId: id },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
   });
 
   if (!sklUpload) {
@@ -255,7 +271,7 @@ const updateSklUpload = asyncHandler(async (req, res) => {
   }
 
   const updatedSklUpload = await prisma.berkasMahasiswa.update({
-    where: { id },
+    where: { id: sklUpload.id },
     data: {
       name: name !== undefined ? name : sklUpload.name,
       mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : sklUpload.mahasiswaId,
@@ -279,7 +295,15 @@ const deleteSklUpload = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const sklUpload = await prisma.berkasMahasiswa.findFirst({
-    where: { id, deletedAt: null, category: "SKL" },
+    where: {
+      deletedAt: null,
+      category: "SKL",
+      OR: [
+        { id },
+        { mahasiswaId: id },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
   });
 
   if (!sklUpload) {
@@ -288,7 +312,7 @@ const deleteSklUpload = asyncHandler(async (req, res) => {
   }
 
   await prisma.berkasMahasiswa.update({
-    where: { id },
+    where: { id: sklUpload.id },
     data: { deletedAt: new Date() },
   });
 
@@ -297,10 +321,18 @@ const deleteSklUpload = asyncHandler(async (req, res) => {
 
 // Download SKL upload file
 const downloadSklUpload = asyncHandler(async (req, res) => {
-  const { uploadId } = req.params;
+  const { id } = req.params;
 
   const upload = await prisma.berkasMahasiswa.findFirst({
-    where: { id: uploadId, deletedAt: null, category: "SKL" },
+    where: {
+      deletedAt: null,
+      category: "SKL",
+      OR: [
+        { id },
+        { mahasiswaId: id },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
   });
 
   if (!upload) {
