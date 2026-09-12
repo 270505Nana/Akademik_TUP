@@ -6,10 +6,14 @@ import { downloadYudisiumRegistrationUpload, getYudisiumRegistrationById, approv
 const BERKAS_STATUS = { SESUAI: 'sesuai', BERMASALAH: 'bermasalah', UNCHECKED: 'unchecked' };
 
 const getBerkasName = (upload) => {
-  const slugStr = upload.category || upload.slug || "";
-  if (!slugStr) return upload.name || 'Berkas';
+  const slugStr = upload.category || upload.slug;
   
-  let clean = slugStr
+  // Proteksi jika slug tidak ada, atau berupa string "undefined" / "null" dari database
+  if (!slugStr || slugStr === 'undefined' || slugStr === 'null') {
+    return upload.name || upload.filename || 'Berkas';
+  }
+  
+  let clean = String(slugStr)
     .replace(/^yudisium-berkas-wajib-contoh-scan-/i, '')
     .replace(/^yudisium-berkas-wajib-contoh-/i, '')
     .replace(/^yudisium-berkas-wajib-/i, '')
