@@ -296,3 +296,71 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--body-bg);
   }
 }
 
+/* =========================================================
+   NEW DASHBOARD MAHASISWA STYLING (CLEAN UI)
+   ========================================================= */
+
+/* Halo User Card */
+.dash-card-clean { background: #fff; border-radius: 16px; border: 1px solid #E9EDF5; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+.dash-welcome { padding: 32px 40px; margin-bottom: 32px; }
+.dash-welcome-title { font-size: 26px; font-weight: 800; color: #111827; margin-bottom: 12px; letter-spacing: -0.02em; }
+.dash-welcome-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 14px; color: #6B7280; margin-bottom: 24px; font-weight: 600; }
+.dash-welcome-desc { font-size: 15px; color: #4B5563; line-height: 1.6; max-width: 900px; margin: 0; }
+
+/* Timeline Card */
+.dash-timeline { padding: 32px 40px; margin-bottom: 40px; border-left: 5px solid var(--primary); }
+.dash-timeline-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+.dash-timeline-overline { font-size: 11px; font-weight: 800; color: var(--primary); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+.dash-timeline-title { font-size: 22px; font-weight: 800; color: #111827; margin: 0 0 4px 0; }
+.dash-timeline-subtitle { font-size: 14px; color: #6B7280; margin: 0; }
+.dash-timeline-status { background-color: #DCFCE7; color: #16A34A; padding: 6px 14px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; display: inline-block; }
+
+.dash-timeline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.dash-timeline-item { background: #FAFBFD; border-radius: 12px; padding: 20px; border: 1px solid #F3F4F6; }
+.dash-timeline-label { font-size: 11px; font-weight: 800; color: #6B7280; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.dash-timeline-val { font-size: 16px; font-weight: 800; color: #111827; margin: 0; line-height: 1.4; }
+.dash-timeline-val.highlight { color: var(--primary); }
+.dash-timeline-val.empty { color: #9CA3AF; }
+
+/* Progress Table Section */
+.dash-progress { margin-bottom: 32px; }
+.dash-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 8px; flex-wrap: wrap; gap: 8px;}
+.dash-progress-title { font-size: 20px; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.01em;}
+.dash-progress-meta { font-size: 12px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Table Styling */
+.prog-table-wrap { overflow-x: auto; width: 100%; }
+.prog-table { width: 100%; min-width: 850px; border-collapse: collapse; text-align: left; }
+.prog-table thead tr { border-bottom: 2px solid #F3F4F6; }
+.prog-table th { padding: 20px 32px; font-size: 11px; font-weight: 800; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.06em; }
+.prog-table th.col-tahapan { width: 28%; }
+.prog-table th.col-status { width: 20%; padding: 20px 16px; }
+.prog-table th.col-ket { width: 37%; padding: 20px 16px; }
+.prog-table th.col-aksi { width: 15%; text-align: right; }
+
+.prog-table tbody tr { border-bottom: 1px solid #F3F4F6; transition: background 0.2s; }
+.prog-table tbody tr:hover { background-color: #FAFBFD; }
+.prog-table td { padding: 24px 32px; vertical-align: top; }
+.prog-table td.col-status, .prog-table td.col-ket { padding: 24px 16px; }
+.prog-table td.col-aksi { text-align: right; }
+
+.prog-tahapan-title { font-size: 14px; font-weight: 800; color: #111827; margin-bottom: 6px; }
+.prog-tahapan-sub { font-size: 12px; color: #6B7280; font-weight: 500; }
+
+/* Badges for Table */
+.badge-prog { display: inline-block; font-size: 11px; font-weight: 800; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.badge-prog.solid { padding: 6px 12px; }
+.badge-prog.text-only { padding: 0; font-weight: 600; font-size: 13px; text-transform: none; letter-spacing: normal; }
+
+/* Text Link Action Button */
+.btn-text-link { font-size: 13px; font-weight: 800; background: none; border: none; color: var(--primary); cursor: pointer; padding: 0; text-decoration: none; transition: color 0.2s; }
+.btn-text-link:hover { color: var(--primary-dark); text-decoration: underline; }
+.btn-text-link:disabled { color: #9CA3AF; cursor: not-allowed; text-decoration: none; }
+.btn-text-link:disabled:hover { color: #9CA3AF; text-decoration: none;}
+
+/* Responsive Dashboard Mahasiswa */
+@media (max-width: 768px) {
+  .dash-welcome { padding: 24px; }
+  .dash-timeline { padding: 24px; }
+  .prog-table th, .prog-table td { padding: 16px; }
+}
