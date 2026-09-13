@@ -5,15 +5,16 @@ import SidebarMahasiswa from '../../components/sidebar/SidebarMahasiswa';
 import '../dashboard.css';
 import { useAuth } from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-
-import {
-  getSKTARequest,
-  getSidangPeriods,
-  getYudisiumPeriods,
-  getSidangRegistrationByStudentId,
-} from '../../service/api';
+import api, { downloadSK } from '../../service/api';
 import { determineSkStatus, STATUS_SK } from '../../components/common/Skstatushelper';
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus } from '../../components/admin/sidang/Sidangstatushelper';
+
+const extractData = (res) => {
+  if (!res) return {};
+  if (res.data && res.data.data) return res.data.data;
+  if (res.data) return res.data;
+  return res;
+};
 
 const normalizeRegistration = (raw) => {
   if (Array.isArray(raw)) return raw[0] ?? null;
@@ -62,13 +63,16 @@ const formatDateShort = (d) =>
 
 const pickRelevantPeriod = (list = []) => {
   if (!Array.isArray(list) || list.length === 0) return null;
+  
   const open = list.find(p => p.isOpen === true);
   if (open) return { ...open, state: 'aktif' };
+  
   const now = new Date();
   const upcoming = list
     .filter(p => new Date(p.startDate) > now)
     .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
   if (upcoming.length > 0) return { ...upcoming[0], state: 'mendatang' };
+  
   const past = [...list].sort((a, b) => new Date(b.endDate) - new Date(a.endDate));
   return past.length > 0 ? { ...past[0], state: 'selesai' } : null;
 };
@@ -92,7 +96,6 @@ const skKeteranganText = (status) => {
   return 'Selesaikan pengajuan SK TA terlebih dahulu.';
 };
 
-// Komponen Badge dipisah menjadi mode 'solid' (untuk status) dan 'text-only' (untuk keterangan)
 const RowBadge = ({ style: s, isTextOnly = false }) => (
   <span 
     className={`badge-prog ${isTextOnly ? 'text-only' : 'solid'}`} 
@@ -103,7 +106,23 @@ const RowBadge = ({ style: s, isTextOnly = false }) => (
 );
 
 const TextLinkAction = ({ onClick, children, disabled }) => (
-  <button onClick={onClick} disabled={disabled} className="btn-text-link">
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      fontSize: '13px',
+      fontWeight: 800,
+      background: 'none',
+      border: 'none',
+      color: disabled ? '#9CA3AF' : '#C0182A',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      padding: 0,
+      textDecoration: 'none',
+      transition: 'color 0.2s',
+    }}
+    onMouseEnter={(e) => !disabled && (e.currentTarget.style.color = '#8B0F1E')}
+    onMouseLeave={(e) => !disabled && (e.currentTarget.style.color = '#C0182A')}
+  >
     {children}
   </button>
 );
@@ -123,18 +142,20 @@ const DashboardMahasiswa = () => {
   const angkatanDisplay = student?.angkatan || null;
   const dosenWaliDisplay = student?.dosenWaliNama || null;
 
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
+  
   const [skStatus, setSkStatus] = useState(null);
   const [sktaRequest, setSktaRequest] = useState(null);
-  const [loadingSk, setLoadingSk] = useState(true);
 
   const [sidangRegStatus, setSidangRegStatus] = useState(null);
-  const [loadingSidangReg, setLoadingSidangReg] = useState(false);
   const [sidangAssignedPeriode, setSidangAssignedPeriode] = useState(null);
   const [sidangResponse, setSidangResponse] = useState(null);
 
+  // Pemisahan Periode Pendaftaran vs Pelaksanaan
   const [sidangPeriode, setSidangPeriode] = useState(null);
+  const [sidangPelaksanaan, setSidangPelaksanaan] = useState(null);
   const [yudisiumPeriode, setYudisiumPeriode] = useState(null);
-  const [loadingPeriode, setLoadingPeriode] = useState(true);
+  const [yudisiumPelaksanaan, setYudisiumPelaksanaan] = useState(null);
 
   const [downloadingSk, setDownloadingSk] = useState(false);
 
@@ -159,103 +180,84 @@ const DashboardMahasiswa = () => {
     }
   };
 
-  const fetchSkStatus = useCallback(async () => {
-    if (!activeStudentId) { setLoadingSk(false); return; }
-    setLoadingSk(true);
-    try {
-      const request = await getSKTARequest(activeStudentId);
-      if (!request) {
-        setSkStatus(null);
-        setSktaRequest(null);
-        setLoadingSk(false);
-        return;
-      }
-      setSktaRequest(request);
-      setSkStatus(determineSkStatus(request));
-    } catch (err) {
-      console.error('Gagal fetch SK status:', err);
-      setSkStatus(null);
-    } finally {
-      setLoadingSk(false);
+  const fetchDashboardData = useCallback(async () => {
+    if (!activeStudentId) {
+      setLoadingDashboard(false);
+      return;
     }
-  }, [activeStudentId]);
 
-  useEffect(() => { fetchSkStatus(); }, [fetchSkStatus]);
+    setLoadingDashboard(true);
+    try {
+      const res = await api.get('/api/mahasiswa/dashboard');
+      const payload = extractData(res);
 
-  useEffect(() => {
-    const fetchSidangRegStatus = async () => {
-      if (!activeStudentId || skStatus !== STATUS_SK.SUDAH_TERBIT) {
+      const skta = payload.sktaRequest || null;
+      setSktaRequest(skta);
+      const computedSkStatus = determineSkStatus(skta);
+      setSkStatus(computedSkStatus);
+
+      // PROSES DATA PERIODE (Berdasarkan Kategori) 
+      const sidangPeriodsRaw = payload.sidangPeriods || [];
+      const yudisiumPeriodsRaw = payload.yudisiumPeriods || [];
+
+      const sDaftar = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran sidang'));
+      const sPelaksanaan = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'sidang'));
+      
+      const yDaftar = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran yudisium'));
+      const yPelaksanaan = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'yudisium'));
+
+      setSidangPeriode(sDaftar);
+      setSidangPelaksanaan(sPelaksanaan);
+      setYudisiumPeriode(yDaftar);
+      setYudisiumPelaksanaan(yPelaksanaan);
+
+      if (computedSkStatus !== STATUS_SK.SUDAH_TERBIT) {
         setSidangRegStatus(STATUS_SIDANG.BELUM_DAFTAR);
         setSidangAssignedPeriode(null);
-        setLoadingSidangReg(false);
-        return;
-      }
-
-      setLoadingSidangReg(true);
-      try {
-        const rawRegistrations = await getSidangRegistrationByStudentId(activeStudentId);
-        const registration = normalizeRegistration(rawRegistrations);
+        setSidangResponse(null);
+      } else {
+        const rawSidangReg = payload.sidangRegistrations || [];
+        const registration = normalizeRegistration(rawSidangReg);
+        setSidangResponse(registration);
 
         if (!registration) {
           setSidangRegStatus(determineSidangStatus(null, null, null));
           setSidangAssignedPeriode(null);
-          return;
+        } else {
+          const assignedPeriode = registration.sidangPeriodId
+            ? sidangPeriodsRaw.find(p => p.id === registration.sidangPeriodId) ?? null
+            : null;
+
+          const status = determineSidangStatus(registration, null, assignedPeriode);
+          setSidangRegStatus(status);
+          setSidangAssignedPeriode(assignedPeriode);
         }
-
-        const allPeriods = await getSidangPeriods().catch(() => []);
-        const assignedPeriode = registration.sidangPeriodId
-          ? (allPeriods ?? []).find(p => p.id === registration.sidangPeriodId) ?? null
-          : null;
-
-        const status = determineSidangStatus(registration, null, assignedPeriode);
-        setSidangRegStatus(status);
-        setSidangAssignedPeriode(assignedPeriode);
-        setSidangResponse(registration);
-
-      } catch (err) {
-        console.error('Gagal fetch sidang registration status:', err);
-        setSidangRegStatus(null);
-        setSidangAssignedPeriode(null);
-      } finally {
-        setLoadingSidangReg(false);
       }
-    };
 
-    if (!loadingSk) fetchSidangRegStatus();
-  }, [skStatus, loadingSk, activeStudentId]);
+    } catch (err) {
+      console.error("Gagal memuat data dashboard:", err);
+      setSkStatus(null);
+      setSidangRegStatus(null);
+    } finally {
+      setLoadingDashboard(false);
+    }
+  }, [activeStudentId]);
 
   useEffect(() => {
-    const fetchPeriode = async () => {
-      setLoadingPeriode(true);
-      try {
-        const [sidangList, yudisiumList] = await Promise.all([
-          getSidangPeriods().catch(() => []),
-          getYudisiumPeriods().catch(() => []),
-        ]);
-        setSidangPeriode(pickRelevantPeriod(sidangList));
-        setYudisiumPeriode(pickRelevantPeriod(yudisiumList));
-      } catch (err) {
-        console.error('Gagal fetch periode:', err);
-      } finally {
-        setLoadingPeriode(false);
-      }
-    };
-    fetchPeriode();
-  }, []);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const skTanggal = sktaRequest?.createdAt ? formatDateShort(sktaRequest.createdAt) : null;
   const deadlineSidang = sidangPeriode ? formatDateShort(sidangPeriode.endDate) : null;
-  const rowSidangLoading = loadingSk || loadingSidangReg;
   const skSudahTerbit = skStatus === STATUS_SK.SUDAH_TERBIT;
 
-  // Helper render keterangan sidang (kolom Keterangan / Revisi)
   const renderKeteranganSidang = () => {
-    if (rowSidangLoading) return <span style={{ color: '#9CA3AF' }}>—</span>;
+    if (loadingDashboard) return <span style={{ color: '#9CA3AF' }}>—</span>;
     if (!skSudahTerbit) return <span style={{ color: '#9CA3AF' }}>Selesaikan pengajuan SK TA terlebih dahulu.</span>;
     
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ color: '#4B5563' }}>{getSidangKeteranganText(sidangRegStatus, sidangAssignedPeriode)}</span>
+        <span style={{ color: '#4B5563', fontWeight: 500 }}>{getSidangKeteranganText(sidangRegStatus, sidangAssignedPeriode)}</span>
         {sidangRegStatus === STATUS_SIDANG.PERLU_REVISI && sidangResponse?.message && (
           <span style={{ color: '#C0182A', fontWeight: 700 }}>Catatan: {sidangResponse.message}</span>
         )}
@@ -320,7 +322,7 @@ const DashboardMahasiswa = () => {
               </div>
               <div>
                 <span className="dash-timeline-status">
-                  {loadingPeriode ? 'MEMUAT...' : (sidangPeriode?.state === 'aktif' || yudisiumPeriode?.state === 'aktif' ? 'SEDANG BERLANGSUNG' : 'BELUM TERSEDIA')}
+                  {loadingDashboard ? 'MEMUAT...' : (sidangPeriode?.state === 'aktif' || yudisiumPeriode?.state === 'aktif' ? 'SEDANG BERLANGSUNG' : 'BELUM TERSEDIA')}
                 </span>
               </div>
             </div>
@@ -329,47 +331,47 @@ const DashboardMahasiswa = () => {
               {/* Pendaftaran Sidang */}
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PENDAFTARAN SIDANG</p>
-                {loadingPeriode ? (
+                {loadingDashboard ? (
                    <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val highlight">
-                     {sidangPeriode ? `Maks. ${formatDateShort(sidangPeriode.endDate)}` : <span className="empty">-</span>}
+                     {sidangPeriode ? `Maks. ${formatDateShort(sidangPeriode.endDate)}` : <span className="empty" style={{ fontSize: '13px', fontWeight: 600 }}>Belum dijadwalkan</span>}
                    </p>
                 )}
               </div>
 
               {/* Pelaksanaan Sidang */}
               <div className="dash-timeline-item">
-                <p className="dash-timeline-label">PELAKSANAAN</p>
-                {loadingPeriode ? (
+                <p className="dash-timeline-label">PELAKSANAAN SIDANG</p>
+                {loadingDashboard ? (
                    <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val">
-                     {sidangPeriode ? formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate) : <span className="empty">-</span>}
+                     {sidangPelaksanaan ? formatDateRange(sidangPelaksanaan.startDate, sidangPelaksanaan.endDate) : <span className="empty" style={{ fontSize: '13px', fontWeight: 600 }}>Belum dijadwalkan</span>}
                    </p>
                 )}
               </div>
 
               {/* Yudisium */}
               <div className="dash-timeline-item">
-                <p className="dash-timeline-label">YUDISIUM</p>
-                {loadingPeriode ? (
+                <p className="dash-timeline-label">PENDAFTARAN YUDISIUM</p>
+                {loadingDashboard ? (
                    <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val">
-                     {yudisiumPeriode ? `Maks. ${formatDateShort(yudisiumPeriode.endDate)}` : <span className="empty">-</span>}
+                     {yudisiumPeriode ? `Maks. ${formatDateShort(yudisiumPeriode.endDate)}` : <span className="empty" style={{ fontSize: '13px', fontWeight: 600 }}>Belum dijadwalkan</span>}
                    </p>
                 )}
               </div>
 
               {/* Sidang Yudisium */}
               <div className="dash-timeline-item">
-                <p className="dash-timeline-label">SIDANG YUDISIUM</p>
-                {loadingPeriode ? (
+                <p className="dash-timeline-label">PELAKSANAAN YUDISIUM</p>
+                {loadingDashboard ? (
                    <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val">
-                     {yudisiumPeriode ? formatDateShort(new Date(new Date(yudisiumPeriode.endDate).getTime() + 5*24*60*60*1000)) : <span className="empty">-</span>}
+                     {yudisiumPelaksanaan ? formatDateRange(yudisiumPelaksanaan.startDate, yudisiumPelaksanaan.endDate) : <span className="empty" style={{ fontSize: '13px', fontWeight: 600 }}>Belum dijadwalkan</span>}
                    </p>
                 )}
               </div>
@@ -401,18 +403,18 @@ const DashboardMahasiswa = () => {
                       <td>
                          <div className="prog-tahapan-title">Pengajuan SK TA</div>
                          <div className="prog-tahapan-sub">
-                           {loadingSk ? 'Memuat...' : skTanggal ? `Diajukan: ${skTanggal}` : 'Belum diajukan'}
+                           {loadingDashboard ? 'Memuat...' : skTanggal ? `Diajukan: ${skTanggal}` : 'Belum diajukan'}
                          </div>
                       </td>
                       <td className="col-status">
-                        {loadingSk ? <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} /> : <RowBadge style={skBadgeStyle(skStatus)} />}
+                        {loadingDashboard ? <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} /> : <RowBadge style={skBadgeStyle(skStatus)} />}
                       </td>
                       <td className="col-ket">
-                        {loadingSk ? <span style={{ color: '#9CA3AF' }}>—</span> : <RowBadge isTextOnly style={{ color: '#4B5563', label: skKeteranganText(skStatus) }} />}
+                        {loadingDashboard ? <span style={{ color: '#9CA3AF' }}>—</span> : <RowBadge isTextOnly style={{ color: '#4B5563', label: skKeteranganText(skStatus) }} />}
                       </td>
                       <td className="col-aksi">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
-                          {loadingSk ? (
+                          {loadingDashboard ? (
                             <span style={{ color: '#9CA3AF', fontSize: '12px' }}>—</span>
                           ) : skStatus === null ? (
                             <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Mulai Pengajuan</TextLinkAction>
@@ -441,7 +443,7 @@ const DashboardMahasiswa = () => {
                          </div>
                       </td>
                       <td className="col-status">
-                        {rowSidangLoading ? (
+                        {loadingDashboard ? (
                           <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                         ) : !skSudahTerbit ? (
                           <RowBadge style={LOCKED_BADGE} />
@@ -454,7 +456,7 @@ const DashboardMahasiswa = () => {
                       </td>
                       <td className="col-aksi">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
-                          {rowSidangLoading ? (
+                          {loadingDashboard ? (
                             <span style={{ color: '#9CA3AF', fontSize: '12px' }}>—</span>
                           ) : !skSudahTerbit ? (
                             <TextLinkAction disabled>Daftar</TextLinkAction>
@@ -480,14 +482,18 @@ const DashboardMahasiswa = () => {
                          </div>
                       </td>
                       <td className="col-status">
-                        {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
+                        {loadingDashboard ? (
+                          <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                        ) : !skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
                           <RowBadge style={LOCKED_BADGE} />
                         ) : (
                           <RowBadge style={{ bg: '#DBEAFE', color: '#1E40AF', label: 'SIAP DAFTAR' }} />
                         )}
                       </td>
                       <td className="col-ket">
-                        {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
+                        {loadingDashboard ? (
+                          <span style={{ color: '#9CA3AF' }}>—</span>
+                        ) : !skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
                           <RowBadge isTextOnly style={{ color: '#9CA3AF', label: 'Selesaikan Pendaftaran Sidang terlebih dahulu.' }} />
                         ) : (
                           <RowBadge isTextOnly style={{ color: '#4B5563', label: 'Silakan lengkapi berkas yudisium kamu.' }} />
@@ -495,7 +501,9 @@ const DashboardMahasiswa = () => {
                       </td>
                       <td className="col-aksi">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
-                          {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) || !yudisiumPeriode?.isOpen ? (
+                          {loadingDashboard ? (
+                            <span style={{ color: '#9CA3AF', fontSize: '12px' }}>—</span>
+                          ) : !skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) || !yudisiumPeriode?.isOpen ? (
                             <TextLinkAction disabled>Daftar</TextLinkAction>
                           ) : (
                             <TextLinkAction onClick={() => navigate('/mahasiswa/pendaftaran-yudisium')}>Daftar Yudisium</TextLinkAction>
