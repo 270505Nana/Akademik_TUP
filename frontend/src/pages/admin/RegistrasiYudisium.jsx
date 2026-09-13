@@ -155,7 +155,6 @@ const RegistrasiYudisium = () => {
   const { user, profile, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Data
   const [registrations, setRegistrations] = useState([]);
   const [periodMap,     setPeriodMap]     = useState({});
   const [prodiMap,      setProdiMap]      = useState({});
@@ -430,7 +429,14 @@ const RegistrasiYudisium = () => {
                             <td className="vs-td-date">{fmtDate(getSubmitDate(reg))}</td>
                             <td className="vs-td-center">
                               {isVerified ? (
-                                <button className="vs-btn-verified" disabled><CheckCircle2 size={12} />Terverifikasi</button>
+                                <button 
+                                  className="vs-btn-verified" 
+                                  style={{ cursor: 'pointer' }}
+                                  onClick={() => setSelectedReg(reg)}
+                                  title="Lihat Detail Verifikasi"
+                                >
+                                  <CheckCircle2 size={12} />Terverifikasi
+                                </button>
                               ) : (
                                 <button
                                   className="vs-btn-verif"
@@ -485,6 +491,7 @@ const RegistrasiYudisium = () => {
             periodMap={Object.fromEntries(Object.entries(periodMap).filter(([_, p]) => p.category === 'yudisium'))}
             onClose={() => setSelectedReg(null)}
             onSaved={handleModalSaved}
+            isReadOnly={getStatus(selectedReg) === STATUS_YUDISIUM.SIAP_YUDISIUM || getStatus(selectedReg) === STATUS_YUDISIUM.PENDAFTARAN_DITERIMA}
           />
         )}
       </AnimatePresence>
