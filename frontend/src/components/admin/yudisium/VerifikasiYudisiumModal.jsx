@@ -5,23 +5,36 @@ import { downloadYudisiumRegistrationUpload, getYudisiumRegistrationById, approv
 
 const BERKAS_STATUS = { SESUAI: 'sesuai', BERMASALAH: 'bermasalah', UNCHECKED: 'unchecked' };
 
+// HELPER EKSTRAKSI DATA: Melindungi dari bungkus pagination backend (res.data.data)
+const extractDataArray = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (data.data && Array.isArray(data.data)) return data.data;
+  if (typeof data === 'object') return Object.values(data);
+  return [];
+};
+
 const getBerkasName = (upload) => {
   const slugStr = upload.category || upload.slug;
   
-  // Proteksi jika slug tidak ada, atau berupa string "undefined" / "null" dari database
+  let finalName = '';
+  
   if (!slugStr || slugStr === 'undefined' || slugStr === 'null') {
-    return upload.name || upload.filename || 'Berkas';
+    finalName = upload.name || upload.filename || 'Berkas';
+    finalName = finalName.replace(/\.[^/.]+$/, "");
+  } else {
+    let clean = String(slugStr)
+      .replace(/^yudisium-berkas-wajib-contoh-scan-/i, '')
+      .replace(/^yudisium-berkas-wajib-contoh-/i, '')
+      .replace(/^yudisium-berkas-wajib-/i, '')
+      .replace(/^yudisium-evidence-cumlaude-[^-]+-/i, '')
+      .replace(/^yudisium-/i, '')
+      .replace(/[-_]/g, ' ');
+      
+    finalName = clean.replace(/\b\w/g, l => l.toUpperCase()).trim();
   }
   
-  let clean = String(slugStr)
-    .replace(/^yudisium-berkas-wajib-contoh-scan-/i, '')
-    .replace(/^yudisium-berkas-wajib-contoh-/i, '')
-    .replace(/^yudisium-berkas-wajib-/i, '')
-    .replace(/^yudisium-evidence-cumlaude-[^-]+-/i, '')
-    .replace(/^yudisium-/i, '')
-    .replace(/[-_]/g, ' ');
-    
-  return clean.replace(/\b\w/g, l => l.toUpperCase()).trim();
+  return finalName.replace(/^[0-9]+[\.\-]\s*/, '').trim();
 };
 
 const CLR = {
@@ -337,7 +350,7 @@ const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onC
 
   const m = registration?.mahasiswa || registration?.student;
   const prodiName = m?.studyProgram?.name ?? '-';
-  const periods = Object.values(periodMap ?? {});
+  const periods = extractDataArray(periodMap); // PENGGUNAAN HELPER BARU
 
   useEffect(() => {
     const initial = registration?.yudisiumRegistrationUploads;
