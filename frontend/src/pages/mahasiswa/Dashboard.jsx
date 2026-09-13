@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu, Calendar, GraduationCap, SquarePen, Loader } from 'lucide-react';
+import { Menu, Loader } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SidebarMahasiswa from '../../components/sidebar/SidebarMahasiswa';
 import '../dashboard.css';
-import illustration from "../../assets/karakter-dashboard.png";
 import { useAuth } from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
@@ -23,47 +22,34 @@ const normalizeRegistration = (raw) => {
 
 const toRowBadge = (cfg) => ({
   bg: cfg.badgeBg,
-  border: cfg.borderColor,
   color: cfg.badgeColor,
   label: cfg.label,
 });
 
 const SIDANG_KETERANGAN_LABEL = {
-  [STATUS_SIDANG.BELUM_DAFTAR]: 'Belum Mengisi Formulir',
-  [STATUS_SIDANG.PROSES_REGISTRASI]: 'Proses Registrasi',
-  [STATUS_SIDANG.DALAM_PROSES]: 'Menunggu Verifikasi',
-  [STATUS_SIDANG.PERLU_REVISI]: 'Berkas Perlu Diperbaiki',
-  [STATUS_SIDANG.REVISI_DIPERBARUI]: 'Menunggu Ulang Verifikasi Admin',
+  [STATUS_SIDANG.BELUM_DAFTAR]: 'Selesaikan pengisian formulir pendaftaran.',
+  [STATUS_SIDANG.PROSES_REGISTRASI]: 'Lanjutkan dan selesaikan unggah berkas.',
+  [STATUS_SIDANG.DALAM_PROSES]: 'Menunggu validasi dokumen oleh admin.',
+  [STATUS_SIDANG.PERLU_REVISI]: 'Terdapat berkas yang harus kamu perbaiki.',
+  [STATUS_SIDANG.REVISI_DIPERBARUI]: 'Menunggu ulang verifikasi admin.',
 };
 
-const getSidangKeteranganBadge = (status, assignedPeriode) => {
+const getSidangKeteranganText = (status, assignedPeriode) => {
   const cfg = SIDANG_STATUS_CONFIG[status];
-  if (!cfg) return { bg: '#F3F4F6', border: '#9CA3AF', color: '#6B7280', label: '—' };
-
-  const base = {
-    bg: cfg.badgeBg,
-    border: cfg.borderColor,
-    color: cfg.badgeColor,
-  };
+  if (!cfg) return '—';
 
   if (status === STATUS_SIDANG.PENDAFTARAN_DITERIMA) {
-    return {
-      ...base,
-      label: `Pendaftaran Sidang Diterima, Kamu dijadwalkan pada periode ${assignedPeriode?.name ?? '-'}`,
-    };
+    return `Pendaftaran diterima. Kamu dijadwalkan pada ${assignedPeriode?.name ?? 'periode ini'}.`;
   }
 
   if (status === STATUS_SIDANG.SIAP_SIDANG) {
-    return {
-      ...base,
-      label: `Pendaftaran Sidang Diterima, Kamu siap sidang! Pada periode ${assignedPeriode?.name ?? '-'}`,
-    };
+    return `Kamu siap sidang! Dijadwalkan pada ${assignedPeriode?.name ?? 'periode ini'}.`;
   }
 
-  return { ...base, label: SIDANG_KETERANGAN_LABEL[status] ?? cfg.label };
+  return SIDANG_KETERANGAN_LABEL[status] ?? cfg.label;
 };
 
-const LOCKED_BADGE = { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Selesaikan Proses Registrasi Sebelumnya' };
+const LOCKED_BADGE = { bg: '#F3F4F6', color: '#6B7280', label: 'TERKUNCI' };
 
 const formatDateRange = (start, end) => {
   const fmt = (d) =>
@@ -87,104 +73,37 @@ const pickRelevantPeriod = (list = []) => {
   return past.length > 0 ? { ...past[0], state: 'selesai' } : null;
 };
 
-const PeriodeCard = ({ icon, title, periode, isLoading }) => {
-  const stateConfig = {
-    aktif: { badge: 'Aktif', bg: '#22C55E', text: '#fff' },
-    mendatang: { badge: 'Mendatang', bg: '#3B82F6', text: '#fff' },
-    selesai: { badge: 'Selesai', bg: '#9CA3AF', text: '#fff' },
-  };
-  const cfg = periode ? (stateConfig[periode.state] || stateConfig.selesai) : null;
-
-  return (
-    <div className="CardAtas4">
-      <div className="CardAtas4-header">
-        <div className="CardAtas4-icon">{icon}</div>
-        {!isLoading && cfg && (
-          <span className="CardAtas4-badge" style={{ background: cfg.bg, color: cfg.text }}>
-            {cfg.badge}
-          </span>
-        )}
-      </div>
-      <div className="CardAtas4-body">
-        <div className="CardAtas4-label">{title}</div>
-        {isLoading ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-            <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
-            <span style={{ fontSize: 12, color: '#9CA3AF' }}>Memuat...</span>
-          </div>
-        ) : periode ? (
-          <div
-            className="CardAtas4-value"
-            dangerouslySetInnerHTML={{
-              __html: `${periode.name}<br/><span class='text-sm font-normal text-gray-500'>${formatDateRange(periode.startDate, periode.endDate)}</span>`,
-            }}
-          />
-        ) : (
-          <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 6 }}>Tidak ada periode aktif</div>
-        )}
-      </div>
-      <div className="CardAtas4-footer">
-        <div className="CardAtas4-divider" />
-        <div className="CardAtas4-sub">
-          {periode ? `Berlaku hingga ${formatDateShort(periode.endDate)}` : '—'}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const skBadgeStyle = (status) => {
   const map = {
-    [STATUS_SK.SUDAH_TERBIT]: { bg: '#D1FAE5', border: '#10B981', color: '#059669', label: 'Sudah Terbit' },
-    [STATUS_SK.BELUM_TERBIT]: { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Belum Terbit' },
-    [STATUS_SK.DALAM_PROSES]: { bg: '#DBEAFE', border: '#3B82F6', color: '#1D4ED8', label: 'Dalam Proses' },
-    [STATUS_SK.EXPIRED]: { bg: '#EDE9FE', border: '#8B5CF6', color: '#5B21B6', label: 'Kadaluarsa' },
-    null: { bg: '#F3F4F6', border: '#9CA3AF', color: '#6B7280', label: 'Belum Mengajukan' },
+    [STATUS_SK.SUDAH_TERBIT]: { bg: '#D1FAE5', color: '#059669', label: 'DISETUJUI' },
+    [STATUS_SK.BELUM_TERBIT]: { bg: '#FEF3C7', color: '#D97706', label: 'PERLU REVISI' },
+    [STATUS_SK.DALAM_PROSES]: { bg: '#DBEAFE', color: '#1D4ED8', label: 'DIVERIFIKASI' },
+    [STATUS_SK.EXPIRED]: { bg: '#EDE9FE', color: '#5B21B6', label: 'KADALUARSA' },
+    null: { bg: '#F3F4F6', color: '#6B7280', label: 'TERKUNCI' },
   };
   return map[status] ?? map[null];
 };
 
-const skKeteranganStyle = (status) => {
-  if (status === STATUS_SK.SUDAH_TERBIT) return { bg: '#D1FAE5', border: '#10B981', color: '#059669', label: 'Dokumen Sudah Lengkap' };
-  if (status === STATUS_SK.DALAM_PROSES) return { bg: '#DBEAFE', border: '#3B82F6', color: '#1D4ED8', label: 'Menunggu Verifikasi' };
-  if (status === STATUS_SK.EXPIRED) return { bg: '#EDE9FE', border: '#8B5CF6', color: '#5B21B6', label: 'Perlu Diperbaharui' };
-  if (status === STATUS_SK.BELUM_TERBIT) return { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Perlu Perbaikan' };
-  return { bg: '#F3F4F6', border: '#9CA3AF', color: '#6B7280', label: '—' };
+const skKeteranganText = (status) => {
+  if (status === STATUS_SK.SUDAH_TERBIT) return 'Dokumen SK TA telah terbit dan lengkap.';
+  if (status === STATUS_SK.DALAM_PROSES) return 'Menunggu validasi dokumen SK TA oleh admin.';
+  if (status === STATUS_SK.EXPIRED) return 'Masa berlaku SK TA telah habis, harap perpanjang.';
+  if (status === STATUS_SK.BELUM_TERBIT) return 'Terdapat kesalahan pada pengajuan SK TA kamu.';
+  return 'Selesaikan pengajuan SK TA terlebih dahulu.';
 };
 
-const RowBadge = ({ style: s }) => (
-  <span style={{
-    fontSize: '10px', fontWeight: 700, padding: '3px 14px',
-    borderRadius: '9999px', background: s.bg,
-    border: `1.5px solid ${s.border}`, color: s.color,
-  }}>
+// Komponen Badge dipisah menjadi mode 'solid' (untuk status) dan 'text-only' (untuk keterangan)
+const RowBadge = ({ style: s, isTextOnly = false }) => (
+  <span 
+    className={`badge-prog ${isTextOnly ? 'text-only' : 'solid'}`} 
+    style={{ background: isTextOnly ? 'transparent' : s.bg, color: s.color }}
+  >
     {s.label}
   </span>
 );
 
-const BtnOutline = ({ onClick, children }) => (
-  <button
-    onClick={onClick}
-    style={{ fontSize: '10px', fontWeight: 700, padding: '4px 14px', borderRadius: '9999px', background: '#fff', border: '1.5px solid #9CA3AF', color: '#374151', cursor: 'pointer' }}
-  >
-    {children}
-  </button>
-);
-
-const BtnRed = ({ onClick, children, disabled }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    style={{
-      fontSize: '10px', fontWeight: 700, padding: '4px 14px',
-      borderRadius: '9999px',
-      background: disabled ? '#9CA3AF' : '#C0182A',
-      border: `1.5px solid ${disabled ? '#9CA3AF' : '#C0182A'}`,
-      color: '#fff',
-      cursor: disabled ? 'not-allowed' : 'pointer',
-      opacity: disabled ? 0.7 : 1,
-    }}
-  >
+const TextLinkAction = ({ onClick, children, disabled }) => (
+  <button onClick={onClick} disabled={disabled} className="btn-text-link">
     {children}
   </button>
 );
@@ -211,6 +130,7 @@ const DashboardMahasiswa = () => {
   const [sidangRegStatus, setSidangRegStatus] = useState(null);
   const [loadingSidangReg, setLoadingSidangReg] = useState(false);
   const [sidangAssignedPeriode, setSidangAssignedPeriode] = useState(null);
+  const [sidangResponse, setSidangResponse] = useState(null);
 
   const [sidangPeriode, setSidangPeriode] = useState(null);
   const [yudisiumPeriode, setYudisiumPeriode] = useState(null);
@@ -264,7 +184,6 @@ const DashboardMahasiswa = () => {
 
   useEffect(() => {
     const fetchSidangRegStatus = async () => {
-      // PERBAIKAN: Menggunakan activeStudentId
       if (!activeStudentId || skStatus !== STATUS_SK.SUDAH_TERBIT) {
         setSidangRegStatus(STATUS_SIDANG.BELUM_DAFTAR);
         setSidangAssignedPeriode(null);
@@ -284,7 +203,6 @@ const DashboardMahasiswa = () => {
         }
 
         const allPeriods = await getSidangPeriods().catch(() => []);
-
         const assignedPeriode = registration.sidangPeriodId
           ? (allPeriods ?? []).find(p => p.id === registration.sidangPeriodId) ?? null
           : null;
@@ -292,6 +210,7 @@ const DashboardMahasiswa = () => {
         const status = determineSidangStatus(registration, null, assignedPeriode);
         setSidangRegStatus(status);
         setSidangAssignedPeriode(assignedPeriode);
+        setSidangResponse(registration);
 
       } catch (err) {
         console.error('Gagal fetch sidang registration status:', err);
@@ -324,397 +243,262 @@ const DashboardMahasiswa = () => {
     fetchPeriode();
   }, []);
 
-  const skTanggal = sktaRequest?.createdAt
-    ? formatDateShort(sktaRequest.createdAt)
-    : null;
-
-  const deadlineSidang = sidangPeriode
-    ? new Date(sidangPeriode.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-    : null;
-
+  const skTanggal = sktaRequest?.createdAt ? formatDateShort(sktaRequest.createdAt) : null;
+  const deadlineSidang = sidangPeriode ? formatDateShort(sidangPeriode.endDate) : null;
   const rowSidangLoading = loadingSk || loadingSidangReg;
   const skSudahTerbit = skStatus === STATUS_SK.SUDAH_TERBIT;
+
+  // Helper render keterangan sidang (kolom Keterangan / Revisi)
+  const renderKeteranganSidang = () => {
+    if (rowSidangLoading) return <span style={{ color: '#9CA3AF' }}>—</span>;
+    if (!skSudahTerbit) return <span style={{ color: '#9CA3AF' }}>Selesaikan pengajuan SK TA terlebih dahulu.</span>;
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span style={{ color: '#4B5563' }}>{getSidangKeteranganText(sidangRegStatus, sidangAssignedPeriode)}</span>
+        {sidangRegStatus === STATUS_SIDANG.PERLU_REVISI && sidangResponse?.message && (
+          <span style={{ color: '#C0182A', fontWeight: 700 }}>Catatan: {sidangResponse.message}</span>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex bg-[#F4F6FB] min-h-screen">
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <SidebarMahasiswa isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div id="main-content" className="flex-1">
+      <div id="main-content" className="flex-1 flex flex-col">
         <header className="topbar">
           <button className="topbar-toggle" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </button>
-          <div className="topbar-brand">Beranda</div>
+          <div className="topbar-brand text-white">Beranda</div>
         </header>
 
-        <main className="page-body">
+        <main className="page-body px-6 py-8 md:px-10 md:py-10" style={{ maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
 
-          {/* Welcome Banner */}
-          <div className="section-card p-0 shadow-sm border-none overflow-hidden mb-6 bg-white">
-            <div className="grid xl:grid-cols-12 gap-0">
-              <div
-                className="xl:col-span-4 bg-[#FAFBFD] p-4 flex items-center justify-center border-r border-gray-100"
-                style={{ maxHeight: '280px', overflow: 'hidden' }}
-              >
-                <div className="relative w-full max-w-[240px]">
-                  <img
-                    src={illustration}
-                    alt="Dashboard Illustration"
-                    style={{ width: '100%', height: 'auto', maxHeight: '220px', objectFit: 'contain' }}
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              </div>
-              <div className="xl:col-span-8 p-8 md:p-10">
-                <h2 className="text-2xl font-extrabold text-[#C0182A] mb-4">
-                  Selamat Datang di SIMTA
-                </h2>
-                <div className="w-16 h-1 bg-primary mb-6 rounded-full" />
-                <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                  SIMTA (Sistem Informasi Manajemen Tugas Akhir) adalah platform utama bagi mahasiswa
-                  untuk mengelola seluruh rangkaian tugas akhir secara digital dan terintegrasi. Menu
-                  Status TA/PA Mahasiswa merupakan sub-menu dari kategori Daftar TA/PA yang berfungsi
-                  sebagai dasbor interaktif untuk memantau progres akademik kamu secara real-time.
-                </p>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Melalui menu ini, kamu dapat melihat dan menyelesaikan tahapan pengambilan TA/PA
-                  secara sistematis, mulai dari pengajuan proposal dokumen, pemilihan dosen pembimbing,
-                  hingga memantau validasi Surat Keputusan (SK).
-                </p>
-              </div>
+          {/* Halo User Card */}
+          <div className="dash-card-clean dash-welcome">
+            <h2 className="dash-welcome-title">
+              Halo {namaDisplay}! <span style={{ display: 'inline-block', transformOrigin: 'bottom right', animation: 'bounce 1s infinite' }}>👋</span>
+            </h2>
+            <div className="dash-welcome-meta">
+              {nimDisplay && <span style={{ color: '#374151' }}>NIM: {nimDisplay}</span>}
+              {prodiDisplay && <><span style={{ color: '#D1D5DB' }}>•</span><span style={{ color: '#374151' }}>{prodiDisplay}</span></>}
+              {kelasDisplay && <><span style={{ color: '#D1D5DB' }}>•</span><span style={{ color: '#374151' }}>Kelas {kelasDisplay}</span></>}
+              {angkatanDisplay && <><span style={{ color: '#D1D5DB' }}>•</span><span style={{ color: '#374151' }}>Angkatan {angkatanDisplay}</span></>}
             </div>
-          </div>
-
-          {/* Halo User */}
-          <div className="section-card p-8 bg-white border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center mb-6">
-            <div className="flex flex-col gap-2 max-w-2xl text-right ml-auto">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center justify-end gap-2">
-                Halo {namaDisplay}! <span className="animate-bounce">👋</span>
-              </h3>
-              <div className="flex items-center justify-end gap-2 flex-wrap mb-1">
-                {nimDisplay && (
-                  <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
-                    NIM: {nimDisplay}
-                  </span>
-                )}
-                {prodiDisplay && (
-                  <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
-                    {prodiDisplay}
-                  </span>
-                )}
-                {kelasDisplay && (
-                  <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
-                    Kelas {kelasDisplay}
-                  </span>
-                )}
-                {angkatanDisplay && (
-                  <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
-                    Angkatan {angkatanDisplay}
-                  </span>
-                )}
-              </div>
-              {dosenWaliDisplay && (
-                <p className="text-xs text-gray-400 mb-2">
-                  Dosen Wali:{' '}
-                  <span className="font-semibold text-gray-600">{dosenWaliDisplay}</span>
-                </p>
-              )}
-              <p className="text-sm text-gray-600 leading-relaxed mb-2">
-                Semangat pengerjaan Tugas Akhirnya! Pastikan semua berkas persyaratanmu sudah
-                lengkap dan tervalidasi
-                {deadlineSidang ? (
-                  <>
-                    {' '}sebelum{' '}
-                    <span className="font-bold text-primary underline decoration-2 underline-offset-4">
-                      {deadlineSidang}
-                    </span>
-                    {' '}agar kamu bisa mengikuti jadwal sidang.
-                  </>
-                ) : ' agar proses administrasimu berjalan lancar.'}
+            
+            {dosenWaliDisplay && (
+              <p style={{ fontSize: '15px', color: '#6B7280', marginBottom: '20px' }}>
+                Dosen Wali: <span style={{ fontWeight: 600, color: '#1F2937' }}>{dosenWaliDisplay}</span>
               </p>
-            </div>
-            <div className="hidden lg:block text-[#D66E79]/10 ml-8">
-              <GraduationCap size={140} strokeWidth={1} />
-            </div>
+            )}
+            
+            <p className="dash-welcome-desc">
+              Semangat pengerjaan Tugas Akhirnya! Pastikan semua berkas persyaratanmu sudah
+              lengkap dan tervalidasi
+              {deadlineSidang ? (
+                <>
+                  {' '}sebelum <span style={{ fontWeight: 700, color: '#C0182A' }}>{deadlineSidang}</span>
+                </>
+              ) : ''}
+              {' '}agar kamu bisa mengikuti jadwal sidang.
+            </p>
           </div>
 
-          {/* Periode Cards */}
-          <div className="mb-6">
-            <h4 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-6 border-l-4 border-primary pl-3">
-              Jadwal Periode Sidang Terkini
-            </h4>
-            <div className="stat-grid">
-              <PeriodeCard
-                icon={<Calendar size={28} color="#C0182A" />}
-                title="Pendaftaran Sidang"
-                periode={sidangPeriode}
-                isLoading={loadingPeriode}
-              />
-              <PeriodeCard
-                icon={<SquarePen size={28} color="#C0182A" />}
-                title="Pendaftaran Yudisium"
-                periode={yudisiumPeriode}
-                isLoading={loadingPeriode}
-              />
-              <div className="CardAtas4">
-                <div className="CardAtas4-header">
-                  <div className="CardAtas4-icon">
-                    <div style={{
-                      width: 28, height: 28, background: '#C0182A', borderRadius: '50%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontWeight: 900, fontStyle: 'italic', fontSize: 16,
-                    }}>L</div>
-                  </div>
-                </div>
-                <div className="CardAtas4-body">
-                  <div className="CardAtas4-label">Pelaksanaan Sidang</div>
-                  <div className="CardAtas4-value">
-                    {loadingPeriode ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                        <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
-                        <span style={{ fontSize: 12, color: '#9CA3AF' }}>Memuat...</span>
-                      </div>
-                    ) : sidangPeriode ? (
-                      <div dangerouslySetInnerHTML={{
-                        __html: `Pelaksanaan Sidang<br/><span class='text-sm font-normal text-gray-500'>${formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate)}</span>`,
-                      }} />
-                    ) : (
-                      <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 6 }}>Belum dijadwalkan</div>
-                    )}
-                  </div>
-                </div>
-                <div className="CardAtas4-footer">
-                  <div className="CardAtas4-divider" />
-                  <div className="CardAtas4-sub">Jadwal dapat berubah sewaktu-waktu</div>
-                </div>
+          {/* Timeline Card */}
+          <div className="dash-card-clean dash-timeline">
+            <div className="dash-timeline-header">
+              <div>
+                <div className="dash-timeline-overline">Timeline Pendaftaran Sidang TA & Yudisium</div>
+                <h3 className="dash-timeline-title">
+                  Periode Aktif: {sidangPeriode?.name || yudisiumPeriode?.name || 'Belum Tersedia'}
+                </h3>
+                <p className="dash-timeline-subtitle">Jadwal penting untuk pelaksanaan sidang semester ini.</p>
+              </div>
+              <div>
+                <span className="dash-timeline-status">
+                  {loadingPeriode ? 'MEMUAT...' : (sidangPeriode?.state === 'aktif' || yudisiumPeriode?.state === 'aktif' ? 'SEDANG BERLANGSUNG' : 'BELUM TERSEDIA')}
+                </span>
+              </div>
+            </div>
+
+            <div className="dash-timeline-grid">
+              {/* Pendaftaran Sidang */}
+              <div className="dash-timeline-item">
+                <p className="dash-timeline-label">PENDAFTARAN SIDANG</p>
+                {loadingPeriode ? (
+                   <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                ) : (
+                   <p className="dash-timeline-val highlight">
+                     {sidangPeriode ? `Maks. ${formatDateShort(sidangPeriode.endDate)}` : <span className="empty">-</span>}
+                   </p>
+                )}
+              </div>
+
+              {/* Pelaksanaan Sidang */}
+              <div className="dash-timeline-item">
+                <p className="dash-timeline-label">PELAKSANAAN</p>
+                {loadingPeriode ? (
+                   <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                ) : (
+                   <p className="dash-timeline-val">
+                     {sidangPeriode ? formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate) : <span className="empty">-</span>}
+                   </p>
+                )}
+              </div>
+
+              {/* Yudisium */}
+              <div className="dash-timeline-item">
+                <p className="dash-timeline-label">YUDISIUM</p>
+                {loadingPeriode ? (
+                   <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                ) : (
+                   <p className="dash-timeline-val">
+                     {yudisiumPeriode ? `Maks. ${formatDateShort(yudisiumPeriode.endDate)}` : <span className="empty">-</span>}
+                   </p>
+                )}
+              </div>
+
+              {/* Sidang Yudisium */}
+              <div className="dash-timeline-item">
+                <p className="dash-timeline-label">SIDANG YUDISIUM</p>
+                {loadingPeriode ? (
+                   <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                ) : (
+                   <p className="dash-timeline-val">
+                     {yudisiumPeriode ? formatDateShort(new Date(new Date(yudisiumPeriode.endDate).getTime() + 5*24*60*60*1000)) : <span className="empty">-</span>}
+                   </p>
+                )}
               </div>
             </div>
           </div>
 
           {/* Tabel Progres */}
-          <div className="mb-6">
-            <h4 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-2 border-l-4 border-primary pl-3">
-              Progres Registrasi Kamu
-            </h4>
-            <p className="text-xs text-muted mb-6 pl-3">
-              Lacak setiap tahapan administrasi tugas akhirmu secara real-time.
-            </p>
+          <div className="dash-progress">
+            <div className="dash-progress-header">
+              <h4 className="dash-progress-title">Detail Progres Registrasi</h4>
+              <span className="dash-progress-meta">Terakhir diperbarui: {formatDateShort(new Date())}</span>
+            </div>
 
-            <div className="section-card border border-gray-100 shadow-sm" style={{ overflow: 'visible' }}>
-              <div className="table-scroll-wrap">
-                <table className="simta-table">
+            <div className="dash-card-clean">
+              <div className="prog-table-wrap">
+                <table className="prog-table">
                   <thead>
                     <tr>
-                      <th className="w-16">No</th>
-                      <th className="min-w-[200px]">Tahap Pendaftaran</th>
-                      <th className="w-48">Status</th>
-                      <th className="min-w-[240px]">Keterangan</th>
-                      <th className="min-w-[220px]">Aksi</th>
+                      <th className="col-tahapan">Tahapan</th>
+                      <th className="col-status">Status</th>
+                      <th className="col-ket">Keterangan / Revisi</th>
+                      <th className="col-aksi">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
 
                     {/* Pengajuan SK */}
-                    <tr style={{ background: '#fff' }}>
-                      <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">1</td>
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex flex-col items-center">
-                          <span className="text-sm font-black text-gray-900">Pengajuan SK</span>
-                          <span className="text-[10px] text-gray-400">
-                            {loadingSk
-                              ? 'Memuat...'
-                              : skTanggal
-                                ? `Diajukan pada: ${skTanggal}`
-                                : 'Belum diajukan'}
-                          </span>
-                        </div>
+                    <tr>
+                      <td>
+                         <div className="prog-tahapan-title">Pengajuan SK TA</div>
+                         <div className="prog-tahapan-sub">
+                           {loadingSk ? 'Memuat...' : skTanggal ? `Diajukan: ${skTanggal}` : 'Belum diajukan'}
+                         </div>
                       </td>
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex justify-center">
-                          {loadingSk
-                            ? <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
-                            : <RowBadge style={skBadgeStyle(skStatus)} />
-                          }
-                        </div>
+                      <td className="col-status">
+                        {loadingSk ? <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} /> : <RowBadge style={skBadgeStyle(skStatus)} />}
                       </td>
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex justify-center">
-                          {loadingSk
-                            ? <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
-                            : <RowBadge style={skKeteranganStyle(skStatus)} />
-                          }
-                        </div>
+                      <td className="col-ket">
+                        {loadingSk ? <span style={{ color: '#9CA3AF' }}>—</span> : <RowBadge isTextOnly style={{ color: '#4B5563', label: skKeteranganText(skStatus) }} />}
                       </td>
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex justify-center items-center gap-2 flex-wrap">
+                      <td className="col-aksi">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
                           {loadingSk ? (
-                            <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
+                            <span style={{ color: '#9CA3AF', fontSize: '12px' }}>—</span>
                           ) : skStatus === null ? (
-                            <BtnRed onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
-                              &gt; Ajukan SK TA
-                            </BtnRed>
+                            <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Mulai Pengajuan</TextLinkAction>
                           ) : skStatus === STATUS_SK.EXPIRED ? (
-                            <BtnRed onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
-                              &gt; Perpanjangan SK
-                            </BtnRed>
+                            <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Perpanjang SK</TextLinkAction>
                           ) : skStatus === STATUS_SK.SUDAH_TERBIT ? (
                             <>
-                              <BtnOutline onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
-                                Lihat Respon
-                              </BtnOutline>
+                              <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
                               {sktaRequest?.sktaDownloadUrl && (
-                                <BtnRed onClick={handleUnduhSK} disabled={false}>
-                                  Unduh SK
-                                </BtnRed>
+                                <TextLinkAction onClick={handleUnduhSK}>Unduh SK</TextLinkAction>
                               )}
                             </>
                           ) : (
-                            <BtnOutline onClick={() => navigate('/mahasiswa/pengajuan-sk')}>
-                              Lihat Respon
-                            </BtnOutline>
+                            <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
                           )}
                         </div>
                       </td>
                     </tr>
 
                     {/* Pendaftaran Sidang */}
-                    <tr style={{ background: '#fff' }}>
-                      <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">2</td>
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex flex-col items-center">
-                          <span className="text-sm font-black text-gray-900">Pendaftaran Sidang</span>
-                          <span className="text-[10px] text-gray-400">
-                            {sidangPeriode
-                              ? `Periode: ${formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate)}`
-                              : 'Belum ada periode aktif'}
-                          </span>
-                        </div>
+                    <tr>
+                      <td>
+                         <div className="prog-tahapan-title">Pendaftaran Sidang</div>
+                         <div className="prog-tahapan-sub">
+                           {sidangPeriode ? `Periode: ${formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate)}` : 'Belum ada periode'}
+                         </div>
                       </td>
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex justify-center">
-                          {rowSidangLoading ? (
-                            <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
-                          ) : !skSudahTerbit ? (
-                            <RowBadge style={LOCKED_BADGE} />
-                          ) : (
-                            <RowBadge style={toRowBadge(
-                              SIDANG_STATUS_CONFIG[sidangRegStatus]
-                              ?? SIDANG_STATUS_CONFIG[STATUS_SIDANG.BELUM_DAFTAR]
-                            )} />
-                          )}
-                        </div>
+                      <td className="col-status">
+                        {rowSidangLoading ? (
+                          <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                        ) : !skSudahTerbit ? (
+                          <RowBadge style={LOCKED_BADGE} />
+                        ) : (
+                          <RowBadge style={toRowBadge(SIDANG_STATUS_CONFIG[sidangRegStatus] ?? SIDANG_STATUS_CONFIG[STATUS_SIDANG.BELUM_DAFTAR])} />
+                        )}
                       </td>
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex flex-col items-center gap-1">
-                          {rowSidangLoading ? (
-                            <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
-                          ) : !skSudahTerbit ? (
-                            <RowBadge style={LOCKED_BADGE} />
-                          ) : (
-                            <>
-                              <RowBadge style={getSidangKeteranganBadge(sidangRegStatus, sidangAssignedPeriode)} />
-                              {sidangRegStatus === STATUS_SIDANG.PERLU_REVISI && sidangResponse?.message && (
-                                <div style={{
-                                  maxWidth: 220, fontSize: 10, color: '#991B1B', textAlign: 'center',
-                                  background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 6,
-                                  padding: '4px 8px', lineHeight: 1.4,
-                                }}>
-                                  <strong>Catatan Admin:</strong> {sidangResponse.message}
-                                  {sidangResponse.isEdit && (
-                                    <div style={{ marginTop: 2, fontSize: 9, color: '#B91C1C' }}>
-                                      Batas revisi: {formatDateShort(sidangResponse.isEdit)}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
+                      <td className="col-ket">
+                        {renderKeteranganSidang()}
                       </td>
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex justify-center">
+                      <td className="col-aksi">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
                           {rowSidangLoading ? (
-                            <span style={{ fontSize: 11, color: '#9CA3AF' }}>—</span>
+                            <span style={{ color: '#9CA3AF', fontSize: '12px' }}>—</span>
                           ) : !skSudahTerbit ? (
-                            <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
-                              Selesaikan SK terlebih dahulu
-                            </span>
+                            <TextLinkAction disabled>Daftar</TextLinkAction>
                           ) : sidangRegStatus === STATUS_SIDANG.BELUM_DAFTAR ? (
-                            <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
-                              &gt; Daftar Sidang
-                            </BtnRed>
+                            <TextLinkAction onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>Daftar</TextLinkAction>
                           ) : sidangRegStatus === STATUS_SIDANG.PROSES_REGISTRASI ? (
-                            <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
-                              &gt; Lanjutkan Form
-                            </BtnRed>
+                            <TextLinkAction onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>Upload Berkas</TextLinkAction>
                           ) : sidangRegStatus === STATUS_SIDANG.PERLU_REVISI ? (
-                            <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
-                              &gt; Lihat Revisi
-                            </BtnRed>
+                            <TextLinkAction onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>Perbaiki Berkas</TextLinkAction>
                           ) : (
-                            <BtnOutline onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>
-                              Lihat Status
-                            </BtnOutline>
+                            <TextLinkAction onClick={() => navigate('/mahasiswa/pendaftaran-sidang')}>Lihat Detail</TextLinkAction>
                           )}
                         </div>
                       </td>
                     </tr>
 
                     {/* Pendaftaran Yudisium */}
-                    <tr style={{ background: '#fff' }}>
-                      <td className="py-5 px-4 text-center font-bold text-gray-500 border border-gray-200">3</td>
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex flex-col items-center">
-                          <span className="text-sm font-black text-gray-900">Pendaftaran Yudisium</span>
-                          <span className="text-[10px] text-gray-400">
-                            {yudisiumPeriode
-                              ? `Periode: ${formatDateRange(yudisiumPeriode.startDate, yudisiumPeriode.endDate)}`
-                              : 'Belum ada periode aktif'}
-                          </span>
-                        </div>
+                    <tr>
+                      <td>
+                         <div className="prog-tahapan-title">Pendaftaran Yudisium</div>
+                         <div className="prog-tahapan-sub">
+                           {yudisiumPeriode ? `Periode: ${formatDateRange(yudisiumPeriode.startDate, yudisiumPeriode.endDate)}` : 'Belum ada periode'}
+                         </div>
                       </td>
-
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex justify-center">
-                          {!skSudahTerbit ? (
-                            <RowBadge style={LOCKED_BADGE} />
-                          ) : ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
-                            <RowBadge style={LOCKED_BADGE} />
-                          ) : (
-                            <RowBadge style={{ bg: '#DBEAFE', border: '#93C5FD', color: '#1E40AF', label: 'Siap Daftar' }} />
-                          )}
-                        </div>
+                      <td className="col-status">
+                        {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
+                          <RowBadge style={LOCKED_BADGE} />
+                        ) : (
+                          <RowBadge style={{ bg: '#DBEAFE', color: '#1E40AF', label: 'SIAP DAFTAR' }} />
+                        )}
                       </td>
-
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex justify-center">
-                          {!skSudahTerbit ? (
-                            <RowBadge style={LOCKED_BADGE} />
-                          ) : ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
-                            <RowBadge style={{ bg: '#FEF3C7', border: '#F59E0B', color: '#92400E', label: 'Selesaikan Sidang dulu' }} />
-                          ) : (
-                            <RowBadge style={{ bg: '#DCFCE7', border: '#86EFAC', color: '#166534', label: 'Siap Mendaftar' }} />
-                          )}
-                        </div>
+                      <td className="col-ket">
+                        {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
+                          <RowBadge isTextOnly style={{ color: '#9CA3AF', label: 'Selesaikan Pendaftaran Sidang terlebih dahulu.' }} />
+                        ) : (
+                          <RowBadge isTextOnly style={{ color: '#4B5563', label: 'Silakan lengkapi berkas yudisium kamu.' }} />
+                        )}
                       </td>
-
-                      <td className="py-5 px-6 border border-gray-200">
-                        <div className="flex justify-center">
-                          {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
-                            <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
-                              {!skSudahTerbit
-                                ? 'Selesaikan SK terlebih dahulu'
-                                : 'Selesaikan Pendaftaran Sidang dahulu'}
-                            </span>
-                          ) : yudisiumPeriode?.isOpen ? (
-                            <BtnRed onClick={() => navigate('/mahasiswa/pendaftaran-yudisium')}>
-                              &gt; Lanjutkan Pendaftaran
-                            </BtnRed>
+                      <td className="col-aksi">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
+                          {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) || !yudisiumPeriode?.isOpen ? (
+                            <TextLinkAction disabled>Daftar</TextLinkAction>
                           ) : (
-                            <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
-                              Belum ada periode aktif
-                            </span>
+                            <TextLinkAction onClick={() => navigate('/mahasiswa/pendaftaran-yudisium')}>Daftar Yudisium</TextLinkAction>
                           )}
                         </div>
                       </td>
@@ -728,8 +512,8 @@ const DashboardMahasiswa = () => {
 
         </main>
 
-        <footer className="page-footer">
-          Telkom University Purwokerto — Divisi Akademik dan Sistem Informasi
+        <footer className="page-footer" style={{ borderTop: '1px solid #E9EDF5', background: '#fff', padding: '16px', marginTop: 'auto' }}>
+          <p style={{ fontSize: '11px', color: '#9CA3AF', textAlign: 'center', fontWeight: 600, margin: 0 }}>Telkom University Purwokerto — Divisi Akademik dan Sistem Informasi</p>
         </footer>
       </div>
     </div>
