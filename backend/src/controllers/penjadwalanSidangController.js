@@ -135,6 +135,85 @@ const listPenjadwalanSidang = asyncHandler(async (req, res) => {
   res.json(formatPaginationResponse(data, total, paginationParams));
 });
 
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+// Helper untuk memeriksa bentrok jadwal (jarak 2 jam) antara ruangan dan dosen
+const checkJadwalConflict = async ({
+  registrationId,
+  tglSidang,
+  ruanganSidangId,
+  dosenIds = [],
+}) => {
+  if (!tglSidang) return null;
+
+  const targetTime = new Date(tglSidang).getTime();
+  const minTime = new Date(targetTime - TWO_HOURS_MS);
+  const maxTime = new Date(targetTime + TWO_HOURS_MS);
+
+  const validDosenIds = dosenIds.filter(Boolean);
+
+  const orConditions = [];
+  if (ruanganSidangId) {
+    orConditions.push({ ruanganSidangId });
+  }
+  if (validDosenIds.length > 0) {
+    orConditions.push(
+      { dosenPembimbing1Id: { in: validDosenIds } },
+      { dosenPembimbing2Id: { in: validDosenIds } },
+      { dosenPenguji1Id: { in: validDosenIds } },
+      { dosenPenguji2Id: { in: validDosenIds } },
+    );
+  }
+
+  if (orConditions.length === 0) return null;
+
+  const conflict = await prisma.sidangRegistration.findFirst({
+    where: {
+      id: { not: registrationId },
+      deletedAt: null,
+      tglSidang: {
+        gt: minTime,
+        lt: maxTime,
+      },
+      OR: orConditions,
+    },
+    include: {
+      ruanganSidang: true,
+      dosenPembimbing1: { include: { user: true } },
+      dosenPembimbing2: { include: { user: true } },
+      dosenPenguji1: { include: { user: true } },
+      dosenPenguji2: { include: { user: true } },
+      mahasiswa: { include: { user: true } },
+    },
+  });
+
+  if (!conflict) return null;
+
+  if (ruanganSidangId && conflict.ruanganSidangId === ruanganSidangId) {
+    const namaRuangan = conflict.ruanganSidang
+      ? `${conflict.ruanganSidang.name} (${conflict.ruanganSidang.gedung})`
+      : "tersebut";
+    return `Jadwal bentrok: Ruangan ${namaRuangan} sudah terjadwal untuk sidang mahasiswa ${conflict.mahasiswa?.user?.name || "lain"} pada rentang waktu 2 jam (${new Date(conflict.tglSidang).toISOString()}).`;
+  }
+
+  const conflictingDosen = [
+    conflict.dosenPembimbing1,
+    conflict.dosenPembimbing2,
+    conflict.dosenPenguji1,
+    conflict.dosenPenguji2,
+  ].find((d) => d && validDosenIds.includes(d.id));
+
+  if (conflictingDosen) {
+    const namaDosen =
+      conflictingDosen.user?.name ||
+      conflictingDosen.kodeDosen ||
+      "Dosen";
+    return `Jadwal bentrok: Dosen ${namaDosen} sudah memiliki jadwal sidang mahasiswa ${conflict.mahasiswa?.user?.name || "lain"} pada rentang waktu 2 jam (${new Date(conflict.tglSidang).toISOString()}).`;
+  }
+
+  return "Jadwal bentrok dengan pelaksanaan sidang lain (jarak minimal 2 jam).";
+};
+
 // Set Dosen Penguji Sidang (Ketua KK Only)
 const setPengujiSidang = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -208,6 +287,20 @@ const setPengujiSidang = asyncHandler(async (req, res) => {
     throw new Error("Dosen penguji 2 tidak ditemukan");
   }
 
+  // Validasi bentrok jika jadwal sidang sudah ditentukan sebelumnya
+  if (registration.tglSidang) {
+    const conflictMessage = await checkJadwalConflict({
+      registrationId: id,
+      tglSidang: registration.tglSidang,
+      dosenIds: [dosenPenguji1Id, dosenPenguji2Id],
+    });
+
+    if (conflictMessage) {
+      res.status(400);
+      throw new Error(conflictMessage);
+    }
+  }
+
   const updatedRegistration = await prisma.sidangRegistration.update({
     where: { id },
     data: {
@@ -274,6 +367,27 @@ const setJadwalSidang = asyncHandler(async (req, res) => {
   if (!ruangan || ruangan.deletedAt) {
     res.status(404);
     throw new Error("Ruangan sidang tidak ditemukan");
+  }
+
+  // Kumpulkan semua dosen yang terlibat dalam sidang ini (Pembimbing 1 & 2, Penguji 1 & 2)
+  const involvedDosenIds = [
+    registration.dosenPembimbing1Id,
+    registration.dosenPembimbing2Id,
+    registration.dosenPenguji1Id,
+    registration.dosenPenguji2Id,
+  ].filter(Boolean);
+
+  // Validasi bentrok jadwal (jarak 2 jam untuk ruangan dan semua dosen terkait)
+  const conflictMessage = await checkJadwalConflict({
+    registrationId: id,
+    tglSidang,
+    ruanganSidangId,
+    dosenIds: involvedDosenIds,
+  });
+
+  if (conflictMessage) {
+    res.status(400);
+    throw new Error(conflictMessage);
   }
 
   const updatedRegistration = await prisma.sidangRegistration.update({
