@@ -1,15 +1,19 @@
-import asyncHandler from 'express-async-handler';
+import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import path from 'path';
-import { ZipArchive } from 'archiver';
-import { v4 as uuidv4 } from 'uuid';
-import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
+import path from "path";
+import { ZipArchive } from "archiver";
+import { v4 as uuidv4 } from "uuid";
+import {
+  getPaginationParams,
+  formatPaginationResponse,
+} from "../utils/paginationHelper.js";
 import {
   uploadFile,
   deleteFile,
   serveDownload,
   getFileStream,
-} from '../services/storageService.js';
+} from "../services/storageService.js";
+import { mapPermohonanToFrontend } from "../mappers/index.js";
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
@@ -20,103 +24,6 @@ const sanitizeFilenamePart = (str) => {
     .replace(/[^a-zA-Z0-9_-]/g, "_")
     .replace(/_+/g, "_")
     .replace(/^_+|_+$/g, "");
-};
-
-// Helper untuk menyelaraskan model baru PermohonanSkta dengan format lama yang diharapkan Frontend
-const mapPermohonanToFrontend = (item, req) => {
-  if (!item) return null;
-  return {
-    id: item.id,
-    createdAt: item.createdAt,
-    category: item.category,
-    mahasiswaId: item.mahasiswaId,
-    judulProposalIndonesia: item.judulProposalIndonesia,
-    judulProposalInggris: item.judulProposalInggris,
-    dosenPembimbing1Id: item.dosenPembimbing1Id,
-    dosenPembimbing2Id: item.dosenPembimbing2Id,
-    researchGroupId: item.researchGroupId,
-    adminId: item.adminId,
-    hasUploadedFinalProposal: item.hasUploadedFinalProposal,
-    hasTakenLanguageTest: item.hasTakenLanguageTest,
-    expDate: item.expDate,
-    wasRejectedBefore: item.wasRejectedBefore ?? false,
-    message: item.message,
-    isEdit: item.isEdit,
-    evidenceUploadPath: item.evidenceUploadPath,
-    sktaUploadPath: item.sktaUploadPath,
-    mahasiswa: item.mahasiswa
-      ? {
-          id: item.mahasiswa.id,
-          nim: item.mahasiswa.nim || '',
-          kelasAsal: item.mahasiswa.kelasAsal || '',
-          tahunAngkatan: item.mahasiswa.tahunAngkatan,
-          sks: item.mahasiswa.sks,
-          ipk: item.mahasiswa.ipk,
-          tak: item.mahasiswa.tak,
-          studyProgramId: item.mahasiswa.studyProgramId,
-          dosenWaliId: item.mahasiswa.dosenWaliId,
-          name: item.mahasiswa.user?.name || '',
-          email: item.mahasiswa.user?.email || '',
-          phone: item.mahasiswa.user?.phone || null,
-          studyProgram: item.mahasiswa.studyProgram
-            ? {
-                id: item.mahasiswa.studyProgram.id,
-                name: item.mahasiswa.studyProgram.name,
-                isActive: item.mahasiswa.studyProgram.isActive,
-                facultyId: item.mahasiswa.studyProgram.facultyId,
-              }
-            : null,
-        }
-      : null,
-    dosenPembimbing1: item.dosenPembimbing1
-      ? {
-          id: item.dosenPembimbing1.id,
-          nip: item.dosenPembimbing1.nip,
-          nidn: item.dosenPembimbing1.nidn,
-          kodeDosen: item.dosenPembimbing1.kodeDosen,
-          researchGroupId: item.dosenPembimbing1.researchGroupId,
-          userId: item.dosenPembimbing1.userId,
-          name: item.dosenPembimbing1.user?.name || '',
-          email: item.dosenPembimbing1.user?.email || '',
-          phone: item.dosenPembimbing1.user?.phone || null,
-        }
-      : null,
-    dosenPembimbing2: item.dosenPembimbing2
-      ? {
-          id: item.dosenPembimbing2.id,
-          nip: item.dosenPembimbing2.nip,
-          nidn: item.dosenPembimbing2.nidn,
-          kodeDosen: item.dosenPembimbing2.kodeDosen,
-          researchGroupId: item.dosenPembimbing2.researchGroupId,
-          userId: item.dosenPembimbing2.userId,
-          name: item.dosenPembimbing2.user?.name || '',
-          email: item.dosenPembimbing2.user?.email || '',
-          phone: item.dosenPembimbing2.user?.phone || null,
-        }
-      : null,
-    researchGroup: item.researchGroup
-      ? {
-          id: item.researchGroup.id,
-          name: item.researchGroup.name,
-          isActive: item.researchGroup.isActive,
-        }
-      : null,
-    admin: item.admin
-      ? {
-          id: item.admin.id,
-          userId: item.admin.userId,
-          name: item.admin.user?.name || '',
-          email: item.admin.user?.email || '',
-          phone: item.admin.user?.phone || null,
-        }
-      : null,
-    evidenceDownloadUrl: item.evidenceUploadPath
-      ? `${req.protocol}://${req.get("host")}/api/permohonan-skta/${item.id}/download/evidence`
-      : null,
-    sktaDownloadUrl: item.sktaUploadPath
-      ? `${req.protocol}://${req.get("host")}/api/permohonan-skta/${item.id}/download/skta`
-      : null,
-  };
 };
 
 // [Route] Mendapatkan Semua Permohonan SKTA
@@ -157,7 +64,7 @@ const listPermohonanSkta = asyncHandler(async (req, res) => {
         admin: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     }),
   ]);
@@ -183,7 +90,13 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
   const judulIndo = proposalTitleId || judulProposalIndonesia;
   const judulEng = proposalTitleEn || judulProposalInggris;
 
-  if (!mhsId || !judulIndo || !judulEng || !dosenPembimbing1Id || !dosenPembimbing2Id) {
+  if (
+    !mhsId ||
+    !judulIndo ||
+    !judulEng ||
+    !dosenPembimbing1Id ||
+    !dosenPembimbing2Id
+  ) {
     res.status(400);
     throw new Error("Semua field wajib diisi");
   }
@@ -215,7 +128,7 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
     if (existing) {
       res.status(409);
       throw new Error(
-        "Mahasiswa sudah memiliki pengajuan SK. Untuk pembaruan SK, gunakan kategori Perpanjangan atau Perubahan."
+        "Mahasiswa sudah memiliki pengajuan SK. Untuk pembaruan SK, gunakan kategori Perpanjangan atau Perubahan.",
       );
     }
   }
@@ -308,10 +221,18 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
   const evidenceFile = getUploadedFile(req.files, "evidence");
 
   const updateData = {
-    judulProposalIndonesia: (judulProposalIndonesia || proposalTitleId || "").trim(),
-    judulProposalInggris: (judulProposalInggris || proposalTitleEn || "").trim(),
+    judulProposalIndonesia: (
+      judulProposalIndonesia ||
+      proposalTitleId ||
+      ""
+    ).trim(),
+    judulProposalInggris: (
+      judulProposalInggris ||
+      proposalTitleEn ||
+      ""
+    ).trim(),
     message: null, // Clear rejection message upon student resubmission
-    isEdit: null,  // Clear revision deadline upon student resubmission
+    isEdit: null, // Clear revision deadline upon student resubmission
   };
 
   if (dosenPembimbing1Id) {
@@ -428,7 +349,7 @@ const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
   const data = await prisma.permohonanSkta.findFirst({
     where: { mahasiswaId },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
     include: {
       mahasiswa: {
@@ -491,7 +412,9 @@ const downloadSkta = asyncHandler(async (req, res) => {
   const ext = path.extname(permohonan.sktaUploadPath || "") || ".pdf";
   const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || "nim");
   const nama = sanitizeFilenamePart(permohonan.mahasiswa?.user?.name || "nama");
-  const prodi = sanitizeFilenamePart(permohonan.mahasiswa?.studyProgram?.name || "study_program");
+  const prodi = sanitizeFilenamePart(
+    permohonan.mahasiswa?.studyProgram?.name || "study_program",
+  );
   const downloadName = `SKTA_${nim}_${nama}_${prodi}${ext}`;
 
   await serveDownload(res, {
@@ -541,12 +464,8 @@ const approvePermohonanSkta = asyncHandler(async (req, res) => {
     throw new Error("Permohonan SKTA tidak ditemukan");
   }
 
-  const {
-    hasUploadedFinalProposal,
-    hasTakenLanguageTest,
-    expDate,
-    adminId,
-  } = req.body;
+  const { hasUploadedFinalProposal, hasTakenLanguageTest, expDate, adminId } =
+    req.body;
 
   const sktaFile = getUploadedFile(req.files, "skta");
 
@@ -558,8 +477,10 @@ const approvePermohonanSkta = asyncHandler(async (req, res) => {
   }
 
   const updateData = {
-    hasUploadedFinalProposal: hasUploadedFinalProposal === "true" || hasUploadedFinalProposal === true,
-    hasTakenLanguageTest: hasTakenLanguageTest === "true" || hasTakenLanguageTest === true,
+    hasUploadedFinalProposal:
+      hasUploadedFinalProposal === "true" || hasUploadedFinalProposal === true,
+    hasTakenLanguageTest:
+      hasTakenLanguageTest === "true" || hasTakenLanguageTest === true,
     expDate: expDate ? new Date(expDate) : null,
     adminId,
     message: null, // Hapus pesan penolakan sebelumnya jika ada
@@ -567,8 +488,12 @@ const approvePermohonanSkta = asyncHandler(async (req, res) => {
 
   if (sktaFile) {
     const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || "nim");
-    const nama = sanitizeFilenamePart(permohonan.mahasiswa?.user?.name || "nama");
-    const prodi = sanitizeFilenamePart(permohonan.mahasiswa?.studyProgram?.name || "study_program");
+    const nama = sanitizeFilenamePart(
+      permohonan.mahasiswa?.user?.name || "nama",
+    );
+    const prodi = sanitizeFilenamePart(
+      permohonan.mahasiswa?.studyProgram?.name || "study_program",
+    );
     const ext = path.extname(sktaFile.originalname || ".pdf") || ".pdf";
     const timestamp = Date.now();
     const customFilename = `SKTA_${nim}_${nama}_${prodi}_${timestamp}${ext}`;
@@ -617,13 +542,13 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   }
 
   const data = await prisma.permohonanSkta.update({
-     where: { id },
-     data: {
-       wasRejectedBefore: true,
-       message,
-       adminId,
-       isEdit: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Memberikan izin edit selama 7 hari ke depan
-     },
+    where: { id },
+    data: {
+      wasRejectedBefore: true,
+      message,
+      adminId,
+      isEdit: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Memberikan izin edit selama 7 hari ke depan
+    },
   });
 
   res.json({
@@ -696,7 +621,10 @@ const uploadDokumenValidasiSkta = asyncHandler(async (req, res) => {
     throw new Error("Permohonan SKTA tidak ditemukan");
   }
 
-  const file = getUploadedFile(req.files, "dokumenFile") || getUploadedFile(req.files, "file") || req.file;
+  const file =
+    getUploadedFile(req.files, "dokumenFile") ||
+    getUploadedFile(req.files, "file") ||
+    req.file;
 
   if (!file) {
     res.status(400);
@@ -818,7 +746,9 @@ const exportSktaZip = asyncHandler(async (req, res) => {
 
   // Filter Tanggal
   if (startDate || endDate) {
-    const validDateField = ["createdAt", "updatedAt", "expDate"].includes(dateField)
+    const validDateField = ["createdAt", "updatedAt", "expDate"].includes(
+      dateField,
+    )
       ? dateField
       : "createdAt";
 
@@ -888,7 +818,9 @@ const exportSktaZip = asyncHandler(async (req, res) => {
 
   if (!list || list.length === 0) {
     res.status(404);
-    throw new Error("Tidak ada berkas SKTA yang sesuai dengan filter yang dipilih");
+    throw new Error(
+      "Tidak ada berkas SKTA yang sesuai dengan filter yang dipilih",
+    );
   }
 
   const validFiles = [];
@@ -899,13 +831,17 @@ const exportSktaZip = asyncHandler(async (req, res) => {
     const ext = path.extname(item.sktaUploadPath || "") || ".pdf";
     const nim = sanitizeFilenamePart(item.mahasiswa?.nim || "nim");
     const nama = sanitizeFilenamePart(item.mahasiswa?.user?.name || "nama");
-    const prodi = sanitizeFilenamePart(item.mahasiswa?.studyProgram?.name || "study_program");
+    const prodi = sanitizeFilenamePart(
+      item.mahasiswa?.studyProgram?.name || "study_program",
+    );
 
     let entryName = `SKTA_${nim}_${nama}_${prodi}${ext}`;
 
     // Mencegah duplikasi nama di dalam zip yang sama
     if (usedEntryNames.has(entryName)) {
-      const timePart = item.createdAt ? new Date(item.createdAt).getTime() : Date.now();
+      const timePart = item.createdAt
+        ? new Date(item.createdAt).getTime()
+        : Date.now();
       entryName = `SKTA_${nim}_${nama}_${prodi}_${timePart}${ext}`;
       if (usedEntryNames.has(entryName)) {
         entryName = `SKTA_${nim}_${nama}_${prodi}_${item.id.slice(0, 8)}${ext}`;
@@ -945,7 +881,10 @@ const exportSktaZip = asyncHandler(async (req, res) => {
       const fileData = await getFileStream(file.filepath);
       archive.append(fileData.stream, { name: file.entryName });
     } catch (err) {
-      console.warn(`[exportSktaZip] Gagal menambahkan berkas ${file.filepath} ke archive:`, err.message);
+      console.warn(
+        `[exportSktaZip] Gagal menambahkan berkas ${file.filepath} ke archive:`,
+        err.message,
+      );
     }
   }
 

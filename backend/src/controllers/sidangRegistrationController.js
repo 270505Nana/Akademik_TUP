@@ -16,53 +16,11 @@ import {
   deleteFile,
   serveDownload,
 } from "../services/storageService.js";
-
-// Constants for File Validation (Lama - dicomment)
-// const REQUIRED_SLUGS = [
-//   "berkas-form-validasi-dosen-wali",
-//   "berkas-rekomendasi-sidang-pembimbing",
-//   "berkas-scan-pernyataan-biodata-ijazah-bermaterai",
-//   "berkas-dummy-ijazah-bermaterai",
-//   "berkas-scan-akta-kelahiran",
-//   "berkas-scan-ijazah-terakhir",
-//   "berkas-scan-khs-dengan-ttd-doswal-kaprodi",
-//   "berkas-log-bimbingan",
-//   "berkas-sertifikat-tak",
-//   "berkas-rekomendasi-berkas-evidence-ta-pa-igracias-pembimbing",
-//   "upload-draft-buku-ta-siap-sidang",
-// ];
-//
-// const NON_SIDANG_SLUGS = {
-//   "Publikasi Jurnal": [
-//     "berkas-loa-jurnal",
-//     "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-jurnal",
-//     "berkas-camera-ready-paper-yang-sudah-terbit",
-//     "berkas-camera-ready-paper-jurnal",
-//     "berkas-riwayat-review-oleh-reviewers",
-//     "berkas-response-jurnal",
-//   ],
-//   "Proceeding International": [
-//     "berkas-loa-proceeding",
-//     "berkas-persetujuan-publikasi-ta-sebagai-pengganti-sidang-proceeding",
-//     "berkas-camera-ready-paper-proceeding",
-//     "berkas-pakta-integritas",
-//     "berkas-response-proceeding",
-//   ],
-//   HKI: [
-//     "sertifikat-hki",
-//     "sertifikat-dari-mitra-dudi",
-//     "sertifikat-pendukung-lainnya",
-//   ],
-// };
-
-const NON_SIDANG_CATEGORY_MAP = {
-  "Publikasi Jurnal": "Sidang - Evidence Non Sidang Publikasi Jurnal",
-  "Proceeding International":
-    "Sidang - Evidence Non Sidang Proceeding International",
-  "Proceeding Internasional":
-    "Sidang - Evidence Non Sidang Proceeding International",
-  HKI: "Sidang - Evidence Non Sidang HKI",
-};
+import { mapSidangRegistrationToFrontend } from "../mappers/index.js";
+import {
+  NON_SIDANG_CATEGORY_MAP,
+  DOCUMENT_CATEGORIES,
+} from "../constants/index.js";
 
 // Helper dasar: ambil semua code dokumen persyaratan berkas untuk satu kategori
 const getSlugsByCategory = async (categoryName) => {
@@ -74,7 +32,7 @@ const getSlugsByCategory = async (categoryName) => {
 };
 
 const getRequiredSlugsFromDb = () =>
-  getSlugsByCategory("Sidang - Berkas Wajib");
+  getSlugsByCategory(DOCUMENT_CATEGORIES.SIDANG_WAJIB);
 
 const getNonSidangSlugsFromDb = (jalur) => {
   const normalized = String(jalur || "").trim();
@@ -90,8 +48,8 @@ const getNonSidangSlugsFromDb = (jalur) => {
 const getTestBahasaSlugsFromDb = (lulusTesBahasa) => {
   const categoryName =
     lulusTesBahasa === true
-      ? "Sidang - Berkas Tes Bahasa (Sudah)"
-      : "Sidang - Berkas Tes Bahasa (Belum)";
+      ? DOCUMENT_CATEGORIES.SIDANG_BAHASA_SUDAH
+      : DOCUMENT_CATEGORIES.SIDANG_BAHASA_BELUM;
   return getSlugsByCategory(categoryName);
 };
 
@@ -112,134 +70,6 @@ const deleteUploadsByCategory = async (registrationId, categories) => {
       where: { id: { in: uploadsToDelete.map((u) => u.id) } },
     });
   }
-};
-
-const mapMahasiswa = (mahasiswa) => {
-  if (!mahasiswa) return null;
-  return {
-    id: mahasiswa.id,
-    nim: mahasiswa.nim || "",
-    kelasAsal: mahasiswa.kelasAsal || "",
-    tahunAngkatan: mahasiswa.tahunAngkatan,
-    sks: mahasiswa.sks,
-    ipk: mahasiswa.ipk,
-    tak: mahasiswa.tak,
-    studyProgramId: mahasiswa.studyProgramId,
-    dosenWaliId: mahasiswa.dosenWaliId,
-    name: mahasiswa.user?.name || "",
-    email: mahasiswa.user?.email || "",
-    phone: mahasiswa.user?.phone || null,
-    studyProgram: mahasiswa.studyProgram
-      ? {
-          id: mahasiswa.studyProgram.id,
-          name: mahasiswa.studyProgram.name,
-          isActive: mahasiswa.studyProgram.isActive,
-          facultyId: mahasiswa.studyProgram.facultyId,
-        }
-      : null,
-  };
-};
-
-const mapDosen = (dosen) => {
-  if (!dosen) return null;
-  return {
-    id: dosen.id,
-    nip: dosen.nip,
-    nidn: dosen.nidn,
-    kodeDosen: dosen.kodeDosen,
-    researchGroupId: dosen.researchGroupId,
-    userId: dosen.userId,
-    name: dosen.user?.name || "",
-    email: dosen.user?.email || "",
-    phone: dosen.user?.phone || null,
-  };
-};
-
-const mapAdmin = (admin) => {
-  if (!admin) return null;
-  return {
-    id: admin.id,
-    userId: admin.userId,
-    name: admin.user?.name || "",
-    email: admin.user?.email || "",
-    phone: admin.user?.phone || null,
-  };
-};
-
-const mapSidangRegistrationToFrontend = (item, req) => {
-  if (!item) return null;
-  return {
-    id: item.id,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    isDraft: item.isDraft,
-    mahasiswaId: item.mahasiswaId,
-    program: item.program,
-    dosenWaliId: item.dosenWaliId,
-    sks: item.sks,
-    ipk: item.ipk,
-    tak: item.tak,
-    sktaExpDate: item.sktaExpDate,
-    judulTugasAkhirIndonesia: item.judulTugasAkhirIndonesia,
-    judulTugasAkhirInggris: item.judulTugasAkhirInggris,
-    dosenPembimbing1Id: item.dosenPembimbing1Id,
-    dosenPembimbing2Id: item.dosenPembimbing2Id,
-    researchGroupId: item.researchGroupId,
-    skemaSidang: item.skemaSidang,
-    jalurNonSidang: item.jalurNonSidang || [],
-    lulusTesBahasa: item.lulusTesBahasa,
-    submittedAt: item.submittedAt,
-    sidangRegistrationPeriodId: item.sidangRegistrationPeriodId,
-    sidangPeriodId: item.sidangPeriodId,
-    message: item.message,
-    isEdit: item.isEdit,
-    adminId: item.adminId,
-    mahasiswa: mapMahasiswa(item.mahasiswa),
-    dosenWali: mapDosen(item.dosenWali),
-    dosenPembimbing1: mapDosen(item.dosenPembimbing1),
-    dosenPembimbing2: mapDosen(item.dosenPembimbing2),
-    researchGroup: item.researchGroup
-      ? {
-          id: item.researchGroup.id,
-          name: item.researchGroup.name,
-          isActive: item.researchGroup.isActive,
-        }
-      : null,
-    admin: mapAdmin(item.admin),
-    sidangRegistrationPeriod: item.sidangRegistrationPeriod
-      ? {
-          id: item.sidangRegistrationPeriod.id,
-          name: item.sidangRegistrationPeriod.name,
-          category: item.sidangRegistrationPeriod.category,
-          period: item.sidangRegistrationPeriod.period,
-          startDate: item.sidangRegistrationPeriod.startDate,
-          endDate: item.sidangRegistrationPeriod.endDate,
-          isOpen: item.sidangRegistrationPeriod.isOpen,
-        }
-      : null,
-    sidangPeriod: item.sidangPeriod
-      ? {
-          id: item.sidangPeriod.id,
-          name: item.sidangPeriod.name,
-          category: item.sidangPeriod.category,
-          period: item.sidangPeriod.period,
-          startDate: item.sidangPeriod.startDate,
-          endDate: item.sidangPeriod.endDate,
-          isOpen: item.sidangPeriod.isOpen,
-        }
-      : null,
-    sidangRegistrationUploads: item.sidangRegistrationUploads
-      ? item.sidangRegistrationUploads.map((upload) => ({
-          id: upload.id,
-          name: upload.name,
-          category: upload.category,
-          filepath: upload.filepath,
-          isValid: upload.isValid,
-          sidangRegistrationId: upload.sidangRegistrationId,
-          downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${upload.id}/download`,
-        }))
-      : [],
-  };
 };
 
 const sidangInclude = {

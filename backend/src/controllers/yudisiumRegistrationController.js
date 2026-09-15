@@ -16,13 +16,16 @@ import {
   deleteFile,
   serveDownload,
 } from "../services/storageService.js";
-
-const CUMLAUDE_CATEGORY_MAP = {
-  "Publikasi Jurnal": "Yudisium - Evidence Cumlaude Publikasi Jurnal",
-  Pameran: "Yudisium - Evidence Cumlaude Pameran",
-  Lomba: "Yudisium - Evidence Cumlaude Lomba",
-  HKI: "Yudisium - Evidence Cumlaude HKI",
-};
+import {
+  mapMahasiswa,
+  mapDosen,
+  mapAdmin,
+  mapYudisiumRegistrationToFrontend,
+} from "../mappers/index.js";
+import {
+  CUMLAUDE_CATEGORY_MAP,
+  DOCUMENT_CATEGORIES,
+} from "../constants/index.js";
 
 // Helper dasar: ambil semua code dokumen persyaratan berkas untuk satu kategori
 const getSlugsByCategory = async (categoryName) => {
@@ -34,10 +37,10 @@ const getSlugsByCategory = async (categoryName) => {
 };
 
 const getRequiredSlugsFromDb = () =>
-  getSlugsByCategory("Yudisium - Berkas Wajib");
+  getSlugsByCategory(DOCUMENT_CATEGORIES.YUDISIUM_WAJIB);
 
 const getWirausahaSlugsFromDb = () =>
-  getSlugsByCategory("Yudisium - Evidence Wirausaha");
+  getSlugsByCategory(DOCUMENT_CATEGORIES.YUDISIUM_WIRAUSAHA);
 
 const getCumlaudeSlugsFromDb = (skemaCumlaude) => {
   const categoryName =
@@ -63,126 +66,6 @@ const deleteUploadsByCategory = async (registrationId, categories) => {
       where: { id: { in: uploadsToDelete.map((u) => u.id) } },
     });
   }
-};
-
-const mapMahasiswa = (mahasiswa) => {
-  if (!mahasiswa) return null;
-  return {
-    id: mahasiswa.id,
-    nim: mahasiswa.nim || "",
-    kelasAsal: mahasiswa.kelasAsal || "",
-    tahunAngkatan: mahasiswa.tahunAngkatan,
-    sks: mahasiswa.sks,
-    ipk: mahasiswa.ipk,
-    tak: mahasiswa.tak,
-    studyProgramId: mahasiswa.studyProgramId,
-    dosenWaliId: mahasiswa.dosenWaliId,
-    name: mahasiswa.user?.name || "",
-    email: mahasiswa.user?.email || "",
-    phone: mahasiswa.user?.phone || null,
-    studyProgram: mahasiswa.studyProgram
-      ? {
-          id: mahasiswa.studyProgram.id,
-          name: mahasiswa.studyProgram.name,
-          isActive: mahasiswa.studyProgram.isActive,
-          facultyId: mahasiswa.studyProgram.facultyId,
-        }
-      : null,
-  };
-};
-
-const mapDosen = (dosen) => {
-  if (!dosen) return null;
-  return {
-    id: dosen.id,
-    nip: dosen.nip,
-    nidn: dosen.nidn,
-    kodeDosen: dosen.kodeDosen,
-    researchGroupId: dosen.researchGroupId,
-    userId: dosen.userId,
-    name: dosen.user?.name || "",
-    email: dosen.user?.email || "",
-    phone: dosen.user?.phone || null,
-  };
-};
-
-const mapAdmin = (admin) => {
-  if (!admin) return null;
-  return {
-    id: admin.id,
-    userId: admin.userId,
-    name: admin.user?.name || "",
-    email: admin.user?.email || "",
-    phone: admin.user?.phone || null,
-  };
-};
-
-const mapYudisiumRegistrationToFrontend = (item, req) => {
-  if (!item) return null;
-  return {
-    id: item.id,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    isDraft: item.isDraft,
-    mahasiswaId: item.mahasiswaId,
-    program: item.program,
-    dosenWaliId: item.dosenWaliId,
-    judulTugasAkhirIndonesia: item.judulTugasAkhirIndonesia,
-    judulTugasAkhirInggris: item.judulTugasAkhirInggris,
-    tak: item.tak,
-    tglSidang: item.tglSidang,
-    skemaSidang: item.skemaSidang,
-    pengajuanCumlaude: item.pengajuanCumlaude,
-    skemaCumlaude: item.skemaCumlaude,
-    evidenCumlaude: item.evidenCumlaude,
-    berminatWirausaha: item.berminatWirausaha,
-    dosenPembimbing1Id: item.dosenPembimbing1Id,
-    dosenPembimbing2Id: item.dosenPembimbing2Id,
-    submittedAt: item.submittedAt,
-    yudisiumRegistrationPeriodId: item.yudisiumRegistrationPeriodId,
-    yudisiumPeriodId: item.yudisiumPeriodId,
-    message: item.message,
-    isEdit: item.isEdit,
-    adminId: item.adminId,
-    mahasiswa: mapMahasiswa(item.mahasiswa),
-    dosenWali: mapDosen(item.dosenWali),
-    dosenPembimbing1: mapDosen(item.dosenPembimbing1),
-    dosenPembimbing2: mapDosen(item.dosenPembimbing2),
-    admin: mapAdmin(item.admin),
-    yudisiumRegistrationPeriod: item.yudisiumRegistrationPeriod
-      ? {
-          id: item.yudisiumRegistrationPeriod.id,
-          name: item.yudisiumRegistrationPeriod.name,
-          category: item.yudisiumRegistrationPeriod.category,
-          period: item.yudisiumRegistrationPeriod.period,
-          startDate: item.yudisiumRegistrationPeriod.startDate,
-          endDate: item.yudisiumRegistrationPeriod.endDate,
-          isOpen: item.yudisiumRegistrationPeriod.isOpen,
-        }
-      : null,
-    yudisiumPeriod: item.yudisiumPeriod
-      ? {
-          id: item.yudisiumPeriod.id,
-          name: item.yudisiumPeriod.name,
-          category: item.yudisiumPeriod.category,
-          period: item.yudisiumPeriod.period,
-          startDate: item.yudisiumPeriod.startDate,
-          endDate: item.yudisiumPeriod.endDate,
-          isOpen: item.yudisiumPeriod.isOpen,
-        }
-      : null,
-    yudisiumRegistrationUploads: item.yudisiumRegistrationUploads
-      ? item.yudisiumRegistrationUploads.map((upload) => ({
-          id: upload.id,
-          name: upload.name,
-          category: upload.category,
-          filepath: upload.filepath,
-          isValid: upload.isValid,
-          yudisiumRegistrationId: upload.yudisiumRegistrationId,
-          downloadUrl: `${req.protocol}://${req.get("host")}/api/yudisium-registrations/uploads/${upload.id}/download`,
-        }))
-      : [],
-  };
 };
 
 const yudisiumInclude = {
@@ -350,16 +233,28 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   }
 
   // 3. Periode Yudisium (Pendaftaran dan Pelaksanaan)
-  if (yudisiumRegistrationPeriodId && typeof yudisiumRegistrationPeriodId === "string" && yudisiumRegistrationPeriodId.trim() !== "") {
+  if (
+    yudisiumRegistrationPeriodId &&
+    typeof yudisiumRegistrationPeriodId === "string" &&
+    yudisiumRegistrationPeriodId.trim() !== ""
+  ) {
     where.yudisiumRegistrationPeriodId = yudisiumRegistrationPeriodId.trim();
   }
 
-  if (yudisiumPeriodId && typeof yudisiumPeriodId === "string" && yudisiumPeriodId.trim() !== "") {
+  if (
+    yudisiumPeriodId &&
+    typeof yudisiumPeriodId === "string" &&
+    yudisiumPeriodId.trim() !== ""
+  ) {
     where.yudisiumPeriodId = yudisiumPeriodId.trim();
   }
 
   // 4. Akademik & Program Studi Mahasiswa
-  if (studyProgramId && typeof studyProgramId === "string" && studyProgramId.trim() !== "") {
+  if (
+    studyProgramId &&
+    typeof studyProgramId === "string" &&
+    studyProgramId.trim() !== ""
+  ) {
     where.mahasiswa = where.mahasiswa || {};
     where.mahasiswa.studyProgramId = studyProgramId.trim();
   }
@@ -372,7 +267,11 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
     };
   }
 
-  if (tahunAngkatan !== undefined && tahunAngkatan !== null && String(tahunAngkatan).trim() !== "") {
+  if (
+    tahunAngkatan !== undefined &&
+    tahunAngkatan !== null &&
+    String(tahunAngkatan).trim() !== ""
+  ) {
     const parsedAngkatan = parseInt(tahunAngkatan, 10);
     if (!isNaN(parsedAngkatan)) {
       where.mahasiswa = where.mahasiswa || {};
@@ -389,7 +288,11 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   }
 
   // Skema Sidang
-  if (skemaSidang && typeof skemaSidang === "string" && skemaSidang.trim() !== "") {
+  if (
+    skemaSidang &&
+    typeof skemaSidang === "string" &&
+    skemaSidang.trim() !== ""
+  ) {
     where.skemaSidang = {
       contains: skemaSidang.trim(),
       mode: "insensitive",
@@ -397,19 +300,31 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   }
 
   // Dosen Wali
-  if (dosenWaliId && typeof dosenWaliId === "string" && dosenWaliId.trim() !== "") {
+  if (
+    dosenWaliId &&
+    typeof dosenWaliId === "string" &&
+    dosenWaliId.trim() !== ""
+  ) {
     where.dosenWaliId = dosenWaliId.trim();
   }
 
   // 5. Cumlaude & Wirausaha
-  if (pengajuanCumlaude && typeof pengajuanCumlaude === "string" && pengajuanCumlaude.trim() !== "") {
+  if (
+    pengajuanCumlaude &&
+    typeof pengajuanCumlaude === "string" &&
+    pengajuanCumlaude.trim() !== ""
+  ) {
     where.pengajuanCumlaude = {
       contains: pengajuanCumlaude.trim(),
       mode: "insensitive",
     };
   }
 
-  if (skemaCumlaude && typeof skemaCumlaude === "string" && skemaCumlaude.trim() !== "") {
+  if (
+    skemaCumlaude &&
+    typeof skemaCumlaude === "string" &&
+    skemaCumlaude.trim() !== ""
+  ) {
     where.skemaCumlaude = {
       contains: skemaCumlaude.trim(),
       mode: "insensitive",
@@ -423,7 +338,8 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
 
   // 6. Sorting
   const sortField = (sortBy || "").trim();
-  const sortDirection = ((sortOrder || "").toLowerCase().trim() === "asc") ? "asc" : "desc";
+  const sortDirection =
+    (sortOrder || "").toLowerCase().trim() === "asc" ? "asc" : "desc";
 
   let orderBy = { createdAt: "desc" };
 
@@ -1415,8 +1331,12 @@ const downloadYudisiumRegistrationFile = asyncHandler(async (req, res) => {
   }
 
   const ext = path.extname(upload.filepath || "") || ".pdf";
-  const baseName = (upload.name || "").replace(/[\\/:*?"<>|]/g, "-").trim() || "dokumen-yudisium";
-  const downloadName = baseName.toLowerCase().endsWith(ext.toLowerCase()) ? baseName : `${baseName}${ext}`;
+  const baseName =
+    (upload.name || "").replace(/[\\/:*?"<>|]/g, "-").trim() ||
+    "dokumen-yudisium";
+  const downloadName = baseName.toLowerCase().endsWith(ext.toLowerCase())
+    ? baseName
+    : `${baseName}${ext}`;
 
   await serveDownload(res, {
     filepath: upload.filepath,

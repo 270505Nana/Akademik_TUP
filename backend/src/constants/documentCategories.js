@@ -1,8 +1,10 @@
 export const DOCUMENT_CATEGORIES = Object.freeze({
+  SKTA: "Permohonan SKTA",
+
   // Kategori Sidang
   SIDANG_WAJIB: "Sidang - Berkas Wajib",
-  SIDANG_BAHASA_SUDAH: "Sidang - Berkas Bahasa Sudah Lulus",
-  SIDANG_BAHASA_BELUM: "Sidang - Berkas Bahasa Belum Lulus",
+  SIDANG_BAHASA_SUDAH: "Sidang - Berkas Tes Bahasa (Sudah)",
+  SIDANG_BAHASA_BELUM: "Sidang - Berkas Tes Bahasa (Belum)",
 
   // Kategori Yudisium
   YUDISIUM_WAJIB: "Yudisium - Berkas Wajib",

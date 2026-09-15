@@ -1,36 +1,18 @@
-import asyncHandler from 'express-async-handler';
+import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import path from 'path';
-import { sendValidationError, isNil } from '../utils/validationHelper.js';
-import { v4 as uuidv4 } from 'uuid';
-import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
-import { uploadFile, deleteFile, serveDownload } from '../services/storageService.js';
-
-const mapMahasiswa = (mahasiswa) => {
-  if (!mahasiswa) return null;
-  return {
-    id: mahasiswa.id,
-    nim: mahasiswa.nim || '',
-    kelasAsal: mahasiswa.kelasAsal || '',
-    tahunAngkatan: mahasiswa.tahunAngkatan,
-    sks: mahasiswa.sks,
-    ipk: mahasiswa.ipk,
-    tak: mahasiswa.tak,
-    studyProgramId: mahasiswa.studyProgramId,
-    dosenWaliId: mahasiswa.dosenWaliId,
-    name: mahasiswa.user?.name || '',
-    email: mahasiswa.user?.email || '',
-    phone: mahasiswa.user?.phone || null,
-    studyProgram: mahasiswa.studyProgram
-      ? {
-          id: mahasiswa.studyProgram.id,
-          name: mahasiswa.studyProgram.name,
-          isActive: mahasiswa.studyProgram.isActive,
-          facultyId: mahasiswa.studyProgram.facultyId,
-        }
-      : null,
-  };
-};
+import path from "path";
+import { sendValidationError, isNil } from "../utils/validationHelper.js";
+import { v4 as uuidv4 } from "uuid";
+import {
+  getPaginationParams,
+  formatPaginationResponse,
+} from "../utils/paginationHelper.js";
+import {
+  uploadFile,
+  deleteFile,
+  serveDownload,
+} from "../services/storageService.js";
+import { mapMahasiswa } from "../mappers/index.js";
 
 const mapTranskripUpload = (item, req) => {
   if (!item) return null;
@@ -98,10 +80,7 @@ const getTranskripUploadById = asyncHandler(async (req, res) => {
     where: {
       deletedAt: null,
       category: "Transkrip",
-      OR: [
-        { id },
-        { mahasiswaId: id },
-      ],
+      OR: [{ id }, { mahasiswaId: id }],
     },
     include: transkripInclude,
     orderBy: { createdAt: "desc" },
@@ -138,9 +117,15 @@ const createTranskripUpload = asyncHandler(async (req, res) => {
     errors.push({ field: "mahasiswaId", message: "mahasiswaId wajib diisi" });
   }
   if (!file) {
-    errors.push({ field: "transkripFile", message: "transkripFile wajib diunggah" });
+    errors.push({
+      field: "transkripFile",
+      message: "transkripFile wajib diunggah",
+    });
   } else if (!["application/pdf"].includes(file.mimetype)) {
-    errors.push({ field: "transkripFile", message: "Tipe file tidak valid (hanya diperbolehkan PDF)" });
+    errors.push({
+      field: "transkripFile",
+      message: "Tipe file tidak valid (hanya diperbolehkan PDF)",
+    });
   }
 
   if (errors.length > 0) {
@@ -218,10 +203,16 @@ const updateTranskripUpload = asyncHandler(async (req, res) => {
   const errors = [];
 
   if (!isNil(req.body.name) && req.body.name === "") {
-    errors.push({ field: "name", message: "name tidak boleh kosong jika diisi" });
+    errors.push({
+      field: "name",
+      message: "name tidak boleh kosong jika diisi",
+    });
   }
   if (file && !["application/pdf"].includes(file.mimetype)) {
-    errors.push({ field: "transkripFile", message: "Tipe file tidak valid (hanya diperbolehkan PDF)" });
+    errors.push({
+      field: "transkripFile",
+      message: "Tipe file tidak valid (hanya diperbolehkan PDF)",
+    });
   }
 
   if (errors.length > 0) {
@@ -232,10 +223,7 @@ const updateTranskripUpload = asyncHandler(async (req, res) => {
     where: {
       deletedAt: null,
       category: "Transkrip",
-      OR: [
-        { id },
-        { mahasiswaId: id },
-      ],
+      OR: [{ id }, { mahasiswaId: id }],
     },
     orderBy: { createdAt: "desc" },
   });
@@ -274,7 +262,8 @@ const updateTranskripUpload = asyncHandler(async (req, res) => {
     where: { id: transkripUpload.id },
     data: {
       name: name !== undefined ? name : transkripUpload.name,
-      mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : transkripUpload.mahasiswaId,
+      mahasiswaId:
+        mahasiswaId !== undefined ? mahasiswaId : transkripUpload.mahasiswaId,
       ...(newFilepath ? { filepath: newFilepath } : {}),
     },
     include: transkripInclude,
@@ -298,10 +287,7 @@ const deleteTranskripUpload = asyncHandler(async (req, res) => {
     where: {
       deletedAt: null,
       category: "Transkrip",
-      OR: [
-        { id },
-        { mahasiswaId: id },
-      ],
+      OR: [{ id }, { mahasiswaId: id }],
     },
     orderBy: { createdAt: "desc" },
   });
@@ -327,10 +313,7 @@ const downloadTranskripUpload = asyncHandler(async (req, res) => {
     where: {
       deletedAt: null,
       category: "Transkrip",
-      OR: [
-        { id },
-        { mahasiswaId: id },
-      ],
+      OR: [{ id }, { mahasiswaId: id }],
     },
     orderBy: { createdAt: "desc" },
   });
@@ -352,8 +335,11 @@ const downloadTranskripUpload = asyncHandler(async (req, res) => {
   }
 
   const ext = path.extname(upload.filepath || "") || ".pdf";
-  const baseName = (upload.name || "").replace(/[\\/:*?"<>|]/g, "-").trim() || "transkrip";
-  const downloadName = baseName.toLowerCase().endsWith(ext.toLowerCase()) ? baseName : `${baseName}${ext}`;
+  const baseName =
+    (upload.name || "").replace(/[\\/:*?"<>|]/g, "-").trim() || "transkrip";
+  const downloadName = baseName.toLowerCase().endsWith(ext.toLowerCase())
+    ? baseName
+    : `${baseName}${ext}`;
 
   await serveDownload(res, {
     filepath: upload.filepath,
