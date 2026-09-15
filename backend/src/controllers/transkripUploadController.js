@@ -12,22 +12,7 @@ import {
   deleteFile,
   serveDownload,
 } from "../services/storageService.js";
-import { mapMahasiswa } from "../mappers/index.js";
-
-const mapTranskripUpload = (item, req) => {
-  if (!item) return null;
-  return {
-    id: item.id,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    name: item.name,
-    category: item.category,
-    filepath: item.filepath,
-    mahasiswaId: item.mahasiswaId,
-    mahasiswa: mapMahasiswa(item.mahasiswa),
-    downloadUrl: `${req.protocol}://${req.get("host")}/api/transkrip/uploads/${item.id}/download`,
-  };
-};
+import { mapTranskripUpload } from "../mappers/index.js";
 
 const transkripInclude = {
   mahasiswa: {

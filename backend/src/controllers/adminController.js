@@ -1,7 +1,11 @@
-import asyncHandler from 'express-async-handler';
+import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import { sendValidationError, isNil } from '../utils/validationHelper.js';
-import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
+import { sendValidationError, isNil } from "../utils/validationHelper.js";
+import {
+  getPaginationParams,
+  formatPaginationResponse,
+} from "../utils/paginationHelper.js";
+import { mapAdmin } from "../mappers/index.js";
 
 // Daftar Semua Admin
 const listAdmins = asyncHandler(async (req, res) => {
@@ -13,7 +17,7 @@ const listAdmins = asyncHandler(async (req, res) => {
       skip: paginationParams.skip,
       take: paginationParams.take,
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       include: {
         user: {
@@ -27,15 +31,7 @@ const listAdmins = asyncHandler(async (req, res) => {
     }),
   ]);
 
-  const mapped = admins.map((adm) => {
-    const { user, ...rest } = adm;
-    return {
-      ...rest,
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || null,
-    };
-  });
+  const mapped = admins.map(mapAdmin);
 
   res.json(formatPaginationResponse(mapped, total, paginationParams));
 });
@@ -62,7 +58,9 @@ const upsertAdmin = asyncHandler(async (req, res) => {
     }
   }
 
-  const user = await prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+  });
   if (!user) {
     res.status(404);
     throw new Error("Pengguna tidak ditemukan");
@@ -75,8 +73,8 @@ const upsertAdmin = asyncHandler(async (req, res) => {
   const { name } = req.body;
 
   const errors = [];
-  if (isNil(name) || String(name).trim() === '') {
-    errors.push({ field: 'name', message: 'Nama wajib diisi' });
+  if (isNil(name) || String(name).trim() === "") {
+    errors.push({ field: "name", message: "Nama wajib diisi" });
   }
   if (errors.length > 0) {
     return sendValidationError(res, errors, req);
@@ -146,13 +144,11 @@ const findAdminById = asyncHandler(async (req, res) => {
   res.json({
     data: {
       ...rest,
-      name: user?.name || '',
-      email: user?.email || '',
+      name: user?.name || "",
+      email: user?.email || "",
       phone: user?.phone || null,
     },
   });
 });
 
-export { listAdmins,
-  upsertAdmin,
-  findAdminById, };
+export { listAdmins, upsertAdmin, findAdminById };

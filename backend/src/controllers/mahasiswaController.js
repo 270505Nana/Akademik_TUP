@@ -1,7 +1,11 @@
-import asyncHandler from 'express-async-handler';
+import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import { sendValidationError, isNil } from '../utils/validationHelper.js';
-import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
+import { sendValidationError, isNil } from "../utils/validationHelper.js";
+import {
+  getPaginationParams,
+  formatPaginationResponse,
+} from "../utils/paginationHelper.js";
+import { mapMahasiswa } from "../mappers/index.js";
 
 // Daftar Semua Mahasiswa
 const listMahasiswa = asyncHandler(async (req, res) => {
@@ -13,7 +17,7 @@ const listMahasiswa = asyncHandler(async (req, res) => {
       skip: paginationParams.skip,
       take: paginationParams.take,
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       include: {
         user: {
@@ -27,15 +31,7 @@ const listMahasiswa = asyncHandler(async (req, res) => {
     }),
   ]);
 
-  const mapped = mahasiswa.map((m) => {
-    const { user, ...rest } = m;
-    return {
-      ...rest,
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || null,
-    };
-  });
+  const mapped = mahasiswa.map(mapMahasiswa);
 
   res.json(formatPaginationResponse(mapped, total, paginationParams));
 });
@@ -62,7 +58,9 @@ const upsertMahasiswa = asyncHandler(async (req, res) => {
     }
   }
 
-  const user = await prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+  });
   if (!user) {
     res.status(404);
     throw new Error("Pengguna tidak ditemukan");
@@ -87,24 +85,49 @@ const upsertMahasiswa = asyncHandler(async (req, res) => {
   } = req.body;
 
   const errors = [];
-  if (isNil(nim)) errors.push({ field: 'nim', message: 'NIM wajib diisi' });
-  if (isNil(name)) errors.push({ field: 'name', message: 'Nama wajib diisi' });
-  if (req.body.className !== undefined && isNil(className)) errors.push({ field: 'className', message: 'Nama kelas wajib diisi' });
-  if (req.body.kelasAsal !== undefined && isNil(kelasAsal)) errors.push({ field: 'kelasAsal', message: 'Nama kelas wajib diisi' });
-  if (year !== undefined && year !== null && isNaN(parseInt(year))) errors.push({ field: 'year', message: 'Tahun angkatan harus berupa integer' });
-  if (tahunAngkatan !== undefined && tahunAngkatan !== null && isNaN(parseInt(tahunAngkatan))) errors.push({ field: 'tahunAngkatan', message: 'Tahun angkatan harus berupa integer' });
-  if (isNil(studyProgramId)) errors.push({ field: 'studyProgramId', message: 'ID program studi wajib diisi' });
-  if (isNil(dosenWaliId)) errors.push({ field: 'dosenWaliId', message: 'ID dosen wali wajib diisi' });
-  if (sks !== undefined && sks !== null && isNaN(parseInt(sks))) errors.push({ field: 'sks', message: 'SKS harus berupa integer' });
-  if (ipk !== undefined && ipk !== null && isNaN(parseFloat(ipk))) errors.push({ field: 'ipk', message: 'IPK harus berupa float' });
-  if (tak !== undefined && tak !== null && isNaN(parseInt(tak))) errors.push({ field: 'tak', message: 'TAK harus berupa integer' });
+  if (isNil(nim)) errors.push({ field: "nim", message: "NIM wajib diisi" });
+  if (isNil(name)) errors.push({ field: "name", message: "Nama wajib diisi" });
+  if (req.body.className !== undefined && isNil(className))
+    errors.push({ field: "className", message: "Nama kelas wajib diisi" });
+  if (req.body.kelasAsal !== undefined && isNil(kelasAsal))
+    errors.push({ field: "kelasAsal", message: "Nama kelas wajib diisi" });
+  if (year !== undefined && year !== null && isNaN(parseInt(year)))
+    errors.push({
+      field: "year",
+      message: "Tahun angkatan harus berupa integer",
+    });
+  if (
+    tahunAngkatan !== undefined &&
+    tahunAngkatan !== null &&
+    isNaN(parseInt(tahunAngkatan))
+  )
+    errors.push({
+      field: "tahunAngkatan",
+      message: "Tahun angkatan harus berupa integer",
+    });
+  if (isNil(studyProgramId))
+    errors.push({
+      field: "studyProgramId",
+      message: "ID program studi wajib diisi",
+    });
+  if (isNil(dosenWaliId))
+    errors.push({ field: "dosenWaliId", message: "ID dosen wali wajib diisi" });
+  if (sks !== undefined && sks !== null && isNaN(parseInt(sks)))
+    errors.push({ field: "sks", message: "SKS harus berupa integer" });
+  if (ipk !== undefined && ipk !== null && isNaN(parseFloat(ipk)))
+    errors.push({ field: "ipk", message: "IPK harus berupa float" });
+  if (tak !== undefined && tak !== null && isNaN(parseInt(tak)))
+    errors.push({ field: "tak", message: "TAK harus berupa integer" });
 
   if (errors.length > 0) return sendValidationError(res, errors, req);
 
   const targetKelasAsal = kelasAsal || className;
-  const targetTahunAngkatan = tahunAngkatan !== undefined ? tahunAngkatan : year;
+  const targetTahunAngkatan =
+    tahunAngkatan !== undefined ? tahunAngkatan : year;
 
-  const parsedTahunAngkatan = targetTahunAngkatan ? parseInt(targetTahunAngkatan) : undefined;
+  const parsedTahunAngkatan = targetTahunAngkatan
+    ? parseInt(targetTahunAngkatan)
+    : undefined;
   const parsedSks = sks !== undefined && sks !== null ? parseInt(sks) : null;
   const parsedIpk = ipk !== undefined && ipk !== null ? parseFloat(ipk) : null;
   const parsedTak = tak !== undefined && tak !== null ? parseInt(tak) : null;
@@ -193,13 +216,11 @@ const findMahasiswaById = asyncHandler(async (req, res) => {
   res.json({
     data: {
       ...rest,
-      name: user?.name || '',
-      email: user?.email || '',
+      name: user?.name || "",
+      email: user?.email || "",
       phone: user?.phone || null,
     },
   });
 });
 
-export { listMahasiswa,
-  upsertMahasiswa,
-  findMahasiswaById, };
+export { listMahasiswa, upsertMahasiswa, findMahasiswaById };

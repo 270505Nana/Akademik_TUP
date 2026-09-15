@@ -9,33 +9,7 @@ import {
   getPaginationParams,
   formatPaginationResponse,
 } from "../utils/paginationHelper.js";
-import { mapMahasiswa, mapDosen } from "../mappers/index.js";
-
-const mapRuangan = (ruangan) => {
-  if (!ruangan) return null;
-  return {
-    id: ruangan.id,
-    name: ruangan.name,
-    gedung: ruangan.gedung,
-    isActive: ruangan.isActive,
-  };
-};
-
-const mapPenjadwalanSidangToFrontend = (item) => {
-  if (!item) return null;
-  return {
-    id: item.id,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    mahasiswa: mapMahasiswa(item.mahasiswa),
-    dosenPembimbing1: mapDosen(item.dosenPembimbing1),
-    dosenPembimbing2: mapDosen(item.dosenPembimbing2),
-    dosenPenguji1: mapDosen(item.dosenPenguji1),
-    dosenPenguji2: mapDosen(item.dosenPenguji2),
-    tglSidang: item.tglSidang,
-    ruanganSidang: mapRuangan(item.ruanganSidang),
-  };
-};
+import { mapPenjadwalanSidangToFrontend } from "../mappers/index.js";
 
 const penjadwalanSidangInclude = {
   mahasiswa: {

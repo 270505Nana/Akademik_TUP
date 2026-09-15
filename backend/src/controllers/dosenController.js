@@ -1,18 +1,11 @@
-import asyncHandler from 'express-async-handler';
+import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import { sendValidationError, isNil } from '../utils/validationHelper.js';
-import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
-
-const mapDosen = (dosen) => {
-  if (!dosen) return null;
-  const { user, ...rest } = dosen;
-  return {
-    ...rest,
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || null,
-  };
-};
+import { sendValidationError, isNil } from "../utils/validationHelper.js";
+import {
+  getPaginationParams,
+  formatPaginationResponse,
+} from "../utils/paginationHelper.js";
+import { mapDosen } from "../mappers/index.js";
 
 const dosenInclude = {
   user: {
@@ -50,108 +43,121 @@ const listDosens = asyncHandler(async (req, res) => {
   };
 
   // Search across name, nip, nidn, kodeDosen
-  const searchTerm = (search || q || '').trim();
+  const searchTerm = (search || q || "").trim();
   if (searchTerm) {
     where.OR = [
       {
         user: {
           name: {
             contains: searchTerm,
-            mode: 'insensitive',
+            mode: "insensitive",
           },
         },
       },
       {
         nip: {
           contains: searchTerm,
-          mode: 'insensitive',
+          mode: "insensitive",
         },
       },
       {
         nidn: {
           contains: searchTerm,
-          mode: 'insensitive',
+          mode: "insensitive",
         },
       },
       {
         kodeDosen: {
           contains: searchTerm,
-          mode: 'insensitive',
+          mode: "insensitive",
         },
       },
     ];
   }
 
   // Specific field filters
-  if (name && typeof name === 'string' && name.trim() !== '') {
+  if (name && typeof name === "string" && name.trim() !== "") {
     where.user = {
       ...where.user,
       name: {
         contains: name.trim(),
-        mode: 'insensitive',
+        mode: "insensitive",
       },
     };
   }
 
-  if (nip && typeof nip === 'string' && nip.trim() !== '') {
+  if (nip && typeof nip === "string" && nip.trim() !== "") {
     where.nip = {
       contains: nip.trim(),
-      mode: 'insensitive',
+      mode: "insensitive",
     };
   }
 
-  if (nidn && typeof nidn === 'string' && nidn.trim() !== '') {
+  if (nidn && typeof nidn === "string" && nidn.trim() !== "") {
     where.nidn = {
       contains: nidn.trim(),
-      mode: 'insensitive',
+      mode: "insensitive",
     };
   }
 
   const kodeDosenParam = kodeDosen || kode_dosen;
-  if (kodeDosenParam && typeof kodeDosenParam === 'string' && kodeDosenParam.trim() !== '') {
+  if (
+    kodeDosenParam &&
+    typeof kodeDosenParam === "string" &&
+    kodeDosenParam.trim() !== ""
+  ) {
     where.kodeDosen = {
       contains: kodeDosenParam.trim(),
-      mode: 'insensitive',
+      mode: "insensitive",
     };
   }
 
   // Filter based on researchGroup
-  const rgId = (researchGroupId || research_group_id || '').trim();
-  const rg = (researchGroup || research_group || '').trim();
+  const rgId = (researchGroupId || research_group_id || "").trim();
+  const rg = (researchGroup || research_group || "").trim();
 
   if (rgId) {
     where.researchGroupId = rgId;
   } else if (rg) {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rg);
+    const isUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        rg,
+      );
     if (isUUID) {
       where.researchGroupId = rg;
     } else {
       where.researchGroup = {
         name: {
           contains: rg,
-          mode: 'insensitive',
+          mode: "insensitive",
         },
       };
     }
   }
 
   // Sort options: nameAsc, nameDesc, researchGroupAsc, researchGroupDesc, newest, oldest
-  const sortParam = (sortBy || sort || '').toLowerCase().trim();
+  const sortParam = (sortBy || sort || "").toLowerCase().trim();
 
-  let orderBy = { createdAt: 'desc' };
+  let orderBy = { createdAt: "desc" };
 
-  if (sortParam === 'nameasc' || sortParam === 'a-z') {
-    orderBy = { user: { name: 'asc' } };
-  } else if (sortParam === 'namedesc' || sortParam === 'z-a') {
-    orderBy = { user: { name: 'desc' } };
-  } else if (sortParam === 'researchgroupasc' || sortParam === 'research_group_asc') {
-    orderBy = { researchGroup: { name: 'asc' } };
-  } else if (sortParam === 'researchgroupdesc' || sortParam === 'research_group_desc') {
-    orderBy = { researchGroup: { name: 'desc' } };
-  } else if (sortParam === 'oldest') {
-    orderBy = { createdAt: 'asc' };
-  } else if (sortParam === 'newest') {
-    orderBy = { createdAt: 'desc' };
+  if (sortParam === "nameasc" || sortParam === "a-z") {
+    orderBy = { user: { name: "asc" } };
+  } else if (sortParam === "namedesc" || sortParam === "z-a") {
+    orderBy = { user: { name: "desc" } };
+  } else if (
+    sortParam === "researchgroupasc" ||
+    sortParam === "research_group_asc"
+  ) {
+    orderBy = { researchGroup: { name: "asc" } };
+  } else if (
+    sortParam === "researchgroupdesc" ||
+    sortParam === "research_group_desc"
+  ) {
+    orderBy = { researchGroup: { name: "desc" } };
+  } else if (sortParam === "oldest") {
+    orderBy = { createdAt: "asc" };
+  } else if (sortParam === "newest") {
+    orderBy = { createdAt: "desc" };
   }
 
   const [total, dosens] = await Promise.all([
@@ -192,7 +198,9 @@ const upsertDosen = asyncHandler(async (req, res) => {
     }
   }
 
-  const user = await prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+  });
   if (!user) {
     res.status(404);
     throw new Error("Pengguna tidak ditemukan");
@@ -202,18 +210,23 @@ const upsertDosen = asyncHandler(async (req, res) => {
     throw new Error("Pengguna bukan dosen");
   }
 
-  const { nip, nidn, lecturerCode, kodeDosen, name, researchGroupId } = req.body;
+  const { nip, nidn, lecturerCode, kodeDosen, name, researchGroupId } =
+    req.body;
   const targetKodeDosen = kodeDosen || lecturerCode;
 
   const errors = [];
-  if (isNil(nip)) errors.push({ field: 'nip', message: 'NIP wajib diisi' });
-  if (isNil(name)) errors.push({ field: 'name', message: 'Nama wajib diisi' });
-  if (isNil(researchGroupId)) errors.push({ field: 'researchGroupId', message: 'ID kelompok riset wajib diisi' });
+  if (isNil(nip)) errors.push({ field: "nip", message: "NIP wajib diisi" });
+  if (isNil(name)) errors.push({ field: "name", message: "Nama wajib diisi" });
+  if (isNil(researchGroupId))
+    errors.push({
+      field: "researchGroupId",
+      message: "ID kelompok riset wajib diisi",
+    });
   if (req.body.kodeDosen !== undefined && isNil(kodeDosen)) {
-    errors.push({ field: 'kodeDosen', message: 'Kode dosen wajib diisi' });
+    errors.push({ field: "kodeDosen", message: "Kode dosen wajib diisi" });
   }
   if (req.body.lecturerCode !== undefined && isNil(lecturerCode)) {
-    errors.push({ field: 'lecturerCode', message: 'Kode dosen wajib diisi' });
+    errors.push({ field: "lecturerCode", message: "Kode dosen wajib diisi" });
   }
   if (errors.length > 0) return sendValidationError(res, errors, req);
 
@@ -326,12 +339,9 @@ const toggleKetuaKK = asyncHandler(async (req, res) => {
   });
 
   res.json({
-    message: `Berhasil mengubah status Ketua KK menjadi ${nextStatus ? 'Aktif' : 'Nonaktif'}`,
+    message: `Berhasil mengubah status Ketua KK menjadi ${nextStatus ? "Aktif" : "Nonaktif"}`,
     data: updatedDosen,
   });
 });
 
-export { listDosens,
-  upsertDosen,
-  findDosenById,
-  toggleKetuaKK, };
+export { listDosens, upsertDosen, findDosenById, toggleKetuaKK };
