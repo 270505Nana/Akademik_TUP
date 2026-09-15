@@ -671,7 +671,12 @@ const AturPeriodeSidang = () => {
                             }} style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }}>
                             <option value="">-- Silakan Pilih --</option>
                             {availableGroupsForSidang.map(g => (
-                              <option key={g.id} value={g.id}>{g.pendaftaran?.name || 'Periode'} (TA {g.period || '-'})</option>
+                              <option key={g.id} value={g.id}>
+                                {g.semester !== 'Umum'
+                                  ? `Semester ${g.semester} ${g.period}`
+                                  : (g.pendaftaran?.name || `Tahun Ajaran ${g.period}`)
+                                }
+                              </option>
                             ))}
                           </select>
                         ) : (
