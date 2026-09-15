@@ -86,6 +86,8 @@ model Dosen {
   pembimbing2YudisiumRegistrations YudisiumRegistration[] @relation("Pembimbing2YudisiumRegistrations")
   pembimbing1Skta                  PermohonanSkta[]       @relation("Pembimbing1Skta")
   pembimbing2Skta                  PermohonanSkta[]       @relation("Pembimbing2Skta")
+  penguji1                         SidangRegistration[]   @relation("Penguji1")
+  penguji2                         SidangRegistration[]   @relation("Penguji2")
 
   @@map("dosen")
 }
@@ -248,6 +250,10 @@ model SidangRegistration {
   tglSidang                  DateTime?                  @map("tgl_sidang")
   ruanganSidang              Ruangan?                   @relation(fields: [ruanganSidangId], references: [id])
   ruanganSidangId            String?                    @map("ruangan_sidang_id")
+  dosenPenguji1              Dosen?                     @relation("Penguji1", fields: [dosenPenguji1Id], references: [id]) // Dosen Penguji 1
+  dosenPenguji1Id            String?                    @map("dosen_penguji_1_id")
+  dosenPenguji2              Dosen?                     @relation("Penguji2", fields: [dosenPenguji2Id], references: [id]) // Dosen Penguji 2
+  dosenPenguji2Id            String?                    @map("dosen_penguji_2_id")
   // Tolak Permohonan
   message                    String?
   isEdit                     DateTime?                  @map("is_edit")
@@ -370,13 +376,13 @@ model BerkasMahasiswa {
 }
 
 model Ruangan {
-  id          String    @id @default(uuid())
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
-  name        String
-  gedung      String
-  isActive    Boolean   @default(true) @map("is_active")
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  name      String
+  gedung    String
+  isActive  Boolean   @default(true) @map("is_active")
 
   sidangRegistrations SidangRegistration[]
 
