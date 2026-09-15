@@ -25,7 +25,7 @@ const TA_DOCUMENTS = [
     icon: <BookOpen size={20} />,
   },
   {
-    id: 2,
+    id: 2
     title: "Aturan Luaran TA",
     description:
       "Ketentuan Cumlaude dan Summa Cumlaude serta panduan penggunaan Artificial Intelligence (AI) dalam Tugas Akhir.",
