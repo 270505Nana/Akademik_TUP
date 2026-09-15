@@ -3,31 +3,53 @@ import prisma from "../config/prisma.js";
 import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../utils/validationHelper.js';
 import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
 
-// Daftar Semua Periode Sidang
+// Daftar Semua Periode Sidang (Dipasangkan Pendaftaran & Pelaksanaan)
 const listSidangPeriods = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { category } = req.query;
+  const { search } = req.query;
 
   const whereClause = { deletedAt: null };
-  if (category) {
-    whereClause.category = category;
+  if (search) {
+    whereClause.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { period: { contains: search, mode: "insensitive" } },
+    ];
   }
 
-  const [total, sidangPeriods] = await Promise.all([
-    prisma.sidangPeriod.count({
-      where: whereClause,
-    }),
-    prisma.sidangPeriod.findMany({
-      where: whereClause,
-      skip: paginationParams.skip,
-      take: paginationParams.take,
-      orderBy: {
-        createdAt: "desc",
-      },
-    }),
-  ]);
+  const allPeriods = await prisma.sidangPeriod.findMany({
+    where: whereClause,
+    orderBy: {
+      startDate: "desc",
+    },
+  });
 
-  res.json(formatPaginationResponse(sidangPeriods, total, paginationParams));
+  // Pairing berdasarkan (name, period)
+  const pairMap = new Map();
+  for (const p of allPeriods) {
+    const key = `${p.name}___${p.period}`;
+    if (!pairMap.has(key)) {
+      pairMap.set(key, { pendaftaran: null, pelaksanaan: null });
+    }
+    const pair = pairMap.get(key);
+    const catLower = (p.category || "").toLowerCase();
+    if (catLower.includes("pendaftaran") || catLower === "pendaftaran sidang") {
+      pair.pendaftaran = p;
+    } else {
+      pair.pelaksanaan = p;
+    }
+  }
+
+  const pairedData = Array.from(pairMap.values());
+  const total = pairedData.length;
+
+  const paginatedData = paginationParams.isPaginated
+    ? pairedData.slice(
+        paginationParams.skip,
+        paginationParams.skip + paginationParams.take,
+      )
+    : pairedData;
+
+  res.json(formatPaginationResponse(paginatedData, total, paginationParams));
 });
 
 // Ambil Detail Sidang Period by ID
