@@ -512,6 +512,13 @@
   flex-shrink: 0;
 }
 
+.ub-btn-download-compact {
+  flex: 0 0 auto !important; 
+  width: auto;
+  min-width: 110px;
+  padding: 10px 16px;
+  border-radius: 8px;
+}
 .ub-btn-batal {
   padding: 9px 18px;
   border-radius: 8px;
