@@ -1,16 +1,16 @@
-import express from 'express';
+import express from "express";
+import {
+  listMahasiswa,
+  upsertMahasiswa,
+  findMahasiswaById,
+} from "../../controllers/mahasiswaController.js";
+import { getMahasiswaDashboard } from "../../controllers/dashboardController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { isMahasiswa } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import { upsertMahasiswaSchema } from "../../schemas/index.js";
 
 const router = express.Router();
-
-import { listMahasiswa,
-  upsertMahasiswa,
-  findMahasiswaById, } from '../../controllers/mahasiswaController.js';
-
-import {getMahasiswaDashboard} from '../../controllers/dashboardController.js';
-
-import { verifyToken } from '../../middlewares/auth.js';
-
-import { isMahasiswa } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -63,7 +63,7 @@ router.get("/", verifyToken, listMahasiswa);
  *       200:
  *         description: Berhasil mengambil data dashboard mahasiswa
  */
-router.get('/dashboard', verifyToken, getMahasiswaDashboard);
+router.get("/dashboard", verifyToken, getMahasiswaDashboard);
 
 /**
  * @swagger
@@ -147,7 +147,7 @@ router.get('/dashboard', verifyToken, getMahasiswaDashboard);
 router.put(
   "/:id",
   verifyToken,
-  isMahasiswa,
+  validate(upsertMahasiswaSchema),
   upsertMahasiswa,
 );
 

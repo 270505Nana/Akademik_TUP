@@ -1,17 +1,17 @@
-import express from 'express';
-
-const router = express.Router();
-
-import { listDosens,
+import express from "express";
+import {
+  listDosens,
   upsertDosen,
   findDosenById,
-  toggleKetuaKK, } from '../../controllers/dosenController.js';
+  toggleKetuaKK,
+} from "../../controllers/dosenController.js";
+import { getDosenDashboard } from "../../controllers/dashboardController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import { upsertDosenSchema } from "../../schemas/index.js";
 
-import {getDosenDashboard} from '../../controllers/dashboardController.js';
-
-import { verifyToken } from '../../middlewares/auth.js';
-
-import { isAdmin } from '../../middlewares/authorize.js';
+const router = express.Router();
 
 /**
  * @swagger
@@ -80,7 +80,7 @@ router.get("/", verifyToken, listDosens);
  *       200:
  *         description: Berhasil mengambil data dashboard dosen
  */
-router.get('/dashboard', verifyToken, getDosenDashboard);
+router.get("/dashboard", verifyToken, getDosenDashboard);
 
 /**
  * @swagger
@@ -141,6 +141,7 @@ router.put(
   "/:id",
   verifyToken,
   isAdmin,
+  validate(upsertDosenSchema),
   upsertDosen,
 );
 
