@@ -1,66 +1,31 @@
 import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import { sendValidationError, isNil } from "../utils/validationHelper.js";
 import {
   getPaginationParams,
   formatPaginationResponse,
 } from "../utils/paginationHelper.js";
 import { mapAdmin } from "../mappers/index.js";
+import * as masterDataService from "../services/masterDataService.js";
 
 // Daftar Semua Admin
-const listAdmins = asyncHandler(async (req, res) => {
+export const listAdmins = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-
-  const [total, admins] = await Promise.all([
-    prisma.admin.count(),
-    prisma.admin.findMany({
-      skip: paginationParams.skip,
-      take: paginationParams.take,
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
-      },
-    }),
-  ]);
-
-  const mapped = admins.map(mapAdmin);
-
-  res.json(formatPaginationResponse(mapped, total, paginationParams));
+  const { total, admins } = await masterDataService.getAdmins(paginationParams);
+  res.json(formatPaginationResponse(admins.map(mapAdmin), total, paginationParams));
 });
 
 // Update or Insert Admin
-const upsertAdmin = asyncHandler(async (req, res) => {
-  const idOrUserId = req.params.id; // String UUID
+export const upsertAdmin = asyncHandler(async (req, res) => {
+  const idOrUserId = req.params.id;
+  const { name } = req.body;
 
-  let adminRecord = await prisma.admin.findUnique({
-    where: { id: idOrUserId },
-  });
-
-  let userId;
-  if (adminRecord) {
-    userId = adminRecord.userId;
-  } else {
-    adminRecord = await prisma.admin.findUnique({
-      where: { userId: idOrUserId },
-    });
-    if (adminRecord) {
-      userId = adminRecord.userId;
-    } else {
-      userId = idOrUserId;
-    }
-  }
+  let adminRecord = await masterDataService.getAdminByIdOrUserId(idOrUserId);
+  const userId = adminRecord ? adminRecord.userId : idOrUserId;
 
   const user = await prisma.user.findFirst({
     where: { id: userId, deletedAt: null },
   });
+
   if (!user) {
     res.status(404);
     throw new Error("Pengguna tidak ditemukan");
@@ -70,85 +35,34 @@ const upsertAdmin = asyncHandler(async (req, res) => {
     throw new Error("Pengguna bukan admin");
   }
 
-  const { name } = req.body;
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedUser = await tx.user.update({
+      where: { id: userId },
+      data: { name },
+    });
 
-  const errors = [];
-  if (isNil(name) || String(name).trim() === "") {
-    errors.push({ field: "name", message: "Nama wajib diisi" });
-  }
-  if (errors.length > 0) {
-    return sendValidationError(res, errors, req);
-  }
-  // Update name in User table
-  const updatedUser = await prisma.user.update({
-    where: { id: userId },
-    data: { name },
-  });
+    const admin = await tx.admin.upsert({
+      where: { userId },
+      update: {},
+      create: { userId },
+      include: { user: true },
+    });
 
-  // Upsert Admin record
-  const admin = await prisma.admin.upsert({
-    where: { userId },
-    update: {},
-    create: { userId },
+    return { ...admin, user: updatedUser };
   });
 
   res.json({
     message: "Create or update admin data successful",
-    data: {
-      ...admin,
-      name: updatedUser.name,
-    },
+    data: mapAdmin(result),
   });
 });
 
-// Find Admin By Id (with fallback to userId)
-const findAdminById = asyncHandler(async (req, res) => {
-  const idOrUserId = req.params.id; // String UUID
-
-  let admin = await prisma.admin.findUnique({
-    where: { id: idOrUserId },
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-          phone: true,
-        },
-      },
-    },
-  });
-
-  if (!admin) {
-    // Fallback to userId
-    admin = await prisma.admin.findUnique({
-      where: { userId: idOrUserId },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
-      },
-    });
-  }
-
+// Find Admin By Id
+export const findAdminById = asyncHandler(async (req, res) => {
+  const admin = await masterDataService.getAdminByIdOrUserId(req.params.id);
   if (!admin) {
     res.status(404);
     throw new Error("Data admin tidak ditemukan");
   }
-
-  const { user, ...rest } = admin;
-
-  res.json({
-    data: {
-      ...rest,
-      name: user?.name || "",
-      email: user?.email || "",
-      phone: user?.phone || null,
-    },
-  });
+  res.json({ data: mapAdmin(admin) });
 });
-
-export { listAdmins, upsertAdmin, findAdminById };

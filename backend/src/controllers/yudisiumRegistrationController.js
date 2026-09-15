@@ -16,130 +16,17 @@ import {
   deleteFile,
   serveDownload,
 } from "../services/storageService.js";
+import { mapYudisiumRegistrationToFrontend } from "../mappers/index.js";
 import {
-  mapMahasiswa,
-  mapDosen,
-  mapAdmin,
-  mapYudisiumRegistrationToFrontend,
-} from "../mappers/index.js";
-import {
-  CUMLAUDE_CATEGORY_MAP,
-  DOCUMENT_CATEGORIES,
-} from "../constants/index.js";
-
-// Helper dasar: ambil semua code dokumen persyaratan berkas untuk satu kategori
-const getSlugsByCategory = async (categoryName) => {
-  const docs = await prisma.dokumenPersyaratanBerkas.findMany({
-    where: { category: categoryName, isRequired: true, deletedAt: null },
-    select: { code: true },
-  });
-  return docs.map((doc) => doc.code);
-};
-
-const getRequiredSlugsFromDb = () =>
-  getSlugsByCategory(DOCUMENT_CATEGORIES.YUDISIUM_WAJIB);
-
-const getWirausahaSlugsFromDb = () =>
-  getSlugsByCategory(DOCUMENT_CATEGORIES.YUDISIUM_WIRAUSAHA);
-
-const getCumlaudeSlugsFromDb = (skemaCumlaude) => {
-  const categoryName =
-    CUMLAUDE_CATEGORY_MAP[skemaCumlaude] ||
-    `Yudisium - Evidence Cumlaude ${skemaCumlaude}`;
-  return getSlugsByCategory(categoryName);
-};
-
-// Helper: hapus berkas fisik dan record upload berdasarkan daftar kategori/slug
-const deleteUploadsByCategory = async (registrationId, categories) => {
-  if (!categories || !categories.length) return;
-  const uploadsToDelete = await prisma.yudisiumRegistrationUpload.findMany({
-    where: {
-      yudisiumRegistrationId: registrationId,
-      category: { in: categories },
-    },
-  });
-  for (const upload of uploadsToDelete) {
-    if (upload.filepath) await deleteFile(upload.filepath);
-  }
-  if (uploadsToDelete.length > 0) {
-    await prisma.yudisiumRegistrationUpload.deleteMany({
-      where: { id: { in: uploadsToDelete.map((u) => u.id) } },
-    });
-  }
-};
-
-const yudisiumInclude = {
-  mahasiswa: {
-    include: {
-      studyProgram: true,
-      user: true,
-    },
-  },
-  dosenWali: {
-    include: {
-      user: true,
-    },
-  },
-  dosenPembimbing1: {
-    include: {
-      user: true,
-    },
-  },
-  dosenPembimbing2: {
-    include: {
-      user: true,
-    },
-  },
-  admin: {
-    include: {
-      user: true,
-    },
-  },
-  yudisiumRegistrationPeriod: true,
-  yudisiumPeriod: true,
-  yudisiumRegistrationUploads: true,
-};
-
-const checkYudisiumEditable = async (registrationId) => {
-  const registration = await prisma.yudisiumRegistration.findUnique({
-    where: { id: registrationId },
-  });
-
-  if (!registration) {
-    return {
-      exists: false,
-      editable: false,
-      reason: "Pendaftaran yudisium tidak ditemukan.",
-    };
-  }
-
-  if (!registration.isDraft) {
-    const hasActiveEditPermission =
-      registration.isEdit && new Date(registration.isEdit) > new Date();
-
-    if (!hasActiveEditPermission) {
-      return {
-        exists: true,
-        editable: false,
-        reason:
-          "Pendaftaran sudah dikirim dan tidak memiliki izin edit yang aktif.",
-      };
-    }
-  }
-
-  if (registration.isEdit) {
-    const isEditExpired = new Date(registration.isEdit) < new Date();
-    if (isEditExpired) {
-      return {
-        exists: true,
-        editable: false,
-        reason: "Batas waktu izin edit dari admin telah kedaluwarsa.",
-      };
-    }
-  }
-
-  return { exists: true, editable: true };
-};
+  yudisiumInclude,
+  getRequiredSlugsFromDb,
+  getWirausahaSlugsFromDb,
+  getCumlaudeSlugsFromDb,
+  deleteUploadsByCategory,
+  checkYudisiumEditable,
+  getYudisiumRegistrationById as fetchYudisiumById,
+  getYudisiumRegistrationByMahasiswaId as fetchYudisiumByMahasiswaId,
+} from "../services/yudisiumRegistrationService.js";
 
 // Yudisium Registration List (with search, filter, sort, and pagination)
 const listYudisiumRegistrations = asyncHandler(async (req, res) => {
@@ -384,13 +271,7 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
 // Get Yudisium Registration by ID
 const getYudisiumRegistrationById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
-  const yudisiumRegistration = await prisma.yudisiumRegistration.findUnique({
-    where: {
-      id,
-    },
-    include: yudisiumInclude,
-  });
+  const yudisiumRegistration = await fetchYudisiumById(id);
 
   if (!yudisiumRegistration) {
     res.status(404);
@@ -405,16 +286,7 @@ const getYudisiumRegistrationById = asyncHandler(async (req, res) => {
 // Get Yudisium Registration by Mahasiswa ID
 const getYudisiumRegistrationByMahasiswaId = asyncHandler(async (req, res) => {
   const { mahasiswaId } = req.params;
-
-  const yudisiumRegistration = await prisma.yudisiumRegistration.findFirst({
-    where: {
-      mahasiswaId,
-    },
-    include: yudisiumInclude,
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const yudisiumRegistration = await fetchYudisiumByMahasiswaId(mahasiswaId);
 
   if (!yudisiumRegistration) {
     res.status(404);

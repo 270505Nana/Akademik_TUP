@@ -14,6 +14,9 @@ import {
   getFileStream,
 } from "../services/storageService.js";
 import { mapPermohonanToFrontend } from "../mappers/index.js";
+import * as sktaService from "../services/sktaService.js";
+import * as mahasiswaService from "../services/mahasiswaService.js";
+import * as dosenService from "../services/dosenService.js";
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
@@ -29,46 +32,7 @@ const sanitizeFilenamePart = (str) => {
 // [Route] Mendapatkan Semua Permohonan SKTA
 const listPermohonanSkta = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-
-  const [total, data] = await Promise.all([
-    prisma.permohonanSkta.count(),
-    prisma.permohonanSkta.findMany({
-      skip: paginationParams.skip,
-      take: paginationParams.take,
-      include: {
-        mahasiswa: {
-          include: {
-            studyProgram: true,
-            user: true,
-          },
-        },
-        dosenPembimbing1: {
-          include: {
-            user: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-        dosenPembimbing2: {
-          include: {
-            user: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-        researchGroup: true,
-        admin: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    }),
-  ]);
-
+  const { total, data } = await sktaService.getPermohonanSktas(paginationParams);
   const enriched = data.map((item) => mapPermohonanToFrontend(item, req));
   res.json(formatPaginationResponse(enriched, total, paginationParams));
 });
@@ -303,37 +267,7 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
 // [Route] Mendapatkan Permohonan SKTA berdasarkan ID Permohonan
 const getPermohonanSktaById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const data = await prisma.permohonanSkta.findUnique({
-    where: { id },
-    include: {
-      mahasiswa: {
-        include: {
-          studyProgram: true,
-          user: true,
-        },
-      },
-      dosenPembimbing1: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      dosenPembimbing2: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      researchGroup: true,
-      admin: true,
-    },
-  });
+  const data = await sktaService.getPermohonanSktaById(id);
 
   if (!data) {
     res.status(404);
@@ -346,40 +280,7 @@ const getPermohonanSktaById = asyncHandler(async (req, res) => {
 // [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa
 const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
   const { mahasiswaId } = req.params;
-  const data = await prisma.permohonanSkta.findFirst({
-    where: { mahasiswaId },
-    orderBy: {
-      createdAt: "desc",
-    },
-    include: {
-      mahasiswa: {
-        include: {
-          studyProgram: true,
-          user: true,
-        },
-      },
-      dosenPembimbing1: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      dosenPembimbing2: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      researchGroup: true,
-      admin: true,
-    },
-  });
+  const data = await sktaService.getLatestPermohonanByMahasiswaId(mahasiswaId);
 
   if (!data) {
     res.status(404);
