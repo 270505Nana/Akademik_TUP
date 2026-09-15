@@ -126,7 +126,19 @@ const AturPeriodeYudisium = () => {
     try {
       const raw  = await getYudisiumPeriods();
       const list = toArray(raw);
-      setPeriods(list.map(normalizeDates));
+      
+      const flatList = [];
+      list.forEach((item) => {
+        if (!item) return;
+        if ('pendaftaran' in item || 'pelaksanaan' in item) {
+          if (item.pendaftaran) flatList.push(normalizeDates(item.pendaftaran));
+          if (item.pelaksanaan) flatList.push(normalizeDates(item.pelaksanaan));
+        } else {
+          flatList.push(normalizeDates(item));
+        }
+      });
+
+      setPeriods(flatList);
     } catch (err) {
       showAlert('error', 'Gagal Memuat', 'Gagal memuat data periode yudisium dari server.');
     } finally {
@@ -139,16 +151,22 @@ const AturPeriodeYudisium = () => {
   const groupedPeriods = useMemo(() => {
     const map = {};
     periods.forEach(p => {
-      const nameLower = p.name.toLowerCase();
+      if (!p) return;
+      const nameLower = (p.name || '').toLowerCase();
       const semester = nameLower.includes('genap') ? 'Genap' : (nameLower.includes('ganjil') ? 'Ganjil' : 'Umum');
-      const groupKey = `${p.period}-${semester}`;
+      const periodVal = p.period || '';
+      const groupKey = `${periodVal}-${semester}`;
 
       if (!map[groupKey]) {
-        map[groupKey] = { id: groupKey, period: p.period, semester, pendaftaran: null, yudisium: null };
+        map[groupKey] = { id: groupKey, period: periodVal, semester, pendaftaran: null, yudisium: null };
       }
       
-      if (p.category === 'pendaftaran yudisium') map[groupKey].pendaftaran = p;
-      if (p.category === 'yudisium') map[groupKey].yudisium = p;
+      const catLower = (p.category || '').toLowerCase();
+      if (catLower.includes('pendaftaran')) {
+        map[groupKey].pendaftaran = p;
+      } else if (catLower === 'yudisium' || catLower.includes('yudisium') || catLower === 'pelaksanaan') {
+        map[groupKey].yudisium = p;
+      }
     });
 
     return Object.values(map).sort((a, b) => {
@@ -178,7 +196,7 @@ const AturPeriodeYudisium = () => {
       const q = searchQuery.toLowerCase();
       result = result.filter(g => {
         const nameMatch = (g.pendaftaran?.name || g.yudisium?.name || '').toLowerCase().includes(q);
-        const periodMatch = g.period.toLowerCase().includes(q);
+        const periodMatch = (g.period || '').toLowerCase().includes(q);
         return nameMatch || periodMatch;
       });
     }
@@ -223,7 +241,7 @@ const AturPeriodeYudisium = () => {
     if (dateError) { showAlert('error', 'Validasi Tanggal', dateError); return; }
 
     if (form.category === 'yudisium') {
-      const pend = periods.find(p => p.category === 'pendaftaran yudisium' && p.period === form.period && p.name === form.name);
+      const pend = periods.find(p => p?.category === 'pendaftaran yudisium' && p?.period === form.period && p?.name === form.name);
 
       if (!pend) { 
         showAlert('error', 'Validasi Gagal', `Data Pendaftaran Yudisium rujukan tidak valid atau tidak ditemukan.`); 
@@ -653,11 +671,11 @@ const AturPeriodeYudisium = () => {
                         {availableGroupsForYudisium.length > 0 ? (
                           <select className="form-control" onChange={e => {
                               const sel = availableGroupsForYudisium.find(g => g.id === e.target.value);
-                              if (sel) setForm({...form, name: sel.pendaftaran.name, period: sel.period});
+                              if (sel?.pendaftaran) setForm({...form, name: sel.pendaftaran.name, period: sel.period});
                             }} style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }}>
                             <option value="">-- Silakan Pilih --</option>
                             {availableGroupsForYudisium.map(g => (
-                              <option key={g.id} value={g.id}>{g.pendaftaran.name} (TA {g.period})</option>
+                              <option key={g.id} value={g.id}>{g.pendaftaran?.name || 'Periode'} (TA {g.period || '-'})</option>
                             ))}
                           </select>
                         ) : (

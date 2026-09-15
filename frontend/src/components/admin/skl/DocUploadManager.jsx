@@ -61,24 +61,43 @@ const getPeriodStatus = (start, end, isOpen) => {
   return isOpen ? 'Aktif' : 'Nonaktif';
 };
 
+// Helper untuk mem-parsing response periode yudisium baik berupa flat list maupun pair category
+const parseYudisiumPeriods = (raw) => {
+  const periodsArray = Array.isArray(raw) ? raw : (raw?.data ?? []);
+  const result = [];
+  periodsArray.forEach((item) => {
+    if (!item) return;
+    if ('pelaksanaan' in item || 'pendaftaran' in item) {
+      // Prioritaskan pelaksanaan yudisium untuk SKL/Transkrip, atau fallback ke pendaftaran jika pelaksanaan belum ada
+      const p = item.pelaksanaan || item.pendaftaran;
+      if (p && p.id) result.push(p);
+    } else if (item.id) {
+      if (!item.category || item.category === 'yudisium') {
+        result.push(item);
+      }
+    }
+  });
+  return result;
+};
+
 // Menentukan periode yudisium aktif atau terbaru dari daftar kategori 'yudisium'
 const findActiveOrLatestPeriod = (periods = []) => {
   if (!Array.isArray(periods) || periods.length === 0) return null;
 
   // 1. Cari periode dengan status 'Aktif' (rentang waktu valid dan isOpen === true)
   const trulyActive = periods.find(
-    (p) => getPeriodStatus(p.startDate, p.endDate, p.isOpen) === 'Aktif'
+    (p) => p && getPeriodStatus(p.startDate, p.endDate, p.isOpen) === 'Aktif'
   );
   if (trulyActive) return trulyActive;
 
   // 2. Fallback: cari periode dengan isOpen === true
-  const anyOpen = periods.find((p) => p.isOpen === true);
+  const anyOpen = periods.find((p) => p && p.isOpen === true);
   if (anyOpen) return anyOpen;
 
   // 3. Fallback: ambil periode terbaru berdasarkan tanggal
   const sorted = [...periods].sort((a, b) => {
-    const d1 = a.startDate || a.endDate || a.createdAt || '1970-01-01';
-    const d2 = b.startDate || b.endDate || b.createdAt || '1970-01-01';
+    const d1 = a?.startDate || a?.endDate || a?.createdAt || '1970-01-01';
+    const d2 = b?.startDate || b?.endDate || b?.createdAt || '1970-01-01';
     return new Date(d2) - new Date(d1);
   });
 
@@ -253,8 +272,7 @@ const DocUploadManager = ({
     setLoadingPeriods(true);
     try {
       const rawPeriods = await getYudisiumPeriods('yudisium').catch(() => []);
-      const periodsArray = Array.isArray(rawPeriods) ? rawPeriods : (rawPeriods?.data ?? []);
-      const yudisiumPeriods = periodsArray.filter((p) => !p.category || p.category === 'yudisium');
+      const yudisiumPeriods = parseYudisiumPeriods(rawPeriods);
 
       setPeriodeList(yudisiumPeriods);
 
@@ -279,8 +297,7 @@ const DocUploadManager = ({
     const intervalId = setInterval(async () => {
       try {
         const rawPeriods = await getYudisiumPeriods('yudisium').catch(() => []);
-        const periodsArray = Array.isArray(rawPeriods) ? rawPeriods : (rawPeriods?.data ?? []);
-        const yudisiumPeriods = periodsArray.filter((p) => !p.category || p.category === 'yudisium');
+        const yudisiumPeriods = parseYudisiumPeriods(rawPeriods);
         setPeriodeList(yudisiumPeriods);
       } catch (e) {
       }
@@ -338,8 +355,7 @@ const DocUploadManager = ({
     setLoadingPeriods(true);
     try {
       const rawPeriods = await getYudisiumPeriods('yudisium').catch(() => []);
-      const periodsArray = Array.isArray(rawPeriods) ? rawPeriods : (rawPeriods?.data ?? []);
-      const yudisiumPeriods = periodsArray.filter((p) => !p.category || p.category === 'yudisium');
+      const yudisiumPeriods = parseYudisiumPeriods(rawPeriods);
       setPeriodeList(yudisiumPeriods);
       fetchStudents(filterPeriodeId, yudisiumPeriods);
     } catch (err) {
@@ -606,16 +622,19 @@ const DocUploadManager = ({
                                 <span style={{ fontStyle: 'italic' }}>Belum ada periode yudisium</span>
                               </div>
                             ) : (
-                              periodeList.map((p) => (
-                                <div
-                                  key={p.id}
-                                  className={`sk-prodi-dropdown-option ${filterPeriodeId === p.id ? 'selected' : ''}`}
-                                  onClick={() => handleSelectPeriode(p.id)}
-                                >
-                                  <span>{p.name}</span>
-                                  {filterPeriodeId === p.id && <Check size={14} />}
-                                </div>
-                              ))
+                              periodeList.map((p, idx) => {
+                                const uniqueKey = p.id || `periode-${idx}`;
+                                return (
+                                  <div
+                                    key={uniqueKey}
+                                    className={`sk-prodi-dropdown-option ${filterPeriodeId === p.id ? 'selected' : ''}`}
+                                    onClick={() => handleSelectPeriode(p.id)}
+                                  >
+                                    <span>{p.name || '-'}</span>
+                                    {filterPeriodeId === p.id && <Check size={14} />}
+                                  </div>
+                                );
+                              })
                             )}
                           </motion.div>
                         )}

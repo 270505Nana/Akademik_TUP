@@ -201,15 +201,15 @@ const UnduhBerkasKelulusan = () => {
           {/* ── Top Header Nav (Sama dengan Registrasi Yudisium) ── */}
           <div className="top-header-nav">
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <button 
-                className="topbar-toggle" 
+              <button
+                className="topbar-toggle"
                 onClick={() => {
                   if (window.innerWidth < 992) {
-                    setSidebarOpen(!sidebarOpen); 
+                    setSidebarOpen(!sidebarOpen);
                   } else {
-                    setSidebarCollapsed(!sidebarCollapsed); 
+                    setSidebarCollapsed(!sidebarCollapsed);
                   }
-                }} 
+                }}
                 style={{ border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}
               >
                 <Menu size={20} />
@@ -290,17 +290,9 @@ const UnduhBerkasKelulusan = () => {
                     <div className="ub-action-buttons-row">
                       <button
                         className="ub-btn-download"
-                        disabled={downloadingType === 'SKL'}
-                        onClick={() => handleDownloadDoc('SKL', sklData.id, sklData.name || `SKL_${student?.nim}.pdf`)}
-                      >
-                        <Download size={14} />
-                        {downloadingType === 'SKL' ? 'Mengunduh…' : 'Unduh SKL (PDF)'}
-                      </button>
-                      <button
-                        className="ub-btn-preview"
                         onClick={() => handleOpenPreview('SKL', sklData.id, 'Surat Keterangan Lulus (SKL)', sklData.name)}
                       >
-                        <Eye size={14} /> Pratinjau
+                        <Eye size={14} /> Lihat dan Unduh Berkas SKL
                       </button>
                     </div>
                   </div>
@@ -372,17 +364,9 @@ const UnduhBerkasKelulusan = () => {
                     <div className="ub-action-buttons-row">
                       <button
                         className="ub-btn-download"
-                        disabled={downloadingType === 'Transkrip'}
-                        onClick={() => handleDownloadDoc('Transkrip', transkripData.id, transkripData.name || `Transkrip_${student?.nim}.pdf`)}
-                      >
-                        <Download size={14} />
-                        {downloadingType === 'Transkrip' ? 'Mengunduh…' : 'Unduh Transkrip (PDF)'}
-                      </button>
-                      <button
-                        className="ub-btn-preview"
                         onClick={() => handleOpenPreview('Transkrip', transkripData.id, 'Transkrip Nilai Akademik', transkripData.name)}
                       >
-                        <Eye size={14} /> Pratinjau
+                        <Eye size={14} /> Lihat dan Unduh Berkas Transkrip
                       </button>
                     </div>
                   </div>
@@ -461,16 +445,18 @@ const UnduhBerkasKelulusan = () => {
               {/* Footer Modal */}
               <div className="ub-modal-footer">
                 <button
-                  className="ub-btn-batal"
-                  onClick={handleClosePreview}
+                  className="ub-btn-download ub-btn-download-compact"
+                  disabled={downloadingType === previewState.docType}
+                  onClick={() =>
+                    handleDownloadDoc(
+                      previewState.docType,
+                      previewState.uploadId,
+                      previewState.fileName
+                    )
+                  }
                 >
-                  Tutup
-                </button>
-                <button
-                  className="ub-btn-download"
-                  onClick={() => handleDownloadDoc(previewState.docType, previewState.uploadId, previewState.fileName)}
-                >
-                  <Download size={14} /> Unduh PDF
+                  <Download size={14} />
+                  {downloadingType === previewState.docType ? "Mengunduh..." : "Unduh"}
                 </button>
               </div>
             </motion.div>
@@ -482,7 +468,10 @@ const UnduhBerkasKelulusan = () => {
       <AnimatePresence>
         {toastAlert.show && (
           <div className="ub-toast-overlay">
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
+            <motion.div style={{ position: 'fixed', top: 24, right: 24, zIndex: 9999, maxWidth: 380 }}
+              initial={{ x: 300, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 300, opacity: 0 }}>
               <CustomAlert
                 type={toastAlert.type}
                 title={toastAlert.title}
