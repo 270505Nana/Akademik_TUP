@@ -220,7 +220,7 @@ const upsertDosen = asyncHandler(async (req, res) => {
   if (isNil(researchGroupId))
     errors.push({
       field: "researchGroupId",
-      message: "ID kelompok riset wajib diisi",
+      message: "ID kelompok keahlian wajib diisi",
     });
   if (req.body.kodeDosen !== undefined && isNil(kodeDosen)) {
     errors.push({ field: "kodeDosen", message: "Kode dosen wajib diisi" });
