@@ -70,6 +70,7 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
 
   const getSubPath = (sub) => {
     if (sub === "Permohonan Penerbitan SK") return "/mahasiswa/pengajuan-sk";
+    if (sub === "Pembaruan SK Tugas Akhir") return "/mahasiswa/pembaruan-sk";
     if (sub === "Registrasi Sidang") return "/mahasiswa/pendaftaran-sidang";
     if (sub === "Registrasi Yudisium") return "/mahasiswa/pendaftaran-yudisium";
     if (sub === "Unduh SKL & Transkrip" || sub === "Unduh SKL dan Transkrip") return "/mahasiswa/unduh-berkas";

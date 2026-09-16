@@ -17,6 +17,7 @@ import MahasiswaBimbingan from "./pages/dosen/MahasiswaBimbingan";
 import RegistrasiTATUP from "./pages/dosen/RegistrasiTATUP";
 import PenjadwalanSidang from "./pages/dosen/PenjadwalanSidang";
 import PengajuanSK from "./pages/mahasiswa/pengajuanSK";
+import PembaruanSK from "./pages/mahasiswa/pembaruanSK";
 import PermohonanSK from "./pages/admin/permohonanSK";
 import AturPeriodeSidang from "./pages/admin/aturperiodesidang";
 import AturPeriodeYudisium from "./pages/admin/aturperiodeyudisium";
@@ -73,6 +74,14 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["MAHASISWA"]} requireCompleteProfile={true}>
                 <PengajuanSK />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mahasiswa/pembaruan-sk"
+            element={
+              <ProtectedRoute allowedRoles={["MAHASISWA"]} requireCompleteProfile={true}>
+                <PembaruanSK />
               </ProtectedRoute>
             }
           />
