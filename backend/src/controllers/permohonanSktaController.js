@@ -346,6 +346,39 @@ const downloadEvidence = asyncHandler(async (req, res) => {
   });
 });
 
+// Helper untuk resolve admin record dari adminId (id / userId) atau user token
+const resolveAdmin = async (adminId, currentUser) => {
+  const targetId = adminId || currentUser?.id;
+  if (!targetId) return null;
+
+  let admin = await prisma.admin.findUnique({
+    where: { id: targetId },
+  });
+
+  if (!admin) {
+    admin = await prisma.admin.findUnique({
+      where: { userId: targetId },
+    });
+  }
+
+  if (!admin && currentUser?.id) {
+    admin = await prisma.admin.findUnique({
+      where: { userId: currentUser.id },
+    });
+  }
+
+  // Jika user ber-role ADMIN tetapi belum ada record di tabel admin, buatkan secara otomatis
+  if (!admin && currentUser?.role === "ADMIN") {
+    admin = await prisma.admin.create({
+      data: {
+        userId: currentUser.id,
+      },
+    });
+  }
+
+  return admin;
+};
+
 // [Route] Menyetujui Permohonan SKTA (Approve)
 const approvePermohonanSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -370,8 +403,8 @@ const approvePermohonanSkta = asyncHandler(async (req, res) => {
 
   const sktaFile = getUploadedFile(req.files, "skta");
 
-  // Cek admin
-  const adminExist = await prisma.admin.findUnique({ where: { id: adminId } });
+  // Cek admin (mencakup admin.id, user.id, atau fallback ke user token)
+  const adminExist = await resolveAdmin(adminId, req.user);
   if (!adminExist) {
     res.status(404);
     throw new Error("Admin/Staf Akademik tidak ditemukan");
@@ -383,7 +416,7 @@ const approvePermohonanSkta = asyncHandler(async (req, res) => {
     hasTakenLanguageTest:
       hasTakenLanguageTest === "true" || hasTakenLanguageTest === true,
     expDate: expDate ? new Date(expDate) : null,
-    adminId,
+    adminId: adminExist.id,
     message: null, // Hapus pesan penolakan sebelumnya jika ada
   };
 
@@ -435,8 +468,8 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
 
   const { message, adminId } = req.body;
 
-  // Cek admin
-  const adminExist = await prisma.admin.findUnique({ where: { id: adminId } });
+  // Cek admin (mencakup admin.id, user.id, atau fallback ke user token)
+  const adminExist = await resolveAdmin(adminId, req.user);
   if (!adminExist) {
     res.status(404);
     throw new Error("Admin/Staf Akademik tidak ditemukan");
@@ -447,7 +480,7 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
     data: {
       wasRejectedBefore: true,
       message,
-      adminId,
+      adminId: adminExist.id,
       isEdit: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Memberikan izin edit selama 7 hari ke depan
     },
   });
