@@ -47,7 +47,6 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
     berminatWirausaha,
     dosenWaliId,
     sortBy,
-    sortOrder,
   } = req.query;
 
   const where = {
@@ -223,31 +222,42 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
     where.berminatWirausaha = parsedWirausaha;
   }
 
-  // 6. Sorting
-  const sortField = (sortBy || "").trim();
-  const sortDirection =
-    (sortOrder || "").toLowerCase().trim() === "asc" ? "asc" : "desc";
-
+  // 6. Sorting (Single unified sortBy param matching other endpoints)
+  const sortParam = (sortBy || "").toLowerCase().trim();
   let orderBy = { createdAt: "desc" };
 
-  if (sortField) {
-    if (sortField === "name") {
-      orderBy = { mahasiswa: { user: { name: sortDirection } } };
-    } else if (sortField === "nim") {
-      orderBy = { mahasiswa: { nim: sortDirection } };
-    } else if (sortField === "ipk") {
-      orderBy = { mahasiswa: { ipk: sortDirection } };
-    } else if (sortField === "tak") {
-      orderBy = { tak: sortDirection };
-    } else if (sortField === "tglSidang") {
-      orderBy = { tglSidang: sortDirection };
-    } else if (sortField === "submittedAt") {
-      orderBy = { submittedAt: sortDirection };
-    } else if (sortField === "createdAt") {
-      orderBy = { createdAt: sortDirection };
-    } else if (sortField === "updatedAt") {
-      orderBy = { updatedAt: sortDirection };
-    }
+  if (sortParam === "nameasc" || sortParam === "a-z") {
+    orderBy = { mahasiswa: { user: { name: "asc" } } };
+  } else if (sortParam === "namedesc" || sortParam === "z-a") {
+    orderBy = { mahasiswa: { user: { name: "desc" } } };
+  } else if (sortParam === "nimasc") {
+    orderBy = { mahasiswa: { nim: "asc" } };
+  } else if (sortParam === "nimdesc") {
+    orderBy = { mahasiswa: { nim: "desc" } };
+  } else if (sortParam === "ipkasc") {
+    orderBy = { mahasiswa: { ipk: "asc" } };
+  } else if (sortParam === "ipkdesc") {
+    orderBy = { mahasiswa: { ipk: "desc" } };
+  } else if (sortParam === "takasc") {
+    orderBy = { tak: "asc" };
+  } else if (sortParam === "takdesc") {
+    orderBy = { tak: "desc" };
+  } else if (sortParam === "tglsidangasc") {
+    orderBy = { tglSidang: "asc" };
+  } else if (sortParam === "tglsidangdesc") {
+    orderBy = { tglSidang: "desc" };
+  } else if (sortParam === "submittedatasc") {
+    orderBy = { submittedAt: "asc" };
+  } else if (sortParam === "submittedatdesc") {
+    orderBy = { submittedAt: "desc" };
+  } else if (sortParam === "oldest" || sortParam === "createdatasc" || sortParam === "lama-baru") {
+    orderBy = { createdAt: "asc" };
+  } else if (sortParam === "newest" || sortParam === "createdatdesc" || sortParam === "baru-lama") {
+    orderBy = { createdAt: "desc" };
+  } else if (sortParam === "updatedatasc") {
+    orderBy = { updatedAt: "asc" };
+  } else if (sortParam === "updatedatdesc") {
+    orderBy = { updatedAt: "desc" };
   }
 
   const [total, yudisiumRegistrations] = await Promise.all([
