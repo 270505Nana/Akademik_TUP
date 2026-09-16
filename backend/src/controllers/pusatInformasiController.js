@@ -53,11 +53,11 @@ const findNearestPeriod = (periods) => {
 const getPusatInformasiPreview = asyncHandler(async (req, res) => {
   const [sidangPeriods, yudisiumPeriods] = await Promise.all([
     prisma.sidangPeriod.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, isOpen: true },
       orderBy: { startDate: 'asc' },
     }),
     prisma.yudisiumPeriod.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, isOpen: true },
       orderBy: { startDate: 'asc' },
     }),
   ]);

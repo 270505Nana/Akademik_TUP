@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import {
   Award, BookOpen, ClipboardCheck, FilePlus2, Gavel, GraduationCap, Mic2, MapPin,
 } from "lucide-react";
@@ -6,6 +8,10 @@ import CountdownBanner from "../../components/landing/CountdownBanner";
 import DocumentCard from "../../components/landing/DocumentCard";
 import heroImage from "../../assets/Telu.webp";
 import "./landing.css";
+
+const publicApi = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
+});
 
 const TA_DOCUMENTS = [
   {
@@ -62,6 +68,33 @@ const TA_STAGES = [
 ];
 
 const LandingPage = () => {
+  const [periodeSidang, setPeriodeSidang] = useState(null);
+  const [periodeYudisium, setPeriodeYudisium] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    publicApi
+      .get("/api/pusat-informasi/preview")
+      .then((response) => {
+        if (isMounted) {
+          setPeriodeSidang(response.data?.periodeSidang ?? null);
+          setPeriodeYudisium(response.data?.periodeYudisium ?? null);
+        }
+      })
+      .catch((error) => {
+        console.error("Gagal memuat data preview periode:", error);
+        if (isMounted) {
+          setPeriodeSidang(null);
+          setPeriodeYudisium(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div className="landing-page">
       <header className="lp-header">
@@ -139,8 +172,8 @@ const LandingPage = () => {
 
             <CountdownBanner
               title="Batas Akhir Sidang TA"
-              subtitle="Semester Genap 2023/2024"
-              targetDate="2026-08-28T23:59:59+07:00"
+              subtitle={periodeSidang ? periodeSidang.name : ""}
+              targetDate={periodeSidang ? periodeSidang.endDate : new Date().toISOString()}
             />
 
             <div className="lp-doc-grid" id="dokumen-ta">
@@ -162,8 +195,8 @@ const LandingPage = () => {
 
             <CountdownBanner
               title="Batas Pendaftaran Yudisium"
-              subtitle="Periode 1"
-              targetDate="2026-09-04T23:59:59+07:00"
+              subtitle={periodeYudisium ? periodeYudisium.name : ""}
+              targetDate={periodeYudisium ? periodeYudisium.endDate : new Date().toISOString()}
             />
 
             <div className="lp-doc-grid">

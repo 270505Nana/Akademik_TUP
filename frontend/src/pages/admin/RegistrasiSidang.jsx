@@ -285,7 +285,15 @@ const RegistrasiSidang = () => {
 
       const allPeriods = await getSidangPeriods().catch(() => []);
       const prdMap = {};
-      (allPeriods ?? []).forEach(p => { prdMap[p.id] = p; });
+      (allPeriods ?? []).forEach(item => {
+        if (!item) return;
+        if (item.pendaftaran || item.pelaksanaan) {
+          if (item.pendaftaran?.id) prdMap[item.pendaftaran.id] = item.pendaftaran;
+          if (item.pelaksanaan?.id) prdMap[item.pelaksanaan.id] = item.pelaksanaan;
+        } else if (item.id) {
+          prdMap[item.id] = item;
+        }
+      });
       setPeriodMap(prdMap);
       const prMap = {};
       visible.forEach(r => {
