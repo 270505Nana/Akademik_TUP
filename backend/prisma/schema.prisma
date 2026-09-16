@@ -181,34 +181,35 @@ model DokumenPersyaratanBerkas {
 
 // Permohonan Surat Keputusan TA
 model PermohonanSkta {
-  id                       String        @id @default(uuid())
-  createdAt                DateTime      @default(now()) @map("created_at")
-  updatedAt                DateTime      @updatedAt @map("updated_at")
-  deletedAt                DateTime?     @map("deleted_at")
+  id                       String         @id @default(uuid())
+  createdAt                DateTime       @default(now()) @map("created_at")
+  updatedAt                DateTime       @updatedAt @map("updated_at")
+  deletedAt                DateTime?      @map("deleted_at")
   // Buat Permohonan
+  isDraft                  Boolean        @default(true) @map("is_draft")
   category                 String // Buat baru, Pembaruan Ganti Judul, Pembaruan Ganti Dospem, Pembaruan Ganti Judul dan Dospem, Perpanjangan
-  mahasiswa                Mahasiswa     @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade) // NIM, Prodi, No HP
-  mahasiswaId              String        @map("mahasiswa_id")
-  judulProposalIndonesia   String        @map("judul_proposal_indonesia")
-  judulProposalInggris     String        @map("judul_proposal_inggris")
-  dosenPembimbing1         Dosen         @relation("Pembimbing1Skta", fields: [dosenPembimbing1Id], references: [id]) // Nama, Kode, Kelompok Keilmuan (Research Group) Dosen Pembimbing 1
-  dosenPembimbing1Id       String        @map("dosen_pembimbing_1_id")
-  dosenPembimbing2         Dosen         @relation("Pembimbing2Skta", fields: [dosenPembimbing2Id], references: [id]) // Nama, Kode Dosen Pembimbing 2
-  dosenPembimbing2Id       String        @map("dosen_pembimbing_2_id")
-  researchGroup            ResearchGroup @relation(fields: [researchGroupId], references: [id])
-  researchGroupId          String        @map("research_group_id")
-  evidenceUploadPath       String        @map("evidence_upload_path")
+  mahasiswa                Mahasiswa?     @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade) // NIM, Prodi, No HP
+  mahasiswaId              String?        @map("mahasiswa_id")
+  judulProposalIndonesia   String?        @map("judul_proposal_indonesia")
+  judulProposalInggris     String?        @map("judul_proposal_inggris")
+  dosenPembimbing1         Dosen?         @relation("Pembimbing1Skta", fields: [dosenPembimbing1Id], references: [id]) // Nama, Kode, Kelompok Keilmuan (Research Group) Dosen Pembimbing 1
+  dosenPembimbing1Id       String?        @map("dosen_pembimbing_1_id")
+  dosenPembimbing2         Dosen?         @relation("Pembimbing2Skta", fields: [dosenPembimbing2Id], references: [id]) // Nama, Kode Dosen Pembimbing 2
+  dosenPembimbing2Id       String?        @map("dosen_pembimbing_2_id")
+  researchGroup            ResearchGroup? @relation(fields: [researchGroupId], references: [id])
+  researchGroupId          String?        @map("research_group_id")
+  evidenceUploadPath       String?        @map("evidence_upload_path")
   // Setujui Permohonan
-  hasUploadedFinalProposal Boolean?      @map("has_uploaded_final_proposal")
-  hasTakenLanguageTest     Boolean?      @map("has_taken_language_test")
-  sktaUploadPath           String?       @map("skta_upload_path")
-  expDate                  DateTime?     @map("exp_date") @db.Date
+  hasUploadedFinalProposal Boolean?       @map("has_uploaded_final_proposal")
+  hasTakenLanguageTest     Boolean?       @map("has_taken_language_test")
+  sktaUploadPath           String?        @map("skta_upload_path")
+  expDate                  DateTime?      @map("exp_date") @db.Date
   // Tolak Permohonan
-  wasRejectedBefore        Boolean       @default(false) @map("was_rejected_before")
+  wasRejectedBefore        Boolean        @default(false) @map("was_rejected_before")
   message                  String?
-  isEdit                   DateTime?     @map("is_edit")
-  admin                    Admin?        @relation(fields: [adminId], references: [id])
-  adminId                  String?       @map("admin_id")
+  isEdit                   DateTime?      @map("is_edit")
+  admin                    Admin?         @relation(fields: [adminId], references: [id])
+  adminId                  String?        @map("admin_id")
 
   @@index([mahasiswaId])
   @@index([dosenPembimbing1Id])

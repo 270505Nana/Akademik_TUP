@@ -29,10 +29,58 @@ const sktaInclude = {
   admin: true,
 };
 
-export const getPermohonanSktas = async ({ skip, take }) => {
+export const checkSktaEditable = async (id) => {
+  const permohonan = await prisma.permohonanSkta.findUnique({
+    where: { id },
+  });
+
+  if (!permohonan) {
+    return {
+      exists: false,
+      editable: false,
+      reason: "Permohonan SKTA tidak ditemukan.",
+    };
+  }
+
+  if (!permohonan.isDraft) {
+    const hasActiveEditPermission =
+      permohonan.isEdit && new Date(permohonan.isEdit) > new Date();
+
+    if (!hasActiveEditPermission) {
+      return {
+        exists: true,
+        editable: false,
+        reason:
+          "Permohonan SKTA sudah dikirim dan tidak memiliki izin edit yang aktif.",
+      };
+    }
+  }
+
+  if (permohonan.isEdit) {
+    const isEditExpired = new Date(permohonan.isEdit) < new Date();
+    if (isEditExpired) {
+      return {
+        exists: true,
+        editable: false,
+        reason: "Batas waktu izin edit dari admin telah kedaluwarsa.",
+      };
+    }
+  }
+
+  return { exists: true, editable: true };
+};
+
+export const getPermohonanSktas = async ({ skip, take }, customWhere = {}) => {
+  const where = {
+    deletedAt: null,
+    isDraft: false,
+    ...customWhere,
+  };
+
   const [total, data] = await Promise.all([
-    prisma.permohonanSkta.count(),
+    prisma.permohonanSkta.count({ where }),
     prisma.permohonanSkta.findMany({
+      where,
       skip,
       take,
       include: sktaInclude,

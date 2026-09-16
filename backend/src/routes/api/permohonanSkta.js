@@ -4,6 +4,7 @@ const router = express.Router();
 import {
   listPermohonanSkta,
   createPermohonanSkta,
+  submitPermohonanSkta,
   updatePermohonanSkta,
   getPermohonanSktaById,
   downloadSkta,
@@ -32,7 +33,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/permohonan-skta:
  *   get:
- *     summary: Get all permohonan SKTA data (paginated)
+ *     summary: Get all permohonan SKTA data (paginated, only submitted records)
  *     tags: [Permohonan SKTA]
  *     security:
  *       - bearerAuth: []
@@ -41,7 +42,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Permohonan SKTA data retrieved successfully with pagination
+ *         description: Permohonan SKTA data retrieved successfully with pagination (isDraft false only)
  *         content:
  *           application/json:
  *             schema:
@@ -128,7 +129,67 @@ router.get("/export-skta", verifyToken, isAdmin, exportSktaZip);
  * @swagger
  * /api/permohonan-skta:
  *   post:
- *     summary: Create a new Permohonan SKTA
+ *     summary: Save draft Permohonan SKTA (Create or Update Draft)
+ *     tags: [Permohonan SKTA]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Category of permohonan (e.g. "Perubahan Judul", "Perubahan Dosen Pembimbing", "Perubahan Judul dan Dosen Pembimbing", "Perpanjangan SK"). Default is "Permohonan Baru".
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 description: ID Permohonan SKTA jika memperbarui draft yang sudah ada
+ *               mahasiswaId:
+ *                 type: string
+ *                 description: Mahasiswa ID
+ *               category:
+ *                 type: string
+ *               judulProposalIndonesia:
+ *                 type: string
+ *               judulProposalInggris:
+ *                 type: string
+ *               dosenPembimbing1Id:
+ *                 type: string
+ *               dosenPembimbing2Id:
+ *                 type: string
+ *               evidence:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Permohonan SKTA berhasil disimpan sebagai draft
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Masa izin edit kedaluwarsa atau tidak diizinkan
+ *       404:
+ *         description: Mahasiswa / Dosen / Permohonan tidak ditemukan
+ *       500:
+ *         description: Internal server error
+ */
+router.post(
+  "/",
+  verifyToken,
+  isMahasiswa,
+  upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
+  createPermohonanSkta
+);
+
+/**
+ * @swagger
+ * /api/permohonan-skta/submit:
+ *   post:
+ *     summary: Submit Permohonan SKTA (Finalize submission, sets isDraft to false)
  *     tags: [Permohonan SKTA]
  *     security:
  *       - bearerAuth: []
@@ -145,15 +206,20 @@ router.get("/export-skta", verifyToken, isAdmin, exportSktaZip);
  *           schema:
  *             type: object
  *             required:
+ *               - id
  *               - mahasiswaId
  *               - judulProposalIndonesia
  *               - judulProposalInggris
  *               - dosenPembimbing1Id
  *               - dosenPembimbing2Id
- *               - researchGroupId
  *               - evidence
  *             properties:
+ *               id:
+ *                 type: string
+ *                 description: ID Permohonan SKTA draft yang akan disubmit
  *               mahasiswaId:
+ *                 type: string
+ *               category:
  *                 type: string
  *               judulProposalIndonesia:
  *                 type: string
@@ -163,25 +229,30 @@ router.get("/export-skta", verifyToken, isAdmin, exportSktaZip);
  *                 type: string
  *               dosenPembimbing2Id:
  *                 type: string
- *               researchGroupId:
- *                 type: string
  *               evidence:
  *                 type: string
  *                 format: binary
+ *                 description: Berkas evidence
  *     responses:
- *       201:
- *         description: Permohonan SKTA submitted successfully
+ *       200:
+ *         description: Permohonan SKTA berhasil diajukan
  *       400:
  *         description: Validation error
+ *       403:
+ *         description: Masa izin edit kedaluwarsa atau tidak diizinkan
+ *       404:
+ *         description: Data mahasiswa/dosen tidak ditemukan
+ *       409:
+ *         description: Mahasiswa sudah memiliki pengajuan SK aktif
  *       500:
  *         description: Internal server error
  */
 router.post(
-  "/",
+  "/submit",
   verifyToken,
   isMahasiswa,
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
-  createPermohonanSkta
+  submitPermohonanSkta
 );
 
 /**
@@ -360,6 +431,10 @@ router.get("/:id/download/evidence", verifyToken, downloadEvidence);
  *     responses:
  *       200:
  *         description: Permohonan SKTA approved successfully
+ *       400:
+ *         description: Permohonan SKTA masih berupa draft dan belum disubmit
+ *       404:
+ *         description: Permohonan SKTA atau Admin tidak ditemukan
  */
 router.put(
   "/:id/approve",
@@ -400,6 +475,10 @@ router.put(
  *     responses:
  *       200:
  *         description: Permohonan SKTA rejected successfully
+ *       400:
+ *         description: Permohonan SKTA masih berupa draft dan belum disubmit
+ *       404:
+ *         description: Permohonan SKTA atau Admin tidak ditemukan
  */
 router.put(
   "/:id/reject",
@@ -425,6 +504,8 @@ router.put(
  *     responses:
  *       200:
  *         description: Retrieve existing Dokumen Validasi SKTA
+ *       400:
+ *         description: Dokumen validasi hanya dapat diakses untuk permohonan yang sudah disubmit
  *       404:
  *         description: Berkas validasi SKTA not found
  *   post:
@@ -458,7 +539,7 @@ router.put(
  *       201:
  *         description: Dokumen validasi SKTA uploaded successfully
  *       400:
- *         description: Validation error
+ *         description: Validation error atau permohonan masih draft
  *       404:
  *         description: Permohonan SKTA not found
  */
