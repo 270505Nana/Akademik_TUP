@@ -1,12 +1,11 @@
-import express from 'express';
+import express from "express";
+import { register, login, user } from "../../controllers/authController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { validate } from "../../middlewares/validate.js";
+import { authRateLimiter } from "../../middlewares/rateLimiter.js";
+import { registerSchema, loginSchema } from "../../schemas/index.js";
 
 const router = express.Router();
-
-import { register, login, user } from '../../controllers/authController.js';
-
-import { verifyToken } from '../../middlewares/auth.js';
-
-
 
 /**
  * @swagger
@@ -53,7 +52,7 @@ import { verifyToken } from '../../middlewares/auth.js';
  *       500:
  *         description: Internal server error
  */
-router.post("/register", register);
+router.post("/register", authRateLimiter, validate(registerSchema), register);
 
 /**
  * @swagger
@@ -79,7 +78,7 @@ router.post("/register", register);
  *       401:
  *         description: Invalid email or password
  */
-router.post("/login", login);
+router.post("/login", authRateLimiter, validate(loginSchema), login);
 
 /**
  * @swagger

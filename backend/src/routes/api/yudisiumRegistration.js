@@ -108,14 +108,8 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [name, nim, ipk, tak, tglSidang, submittedAt, createdAt, updatedAt]
- *         description: Sort field (default createdAt)
- *       - in: query
- *         name: sortOrder
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *         description: Sort order direction (asc or desc, default desc)
+ *           enum: [newest, oldest, nameAsc, nameDesc, nimAsc, nimDesc, ipkAsc, ipkDesc, takAsc, takDesc, tglSidangAsc, tglSidangDesc, submittedAtAsc, submittedAtDesc, updatedAtAsc, updatedAtDesc]
+ *         description: Sort option (newest for baru-lama, oldest for lama-baru, nameAsc/nameDesc, nimAsc/nimDesc, ipkAsc/ipkDesc, takAsc/takDesc, tglSidangAsc/tglSidangDesc, submittedAtAsc/submittedAtDesc, updatedAtAsc/updatedAtDesc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:

@@ -1,16 +1,16 @@
-import express from 'express';
+import express from "express";
+import {
+  listMahasiswa,
+  upsertMahasiswa,
+  findMahasiswaById,
+} from "../../controllers/mahasiswaController.js";
+import { getMahasiswaDashboard } from "../../controllers/dashboardController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { isMahasiswa } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import { upsertMahasiswaSchema } from "../../schemas/index.js";
 
 const router = express.Router();
-
-import { listMahasiswa,
-  upsertMahasiswa,
-  findMahasiswaById, } from '../../controllers/mahasiswaController.js';
-
-import {getMahasiswaDashboard} from '../../controllers/dashboardController.js';
-
-import { verifyToken } from '../../middlewares/auth.js';
-
-import { isMahasiswa } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -63,7 +63,7 @@ router.get("/", verifyToken, listMahasiswa);
  *       200:
  *         description: Berhasil mengambil data dashboard mahasiswa
  */
-router.get('/dashboard', verifyToken, getMahasiswaDashboard);
+router.get("/dashboard", verifyToken, getMahasiswaDashboard);
 
 /**
  * @swagger
@@ -95,19 +95,13 @@ router.get('/dashboard', verifyToken, getMahasiswaDashboard);
  *             properties:
  *               nim:
  *                 type: string
- *                 example: 2011104001
+ *                 example: "2011104001"
  *               name:
  *                 type: string
  *                 example: John Doe
- *               className:
- *                 type: string
- *                 example: SE-07-01
  *               kelasAsal:
  *                 type: string
  *                 example: SE-07-01
- *               year:
- *                 type: integer
- *                 example: 2023
  *               tahunAngkatan:
  *                 type: integer
  *                 example: 2023
@@ -147,7 +141,7 @@ router.get('/dashboard', verifyToken, getMahasiswaDashboard);
 router.put(
   "/:id",
   verifyToken,
-  isMahasiswa,
+  validate(upsertMahasiswaSchema),
   upsertMahasiswa,
 );
 
