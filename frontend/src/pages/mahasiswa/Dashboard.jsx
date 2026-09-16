@@ -62,14 +62,25 @@ const formatDateShort = (d) =>
 
 const pickRelevantPeriod = (list = []) => {
   if (!Array.isArray(list) || list.length === 0) return null;
-  const open = list.find(p => p.isOpen === true);
+  const flat = [];
+  list.forEach(item => {
+    if (!item) return;
+    if (item.pendaftaran || item.pelaksanaan) {
+      if (item.pendaftaran) flat.push(item.pendaftaran);
+      if (item.pelaksanaan) flat.push(item.pelaksanaan);
+    } else {
+      flat.push(item);
+    }
+  });
+  if (flat.length === 0) return null;
+  const open = flat.find(p => p && p.isOpen === true);
   if (open) return { ...open, state: 'aktif' };
   const now = new Date();
-  const upcoming = list
-    .filter(p => new Date(p.startDate) > now)
+  const upcoming = flat
+    .filter(p => p && new Date(p.startDate) > now)
     .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
   if (upcoming.length > 0) return { ...upcoming[0], state: 'mendatang' };
-  const past = [...list].sort((a, b) => new Date(b.endDate) - new Date(a.endDate));
+  const past = [...flat].sort((a, b) => new Date(b?.endDate || 0) - new Date(a?.endDate || 0));
   return past.length > 0 ? { ...past[0], state: 'selesai' } : null;
 };
 
@@ -203,8 +214,18 @@ const DashboardMahasiswa = () => {
         }
 
         const allPeriods = await getSidangPeriods().catch(() => []);
+        const flatPeriods = [];
+        (allPeriods ?? []).forEach(item => {
+          if (!item) return;
+          if (item.pendaftaran || item.pelaksanaan) {
+            if (item.pendaftaran) flatPeriods.push(item.pendaftaran);
+            if (item.pelaksanaan) flatPeriods.push(item.pelaksanaan);
+          } else {
+            flatPeriods.push(item);
+          }
+        });
         const assignedPeriode = registration.sidangPeriodId
-          ? (allPeriods ?? []).find(p => p.id === registration.sidangPeriodId) ?? null
+          ? (flatPeriods.find(p => p.id === registration.sidangPeriodId) ?? null)
           : null;
 
         const status = determineSidangStatus(registration, null, assignedPeriode);

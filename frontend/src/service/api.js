@@ -514,9 +514,12 @@ export const getStudyPrograms = async () => api.get("/api/study-programs").then(
 export const getStudyProgramById = async (id) => api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
 
 // --- SIDANG PERIODS ---
-export const getSidangPeriods = async () => {
+export const getSidangPeriods = async (params = {}) => {
   try {
-    const response = await api.get("/api/sidang-periods?limit=all");
+    const query = typeof params === 'string' ? { search: params } : params;
+    const response = await api.get("/api/sidang-periods", {
+      params: { limit: "all", ...query }
+    });
     return response.data?.data ?? response.data;
   } catch (err) {
     if (err.response?.status === 404) return null;
@@ -536,13 +539,12 @@ export const updateSidangPeriod = async (id, payload) => {
 
 
 // --- YUDISIUM PERIODS ---
-export const getYudisiumPeriods = async (category = '') => {
+export const getYudisiumPeriods = async (params = '') => {
   try {
-    const url = category 
-      ? `/api/yudisium-periods?category=${encodeURIComponent(category)}&limit=all` 
-      : `/api/yudisium-periods?limit=all`;
-      
-    const response = await api.get(url);
+    const query = typeof params === 'string' ? (params ? { category: params } : {}) : params;
+    const response = await api.get("/api/yudisium-periods", {
+      params: { limit: "all", ...query }
+    });
     return response.data?.data || response.data || [];
   } catch (err) {
     if (err.response?.status === 404) return [];
@@ -552,12 +554,27 @@ export const getYudisiumPeriods = async (category = '') => {
 
 export const getActiveYudisiumPeriod = async () => {
   try {
-    const response = await api.get('/api/yudisium-periods?category=pendaftaran yudisium&limit=all');
+    const response = await api.get('/api/yudisium-periods', {
+      params: { category: 'pendaftaran yudisium', limit: 'all' }
+    });
     const periods = response.data?.data ?? response.data;
+    const list = Array.isArray(periods) ? periods : [];
 
     const now = new Date();
 
-    const activePeriod = periods.find(p => {
+    const flat = [];
+    list.forEach(item => {
+      if (!item) return;
+      if (item.pendaftaran || item.pelaksanaan) {
+        if (item.pendaftaran) flat.push(item.pendaftaran);
+        if (item.pelaksanaan) flat.push(item.pelaksanaan);
+      } else {
+        flat.push(item);
+      }
+    });
+
+    const activePeriod = flat.find(p => {
+      if (!p || !p.startDate || !p.endDate) return false;
       const start = new Date(p.startDate);
       const end = new Date(p.endDate);
       return p.isOpen === true && now >= start && now <= end;
@@ -699,27 +716,31 @@ export const downloadTranskripFile = async (uploadId) => {
 // ------------------------------------------- MAHASISWA SKL & TRANSKRIP -------------------------------------------
 
 /**
- * Ambil data unggahan SKL milik mahasiswa yang sedang login.
- * @param {string} [mahasiswaId]
+ * Ambil data SKL/Transkrip milik mahasiswa (by mahasiswaId).
+ * 404 berarti mahasiswa belum punya dokumen ter-upload, dikembalikan sebagai null.
  */
 export const getMySklUpload = async (mahasiswaId) => {
-  const params = { limit: 'all' };
-  if (mahasiswaId) params.mahasiswaId = mahasiswaId;
-  const response = await api.get('/api/skl', { params });
-  const list = response.data?.data || response.data || [];
-  return Array.isArray(list) ? (list[0] || null) : null;
+  if (!mahasiswaId) return null;
+
+  try {
+    const response = await api.get(`/api/skl/${mahasiswaId}`);
+    return response.data?.data ?? response.data ?? null;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
 };
 
-/**
- * Ambil data unggahan Transkrip milik mahasiswa yang sedang login.
- * @param {string} [mahasiswaId]
- */
 export const getMyTranskripUpload = async (mahasiswaId) => {
-  const params = { limit: 'all' };
-  if (mahasiswaId) params.mahasiswaId = mahasiswaId;
-  const response = await api.get('/api/transkrip', { params });
-  const list = response.data?.data || response.data || [];
-  return Array.isArray(list) ? (list[0] || null) : null;
+  if (!mahasiswaId) return null;
+
+  try {
+    const response = await api.get(`/api/transkrip/${mahasiswaId}`);
+    return response.data?.data ?? response.data ?? null;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
 };
 
 export default api;
