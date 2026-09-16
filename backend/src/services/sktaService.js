@@ -87,34 +87,3 @@ export const updatePermohonanSkta = async (id, data) => {
   });
 };
 
-export const getDokumenValidasi = async (permohonanSktaId) => {
-  return await prisma.berkasMahasiswa.findFirst({
-    where: {
-      category: "Dokumen Validasi Skta",
-      permohonanSktaId,
-      deletedAt: null,
-    },
-    include: {
-      mahasiswa: {
-        include: {
-          user: true,
-          studyProgram: true,
-        },
-      },
-      permohonanSkta: {
-        include: {
-          dosenPembimbing1: {
-            include: {
-              user: true,
-            },
-          },
-          dosenPembimbing2: {
-            include: {
-              user: true,
-            },
-          },
-        },
-      },
-    },
-  });
-};

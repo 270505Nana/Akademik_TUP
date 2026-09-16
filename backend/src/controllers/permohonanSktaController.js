@@ -32,7 +32,8 @@ const sanitizeFilenamePart = (str) => {
 // [Route] Mendapatkan Semua Permohonan SKTA
 const listPermohonanSkta = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { total, data } = await sktaService.getPermohonanSktas(paginationParams);
+  const { total, data } =
+    await sktaService.getPermohonanSktas(paginationParams);
   const enriched = data.map((item) => mapPermohonanToFrontend(item, req));
   res.json(formatPaginationResponse(enriched, total, paginationParams));
 });
@@ -42,22 +43,18 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
   const category = req.query.category || "Permohonan Baru";
   const {
     mahasiswaId,
-    proposalTitleId,
     judulProposalIndonesia,
-    proposalTitleEn,
     judulProposalInggris,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
   } = req.body;
 
   const mhsId = mahasiswaId;
-  const judulIndo = proposalTitleId || judulProposalIndonesia;
-  const judulEng = proposalTitleEn || judulProposalInggris;
 
   if (
     !mhsId ||
-    !judulIndo ||
-    !judulEng ||
+    !judulProposalIndonesia ||
+    !judulProposalInggris ||
     !dosenPembimbing1Id ||
     !dosenPembimbing2Id
   ) {
@@ -118,8 +115,8 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
     data: {
       category,
       mahasiswaId: mhsId,
-      judulProposalIndonesia: judulIndo,
-      judulProposalInggris: judulEng,
+      judulProposalIndonesia,
+      judulProposalInggris,
       dosenPembimbing1Id,
       dosenPembimbing2Id,
       researchGroupId,
@@ -171,30 +168,17 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
   }
 
   const {
-    proposalTitleId,
     judulProposalIndonesia,
-    proposalTitleEn,
     judulProposalInggris,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
   } = req.body;
 
-  const judulIndo = proposalTitleId || judulProposalIndonesia;
-  const judulEng = proposalTitleEn || judulProposalInggris;
-
   const evidenceFile = getUploadedFile(req.files, "evidence");
 
   const updateData = {
-    judulProposalIndonesia: (
-      judulProposalIndonesia ||
-      proposalTitleId ||
-      ""
-    ).trim(),
-    judulProposalInggris: (
-      judulProposalInggris ||
-      proposalTitleEn ||
-      ""
-    ).trim(),
+    judulProposalIndonesia: (judulProposalIndonesia || "").trim(),
+    judulProposalInggris: (judulProposalInggris || "").trim(),
     message: null, // Clear rejection message upon student resubmission
     isEdit: null, // Clear revision deadline upon student resubmission
   };
