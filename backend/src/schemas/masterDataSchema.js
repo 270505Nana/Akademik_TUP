@@ -31,27 +31,24 @@ export const upsertMahasiswaSchema = z.object({
     .string({ required_error: "NIM wajib diisi" })
     .trim()
     .min(1, "NIM wajib diisi"),
-  kelasAsal: z.string().trim().optional().nullable(),
+  kelasAsal: z
+    .string({ required_error: "Kelas asal wajib diisi" })
+    .trim()
+    .min(1, "Kelas asal wajib diisi"),
   tahunAngkatan: z.coerce
-    .number()
+    .number({ required_error: "Tahun angkatan wajib diisi" })
     .int()
     .min(2000)
-    .max(2100)
-    .optional()
-    .nullable(),
+    .max(2100),
+  studyProgramId: z
+    .string({ required_error: "Program Studi wajib dipilih" })
+    .uuid("ID Program Studi tidak valid"),
+  dosenWaliId: z
+    .string({ required_error: "Dosen Wali wajib dipilih" })
+    .uuid("ID Dosen Wali tidak valid"),
   sks: z.coerce.number().int().min(0).max(200).optional().nullable(),
   ipk: z.coerce.number().min(0).max(4).optional().nullable(),
   tak: z.coerce.number().int().min(0).optional().nullable(),
-  studyProgramId: z
-    .string()
-    .uuid("ID Program Studi tidak valid")
-    .optional()
-    .nullable(),
-  dosenWaliId: z
-    .string()
-    .uuid("ID Dosen Wali tidak valid")
-    .optional()
-    .nullable(),
 });
 
 // Schema Admin

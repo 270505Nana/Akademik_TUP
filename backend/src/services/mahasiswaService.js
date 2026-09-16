@@ -61,7 +61,7 @@ export const getMahasiswaByIdOrUserId = async (idOrUserId) => {
   return mahasiswa;
 };
 
-export const upsertMahasiswa = async (idOrUserId, payload) => {
+export const upsertMahasiswa = async (idOrUserId, payload, currentUser) => {
   const {
     name,
     nim,
@@ -74,6 +74,8 @@ export const upsertMahasiswa = async (idOrUserId, payload) => {
     dosenWaliId,
   } = payload;
 
+  // Cek apakah ada mahasiswa dengan id sama
+  // Jika tidak ada berarti itu mungkin id user
   let mRecord = await prisma.mahasiswa.findUnique({
     where: { id: idOrUserId },
   });
@@ -84,6 +86,27 @@ export const upsertMahasiswa = async (idOrUserId, payload) => {
       where: { userId: idOrUserId },
     });
     if (mRecord) userId = mRecord.userId;
+  }
+
+  // Authorization Check: Mahasiswa hanya boleh upsert data miliknya sendiri
+  if (currentUser) {
+    if (currentUser.role === ROLES.MAHASISWA && currentUser.id !== userId) {
+      const error = new Error(
+        "Akses ditolak: Anda hanya dapat mengubah data profil Anda sendiri.",
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+    if (
+      currentUser.role !== ROLES.ADMIN &&
+      currentUser.role !== ROLES.MAHASISWA
+    ) {
+      const error = new Error(
+        "Akses ditolak: Anda tidak memiliki izin untuk mengubah data mahasiswa.",
+      );
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   const user = await prisma.user.findFirst({

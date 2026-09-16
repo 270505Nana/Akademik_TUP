@@ -95,19 +95,13 @@ router.get("/dashboard", verifyToken, getMahasiswaDashboard);
  *             properties:
  *               nim:
  *                 type: string
- *                 example: 2011104001
+ *                 example: "2011104001"
  *               name:
  *                 type: string
  *                 example: John Doe
- *               className:
- *                 type: string
- *                 example: SE-07-01
  *               kelasAsal:
  *                 type: string
  *                 example: SE-07-01
- *               year:
- *                 type: integer
- *                 example: 2023
  *               tahunAngkatan:
  *                 type: integer
  *                 example: 2023

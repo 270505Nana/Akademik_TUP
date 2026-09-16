@@ -32,6 +32,7 @@ const upsertMahasiswa = asyncHandler(async (req, res) => {
   const mahasiswa = await mahasiswaService.upsertMahasiswa(
     req.params.id,
     req.body,
+    req.user,
   );
   res.json({
     message: "Data mahasiswa berhasil disimpan",
