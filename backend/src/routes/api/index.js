@@ -17,9 +17,11 @@ import yudisiumRegistrationRouter from './yudisiumRegistration.js';
 import sklUploadRouter from './sklUpload.js';
 import transkripUploadRouter from './transkripUpload.js';
 import ruanganRouter from './ruangan.js';
+import healthRouter from './health.js';
 
 const router = express.Router();
 
+router.use("/health", healthRouter);
 router.use("/auth", authRouter);
 router.use("/admin", adminRouter);
 router.use("/research-groups", researchGroupRouter);
