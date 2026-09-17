@@ -1,4 +1,8 @@
 import 'dotenv/config';
+
+// Pastikan default timezone proses Node.js adalah Asia/Jakarta (WIB)
+process.env.TZ = process.env.TZ || 'Asia/Jakarta';
+
 import app from './app.js';
 import prisma from './config/prisma.js';
 

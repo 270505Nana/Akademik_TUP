@@ -348,20 +348,6 @@ const getDosenDashboard = asyncHandler(async (req, res) => {
       nim: sidang.mahasiswa?.nim || "-",
       studyProgram: sidang.mahasiswa?.studyProgram?.name || "-",
       position: position,
-      hari: sidang.tglSidang
-        ? new Date(sidang.tglSidang).toLocaleDateString("id-ID", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })
-        : "Belum ditentukan",
-      jam: sidang.tglSidang
-        ? new Date(sidang.tglSidang).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "-",
       ruangan: sidang.ruanganSidang?.name || "Ruangan Belum Ditentukan",
       tglSidang: sidang.tglSidang,
     };
