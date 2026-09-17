@@ -74,8 +74,9 @@ const PermohonanSK = () => {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const res      = await getAllSktaRequests();
+      const res = await getAllSktaRequests();
       const dataList = res?.data ?? res ?? [];
+      
       const groupByStudent = new Map();
       dataList.forEach(item => {
         const sid = item.studentId ?? item.mahasiswaId ?? item.student?.id ?? item.mahasiswa?.id;
@@ -656,4 +657,4 @@ const PermohonanSK = () => {
   );
 };
 
-export default PermohonanSK;  
+export default PermohonanSK;
