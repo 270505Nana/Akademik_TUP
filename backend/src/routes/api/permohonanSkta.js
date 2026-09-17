@@ -33,7 +33,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/permohonan-skta:
  *   get:
- *     summary: Get all permohonan SKTA data (paginated, only submitted records)
+ *     summary: Get all permohonan SKTA data (paginated, excluding initial unsubmitted drafts)
  *     tags: [Permohonan SKTA]
  *     security:
  *       - bearerAuth: []
@@ -42,7 +42,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
- *         description: Permohonan SKTA data retrieved successfully with pagination (isDraft false only)
+ *         description: Permohonan SKTA data retrieved successfully with pagination (submitted and revision records)
  *         content:
  *           application/json:
  *             schema:

@@ -73,7 +73,17 @@ export const checkSktaEditable = async (id) => {
 export const getPermohonanSktas = async ({ skip, take }, customWhere = {}) => {
   const where = {
     deletedAt: null,
-    isDraft: false,
+    OR: [
+      { isDraft: false },
+      {
+        isDraft: true,
+        OR: [
+          { isEdit: { not: null } },
+          { wasRejectedBefore: true },
+          { message: { not: null } },
+        ],
+      },
+    ],
     ...customWhere,
   };
 
