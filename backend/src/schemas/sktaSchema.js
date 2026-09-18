@@ -37,7 +37,8 @@ export const rejectSktaSchema = z.object({
     .string({ required_error: "Admin ID wajib diisi" })
     .uuid("Admin ID tidak valid"),
   message: z
-    .string({ required_error: "Alasan penolakan wajib diisi" })
+    .string({ required_error: "Pesan penolakan/revisi wajib diisi" })
     .trim()
-    .min(1, "Alasan penolakan wajib diisi"),
+    .min(1, "Pesan penolakan/revisi wajib diisi"),
+  isEdit: z.string().optional().nullable(),
 });

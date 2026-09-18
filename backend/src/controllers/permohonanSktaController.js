@@ -10,6 +10,7 @@ import {
 import {
   sendValidationError,
   isNil,
+  isValidISO8601,
 } from "../utils/validationHelper.js";
 import {
   uploadFile,
@@ -860,9 +861,29 @@ const approvePermohonanSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Menolak Permohonan SKTA (Reject)
+// [Route] Menolak / Meminta Revisi Permohonan SKTA (Reject / Revision Request)
 const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const { message, adminId, isEdit } = req.body;
+
+  const errors = [];
+  if (isNil(adminId)) {
+    errors.push({ field: "adminId", message: "ID staf akademik wajib diisi" });
+  }
+  if (isNil(message)) {
+    errors.push({ field: "message", message: "Pesan penolakan wajib diisi" });
+  }
+  if (!isNil(isEdit) && !isValidISO8601(isEdit)) {
+    errors.push({
+      field: "isEdit",
+      message: "isEdit harus berupa tanggal yang valid (format ISO 8601)",
+    });
+  }
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
+
   const permohonan = await prisma.permohonanSkta.findUnique({ where: { id } });
   if (!permohonan) {
     res.status(404);
@@ -874,8 +895,6 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
     throw new Error("Permohonan SKTA masih berupa draft dan belum disubmit");
   }
 
-  const { message, adminId } = req.body;
-
   // Cek admin (mencakup admin.id, user.id, atau fallback ke user token)
   const adminExist = await resolveAdmin(adminId, req.user);
   if (!adminExist) {
@@ -886,11 +905,11 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   const data = await prisma.permohonanSkta.update({
     where: { id },
     data: {
-      isDraft: true,
+      isDraft: isEdit ? true : false,
       wasRejectedBefore: true,
       message,
       adminId: adminExist.id,
-      isEdit: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Memberikan izin edit selama 7 hari ke depan
+      isEdit: isEdit ? new Date(isEdit) : null,
     },
     include: {
       mahasiswa: {
@@ -923,7 +942,7 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   });
 
   res.json({
-    message: "Permohonan SKTA berhasil ditolak",
+    message: "Permohonan SKTA berhasil ditolak / diminta revisi",
     data: mapPermohonanToFrontend(data, req),
   });
 });

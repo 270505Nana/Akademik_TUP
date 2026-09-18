@@ -448,7 +448,7 @@ router.put(
  * @swagger
  * /api/permohonan-skta/{id}/reject:
  *   put:
- *     summary: Reject Permohonan SKTA
+ *     summary: Reject / request revision for Permohonan SKTA
  *     tags: [Permohonan SKTA]
  *     security:
  *       - bearerAuth: []
@@ -458,6 +458,7 @@ router.put(
  *         required: true
  *         schema:
  *           type: string
+ *         description: Permohonan SKTA ID (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -470,13 +471,22 @@ router.put(
  *             properties:
  *               message:
  *                 type: string
+ *                 description: Catatan / alasan penolakan atau revisi
  *               adminId:
  *                 type: string
+ *                 description: ID staf akademik / admin
+ *               isEdit:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Batas waktu revisi (ISO 8601). Jika diisi, permohonan menjadi revisi/draft. Jika null/kosong, permohonan ditolak permanen.
+ *                 example: "2026-03-31T23:59:59.000Z"
  *     responses:
  *       200:
- *         description: Permohonan SKTA rejected successfully
+ *         description: Permohonan SKTA berhasil ditolak / diminta revisi
  *       400:
- *         description: Permohonan SKTA masih berupa draft dan belum disubmit
+ *         description: Validation error atau permohonan masih draft
+ *       401:
+ *         description: Token tidak valid
  *       404:
  *         description: Permohonan SKTA atau Admin tidak ditemukan
  */
