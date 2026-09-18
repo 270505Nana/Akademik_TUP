@@ -12,7 +12,7 @@ import {
   Search,
   ChevronRight,
 } from 'lucide-react';
-import './landing.css';
+import '../../components/landing/landing.css';
 
 // Data informasi sementara sebelum nantinya diambil dari Spreadsheet (data-driven)
 const INFORMATION_CATEGORIES = [

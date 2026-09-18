@@ -743,4 +743,32 @@ export const getMyTranskripUpload = async (mahasiswaId) => {
   }
 };
 
+// ------------------------------------------- DOSEN: MAHASISWA BIMBINGAN -------------------------------------------
+
+/**
+ * Mendapatkan daftar mahasiswa bimbingan pendaftaran sidang untuk dosen yang sedang login.
+ * @param {Object} params - { search, studyProgramId, sortBy, page, limit }
+ * @returns {Promise<{ data: Array, pagination: Object }>}
+ */
+export const getMahasiswaBimbingan = async (params = {}) => {
+  const cleanParams = {};
+  if (params.search && params.search.trim() !== '') cleanParams.search = params.search.trim();
+  if (params.studyProgramId && params.studyProgramId.trim() !== '') cleanParams.studyProgramId = params.studyProgramId.trim();
+  if (params.sortBy && params.sortBy.trim() !== '') cleanParams.sortBy = params.sortBy.trim();
+  if (params.page !== undefined && params.page !== null) cleanParams.page = params.page;
+  if (params.limit !== undefined && params.limit !== null) cleanParams.limit = params.limit;
+
+  const response = await api.get('/api/mahasiswa-bimbingan', { params: cleanParams });
+  return response.data;
+};
+
+/**
+ * Mendapatkan data ringkasan dashboard untuk dosen yang sedang login.
+ * @returns {Promise<Object>}
+ */
+export const getDosenDashboard = async () => {
+  const response = await api.get('/api/dosen/dashboard');
+  return response.data?.data ?? response.data;
+};
+
 export default api;
