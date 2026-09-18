@@ -5,7 +5,9 @@ import { isKetuaKK, isAdmin } from '../../middlewares/authorize.js';
 import {
   listPenjadwalanSidang,
   setPengujiSidang,
+  batchSetPengujiSidang,
   setJadwalSidang,
+  batchSetJadwalSidang,
 } from '../../controllers/penjadwalanSidangController.js';
 
 /**
@@ -72,6 +74,117 @@ import {
  *         description: Invalid token
  */
 router.get("/", verifyToken, listPenjadwalanSidang);
+
+/**
+ * @swagger
+ * /api/penjadwalan-sidang/set-penguji/batch:
+ *   put:
+ *     summary: Set dosen penguji sidang batch (Ketua KK only)
+ *     tags: [Penjadwalan Sidang]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               type: object
+ *               required:
+ *                 - id
+ *                 - dosenPenguji1Id
+ *                 - dosenPenguji2Id
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   description: Sidang registration ID (UUID)
+ *                 dosenPenguji1Id:
+ *                   type: string
+ *                   description: ID dosen penguji 1 (UUID)
+ *                 dosenPenguji2Id:
+ *                   type: string
+ *                   description: ID dosen penguji 2 (UUID)
+ *     responses:
+ *       200:
+ *         description: Dosen penguji sidang batch berhasil ditentukan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Validation error / Jadwal bentrok
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya dosen dengan status Ketua KK yang dapat mengakses)
+ *       404:
+ *         description: Sidang registration or dosen not found
+ */
+router.put("/set-penguji/batch", verifyToken, isKetuaKK, batchSetPengujiSidang);
+
+/**
+ * @swagger
+ * /api/penjadwalan-sidang/set-jadwal/batch:
+ *   put:
+ *     summary: Set jadwal sidang batch (Admin only)
+ *     tags: [Penjadwalan Sidang]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               type: object
+ *               required:
+ *                 - id
+ *                 - tglSidang
+ *                 - ruanganSidangId
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   description: Sidang registration ID (UUID)
+ *                 tglSidang:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Tanggal dan waktu pelaksanaan sidang (ISO 8601)
+ *                 ruanganSidangId:
+ *                   type: string
+ *                   description: ID ruangan sidang (UUID)
+ *     responses:
+ *       200:
+ *         description: Jadwal sidang batch berhasil ditentukan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Validation error / Jadwal bentrok
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya admin yang dapat mengakses)
+ *       404:
+ *         description: Sidang registration or ruangan not found
+ */
+router.put("/set-jadwal/batch", verifyToken, isAdmin, batchSetJadwalSidang);
 
 /**
  * @swagger

@@ -74,6 +74,7 @@ const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 // Helper untuk memeriksa bentrok jadwal (jarak 2 jam) antara ruangan dan dosen
 const checkJadwalConflict = async ({
   registrationId,
+  excludeRegistrationIds = [],
   tglSidang,
   ruanganSidangId,
   dosenIds = [],
@@ -101,9 +102,22 @@ const checkJadwalConflict = async ({
 
   if (orConditions.length === 0) return null;
 
+  const notIds = [];
+  if (registrationId) notIds.push(registrationId);
+  if (Array.isArray(excludeRegistrationIds) && excludeRegistrationIds.length > 0) {
+    notIds.push(...excludeRegistrationIds);
+  }
+
+  const idCondition =
+    notIds.length === 1
+      ? { id: { not: notIds[0] } }
+      : notIds.length > 1
+        ? { id: { notIn: notIds } }
+        : {};
+
   const conflict = await prisma.sidangRegistration.findFirst({
     where: {
-      id: { not: registrationId },
+      ...idCondition,
       deletedAt: null,
       tglSidang: {
         gt: minTime,
@@ -248,6 +262,205 @@ const setPengujiSidang = asyncHandler(async (req, res) => {
   });
 });
 
+// Set Dosen Penguji Sidang Batch (Ketua KK Only)
+const batchSetPengujiSidang = asyncHandler(async (req, res) => {
+  if (!Array.isArray(req.body) || req.body.length === 0) {
+    return sendValidationError(res, [
+      {
+        field: "body",
+        message: "Request body harus berupa array data dan tidak boleh kosong",
+      },
+    ]);
+  }
+
+  const errors = [];
+  const seenIds = new Set();
+
+  req.body.forEach((item, idx) => {
+    if (isNil(item.id)) {
+      errors.push({
+        field: `[${idx}].id`,
+        message: "ID pendaftaran sidang wajib diisi",
+      });
+    } else if (typeof item.id !== "string") {
+      errors.push({
+        field: `[${idx}].id`,
+        message: "ID pendaftaran sidang harus berupa string",
+      });
+    } else if (seenIds.has(item.id)) {
+      errors.push({
+        field: `[${idx}].id`,
+        message: "ID pendaftaran sidang tidak boleh duplikat dalam satu request",
+      });
+    } else {
+      seenIds.add(item.id);
+    }
+
+    if (isNil(item.dosenPenguji1Id)) {
+      errors.push({
+        field: `[${idx}].dosenPenguji1Id`,
+        message: "ID dosen penguji 1 wajib diisi",
+      });
+    } else if (typeof item.dosenPenguji1Id !== "string") {
+      errors.push({
+        field: `[${idx}].dosenPenguji1Id`,
+        message: "ID dosen penguji 1 harus berupa string",
+      });
+    }
+
+    if (isNil(item.dosenPenguji2Id)) {
+      errors.push({
+        field: `[${idx}].dosenPenguji2Id`,
+        message: "ID dosen penguji 2 wajib diisi",
+      });
+    } else if (typeof item.dosenPenguji2Id !== "string") {
+      errors.push({
+        field: `[${idx}].dosenPenguji2Id`,
+        message: "ID dosen penguji 2 harus berupa string",
+      });
+    }
+
+    if (
+      !isNil(item.dosenPenguji1Id) &&
+      !isNil(item.dosenPenguji2Id) &&
+      item.dosenPenguji1Id === item.dosenPenguji2Id
+    ) {
+      errors.push({
+        field: `[${idx}].dosenPenguji2Id`,
+        message: "Dosen penguji 1 dan dosen penguji 2 tidak boleh sama",
+      });
+    }
+  });
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
+
+  const registrationIds = Array.from(seenIds);
+  const registrations = await prisma.sidangRegistration.findMany({
+    where: {
+      id: { in: registrationIds },
+      deletedAt: null,
+    },
+    include: {
+      mahasiswa: { include: { user: true } },
+      dosenPembimbing1: { include: { user: true } },
+      dosenPembimbing2: { include: { user: true } },
+    },
+  });
+
+  const registrationMap = new Map(registrations.map((reg) => [reg.id, reg]));
+  for (const id of registrationIds) {
+    if (!registrationMap.has(id)) {
+      res.status(404);
+      throw new Error(`Pendaftaran sidang dengan ID ${id} tidak ditemukan`);
+    }
+  }
+
+  const allDosenIds = new Set();
+  req.body.forEach((item) => {
+    allDosenIds.add(item.dosenPenguji1Id);
+    allDosenIds.add(item.dosenPenguji2Id);
+  });
+
+  const dosens = await prisma.dosen.findMany({
+    where: {
+      id: { in: Array.from(allDosenIds) },
+      deletedAt: null,
+    },
+    include: { user: true },
+  });
+
+  const dosenMap = new Map(dosens.map((d) => [d.id, d]));
+  for (const dosenId of allDosenIds) {
+    if (!dosenMap.has(dosenId)) {
+      res.status(404);
+      throw new Error(`Dosen penguji dengan ID ${dosenId} tidak ditemukan`);
+    }
+  }
+
+  // 1. Validasi bentrok antar item di dalam batch (jika sudah ada tglSidang)
+  const scheduledItems = req.body
+    .map((item) => {
+      const reg = registrationMap.get(item.id);
+      return {
+        ...item,
+        tglSidang: reg.tglSidang,
+        mahasiswaName: reg.mahasiswa?.user?.name || "Mahasiswa",
+        allDosenIds: [
+          reg.dosenPembimbing1Id,
+          reg.dosenPembimbing2Id,
+          item.dosenPenguji1Id,
+          item.dosenPenguji2Id,
+        ].filter(Boolean),
+      };
+    })
+    .filter((item) => item.tglSidang);
+
+  for (let i = 0; i < scheduledItems.length; i++) {
+    for (let j = i + 1; j < scheduledItems.length; j++) {
+      const itemA = scheduledItems[i];
+      const itemB = scheduledItems[j];
+      const diff = Math.abs(
+        new Date(itemA.tglSidang).getTime() -
+          new Date(itemB.tglSidang).getTime(),
+      );
+
+      if (diff < TWO_HOURS_MS) {
+        const commonDosenId = itemA.allDosenIds.find((dId) =>
+          itemB.allDosenIds.includes(dId),
+        );
+        if (commonDosenId) {
+          const dosenObj = dosenMap.get(commonDosenId);
+          const namaDosen =
+            dosenObj?.user?.name || dosenObj?.kodeDosen || "Dosen";
+          res.status(400);
+          throw new Error(
+            `Jadwal bentrok dalam batch: Dosen ${namaDosen} terlibat pada sidang mahasiswa ${itemA.mahasiswaName} dan ${itemB.mahasiswaName} dalam rentang 2 jam.`,
+          );
+        }
+      }
+    }
+  }
+
+  // 2. Validasi bentrok dengan data lain di database
+  for (const item of scheduledItems) {
+    const conflictMessage = await checkJadwalConflict({
+      excludeRegistrationIds: registrationIds,
+      tglSidang: item.tglSidang,
+      dosenIds: [item.dosenPenguji1Id, item.dosenPenguji2Id],
+    });
+
+    if (conflictMessage) {
+      res.status(400);
+      throw new Error(conflictMessage);
+    }
+  }
+
+  const updatedRegistrations = await prisma.$transaction(async (tx) => {
+    const results = [];
+    for (const item of req.body) {
+      const updated = await tx.sidangRegistration.update({
+        where: { id: item.id },
+        data: {
+          dosenPenguji1Id: item.dosenPenguji1Id,
+          dosenPenguji2Id: item.dosenPenguji2Id,
+        },
+        include: penjadwalanSidangInclude,
+      });
+      results.push(updated);
+    }
+    return results;
+  });
+
+  res.json({
+    message: "Dosen penguji sidang batch berhasil ditentukan",
+    data: updatedRegistrations.map((reg) =>
+      mapPenjadwalanSidangToFrontend(reg),
+    ),
+  });
+});
+
 // Set Jadwal Sidang (Admin Only)
 const setJadwalSidang = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -337,4 +550,209 @@ const setJadwalSidang = asyncHandler(async (req, res) => {
   });
 });
 
-export { listPenjadwalanSidang, setPengujiSidang, setJadwalSidang };
+// Set Jadwal Sidang Batch (Admin Only)
+const batchSetJadwalSidang = asyncHandler(async (req, res) => {
+  if (!Array.isArray(req.body) || req.body.length === 0) {
+    return sendValidationError(res, [
+      {
+        field: "body",
+        message: "Request body harus berupa array data dan tidak boleh kosong",
+      },
+    ]);
+  }
+
+  const errors = [];
+  const seenIds = new Set();
+
+  req.body.forEach((item, idx) => {
+    if (isNil(item.id)) {
+      errors.push({
+        field: `[${idx}].id`,
+        message: "ID pendaftaran sidang wajib diisi",
+      });
+    } else if (typeof item.id !== "string") {
+      errors.push({
+        field: `[${idx}].id`,
+        message: "ID pendaftaran sidang harus berupa string",
+      });
+    } else if (seenIds.has(item.id)) {
+      errors.push({
+        field: `[${idx}].id`,
+        message: "ID pendaftaran sidang tidak boleh duplikat dalam satu request",
+      });
+    } else {
+      seenIds.add(item.id);
+    }
+
+    if (isNil(item.tglSidang)) {
+      errors.push({
+        field: `[${idx}].tglSidang`,
+        message: "Tanggal sidang wajib diisi",
+      });
+    } else if (!isValidISO8601(item.tglSidang)) {
+      errors.push({
+        field: `[${idx}].tglSidang`,
+        message:
+          "Tanggal sidang harus berupa tanggal yang valid (format ISO 8601)",
+      });
+    }
+
+    if (isNil(item.ruanganSidangId)) {
+      errors.push({
+        field: `[${idx}].ruanganSidangId`,
+        message: "ID ruangan sidang wajib diisi",
+      });
+    } else if (typeof item.ruanganSidangId !== "string") {
+      errors.push({
+        field: `[${idx}].ruanganSidangId`,
+        message: "ID ruangan sidang harus berupa string",
+      });
+    }
+  });
+
+  if (errors.length > 0) {
+    return sendValidationError(res, errors);
+  }
+
+  const registrationIds = Array.from(seenIds);
+  const registrations = await prisma.sidangRegistration.findMany({
+    where: {
+      id: { in: registrationIds },
+      deletedAt: null,
+    },
+    include: {
+      mahasiswa: { include: { user: true } },
+      dosenPembimbing1: { include: { user: true } },
+      dosenPembimbing2: { include: { user: true } },
+      dosenPenguji1: { include: { user: true } },
+      dosenPenguji2: { include: { user: true } },
+    },
+  });
+
+  const registrationMap = new Map(registrations.map((reg) => [reg.id, reg]));
+  for (const id of registrationIds) {
+    if (!registrationMap.has(id)) {
+      res.status(404);
+      throw new Error(`Pendaftaran sidang dengan ID ${id} tidak ditemukan`);
+    }
+  }
+
+  const allRuanganIds = new Set(req.body.map((item) => item.ruanganSidangId));
+  const ruanganList = await prisma.ruangan.findMany({
+    where: {
+      id: { in: Array.from(allRuanganIds) },
+      deletedAt: null,
+    },
+  });
+
+  const ruanganMap = new Map(ruanganList.map((r) => [r.id, r]));
+  for (const ruanganId of allRuanganIds) {
+    if (!ruanganMap.has(ruanganId)) {
+      res.status(404);
+      throw new Error(`Ruangan sidang dengan ID ${ruanganId} tidak ditemukan`);
+    }
+  }
+
+  // 1. Validasi bentrok antar item di dalam batch
+  const itemsWithMeta = req.body.map((item) => {
+    const reg = registrationMap.get(item.id);
+    return {
+      ...item,
+      mahasiswaName: reg.mahasiswa?.user?.name || "Mahasiswa",
+      involvedDosenIds: [
+        reg.dosenPembimbing1Id,
+        reg.dosenPembimbing2Id,
+        reg.dosenPenguji1Id,
+        reg.dosenPenguji2Id,
+      ].filter(Boolean),
+      involvedDosens: [
+        reg.dosenPembimbing1,
+        reg.dosenPembimbing2,
+        reg.dosenPenguji1,
+        reg.dosenPenguji2,
+      ].filter(Boolean),
+    };
+  });
+
+  for (let i = 0; i < itemsWithMeta.length; i++) {
+    for (let j = i + 1; j < itemsWithMeta.length; j++) {
+      const itemA = itemsWithMeta[i];
+      const itemB = itemsWithMeta[j];
+      const diff = Math.abs(
+        new Date(itemA.tglSidang).getTime() -
+          new Date(itemB.tglSidang).getTime(),
+      );
+
+      if (diff < TWO_HOURS_MS) {
+        if (itemA.ruanganSidangId === itemB.ruanganSidangId) {
+          const ruanganObj = ruanganMap.get(itemA.ruanganSidangId);
+          const namaRuangan = ruanganObj
+            ? `${ruanganObj.name} (${ruanganObj.gedung})`
+            : "yang sama";
+          res.status(400);
+          throw new Error(
+            `Jadwal bentrok dalam batch: Ruangan ${namaRuangan} dijadwalkan bersamaan untuk mahasiswa ${itemA.mahasiswaName} dan ${itemB.mahasiswaName} dalam rentang 2 jam.`,
+          );
+        }
+
+        const commonDosen = itemA.involvedDosens.find((dA) =>
+          itemB.involvedDosenIds.includes(dA.id),
+        );
+        if (commonDosen) {
+          const namaDosen =
+            commonDosen.user?.name || commonDosen.kodeDosen || "Dosen";
+          res.status(400);
+          throw new Error(
+            `Jadwal bentrok dalam batch: Dosen ${namaDosen} terjadwal untuk mahasiswa ${itemA.mahasiswaName} dan ${itemB.mahasiswaName} dalam rentang 2 jam.`,
+          );
+        }
+      }
+    }
+  }
+
+  // 2. Validasi bentrok dengan jadwal lain di database
+  for (const item of itemsWithMeta) {
+    const conflictMessage = await checkJadwalConflict({
+      excludeRegistrationIds: registrationIds,
+      tglSidang: item.tglSidang,
+      ruanganSidangId: item.ruanganSidangId,
+      dosenIds: item.involvedDosenIds,
+    });
+
+    if (conflictMessage) {
+      res.status(400);
+      throw new Error(conflictMessage);
+    }
+  }
+
+  const updatedRegistrations = await prisma.$transaction(async (tx) => {
+    const results = [];
+    for (const item of req.body) {
+      const updated = await tx.sidangRegistration.update({
+        where: { id: item.id },
+        data: {
+          tglSidang: new Date(item.tglSidang),
+          ruanganSidangId: item.ruanganSidangId,
+        },
+        include: penjadwalanSidangInclude,
+      });
+      results.push(updated);
+    }
+    return results;
+  });
+
+  res.json({
+    message: "Jadwal sidang batch berhasil ditentukan",
+    data: updatedRegistrations.map((reg) =>
+      mapPenjadwalanSidangToFrontend(reg),
+    ),
+  });
+});
+
+export {
+  listPenjadwalanSidang,
+  setPengujiSidang,
+  batchSetPengujiSidang,
+  setJadwalSidang,
+  batchSetJadwalSidang,
+};
