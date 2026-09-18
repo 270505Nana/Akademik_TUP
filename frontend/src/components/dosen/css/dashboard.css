@@ -1,0 +1,332 @@
+/* ================================
+   Dashboard Dosen - Extracted Styles
+   (components/dosen/dashboard.css)
+   ================================ */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+/* ---------- Stat Cards ---------- */
+
+.CardAtas4-icon-wrap {
+  background: #FEF2F2;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-retry-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #C0182A;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---------- Section Card (generic, flex) ---------- */
+
+.section-flex {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-header-text {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: #C0182A;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.list-body {
+  padding: 4px 0;
+}
+
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 36px 0;
+}
+
+.error-block {
+  padding: 32px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.error-icon-large {
+  opacity: 0.6;
+}
+
+.error-text {
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.5;
+}
+
+.empty-state {
+  padding: 36px 20px;
+  text-align: center;
+  color: #6B7280;
+  font-size: 13px;
+}
+
+/* ---------- Jadwal Sidang Item ---------- */
+
+.jadwal-item {
+  padding: 16px 20px;
+  border-left: 3px solid #C0182A;
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: #FAFAFA;
+}
+
+.jadwal-item.is-first {
+  margin-top: 12px;
+}
+
+.jadwal-item.has-border-bottom {
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.jadwal-item--urgent {
+  border-left: 3px solid #DC2626;
+  background: #FFFDFD;
+}
+
+.jadwal-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.jadwal-item-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.jadwal-item-sub {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.jadwal-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.badge-urgent {
+  padding: 3px 8px;
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.badge-penguji {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.badge-pembimbing {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.badge-default {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.jadwal-item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.detail-row--highlight {
+  color: #C0182A;
+  font-weight: 600;
+}
+
+/* ---------- Status Input Nilai ---------- */
+
+.nilai-body {
+  padding: 12px 20px 4px;
+}
+
+.warning-banner {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.warning-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.warning-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #92400E;
+  margin-bottom: 2px;
+}
+
+.warning-desc {
+  font-size: 12px;
+  color: #78350F;
+  line-height: 1.5;
+}
+
+.nilai-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
+  background: #FAFAFA;
+}
+
+.nilai-item.is-last {
+  margin-bottom: 12px;
+}
+
+.nilai-item--urgent {
+  border: 1px solid #FECACA;
+  background: #FFF5F5;
+}
+
+.nilai-item-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.nilai-item-sub {
+  font-size: 12px;
+  color: #6B7280;
+  margin-bottom: 4px;
+}
+
+.nilai-item-due {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+}
+
+.nilai-item-due--urgent {
+  color: #C0182A;
+}
+
+.btn-input-nilai {
+  padding: 8px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-left: 12px;
+  border: 1.5px solid #D1D5DB;
+  background: #fff;
+  color: #374151;
+  transition: all 0.2s;
+}
+
+.btn-input-nilai--urgent {
+  border: none;
+  background: #C0182A;
+  color: #fff;
+}
+
+/* ---------- Dashboard Error Banner ---------- */
+
+.dashboard-error-banner {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #991B1B;
+  font-size: 13px;
+}
+
+.dashboard-error-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-error-btn {
+  background: #C0182A;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}

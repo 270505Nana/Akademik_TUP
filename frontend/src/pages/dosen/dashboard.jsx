@@ -1,246 +1,238 @@
-import React, { useState } from 'react';
-import { Users, Calendar, ClipboardEdit, CalendarDays, Clock, MapPin, AlertCircle, Menu, HelpCircle, Bell } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Users, Calendar, ClipboardEdit, CalendarDays, Clock, MapPin, AlertCircle, Menu, HelpCircle, Bell, Loader } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarDosen from '../../components/sidebar/SidebarDosen';
 import FooterDosen from '../../components/common/FooterDosen';
 import { useAuth } from '../../context/AuthContext';
+import { getDosenDashboard } from '../../service/api';
 import '../dashboard.css';
+import '../../components/dosen/css/dashboard.css';
 
-
-const MOCK_STATISTIK = [
-  { label: 'Total Mahasiswa Bimbingan', nilai: 24, icon: 'users' },
-  { label: 'Mahasiswa Siap Sidang di Prodi', nilai: 8, icon: 'calendar' },
-  { label: 'Nilai yang Belum Diinput', nilai: 3, icon: 'edit' },
-];
-
-const MOCK_JADWAL_SIDANG = [
-  {
-    id: 1,
-    nama: 'Ahmad Fauzi',
-    nim: '1301204001',
-    prodi: 'S1 Informatika',
-    peran: 'Penguji 1',
-    hari: 'Senin, 18 November 2024',
-    jam: '10:00 - 12:00',
-    ruangan: 'Ruang A302, Gedung IoT',
-    isUrgent: false,
-  },
-  {
-    id: 2,
-    nama: 'Nina Kirana',
-    nim: '1301204002',
-    prodi: 'S1 Informatika',
-    peran: 'Pembimbing 1',
-    hari: 'Selasa, 20 November 2024',
-    jam: '10:00 - 12:00',
-    ruangan: 'Ruang A302, Gedung IoT',
-    isUrgent: false,
-  },
-  {
-    id: 3,
-    nama: 'Dino Septiawan',
-    nim: '1301204003',
-    prodi: 'S1 Informatika',
-    peran: 'Pembimbing 2',
-    hari: 'Selasa, 20 November 2024',
-    jam: '10:00 - 12:00',
-    ruangan: 'Ruang A302, Gedung IoT',
-    isUrgent: false,
-  },
-];
-
-const MOCK_INPUT_NILAI = [
-  {
-    id: 1,
-    nama: 'Ahmad Fauzi',
-    nim: '1301204001',
-    prodi: 'S1 Informatika',
-    jatuhTempo: 'Jatuh tempo hari ini',
-    isUrgent: true,
-  },
-  {
-    id: 2,
-    nama: 'Dewi Lestari',
-    nim: '1301204002',
-    prodi: 'S1 Informatika',
-    jatuhTempo: 'Jatuh tempo 2 hari lagi',
-    isUrgent: false,
-  },
-  {
-    id: 3,
-    nama: 'Rizky Ananda',
-    nim: '1301204003',
-    prodi: 'S1 Informatika',
-    jatuhTempo: 'Jatuh tempo 3 hari lagi',
-    isUrgent: false,
-  },
-];
-
-// Pemetaan warna badge peran dosen dalam sidang
-const PERAN_STYLE = {
-  'Penguji 1': { bg: '#FEF3C7', color: '#92400E' },
-  'Penguji 2': { bg: '#FEF3C7', color: '#92400E' },
-  'Pembimbing 1': { bg: '#FEE2E2', color: '#991B1B' },
-  'Pembimbing 2': { bg: '#FEE2E2', color: '#991B1B' },
+const PERAN_CLASS = {
+  'Penguji 1': 'badge-penguji',
+  'Penguji 2': 'badge-penguji',
+  'Pembimbing 1': 'badge-pembimbing',
+  'Pembimbing 2': 'badge-pembimbing',
 };
 
-// Icon statistik sesuai tipe
+const isToday = (dateStr) => {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return false;
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+};
+
+const formatJam = (jam) => {
+  if (!jam || jam === '-') return '-';
+  const formattedJam = jam.replace('.', ':');
+  return `Pukul ${formattedJam} WIB`;
+};
+
 const StatIcon = ({ tipe }) => {
-  const base = { color: '#C0182A' };
-  if (tipe === 'users') return <Users size={26} style={base} />;
-  if (tipe === 'calendar') return <Calendar size={26} style={base} />;
-  if (tipe === 'edit') return <ClipboardEdit size={26} style={base} />;
+  const color = '#C0182A';
+  if (tipe === 'users') return <Users size={26} color={color} />;
+  if (tipe === 'calendar') return <Calendar size={26} color={color} />;
+  if (tipe === 'edit') return <ClipboardEdit size={26} color={color} />;
   return null;
 };
 
-// Menampilkan 3 kartu statistik ringkasan dosen
-const StatCards = () => (
-  <div className="stat-grid">
-    {MOCK_STATISTIK.map((item, idx) => (
-      <div className="CardAtas4" key={idx}>
-        <div className="CardAtas4-header">
-          <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <StatIcon tipe={item.icon} />
+const StatCards = ({ data, loading, error, onRetry }) => {
+  const statistik = [
+    {
+      label: 'Total Mahasiswa Bimbingan',
+      nilai: data?.totalMahasiswaBimbingan ?? 0,
+      icon: 'users',
+    },
+    {
+      label: 'Mahasiswa yang Perlu Diuji',
+      nilai: data?.totalMahasiswaSiapSidang ?? 0,
+      icon: 'calendar',
+    },
+    {
+      label: 'Nilai yang Belum Diinput',
+      nilai: data?.totalNilaiBelumDiinput ?? 0,
+      icon: 'edit',
+    },
+  ];
+
+  return (
+    <div className="stat-grid">
+      {statistik.map((item, idx) => (
+        <div className="CardAtas4" key={idx}>
+          <div className="CardAtas4-header">
+            <div className="CardAtas4-icon-wrap">
+              <StatIcon tipe={item.icon} />
+            </div>
+          </div>
+          <div className="CardAtas4-label">{item.label}</div>
+          <div className="CardAtas4-value">
+            {loading ? (
+              <Loader size={20} color="#C0182A" className="spin-icon" />
+            ) : error ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                title="Muat ulang"
+                className="stat-retry-btn"
+              >
+                <AlertCircle size={14} />
+                Coba lagi
+              </button>
+            ) : (
+              item.nilai
+            )}
           </div>
         </div>
-        <div className="CardAtas4-label">{item.label}</div>
-        <div className="CardAtas4-value">{item.nilai}</div>
-      </div>
-    ))}
-  </div>
-);
+      ))}
+    </div>
+  );
+};
 
 // Menampilkan jadwal sidang terdekat yang melibatkan dosen
-const JadwalSidangSection = () => (
-  <div className="section-card" style={{ flex: 1, minWidth: 0 }}>
+const JadwalSidangSection = ({ jadwalSidang = [], loading, error, onRetry, onNavigateAll }) => (
+  <div className="section-card section-flex">
     <div className="card-header-custom" style={{ alignItems: 'center' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="card-header-title">
         <CalendarDays size={18} color="#C0182A" />
-        <span style={{ fontWeight: 700, fontSize: 15 }}>Jadwal Sidang Terdekat</span>
+        <span className="card-header-text">Jadwal Sidang Terdekat</span>
       </div>
-      <a href="#" style={{ fontSize: 13, color: '#C0182A', fontWeight: 600, textDecoration: 'none' }}>Lihat Semua</a>
+      <button type="button" onClick={onNavigateAll} className="link-btn">
+        Lihat Semua
+      </button>
     </div>
 
-    <div style={{ padding: '4px 0' }}>
-      {MOCK_JADWAL_SIDANG.map((item, idx) => {
-        const peranStyle = PERAN_STYLE[item.peran] || { bg: '#F3F4F6', color: '#374151' };
-        return (
-          <div
-            key={item.id}
-            style={{
-              padding: '16px 20px',
-              borderBottom: idx < MOCK_JADWAL_SIDANG.length - 1 ? '1px solid #F1F5F9' : 'none',
-              borderLeft: '3px solid #C0182A',
-              marginLeft: 20,
-              marginRight: 20,
-              marginTop: idx === 0 ? 12 : 0,
-              marginBottom: idx < MOCK_JADWAL_SIDANG.length - 1 ? 12 : 12,
-              borderRadius: 8,
-              background: '#FAFAFA',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: '#111827', marginBottom: 2 }}>{item.nama}</div>
-                <div style={{ fontSize: 12, color: '#6B7280' }}>{item.nim} &bull; {item.prodi}</div>
-              </div>
-              <span style={{
-                fontSize: 11, fontWeight: 700, padding: '3px 10px',
-                borderRadius: 6, background: peranStyle.bg, color: peranStyle.color,
-                whiteSpace: 'nowrap', marginLeft: 8,
-              }}>
-                {item.peran}
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#C0182A', fontWeight: 600 }}>
-                <CalendarDays size={13} />
-                {item.hari}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6B7280' }}>
-                <Clock size={13} />
-                {item.jam}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6B7280' }}>
-                <MapPin size={13} />
-                {item.ruangan}
-              </div>
-            </div>
+    <div className="list-body">
+      {loading ? (
+        <div className="loading-wrap">
+          <Loader size={22} color="#C0182A" className="spin-icon" />
+        </div>
+      ) : error ? (
+        <div className="error-block">
+          <AlertCircle size={28} color="#C0182A" className="error-icon-large" />
+          <div className="error-text">
+            Gagal memuat jadwal sidang.
           </div>
-        );
-      })}
+        </div>
+      ) : jadwalSidang.length === 0 ? (
+        <div className="empty-state">
+          Belum ada jadwal sidang terdekat.
+        </div>
+      ) : (
+        jadwalSidang.map((item, idx) => {
+          const peran = item.position || item.peran || 'Penguji';
+          const peranClass = PERAN_CLASS[peran] || 'badge-default';
+          const isUrgent = isToday(item.tglSidang);
+          const isLast = idx === jadwalSidang.length - 1;
+
+          const itemClassName = [
+            'jadwal-item',
+            !isLast ? 'has-border-bottom' : '',
+            idx === 0 ? 'is-first' : '',
+            isUrgent ? 'jadwal-item--urgent' : '',
+          ].filter(Boolean).join(' ');
+
+          return (
+            <div key={item.id || idx} className={itemClassName}>
+              <div className="jadwal-item-head">
+                <div>
+                  <div className="jadwal-item-name">{item.name || item.nama}</div>
+                  <div className="jadwal-item-sub">{item.nim} &bull; {item.studyProgram || item.prodi}</div>
+                </div>
+                <div className="jadwal-badges">
+                  {isUrgent && (
+                    <span className="badge badge-urgent">
+                      Hari Ini
+                    </span>
+                  )}
+                  <span className={`badge ${peranClass}`}>
+                    {peran}
+                  </span>
+                </div>
+              </div>
+              <div className="jadwal-item-details">
+                <div className="detail-row detail-row--highlight">
+                  <CalendarDays size={13} />
+                  {item.hari}
+                </div>
+                <div className="detail-row">
+                  <Clock size={13} />
+                  {formatJam(item.jam)}
+                </div>
+                <div className="detail-row">
+                  <MapPin size={13} />
+                  {item.ruangan}
+                </div>
+              </div>
+            </div>
+          );
+        })
+      )}
     </div>
   </div>
 );
 
 // Menampilkan status input nilai sidang beserta reminder batas waktu
-const StatusInputNilaiSection = ({ onShowToast, onInputNilai }) => (
-  <div className="section-card" style={{ flex: 1, minWidth: 0 }}>
+const StatusInputNilaiSection = ({ onShowToast, onInputNilai, inputNilaiList = [] }) => (
+  <div className="section-card section-flex">
     <div className="card-header-custom">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="card-header-title">
         <ClipboardEdit size={18} color="#C0182A" />
-        <span style={{ fontWeight: 700, fontSize: 15 }}>Status Input Nilai Sidang</span>
+        <span className="card-header-text">Status Input Nilai Sidang</span>
       </div>
     </div>
 
-    <div style={{ padding: '12px 20px 4px' }}>
-      {/* Reminder batas waktu */}
-      <div style={{
-        background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8,
-        padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start',
-        marginBottom: 16,
-      }}>
-        <AlertCircle size={16} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
+    <div className="nilai-body">
+      <div className="warning-banner">
+        <AlertCircle size={16} color="#D97706" className="warning-icon" />
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 2 }}>Batas Waktu Penginputan</div>
-          <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.5 }}>
+          <div className="warning-title">Batas Waktu Penginputan</div>
+          <div className="warning-desc">
             Nilai sidang wajib diinputkan maksimal 24 jam setelah pelaksanaan sidang.
           </div>
         </div>
       </div>
 
-      {/* Daftar mahasiswa yang perlu dinilai */}
-      {MOCK_INPUT_NILAI.map((item, idx) => (
-        <div
-          key={item.id}
-          style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '12px 14px',
-            marginBottom: idx < MOCK_INPUT_NILAI.length - 1 ? 8 : 12,
-            borderRadius: 8,
-            border: item.isUrgent ? '1px solid #FECACA' : '1px solid #E5E7EB',
-            background: item.isUrgent ? '#FFF5F5' : '#FAFAFA',
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: '#111827', marginBottom: 2 }}>{item.nama}</div>
-            <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 4 }}>{item.nim} &bull; {item.prodi}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: item.isUrgent ? '#C0182A' : '#6B7280' }}>
-              <AlertCircle size={12} />
-              {item.jatuhTempo}
-            </div>
-          </div>
-          <button
-            onClick={() => onInputNilai(item)}
-            style={{
-              padding: '8px 14px',
-              borderRadius: 7,
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              marginLeft: 12,
-              border: item.isUrgent ? 'none' : '1.5px solid #D1D5DB',
-              background: item.isUrgent ? '#C0182A' : '#fff',
-              color: item.isUrgent ? '#fff' : '#374151',
-              transition: 'all 0.2s',
-            }}
-          >
-            Input Nilai
-          </button>
+      {/* TODO: BE belum menyediakan field untuk status input nilai sidang */}
+      {inputNilaiList.length === 0 ? (
+        <div className="empty-state">
+          Belum ada data nilai yang perlu diinput
         </div>
-      ))}
+      ) : (
+        /* Daftar mahasiswa yang perlu dinilai */
+        inputNilaiList.map((item, idx) => {
+          const isLast = idx === inputNilaiList.length - 1;
+          const nilaiItemClassName = [
+            'nilai-item',
+            isLast ? 'is-last' : '',
+            item.isUrgent ? 'nilai-item--urgent' : '',
+          ].filter(Boolean).join(' ');
+
+          return (
+            <div key={item.id || idx} className={nilaiItemClassName}>
+              <div>
+                <div className="nilai-item-name">{item.nama || item.name}</div>
+                <div className="nilai-item-sub">{item.nim} &bull; {item.prodi || item.studyProgram}</div>
+                <div className={`nilai-item-due ${item.isUrgent ? 'nilai-item-due--urgent' : ''}`}>
+                  <AlertCircle size={12} />
+                  {item.jatuhTempo}
+                </div>
+              </div>
+              <button
+                onClick={() => onInputNilai(item)}
+                className={`btn-input-nilai ${item.isUrgent ? 'btn-input-nilai--urgent' : ''}`}
+              >
+                Input Nilai
+              </button>
+            </div>
+          );
+        })
+      )}
     </div>
   </div>
 );
@@ -249,6 +241,10 @@ const StatusInputNilaiSection = ({ onShowToast, onInputNilai }) => (
 const DashboardDosen = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const namaDisplay = profile?.name || user?.name || user?.username || 'Dosen';
@@ -259,25 +255,35 @@ const DashboardDosen = () => {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   };
 
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getDosenDashboard();
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Gagal mengambil data dashboard dosen:', err);
+      setError(err.response?.data?.message || 'Gagal memuat data dashboard. Silakan coba lagi.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
   return (
     <>
       <SidebarDosen isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div id="main-content">
-        {/* Top bar maroon dengan icon bantuan dan notifikasi */}
+        {/* Top bar */}
         <header className="topbar topbar-dosen">
           <button className="topbar-toggle topbar-toggle-dosen" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </button>
           <div className="topbar-brand topbar-brand-dosen">Beranda</div>
-          <div className="topbar-right">
-            <button className="topbar-icon-btn" title="Bantuan" aria-label="Bantuan">
-              <HelpCircle size={20} />
-            </button>
-            <button className="topbar-icon-btn" title="Notifikasi" aria-label="Notifikasi">
-              <Bell size={20} />
-            </button>
-          </div>
         </header>
 
         <main className="page-body">
@@ -287,15 +293,37 @@ const DashboardDosen = () => {
             <p>Berikut informasi jadwal sidang dan tugas yang perlu Anda tindak lanjuti.</p>
           </div>
 
-          {/* 3 Kartu Statistik */}
-          <StatCards />
+          {/* Banner Error jika Fetch Gagal */}
+          {error && (
+            <div className="dashboard-error-banner">
+              <div className="dashboard-error-left">
+                <AlertCircle size={18} color="#C0182A" />
+                <span>{error}</span>
+              </div>
+              <button
+                type="button"
+                onClick={fetchDashboardData}
+                className="dashboard-error-btn"
+              >
+                Coba Lagi
+              </button>
+            </div>
+          )}
 
-          {/* Jadwal Sidang + Status Input Nilai dalam 2 kolom */}
+          {/* 3 Kartu Statistik */}
+          <StatCards data={dashboardData} loading={loading} error={error} onRetry={fetchDashboardData} />
           <div className="dosen-bottom-grid">
-            <JadwalSidangSection />
+            <JadwalSidangSection
+              jadwalSidang={dashboardData?.jadwalSidang || []}
+              loading={loading}
+              error={error}
+              onRetry={fetchDashboardData}
+              onNavigateAll={() => navigate('/dosen/jadwal-nilai-sidang')}
+            />
             <StatusInputNilaiSection
               onShowToast={showToast}
-              onInputNilai={(item) => navigate(`/dosen/input-nilai/${item.nim}`, { state: { mahasiswa: item } })}
+              onInputNilai={(item) => navigate(`/dosen/input-nilai/${item.id || item.nim}`, { state: { mahasiswa: item } })}
+              inputNilaiList={[]}
             />
           </div>
         </main>

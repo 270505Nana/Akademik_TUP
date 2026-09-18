@@ -7,7 +7,7 @@ html:has(.landing-page) {
 .landing-page {
   --lp-red: #C0182A;
   --lp-maroon: #8B1A1A;
-  --lp-gold: #F5C400;
+  --lp-gold: #f5c400;
   --lp-gold-soft: #FFF4C2;
   --lp-text: #111827;
   --lp-muted: #6B7280;

@@ -51,10 +51,44 @@ const getSidangKeteranganText = (status, assignedPeriode) => {
 
 const LOCKED_BADGE = { bg: '#F3F4F6', color: '#6B7280', label: 'TERKUNCI' };
 
+const formatPeriodSubtitle = (periode) => {
+  if (!periode) return '';
+  const nameLower = (periode.name || '').toLowerCase();
+  const semester = nameLower.includes('genap')
+    ? 'Genap'
+    : nameLower.includes('ganjil')
+      ? 'Ganjil'
+      : 'Umum';
+  const periodVal = periode.period || '';
+
+  if (semester !== 'Umum' && periodVal) {
+    return `Semester ${semester} ${periodVal}`;
+  }
+  if (semester !== 'Umum') {
+    return `Semester ${semester}`;
+  }
+  return periode.name || (periodVal ? `Tahun Ajaran ${periodVal}` : '');
+};
+
 const formatDateRange = (start, end) => {
   const fmt = (d) =>
     new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   return `${fmt(start)} – ${fmt(end)}`;
+};
+
+const formatDateRangeCompact = (start, end) => {
+  if (!start || !end) return '—';
+  const s = new Date(start);
+  const e = new Date(end);
+  const sameYear = s.getFullYear() === e.getFullYear();
+  const sameMonth = sameYear && s.getMonth() === e.getMonth();
+  if (sameMonth) {
+    return `${s.getDate()} - ${e.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  }
+  if (sameYear) {
+    return `${s.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – ${e.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  }
+  return `${s.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} – ${e.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 };
 
 const formatDateShort = (d) =>
@@ -143,8 +177,10 @@ const DashboardMahasiswa = () => {
   const [sidangAssignedPeriode, setSidangAssignedPeriode] = useState(null);
   const [sidangResponse, setSidangResponse] = useState(null);
 
-  const [sidangPeriode, setSidangPeriode] = useState(null);
-  const [yudisiumPeriode, setYudisiumPeriode] = useState(null);
+  const [pendaftaranSidang, setPendaftaranSidang] = useState(null);
+  const [pelaksanaanSidang, setPelaksanaanSidang] = useState(null);
+  const [pendaftaranYudisium, setPendaftaranYudisium] = useState(null);
+  const [pelaksanaanYudisium, setPelaksanaanYudisium] = useState(null);
   const [loadingPeriode, setLoadingPeriode] = useState(true);
 
   const [downloadingSk, setDownloadingSk] = useState(false);
@@ -230,7 +266,11 @@ const DashboardMahasiswa = () => {
 
         const status = determineSidangStatus(registration, null, assignedPeriode);
         setSidangRegStatus(status);
-        setSidangAssignedPeriode(assignedPeriode);
+        setSidangAssignedPeriode(
+          assignedPeriode
+            ? { ...assignedPeriode, name: formatPeriodSubtitle(assignedPeriode) }
+            : null
+        );
         setSidangResponse(registration);
 
       } catch (err) {
@@ -253,8 +293,29 @@ const DashboardMahasiswa = () => {
           getSidangPeriods().catch(() => []),
           getYudisiumPeriods().catch(() => []),
         ]);
-        setSidangPeriode(pickRelevantPeriod(sidangList));
-        setYudisiumPeriode(pickRelevantPeriod(yudisiumList));
+
+        // Parse sidang pair: each item has { pendaftaran, pelaksanaan }
+        const pickFromPair = (list, key) => {
+          if (!Array.isArray(list) || list.length === 0) return null;
+          // Pick the relevant group: prefer an open one, then upcoming, then most recent past
+          const sorted = [...list].filter(Boolean);
+          const openGroup = sorted.find(item => item?.[key]?.isOpen === true);
+          if (openGroup) return openGroup[key] ?? null;
+          const now = new Date();
+          const upcomingGroup = sorted
+            .filter(item => item?.[key] && new Date(item[key].startDate) > now)
+            .sort((a, b) => new Date(a[key].startDate) - new Date(b[key].startDate));
+          if (upcomingGroup.length > 0) return upcomingGroup[0][key];
+          const pastGroup = [...sorted]
+            .filter(item => item?.[key])
+            .sort((a, b) => new Date(b[key].endDate || 0) - new Date(a[key].endDate || 0));
+          return pastGroup.length > 0 ? pastGroup[0][key] : null;
+        };
+
+        setPendaftaranSidang(pickFromPair(sidangList, 'pendaftaran'));
+        setPelaksanaanSidang(pickFromPair(sidangList, 'pelaksanaan'));
+        setPendaftaranYudisium(pickFromPair(yudisiumList, 'pendaftaran'));
+        setPelaksanaanYudisium(pickFromPair(yudisiumList, 'pelaksanaan'));
       } catch (err) {
         console.error('Gagal fetch periode:', err);
       } finally {
@@ -265,7 +326,7 @@ const DashboardMahasiswa = () => {
   }, []);
 
   const skTanggal = sktaRequest?.createdAt ? formatDateShort(sktaRequest.createdAt) : null;
-  const deadlineSidang = sidangPeriode ? formatDateShort(sidangPeriode.endDate) : null;
+  const deadlineSidang = pendaftaranSidang ? formatDateShort(pendaftaranSidang.endDate) : null;
   const rowSidangLoading = loadingSk || loadingSidangReg;
   const skSudahTerbit = skStatus === STATUS_SK.SUDAH_TERBIT;
 
@@ -335,13 +396,13 @@ const DashboardMahasiswa = () => {
               <div>
                 <div className="dash-timeline-overline">Timeline Pendaftaran Sidang TA & Yudisium</div>
                 <h3 className="dash-timeline-title">
-                  Periode Aktif: {sidangPeriode?.name || yudisiumPeriode?.name || 'Belum Tersedia'}
+                  Periode Aktif: {formatPeriodSubtitle(pendaftaranSidang) || formatPeriodSubtitle(pendaftaranYudisium) || 'Belum Tersedia'}
                 </h3>
                 <p className="dash-timeline-subtitle">Jadwal penting untuk pelaksanaan sidang semester ini.</p>
               </div>
               <div>
                 <span className="dash-timeline-status">
-                  {loadingPeriode ? 'MEMUAT...' : (sidangPeriode?.state === 'aktif' || yudisiumPeriode?.state === 'aktif' ? 'SEDANG BERLANGSUNG' : 'BELUM TERSEDIA')}
+                  {loadingPeriode ? 'MEMUAT...' : (pendaftaranSidang?.isOpen || pelaksanaanSidang?.isOpen || pendaftaranYudisium?.isOpen || pelaksanaanYudisium?.isOpen ? 'SEDANG BERLANGSUNG' : 'BELUM TERSEDIA')}
                 </span>
               </div>
             </div>
@@ -354,43 +415,51 @@ const DashboardMahasiswa = () => {
                    <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val highlight">
-                     {sidangPeriode ? `Maks. ${formatDateShort(sidangPeriode.endDate)}` : <span className="empty">-</span>}
+                     {pendaftaranSidang
+                       ? formatDateRangeCompact(pendaftaranSidang.startDate, pendaftaranSidang.endDate)
+                       : <span className="empty">-</span>}
                    </p>
                 )}
               </div>
 
               {/* Pelaksanaan Sidang */}
               <div className="dash-timeline-item">
-                <p className="dash-timeline-label">PELAKSANAAN</p>
+                <p className="dash-timeline-label">PELAKSANAAN SIDANG</p>
                 {loadingPeriode ? (
                    <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val">
-                     {sidangPeriode ? formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate) : <span className="empty">-</span>}
+                     {pelaksanaanSidang
+                       ? formatDateRangeCompact(pelaksanaanSidang.startDate, pelaksanaanSidang.endDate)
+                       : <span className="empty">-</span>}
                    </p>
                 )}
               </div>
 
-              {/* Yudisium */}
+              {/* Pendaftaran Yudisium */}
               <div className="dash-timeline-item">
-                <p className="dash-timeline-label">YUDISIUM</p>
+                <p className="dash-timeline-label">PENDAFTARAN YUDISIUM</p>
                 {loadingPeriode ? (
                    <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val">
-                     {yudisiumPeriode ? `Maks. ${formatDateShort(yudisiumPeriode.endDate)}` : <span className="empty">-</span>}
+                     {pendaftaranYudisium
+                       ? formatDateRangeCompact(pendaftaranYudisium.startDate, pendaftaranYudisium.endDate)
+                       : <span className="empty">-</span>}
                    </p>
                 )}
               </div>
 
-              {/* Sidang Yudisium */}
+              {/* Pelaksanaan Yudisium */}
               <div className="dash-timeline-item">
-                <p className="dash-timeline-label">SIDANG YUDISIUM</p>
+                <p className="dash-timeline-label">PELAKSANAAN YUDISIUM</p>
                 {loadingPeriode ? (
                    <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val">
-                     {yudisiumPeriode ? formatDateShort(new Date(new Date(yudisiumPeriode.endDate).getTime() + 5*24*60*60*1000)) : <span className="empty">-</span>}
+                     {pelaksanaanYudisium
+                       ? formatDateRangeCompact(pelaksanaanYudisium.startDate, pelaksanaanYudisium.endDate)
+                       : <span className="empty">-</span>}
                    </p>
                 )}
               </div>
@@ -458,7 +527,7 @@ const DashboardMahasiswa = () => {
                       <td>
                          <div className="prog-tahapan-title">Pendaftaran Sidang</div>
                          <div className="prog-tahapan-sub">
-                           {sidangPeriode ? `Periode: ${formatDateRange(sidangPeriode.startDate, sidangPeriode.endDate)}` : 'Belum ada periode'}
+                           {pendaftaranSidang ? `Daftar s.d. ${formatDateShort(pendaftaranSidang.endDate)}` : 'Belum ada periode'}
                          </div>
                       </td>
                       <td className="col-status">
@@ -497,7 +566,7 @@ const DashboardMahasiswa = () => {
                       <td>
                          <div className="prog-tahapan-title">Pendaftaran Yudisium</div>
                          <div className="prog-tahapan-sub">
-                           {yudisiumPeriode ? `Periode: ${formatDateRange(yudisiumPeriode.startDate, yudisiumPeriode.endDate)}` : 'Belum ada periode'}
+                           {pendaftaranYudisium ? `Daftar s.d. ${formatDateShort(pendaftaranYudisium.endDate)}` : 'Belum ada periode'}
                          </div>
                       </td>
                       <td className="col-status">
@@ -516,7 +585,7 @@ const DashboardMahasiswa = () => {
                       </td>
                       <td className="col-aksi">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
-                          {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) || !yudisiumPeriode?.isOpen ? (
+                          {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) || !pendaftaranYudisium?.isOpen ? (
                             <TextLinkAction disabled>Daftar</TextLinkAction>
                           ) : (
                             <TextLinkAction onClick={() => navigate('/mahasiswa/pendaftaran-yudisium')}>Daftar Yudisium</TextLinkAction>
