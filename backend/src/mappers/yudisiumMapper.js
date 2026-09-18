@@ -57,14 +57,16 @@ export const mapYudisiumRegistrationToFrontend = (item, req) => {
           isActive: item.yudisiumPeriod.isActive,
         }
       : null,
-    uploads: uploads.map((u) => ({
+    yudisiumRegistrationUploads: uploads.map((u) => ({
       id: u.id,
+      name: u.name,
       category: u.category,
-      filename: u.filename,
-      originalFilename: u.originalFilename,
-      downloadUrl: `${req.protocol}://${req.get("host")}/api/yudisium-registrations/download/${u.id}`,
-      previewUrl: `${req.protocol}://${req.get("host")}/api/yudisium-registrations/preview/${u.id}`,
-      createdAt: u.createdAt,
+      filepath: u.filepath,
+      isValid: u.isValid,
+      yudisiumRegistrationId: u.yudisiumRegistrationId,
+      downloadUrl: req
+        ? `${req.protocol}://${req.get("host")}/api/yudisium-registrations/uploads/${u.id}/download`
+        : null,
     })),
   };
 };
