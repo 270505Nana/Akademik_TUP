@@ -75,6 +75,7 @@ const PermohonanSK = () => {
     setLoading(true);
     try {
       const res = await getAllSktaRequests();
+      // Langsung tangkap kiriman data bersih dari Backend tanpa filter manual isDraft
       const dataList = res?.data ?? res ?? [];
       
       const groupByStudent = new Map();

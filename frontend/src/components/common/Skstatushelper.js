@@ -3,6 +3,7 @@ export const STATUS_SK = {
   BELUM_TERBIT : 'belum-terbit',  // Admin reject, ada message + isEdit (deadline revisi)
   SUDAH_TERBIT : 'sudah-terbit',  // Semua syarat terpenuhi, file SK sudah ada
   EXPIRED      : 'expired',       // SK sudah terbit tapi expDate lewat
+  DRAFT        : 'draft',         // Mahasiswa menyimpan form tanpa bukti (khusus Perubahan)
 };
 
 export const SKTA_CATEGORY = {
@@ -29,18 +30,30 @@ export const unwrapResponse = (raw) => {
 };
 
 /**
- *
- * - 'dalam-proses' : belum ada keputusan admin (belum reject, belum approve)
- * - 'belum-terbit' : admin sudah reject (ada `message`)
- * - 'sudah-terbit' : hasTakenLanguageTest && hasUploadedFinalProposal && file SK ada
- * - 'expired'      : sudah-terbit tapi expDate sudah lewat
- *
  * @param {object|null} permohonan  hasil dari getSKTARequest() / unwrapResponse()
  * @returns {string}
  */
 export const determineStatus = (permohonan) => {
   if (!permohonan) return STATUS_SK.DALAM_PROSES;
 
+  // 1. CEK REVISI TERLEBIH DAHULU (Prioritas Utama)
+  // Walaupun isDraft diubah jadi true oleh BE dan ada SK lama, jika ada message, ini mutlak REVISI.
+  if (permohonan.message || permohonan.isEdit) {
+    return STATUS_SK.BELUM_TERBIT; 
+  }
+
+  // 2. CEK DRAFT (Khusus Kategori Perubahan)
+  // Hanya berstatus draft jika isDraft = true DAN tidak ada pesan penolakan.
+  const draftCategories = [
+    SKTA_CATEGORY.PERUBAHAN_JUDUL,
+    SKTA_CATEGORY.PERUBAHAN_DOSEN_PEMBIMBING,
+    SKTA_CATEGORY.PERUBAHAN_JUDUL_DAN_DOSEN
+  ];
+  if (permohonan.isDraft === true && draftCategories.includes(permohonan.category)) {
+    return STATUS_SK.DRAFT;
+  }
+
+  // 3. CEK SUDAH TERBIT / APPROVAL FINAL
   const hasLang     = permohonan.hasTakenLanguageTest     === true;
   const hasProposal = permohonan.hasUploadedFinalProposal === true;
   const hasFile     = !!permohonan.sktaUploadPath || !!permohonan.sktaDownloadUrl
@@ -48,9 +61,7 @@ export const determineStatus = (permohonan) => {
 
   if (hasLang && hasProposal && hasFile) return STATUS_SK.SUDAH_TERBIT;
 
-  // Admin sudah menolak (rejectPermohonanSkta) → ada message dan/atau deadline isEdit
-  if (permohonan.message || permohonan.isEdit) return STATUS_SK.BELUM_TERBIT;
-
+  // 4. DEFAULT: Dalam Antrian Admin
   return STATUS_SK.DALAM_PROSES;
 };
 
