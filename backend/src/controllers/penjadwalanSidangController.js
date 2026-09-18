@@ -49,6 +49,24 @@ const listPenjadwalanSidang = asyncHandler(async (req, res) => {
     deletedAt: null,
   };
 
+  if (req.user?.role === "DOSEN") {
+    const dosen =
+      req.dosen ||
+      (await prisma.dosen.findUnique({
+        where: { userId: req.user.id, deletedAt: null },
+      }));
+
+    if (!dosen) {
+      res.status(404);
+      throw new Error("Data Dosen tidak ditemukan");
+    }
+
+    where.dosenPembimbing1 = {
+      researchGroupId: dosen.researchGroupId,
+      deletedAt: null,
+    };
+  }
+
   const [total, sidangRegistrations] = await Promise.all([
     prisma.sidangRegistration.count({ where }),
     prisma.sidangRegistration.findMany({

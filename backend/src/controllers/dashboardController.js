@@ -280,6 +280,10 @@ const getDosenDashboard = asyncHandler(async (req, res) => {
 
   const dosenSidangCondition = {
     deletedAt: null,
+    dosenPenguji1Id: { not: null },
+    dosenPenguji2Id: { not: null },
+    ruanganSidangId: { not: null },
+    tglSidang: { not: null },
     OR: [
       { dosenPembimbing1Id: dosen.id },
       { dosenPembimbing2Id: dosen.id },
