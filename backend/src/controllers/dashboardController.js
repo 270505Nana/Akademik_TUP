@@ -228,37 +228,16 @@ const getDosenDashboard = asyncHandler(async (req, res) => {
     throw new Error("Data Dosen tidak ditemukan");
   }
 
-  // 1. Total Mahasiswa Bimbingan (mahasiswa yang dosen pembimbing 1 atau 2 adalah dosen yang login)
-  const [bimbinganSkta, bimbinganSidang] = await Promise.all([
-    prisma.permohonanSkta.findMany({
-      where: {
-        deletedAt: null,
-        OR: [
-          { dosenPembimbing1Id: dosen.id },
-          { dosenPembimbing2Id: dosen.id },
-        ],
-      },
-      select: { mahasiswaId: true },
-      distinct: ["mahasiswaId"],
-    }),
-    prisma.sidangRegistration.findMany({
-      where: {
-        deletedAt: null,
-        OR: [
-          { dosenPembimbing1Id: dosen.id },
-          { dosenPembimbing2Id: dosen.id },
-        ],
-      },
-      select: { mahasiswaId: true },
-      distinct: ["mahasiswaId"],
-    }),
-  ]);
-
-  const uniqueMahasiswaBimbinganIds = new Set([
-    ...bimbinganSkta.map((b) => b.mahasiswaId).filter(Boolean),
-    ...bimbinganSidang.map((b) => b.mahasiswaId).filter(Boolean),
-  ]);
-  const totalMahasiswaBimbingan = uniqueMahasiswaBimbinganIds.size;
+  // 1. Total Mahasiswa Bimbingan (pendaftaran sidang di mana dosen adalah pembimbing 1 atau 2)
+  const totalMahasiswaBimbingan = await prisma.sidangRegistration.count({
+    where: {
+      deletedAt: null,
+      OR: [
+        { dosenPembimbing1Id: dosen.id },
+        { dosenPembimbing2Id: dosen.id },
+      ],
+    },
+  });
 
   // 2. Total Mahasiswa Siap Sidang (mahasiswa dengan dosen penguji 1 atau 2 adalah dosen yang login)
   const totalMahasiswaSiapSidang = await prisma.sidangRegistration.count({
@@ -280,6 +259,10 @@ const getDosenDashboard = asyncHandler(async (req, res) => {
 
   const dosenSidangCondition = {
     deletedAt: null,
+    dosenPenguji1Id: { not: null },
+    dosenPenguji2Id: { not: null },
+    ruanganSidangId: { not: null },
+    tglSidang: { not: null },
     OR: [
       { dosenPembimbing1Id: dosen.id },
       { dosenPembimbing2Id: dosen.id },
@@ -348,20 +331,6 @@ const getDosenDashboard = asyncHandler(async (req, res) => {
       nim: sidang.mahasiswa?.nim || "-",
       studyProgram: sidang.mahasiswa?.studyProgram?.name || "-",
       position: position,
-      hari: sidang.tglSidang
-        ? new Date(sidang.tglSidang).toLocaleDateString("id-ID", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })
-        : "Belum ditentukan",
-      jam: sidang.tglSidang
-        ? new Date(sidang.tglSidang).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "-",
       ruangan: sidang.ruanganSidang?.name || "Ruangan Belum Ditentukan",
       tglSidang: sidang.tglSidang,
     };

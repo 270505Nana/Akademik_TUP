@@ -68,14 +68,16 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
           isActive: item.sidangPeriod.isActive,
         }
       : null,
-    uploads: uploads.map((u) => ({
+    sidangRegistrationUploads: uploads.map((u) => ({
       id: u.id,
+      name: u.name,
       category: u.category,
-      filename: u.filename,
-      originalFilename: u.originalFilename,
-      downloadUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/download/${u.id}`,
-      previewUrl: `${req.protocol}://${req.get("host")}/api/sidang-registrations/preview/${u.id}`,
-      createdAt: u.createdAt,
+      filepath: u.filepath,
+      isValid: u.isValid,
+      sidangRegistrationId: u.sidangRegistrationId,
+      downloadUrl: req
+        ? `${req.protocol}://${req.get("host")}/api/sidang-registrations/uploads/${u.id}/download`
+        : null,
     })),
   };
 };

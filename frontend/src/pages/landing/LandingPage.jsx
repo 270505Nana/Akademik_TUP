@@ -7,7 +7,7 @@ import {
 import CountdownBanner from "../../components/landing/CountdownBanner";
 import DocumentCard from "../../components/landing/DocumentCard";
 import heroImage from "../../assets/Telu.webp";
-import "./landing.css";
+import '../../components/landing/landing.css';
 
 const publicApi = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
@@ -30,7 +30,7 @@ const TA_DOCUMENTS = [
     description:
       "Ketentuan Cumlaude dan Summa Cumlaude serta panduan penggunaan Artificial Intelligence (AI) dalam Tugas Akhir.",
     link: "#",
-    accent: "red",
+    accent: "gold",
     linkLabel: "📄 Lihat Panduan (PDF)",
     icon: <Gavel size={20} />,
   },
@@ -62,10 +62,29 @@ const YUDISIUM_DOCUMENTS = [
 const TA_STAGES = [
   { step: 1, label: "Pengajuan Judul", icon: <FilePlus2 size={22} />, tone: "red" },
   { step: 2, label: "Pengerjaan", icon: <BookOpen size={22} />, tone: "gold" },
-  { step: 3, label: "Seminar Hasil", icon: <Mic2 size={22} />, tone: "gold" },
+  { step: 3, label: "Seminar Hasil", icon: <Mic2 size={22} />, tone: "red" },
   { step: 4, label: "Sidang Akhir", icon: <Gavel size={22} />, tone: "gold" },
-  { step: 5, label: "Yudisium", icon: <GraduationCap size={22} />, tone: "gold" },
+  { step: 5, label: "Yudisium", icon: <GraduationCap size={22} />, tone: "red" },
 ];
+
+const formatPeriodSubtitle = (periode) => {
+  if (!periode) return "";
+  const nameLower = (periode.name || "").toLowerCase();
+  const semester = nameLower.includes("genap")
+    ? "Genap"
+    : nameLower.includes("ganjil")
+      ? "Ganjil"
+      : "Umum";
+  const periodVal = periode.period || "";
+
+  if (semester !== "Umum" && periodVal) {
+    return `Semester ${semester} ${periodVal}`;
+  }
+  if (semester !== "Umum") {
+    return `Semester ${semester}`;
+  }
+  return periode.name || (periodVal ? `Tahun Ajaran ${periodVal}` : "");
+};
 
 const LandingPage = () => {
   const [periodeSidang, setPeriodeSidang] = useState(null);
@@ -117,7 +136,8 @@ const LandingPage = () => {
                 <span className="lp-hero-title">Sistem Informasi Manajemen Tugas Akhir</span>
               </h1>
               <p className="lp-hero-desc">
-                Selamat datang di portal resmi Manajemen Tugas Akhir Telkom University Purwokerto. SIMTA memudahkan proses administrasi Tugas Akhir Anda secara terintegrasi dan transparan. Temukan informasi penting mengenai tahapan, persyaratan, dan ketentuan Tugas Akhir di halaman ini.</p>
+                Temukan berbagai informasi dan layanan Tugas Akhir dalam satu portal. SIMTA hadir untuk membantu mahasiswa Telkom University Purwokerto mengakses kebutuhan administrasi Tugas Akhir dengan lebih praktis dan terintegrasi.
+              </p>
               <a href="#pusat-informasi" className="lp-btn lp-btn-primary">Panduan PDF</a>
             </div>
             <div className="lp-hero-visual">
@@ -172,7 +192,7 @@ const LandingPage = () => {
 
             <CountdownBanner
               title="Batas Akhir Sidang TA"
-              subtitle={periodeSidang ? periodeSidang.name : ""}
+              subtitle={formatPeriodSubtitle(periodeSidang)}
               targetDate={periodeSidang ? periodeSidang.endDate : new Date().toISOString()}
             />
 
@@ -195,7 +215,7 @@ const LandingPage = () => {
 
             <CountdownBanner
               title="Batas Pendaftaran Yudisium"
-              subtitle={periodeYudisium ? periodeYudisium.name : ""}
+              subtitle={formatPeriodSubtitle(periodeYudisium)}
               targetDate={periodeYudisium ? periodeYudisium.endDate : new Date().toISOString()}
             />
 
