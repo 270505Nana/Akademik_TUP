@@ -15,9 +15,13 @@ export const upsertDosenSchema = z.object({
     .string({ required_error: "Kode dosen wajib diisi" })
     .trim()
     .min(1, "Kode dosen wajib diisi"),
+  // NOTE: Validasi UUID sementara dilonggarkan menjadi non-empty string untuk fleksibilitas format ID (legacy / custom ID).
+  // TODO (Production): Kembalikan ke .uuid("ID kelompok keahlian tidak valid") jika semua ID sudah terstandarisasi UUID.
   researchGroupId: z
     .string({ required_error: "ID kelompok keahlian wajib diisi" })
-    .uuid("ID kelompok keahlian tidak valid"),
+    .trim()
+    .min(1, "ID kelompok keahlian wajib diisi"),
+    // .uuid("ID kelompok keahlian tidak valid"),
   isKetuaKK: z.boolean().optional(),
 });
 
@@ -40,12 +44,20 @@ export const upsertMahasiswaSchema = z.object({
     .int()
     .min(2000)
     .max(2100),
+  // NOTE: Validasi UUID sementara dilonggarkan menjadi non-empty string untuk fleksibilitas format ID (legacy / custom ID).
+  // TODO (Production): Kembalikan ke .uuid("ID Program Studi tidak valid") jika semua ID sudah terstandarisasi UUID.
   studyProgramId: z
     .string({ required_error: "Program Studi wajib dipilih" })
-    .uuid("ID Program Studi tidak valid"),
+    .trim()
+    .min(1, "Program Studi wajib dipilih"),
+    // .uuid("ID Program Studi tidak valid"),
+  // NOTE: Validasi UUID sementara dilonggarkan menjadi non-empty string untuk fleksibilitas format ID (legacy / custom ID).
+  // TODO (Production): Kembalikan ke .uuid("ID Dosen Wali tidak valid") jika semua ID sudah terstandarisasi UUID.
   dosenWaliId: z
     .string({ required_error: "Dosen Wali wajib dipilih" })
-    .uuid("ID Dosen Wali tidak valid"),
+    .trim()
+    .min(1, "Dosen Wali wajib dipilih"),
+    // .uuid("ID Dosen Wali tidak valid"),
   sks: z.coerce.number().int().min(0).max(200).optional().nullable(),
   ipk: z.coerce.number().min(0).max(4).optional().nullable(),
   tak: z.coerce.number().int().min(0).optional().nullable(),
@@ -79,9 +91,13 @@ export const upsertStudyProgramSchema = z.object({
     .string({ required_error: "Kode program studi wajib diisi" })
     .trim()
     .min(1, "Kode program studi wajib diisi"),
+  // NOTE: Validasi UUID sementara dilonggarkan menjadi non-empty string untuk fleksibilitas format ID (legacy / custom ID).
+  // TODO (Production): Kembalikan ke .uuid("ID Fakultas tidak valid") jika semua ID sudah terstandarisasi UUID.
   facultyId: z
     .string({ required_error: "ID Fakultas wajib diisi" })
-    .uuid("ID Fakultas tidak valid"),
+    .trim()
+    .min(1, "ID Fakultas wajib diisi"),
+    // .uuid("ID Fakultas tidak valid"),
   isActive: z.boolean().optional(),
 });
 
