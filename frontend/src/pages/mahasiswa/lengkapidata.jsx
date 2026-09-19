@@ -15,8 +15,8 @@ const LengkapiData = () => {
   const [formData, setFormData] = useState({
     namaLengkap:      '',
     nim:              '',
-    kelas:            '',
-    angkatan:         '',
+    kelasAsal:        '',
+    tahunAngkatan:    '',
     studyProgramId:   '',
     studyProgramNama: '',
     dosenWaliId:      '',
@@ -29,10 +29,8 @@ const LengkapiData = () => {
   const [showDropdown, setShowDropdown] = useState({ dosenWali: false });
   const [errors,       setErrors]       = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [lecturers,     setLecturers]     = useState([]);
   const [studyPrograms, setStudyPrograms] = useState([]);
-
   const [loadingDosen, setLoadingDosen] = useState(true);
   const [loadingProdi, setLoadingProdi] = useState(true);
   const [errorDosen,   setErrorDosen]   = useState(null);
@@ -78,17 +76,26 @@ const LengkapiData = () => {
   useEffect(() => {
     const draft = localStorage.getItem('student_form_draft');
     if (draft) {
-      const parsed = JSON.parse(draft);
-      setFormData(prev => ({
-        ...prev,
-        ...parsed,
-        namaLengkap: parsed.namaLengkap || user?.name || ''
-      }));
-      setSearchQuery({
-        dosenWali: parsed.dosenWaliKode
-          ? `${parsed.dosenWaliKode} - ${parsed.dosenWaliNama}`
-          : '',
-      });
+      try {
+        const parsed = JSON.parse(draft);
+        const validStudyProgramId = parsed.studyProgramId ? String(parsed.studyProgramId) : '';
+        const validDosenWaliId = parsed.dosenWaliId ? String(parsed.dosenWaliId) : '';
+
+        setFormData(prev => ({
+          ...prev,
+          ...parsed,
+          studyProgramId: validStudyProgramId,
+          dosenWaliId: validDosenWaliId,
+          namaLengkap: parsed.namaLengkap || user?.name || ''
+        }));
+        setSearchQuery({
+          dosenWali: validDosenWaliId && parsed.dosenWaliKode
+            ? `${parsed.dosenWaliKode} - ${parsed.dosenWaliNama}`
+            : '',
+        });
+      } catch (e) {
+        console.error("Gagal parse draft:", e);
+      }
     } else if (user?.name) {
       setFormData(prev => ({
         ...prev,
@@ -156,7 +163,7 @@ const LengkapiData = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const requiredFields = ['namaLengkap', 'nim', 'kelas', 'angkatan', 'studyProgramId', 'dosenWaliId'];
+    const requiredFields = ['namaLengkap', 'nim', 'kelasAsal', 'tahunAngkatan', 'studyProgramId', 'dosenWaliId'];
     const emptyField = requiredFields.find(field => !formData[field]);
     if (emptyField) {
       setErrors('Semua field wajib diisi.');
@@ -166,14 +173,16 @@ const LengkapiData = () => {
     const payload = {
       nim:            formData.nim,
       name:           formData.namaLengkap,
-      className:      formData.kelas,
-      year:           Number(formData.angkatan),
-      studyProgramId: formData.studyProgramId,
-      dosenWaliId:    formData.dosenWaliId,
+      kelasAsal:      formData.kelasAsal,
+      tahunAngkatan:  Number(formData.tahunAngkatan),
+      studyProgramId: String(formData.studyProgramId),
+      dosenWaliId:    String(formData.dosenWaliId),
       sks:            null,
       ipk:            null,
       tak:            null,
     };
+
+    console.log('[LengkapiData] Submitting payload:', payload);
 
     setIsSubmitting(true);
     try {
@@ -183,7 +192,12 @@ const LengkapiData = () => {
       localStorage.removeItem('student_form_draft');
       navigate('/mahasiswa/dashboard');
     } catch (err) {
-      const msg = err.response?.data?.message || "Gagal menyimpan data. Silakan coba lagi.";
+      console.error('[LengkapiData] Submission error response:', err.response?.data);
+      const resData = err.response?.data;
+      let msg = resData?.message || "Gagal menyimpan data. Silakan coba lagi.";
+      if (Array.isArray(resData?.errors) && resData.errors.length > 0) {
+        msg = resData.errors.map(e => e.message).join(', ');
+      }
       setErrors(msg);
     } finally {
       setIsSubmitting(false);
@@ -202,7 +216,15 @@ const LengkapiData = () => {
     const results = filteredLecturers(query);
     if (results.length === 0) return <div className="dropdown-item disabled">Dosen tidak ditemukan</div>;
     return results.map((l) => (
-      <div key={l.kode} className="dropdown-item" onClick={() => selectLecturer(type, l)}>
+      <div
+        key={l.id || l.kode}
+        className="dropdown-item"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          selectLecturer(type, l);
+        }}
+        onClick={() => selectLecturer(type, l)}
+      >
         {l.kode} - {l.nama}
       </div>
     ));
@@ -219,7 +241,7 @@ const LengkapiData = () => {
             <img src={logoTelkom} alt="Logo Telkom" className="form-logo-img" />
           </div>
           <h2 className="title">Lengkapi Data Diri</h2>
-          <p className="subtitle">Silakan melengkapi data akademik Anda sebelum melanjutkan ke Dashboard.</p>
+          <p className="subtitle">Silakan melengkapi data akademik Anda sebelum melanjutkan ke halaman Dashboard.</p>
         </div>
 
         {errors && <div className="error-alert">{errors}</div>}
@@ -239,15 +261,28 @@ const LengkapiData = () => {
             </div>
           </div>
 
-          {/* NIM + Angkatan */}
+          {/* NIM (dipindahkan ke samping Nama Lengkap, full width agar tidak terpotong) */}
+          <div className="form-group">
+            <label className="form-label"><IdCard size={16} /> NIM</label>
+            <div className="input-wrapper">
+              <IdCard className="input-icon" size={18} />
+              <input
+                type="text" name="nim" className="form-input"
+                placeholder="NIM" value={formData.nim}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+
+          {/* Kelas Asal + Angkatan (Kelas Asal di sebelah kiri Angkatan) */}
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label"><IdCard size={16} /> NIM</label>
+              <label className="form-label"><GraduationCap size={16} /> Kelas Asal</label>
               <div className="input-wrapper">
-                <IdCard className="input-icon" size={18} />
+                <GraduationCap className="input-icon" size={18} />
                 <input
-                  type="text" name="nim" className="form-input"
-                  placeholder="NIM" value={formData.nim}
+                  type="text" name="kelasAsal" className="form-input"
+                  placeholder="SE-07-01" value={formData.kelasAsal}
                   onChange={handleInputChange}
                 />
               </div>
@@ -257,24 +292,11 @@ const LengkapiData = () => {
               <div className="input-wrapper">
                 <GraduationCap className="input-icon" size={18} />
                 <input
-                  type="text" name="angkatan" className="form-input"
-                  placeholder="Angkatan" value={formData.angkatan}
+                  type="text" name="tahunAngkatan" className="form-input"
+                  placeholder="Angkatan" value={formData.tahunAngkatan}
                   onChange={handleInputChange}
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Kelas */}
-          <div className="form-group">
-            <label className="form-label"><GraduationCap size={16} /> Kelas Asal</label>
-            <div className="input-wrapper">
-              <GraduationCap className="input-icon" size={18} />
-              <input
-                type="text" name="kelas" className="form-input"
-                placeholder="SE-07-01" value={formData.kelas}
-                onChange={handleInputChange}
-              />
             </div>
           </div>
 
@@ -333,7 +355,7 @@ const LengkapiData = () => {
 
           {/* NIP Dosen Wali */}
           <div className="form-group">
-            <label className="form-label">NIP Dosen Wali (Otomatis)</label>
+            <label className="form-label"><IdCard size={16} />NIP Dosen Wali (Otomatis)</label>
             <input
               type="text" className="form-input disabled" disabled
               value={formData.dosenWaliNip} style={{ paddingLeft: '14px' }}
