@@ -25,7 +25,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 40px 20px;
+  padding: 16px;
   position: relative;
   overflow: hidden;
 }
@@ -53,40 +53,29 @@
   left: -50px;
 }
 
-/* .data-diri-card {
-  position: relative;
-  z-index: 1;
-  background: var(--white);
-  width: 100%;
-  max-width: 600px;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: var(--shadow-card);
-} */
-
 .data-diri-card {
   position: relative;
   z-index: 1;
   background: var(--white);
   width: 100%;
-  max-width: 680px; /* naik dari 600px, kasih ruang ekstra ±80px buat redistribusi NIM:Angkatan */
-  padding: 40px;
+  max-width: 640px;
+  padding: 24px 32px;
   border-radius: 20px;
   box-shadow: var(--shadow-card);
 }
 
 .header-section {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 12px;
 }
 
 .form-logo {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 16px;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 6px;
   background: var(--gray-100);
   border: 1px solid var(--gray-200-border);
-  border-radius: 14px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,24 +88,25 @@
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: var(--gray-900);
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
 .subtitle {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: var(--gray-600);
+  line-height: 1.3;
 }
 
 .error-alert {
   background: #fef2f2;
   color: #b91c1c;
-  padding: 12px;
+  padding: 10px;
   border-radius: 8px;
-  margin-bottom: 20px;
-  font-size: 0.875rem;
+  margin-bottom: 14px;
+  font-size: 0.85rem;
   text-align: center;
   border: 1px solid #fecaca;
 }
@@ -124,33 +114,29 @@
 .form-grid {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 10px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
-/* .form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-} */
+/* Kelas Asal & Angkatan sekarang berpasangan dan harus sama panjang */
 .form-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(160px, 1fr); /* NIM dapat porsi ~1.6x, Angkatan dijamin minimal 160px */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
 }
 
 .form-label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--red-primary);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .input-wrapper {
@@ -168,11 +154,11 @@
 .form-input,
 .form-select {
   width: 100%;
-  padding: 12px 14px 12px 42px;
+  padding: 8px 14px 8px 38px;
   background: var(--gray-100);
   border: 1.5px solid var(--gray-200);
   border-radius: var(--radius-input);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   outline: none;
   transition: all var(--transition);
 }
@@ -206,6 +192,8 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
+  max-height: 180px;
+  overflow-y: auto;
 }
 
 .dropdown-item {
@@ -240,8 +228,8 @@
 }
 
 .btn-submit {
-  margin-top: 24px;
-  padding: 14px;
+  margin-top: 8px;
+  padding: 10px;
   background: var(--red-primary);
   color: var(--white);
   border: none;
