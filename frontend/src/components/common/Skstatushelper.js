@@ -29,21 +29,15 @@ export const unwrapResponse = (raw) => {
   return raw;
 };
 
-/**
- * @param {object|null} permohonan  hasil dari getSKTARequest() / unwrapResponse()
- * @returns {string}
- */
 export const determineStatus = (permohonan) => {
   if (!permohonan) return STATUS_SK.DALAM_PROSES;
 
-  // 1. CEK REVISI TERLEBIH DAHULU (Prioritas Utama)
-  // Walaupun isDraft diubah jadi true oleh BE dan ada SK lama, jika ada message, ini mutlak REVISI.
+  // 1. CEK REVISI TERLEBIH DAHULU
   if (permohonan.message || permohonan.isEdit) {
     return STATUS_SK.BELUM_TERBIT; 
   }
 
   // 2. CEK DRAFT (Khusus Kategori Perubahan)
-  // Hanya berstatus draft jika isDraft = true DAN tidak ada pesan penolakan.
   const draftCategories = [
     SKTA_CATEGORY.PERUBAHAN_JUDUL,
     SKTA_CATEGORY.PERUBAHAN_DOSEN_PEMBIMBING,
@@ -53,7 +47,7 @@ export const determineStatus = (permohonan) => {
     return STATUS_SK.DRAFT;
   }
 
-  // 3. CEK SUDAH TERBIT / APPROVAL FINAL
+  // 3. CEK SUDAH TERBIT
   const hasLang     = permohonan.hasTakenLanguageTest     === true;
   const hasProposal = permohonan.hasUploadedFinalProposal === true;
   const hasFile     = !!permohonan.sktaUploadPath || !!permohonan.sktaDownloadUrl
@@ -61,17 +55,9 @@ export const determineStatus = (permohonan) => {
 
   if (hasLang && hasProposal && hasFile) return STATUS_SK.SUDAH_TERBIT;
 
-  // 4. DEFAULT: Dalam Antrian Admin
   return STATUS_SK.DALAM_PROSES;
 };
 
-/**
- * determineSkStatus
- * Tambahan pengecekan expDate di atas determineStatus dasar.
- *
- * @param {object|null} permohonan
- * @returns {string}
- */
 export const determineSkStatus = (permohonan) => {
   const baseStatus = determineStatus(permohonan);
 
@@ -88,8 +74,11 @@ export const isSkEditable = (status, permohonan = null) => {
   if (status === STATUS_SK.EXPIRED) return true;
   if (status === STATUS_SK.BELUM_TERBIT) {
     if (!permohonan?.isEdit) return false;
-    return new Date(permohonan.isEdit) > new Date();
+    const deadline = new Date(permohonan.isEdit);
+    deadline.setHours(23, 59, 59, 999); 
+    return deadline > new Date();
   }
+  if (status === STATUS_SK.DRAFT) return true;
   return false;
 };
 
@@ -97,10 +86,14 @@ const MAIN_PAGE_CATEGORIES = [SKTA_CATEGORY.PERMOHONAN_BARU, SKTA_CATEGORY.PERPA
 
 export const getSubmissionMode = (permohonan) => {
   if (!permohonan) return 'create-baru';
-  if (!MAIN_PAGE_CATEGORIES.includes(permohonan.category)) return 'blocked';
+  
   const status = determineSkStatus(permohonan);
+  
   if (status === STATUS_SK.EXPIRED) return 'create-perpanjangan';
-  if (status === STATUS_SK.BELUM_TERBIT && isSkEditable(status, permohonan)) return 'patch-revisi';
+  if (!MAIN_PAGE_CATEGORIES.includes(permohonan.category)) return 'blocked';
+
+  if (status === STATUS_SK.BELUM_TERBIT) return 'patch-revisi';
+  
   return 'blocked';
 };
 

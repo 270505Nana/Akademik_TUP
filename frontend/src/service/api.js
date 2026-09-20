@@ -327,6 +327,7 @@ export const rejectPermohonanSK = async (permohonanId, payload) => {
   const response = await api.put(`/api/permohonan-skta/${permohonanId}/reject`, {
     message: payload.message,
     adminId: payload.adminId,
+    isEdit: payload.isEdit, 
   });
   return response.data?.data ?? response.data;
 };
@@ -725,11 +726,6 @@ export const getMyTranskripUpload = async (mahasiswaId) => {
 
 // ------------------------------------------- DOSEN: MAHASISWA BIMBINGAN -------------------------------------------
 
-/**
- * Mendapatkan daftar mahasiswa bimbingan pendaftaran sidang untuk dosen yang sedang login.
- * @param {Object} params - { search, studyProgramId, sortBy, page, limit }
- * @returns {Promise<{ data: Array, pagination: Object }>}
- */
 export const getMahasiswaBimbingan = async (params = {}) => {
   const cleanParams = {};
   if (params.search && params.search.trim() !== '') cleanParams.search = params.search.trim();
@@ -742,10 +738,6 @@ export const getMahasiswaBimbingan = async (params = {}) => {
   return response.data;
 };
 
-/**
- * Mendapatkan data ringkasan dashboard untuk dosen yang sedang login.
- * @returns {Promise<Object>}
- */
 export const getDosenDashboard = async () => {
   const response = await api.get('/api/dosen/dashboard');
   return response.data?.data ?? response.data;

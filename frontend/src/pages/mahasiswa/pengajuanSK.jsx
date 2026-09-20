@@ -1,26 +1,85 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
-import { Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, RefreshCw, AlertCircle, Menu } from 'lucide-react';
-import SimtaLogo from "../../assets/logo-simta.png";
-import Telulogo  from "../../assets/logo-telkom.png";
+import { Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, RefreshCw, AlertCircle, Menu, Eye } from 'lucide-react';
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import { getLecturers, getSKTARequest, submitSKTARequest, resubmitSKTARequest, downloadTemplate, downloadSK } from '../../service/api';
+import api, { getLecturers, getSKTARequest, submitSKTARequest, submitFinalSKTARequest, downloadTemplate, downloadSK } from '../../service/api';
 import {
   determineSkStatus,
   getSubmissionMode,
   isMainPageCategory,
   STATUS_SK,
   SKTA_CATEGORY,
+  isSkEditable
 } from '../../components/common/Skstatushelper';
 import CustomAlert from '../../components/common/CustomAlert';
-import TemplateEvidenceModal from '../../components/common/TemplateEvidenceModal';
 import SidebarMahasiswa from '../../components/sidebar/SidebarMahasiswa';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
 
-const DownloadTemplateButton = ({ code }) => {
+const PreviewModal = ({ code, onClose }) => {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const fetchPreview = async () => {
+      try {
+        const res = await api.get(`/api/templates/preview/${code}`, { responseType: 'blob' });
+        if (active) {
+          const url = URL.createObjectURL(res.data);
+          setBlobUrl(url);
+        }
+      } catch (err) {
+        console.error('Preview error:', err);
+        if (active) setError(true);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    fetchPreview();
+    return () => {
+      active = false;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [code]);
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)' }}>
+      <div style={{ background: '#fff', width: '90%', maxWidth: '850px', height: '85vh', borderRadius: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+        <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E5E7EB', background: '#F8FAFC' }}>
+          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>Preview Dokumen Template</h3>
+          <button onClick={onClose} style={{ background: '#E2E8F0', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#CBD5E1'} onMouseLeave={e => e.currentTarget.style.background = '#E2E8F0'}>
+            <span style={{ fontWeight: 'bold', fontSize: '14px', lineHeight: 1 }}>✕</span>
+          </button>
+        </div>
+        <div style={{ flex: 1, position: 'relative', background: '#F3F4F6' }}>
+          {loading && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+              <Loader size={32} color="#C0182A" style={{ animation: 'spin 1s linear infinite' }} />
+              <p style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>Memuat preview dokumen...</p>
+            </div>
+          )}
+          {error && !loading && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <AlertTriangle size={32} color="#B91C1C" />
+              <p style={{ fontSize: '13px', color: '#B91C1C', fontWeight: 700, margin: 0 }}>Gagal memuat preview dokumen.</p>
+              <p style={{ fontSize: '11px', color: '#6B7280', margin: 0 }}>Pastikan koneksi stabil atau coba unduh secara langsung.</p>
+            </div>
+          )}
+          {blobUrl && !loading && (
+            <iframe src={blobUrl} style={{ width: '100%', height: '100%', border: 'none' }} title="Preview PDF Template" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TemplateActionButtons = ({ code }) => {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -43,21 +102,40 @@ const DownloadTemplateButton = ({ code }) => {
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleDownload}
-      disabled={isDownloading}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '5px 14px', borderRadius: 9999,
-        fontSize: 11, fontWeight: 700,
-        background: isDownloading ? '#9CA3AF' : '#C0182A',
-        color: '#fff', border: 'none', cursor: isDownloading ? 'not-allowed' : 'pointer',
-        marginLeft: 6,
-      }}
-    >
-      {isDownloading ? 'Mengunduh...' : '⬇ Download Contoh Evidence'}
-    </button>
+    <>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginLeft: '6px' }}>
+        <button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 14px', borderRadius: 9999,
+            fontSize: 11, fontWeight: 700,
+            background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', cursor: 'pointer',
+            transition: 'background 0.2s'
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = '#E2E8F0'}
+          onMouseLeave={e => e.currentTarget.style.background = '#F1F5F9'}
+        >
+          <Eye size={13} /> Preview
+        </button>
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={isDownloading}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 14px', borderRadius: 9999,
+            fontSize: 11, fontWeight: 700,
+            background: isDownloading ? '#9CA3AF' : '#C0182A',
+            color: '#fff', border: 'none', cursor: isDownloading ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {isDownloading ? 'Mengunduh...' : '⬇ Download Template'}
+        </button>
+      </div>
+      {showPreview && <PreviewModal code={code} onClose={() => setShowPreview(false)} />}
+    </>
   );
 };
 
@@ -203,26 +281,12 @@ const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, submissio
 
 const parseBackendError = (err) => {
   const data = err.response?.data;
-  
   if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
     const lines = data.errors.map(e => `• ${e.message}`);
-    return {
-      title: data.message || 'Periksa kembali formulirmu',
-      message: lines.join('\n'),
-    };
+    return { title: data.message || 'Periksa kembali formulirmu', message: lines.join('\n') };
   }
-  
-  if (data?.message) {
-    return {
-      title: 'Gagal mengirim pengajuan',
-      message: data.message,
-    };
-  }
-
-  return {
-    title: 'Gagal mengirim pengajuan',
-    message: err.message || 'Terjadi kesalahan pada sistem. Silakan coba lagi.',
-  };
+  if (data?.message) return { title: 'Gagal mengirim pengajuan', message: data.message };
+  return { title: 'Gagal mengirim pengajuan', message: err.message || 'Terjadi kesalahan pada sistem. Silakan coba lagi.' };
 };
 
 const PengajuanSK = () => {
@@ -254,14 +318,10 @@ const PengajuanSK = () => {
   const [isDragging,   setIsDragging]   = useState(false);
   
   const [submitError,  setSubmitError]  = useState(null);
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   const handleToggleSidebar = () => {
-    if (window.innerWidth < 992) {
-      setSidebarOpen(!sidebarOpen);
-    } else {
-      setIsDesktopCollapsed(!isDesktopCollapsed);
-    }
+    if (window.innerWidth < 992) setSidebarOpen(!sidebarOpen);
+    else setIsDesktopCollapsed(!isDesktopCollapsed);
   };
 
   useEffect(() => {
@@ -339,10 +399,7 @@ const PengajuanSK = () => {
 
       } catch (err) {
         console.error('Gagal cek status SKTA:', err);
-        setSubmitError({
-          title: 'Gagal memuat data',
-          message: 'Terjadi kesalahan saat memuat status pengajuan SK kamu. Silakan refresh halaman.',
-        });
+        setSubmitError({ title: 'Gagal memuat data', message: 'Terjadi kesalahan saat memuat status pengajuan SK kamu. Silakan refresh halaman.' });
         setPageStatus('form');
       }
     };
@@ -355,7 +412,16 @@ const PengajuanSK = () => {
   const noHpDisplay  = user?.phone               || '';
   const prodiDisplay = student?.studyProgramNama || '';
 
+  // STATE KONDISIONAL BERDASARKAN DEADLINE
+  const isExpired      = submissionMode === 'create-perpanjangan';
+  const isBelumTerbit  = submissionMode === 'patch-revisi';
+  const isEditableForm = isSkEditable(skStatus, permohonan);
+  const isReadOnlyForm = isBelumTerbit && !isEditableForm;
+
+  const dynamicTitle = `${isExpired ? 'Perpanjangan SK' : isBelumTerbit ? 'Perbaikan Revisi SK' : 'Permohonan'} Penerbitan SK Pembimbing Tugas Akhir`;
+
   const handleDosenChange = useCallback((field, val) => {
+    if (isReadOnlyForm) return;
     const namaField = field === 'kode1' ? 'dosen1' : 'dosen2';
     setFormData(prev => {
       const updated = { ...prev, [field]: val, [namaField]: val?.nama || '' };
@@ -372,7 +438,7 @@ const PengajuanSK = () => {
       return updated;
     });
     setSubmitError(null);
-  }, []);
+  }, [isReadOnlyForm]);
 
   const processFile = (file) => {
     if (!file) return;
@@ -388,12 +454,10 @@ const PengajuanSK = () => {
       setSelectedFile(null); setActualFile(null);
     } else {
       setFileError(null);
-      
       const safeName = (student?.namaLengkap || user?.username || "mahasiswa").toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       const safeNim = student?.nim || "0000000000";
       const extension = file.name.split('.').pop();
       const formattedFileName = `${safeNim}-${safeName}-evidence-pembimbing.${extension}`;
-      
       const renamedFile = new File([file], formattedFileName, { type: file.type });
       
       setActualFile(renamedFile);
@@ -412,6 +476,7 @@ const PengajuanSK = () => {
 
   const handleDragOver = (e) => {
     e.preventDefault();
+    if (isReadOnlyForm) return;
     setIsDragging(true);
   };
 
@@ -422,6 +487,7 @@ const PengajuanSK = () => {
 
   const handleDrop = (e) => {
     e.preventDefault();
+    if (isReadOnlyForm) return;
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFile(e.dataTransfer.files[0]);
@@ -429,18 +495,9 @@ const PengajuanSK = () => {
     }
   };
 
-  const isExpired    = submissionMode === 'create-perpanjangan';
-  const isBelumTerbit = submissionMode === 'patch-revisi';
-
   const handleSubmit = async () => {
     setSubmitError(null);
-    if (submissionMode === 'blocked') {
-      setSubmitError({
-        title: 'Tidak dapat mengajukan',
-        message: 'Kamu sudah memiliki pengajuan SK yang masih aktif/diproses. Tidak bisa mengajukan lebih dari 1 kali.',
-      });
-      return;
-    }
+    if (submissionMode === 'blocked' || isReadOnlyForm) return;
 
     const validationError = validate({
       judulIndo:    formData.judulIndo,
@@ -468,15 +525,18 @@ const PengajuanSK = () => {
     try {
       if (submissionMode === 'patch-revisi') {
         const activeRequestId = sktaRequestId ?? permohonan?.id;
-        await resubmitSKTARequest({
-          sktaRequestId:      activeRequestId,
-          studentId:          mahasiswaId,
-          proposalTitleId:    formData.judulIndo.trim(),
-          proposalTitleEn:    formData.judulInggris.trim(),
-          dosenPembimbing1Id: formData.kode1?.value,
-          dosenPembimbing2Id: formData.kode2?.value,
-          evidence:           actualFile,
-        });
+
+        const finalPayload = new FormData();
+        finalPayload.append('id', activeRequestId);
+        finalPayload.append('mahasiswaId', mahasiswaId);
+        finalPayload.append('category', permohonan?.category || SKTA_CATEGORY.PERMOHONAN_BARU);
+        finalPayload.append('judulProposalIndonesia', formData.judulIndo.trim());
+        finalPayload.append('judulProposalInggris', formData.judulInggris.trim());
+        if (formData.kode1?.value) finalPayload.append('dosenPembimbing1Id', formData.kode1.value);
+        if (formData.kode2?.value) finalPayload.append('dosenPembimbing2Id', formData.kode2.value);
+        if (actualFile) finalPayload.append('evidence', actualFile);
+
+        await submitFinalSKTARequest(finalPayload);
         setPageStatus('revision_sent');
 
       } else {
@@ -484,18 +544,31 @@ const PengajuanSK = () => {
           ? SKTA_CATEGORY.PERPANJANGAN_SK
           : SKTA_CATEGORY.PERMOHONAN_BARU;
 
-        const result = await submitSKTARequest({
+        const draftResult = await submitSKTARequest({
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
           studentId:          mahasiswaId,
           dosenPembimbing1Id: formData.kode1?.value,
           dosenPembimbing2Id: formData.kode2?.value,
-          evidence:           actualFile,
           category:           categoryString,
         });
         
-        const newSktaRequestId = result?.data?.id;
-        if (newSktaRequestId) updateSktaRequestId(newSktaRequestId);
+        const newSktaRequestId = draftResult?.data?.id || draftResult?.id;
+        if (!newSktaRequestId) throw new Error("Gagal mendapatkan ID Permohonan dari server.");
+
+        const finalPayload = new FormData();
+        finalPayload.append('id', newSktaRequestId);
+        finalPayload.append('mahasiswaId', mahasiswaId);
+        finalPayload.append('category', categoryString);
+        finalPayload.append('judulProposalIndonesia', formData.judulIndo.trim());
+        finalPayload.append('judulProposalInggris', formData.judulInggris.trim());
+        if (formData.kode1?.value) finalPayload.append('dosenPembimbing1Id', formData.kode1.value);
+        if (formData.kode2?.value) finalPayload.append('dosenPembimbing2Id', formData.kode2.value);
+        if (actualFile) finalPayload.append('evidence', actualFile);
+
+        await submitFinalSKTARequest(finalPayload);
+        
+        updateSktaRequestId(newSktaRequestId);
         setPageStatus('success');
       }
     } catch (err) {
@@ -509,13 +582,14 @@ const PengajuanSK = () => {
     control: (base, state) => ({
       ...base,
       paddingLeft: '32px',
-      backgroundColor: '#F9FAFB',
+      backgroundColor: state.isDisabled ? '#F3F4F6' : '#F9FAFB',
       border: `1.5px solid ${state.isFocused ? '#C0182A' : '#E5E7EB'}`,
       borderRadius: '6px',
       fontSize: '12.5px',
       minHeight: '40px',
       boxShadow: state.isFocused ? '0 0 0 3px rgba(192,24,42,0.1)' : 'none',
-      '&:hover': { borderColor: '#C0182A' },
+      '&:hover': { borderColor: state.isDisabled ? '#E5E7EB' : '#C0182A' },
+      cursor: state.isDisabled ? 'not-allowed' : 'default'
     }),
     valueContainer: (base) => ({ ...base, padding: '0 6px' }),
     option: (base, state) => ({
@@ -526,45 +600,11 @@ const PengajuanSK = () => {
     }),
   };
 
-  const LayoutWrapper = ({ children }) => {
-    const dynamicTitle = `${isExpired ? 'Perpanjangan SK' : isBelumTerbit ? 'Perbaikan Revisi SK' : 'Permohonan'} Penerbitan SK Pembimbing Tugas Akhir`;
-    
-    return (
-      <div className={`flex bg-[#F4F6FB] min-h-screen ${isDesktopCollapsed ? 'desktop-collapsed' : ''}`}>
-        <style>{`
-          .topbar-toggle { display: flex !important; cursor: pointer; }
-          @media (min-width: 992px) {
-            .desktop-collapsed #sidebar { transform: translateX(-100%) !important; }
-            .desktop-collapsed #main-content { margin-left: 0 !important; }
-          }
-        `}</style>
-        <SidebarMahasiswa isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div id="main-content" className="flex-1 flex flex-col" style={{ transition: 'margin-left 0.22s ease' }}>
-          <header className="topbar">
-            <button className="topbar-toggle" onClick={handleToggleSidebar}>
-              <Menu size={20} color="#fff" />
-            </button>
-            <div className="topbar-brand text-white" style={{ fontSize: '15px' }}>{dynamicTitle}</div>
-          </header>
-          <main className="page-body px-4 py-6 md:px-8 md:py-8" style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
-            {children}
-          </main>
-        </div>
-      </div>
-    );
-  };
+  const renderContent = () => {
+    if (pageStatus === 'loading') return <PageLoader />;
 
-  if (pageStatus === 'loading') {
-    return (
-      <LayoutWrapper>
-        <PageLoader />
-      </LayoutWrapper>
-    );
-  }
-
-  if (pageStatus === 'revision_sent') {
-    return (
-      <LayoutWrapper>
+    if (pageStatus === 'revision_sent') {
+      return (
         <div style={{ padding: '40px 20px', textAlign: 'center', maxWidth: 500, margin: '0 auto' }}>
           <div style={{
             width: 64, height: 64, borderRadius: '50%',
@@ -594,10 +634,6 @@ const PengajuanSK = () => {
               </div>
             </div>
           </div>
-          <p style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 28, lineHeight: 1.5 }}>
-            Selama proses verifikasi berlangsung, kamu tidak dapat mengirim revisi ulang.
-            Jika ada pertanyaan, hubungi helpdesk layanan sidang-yudisium.
-          </p>
           <button
             onClick={() => navigate('/mahasiswa/dashboard')}
             style={{
@@ -609,13 +645,11 @@ const PengajuanSK = () => {
             Kembali ke Dashboard
           </button>
         </div>
-      </LayoutWrapper>
-    );
-  }
+      );
+    }
 
-  if (pageStatus === 'success') {
-    return (
-      <LayoutWrapper>
+    if (pageStatus === 'success') {
+      return (
         <div style={{ padding: '40px 20px', textAlign: 'center', maxWidth: 500, margin: '0 auto' }}>
           <div style={{
             width: 64, height: 64, borderRadius: '50%',
@@ -643,15 +677,12 @@ const PengajuanSK = () => {
             Kembali ke Dashboard
           </button>
         </div>
-      </LayoutWrapper>
-    );
-  }
+      );
+    }
 
-  if (pageStatus === 'status_only') {
-    const categoryMismatch = !isMainPageCategory(permohonan);
-
-    return (
-      <LayoutWrapper>
+    if (pageStatus === 'status_only') {
+      const categoryMismatch = !isMainPageCategory(permohonan);
+      return (
         <div style={{ padding: '24px 16px', maxWidth: 600, margin: '0 auto' }}>
           {categoryMismatch ? (
             <div style={{
@@ -679,30 +710,26 @@ const PengajuanSK = () => {
             </button>
           </div>
         </div>
-      </LayoutWrapper>
-    );
-  }
+      );
+    }
 
-  return (
-    <LayoutWrapper>
+    return (
       <div className="sk-content-wrapper" style={{ padding: '0 8px' }}>
 
-        {isExpired && (
-          <SkStatusBanner status={STATUS_SK.EXPIRED} permohonan={permohonan} />
-        )}
-
-        {isBelumTerbit && (
-          <SkStatusBanner status={STATUS_SK.BELUM_TERBIT} permohonan={permohonan} />
-        )}
+        {isExpired && <SkStatusBanner status={STATUS_SK.EXPIRED} permohonan={permohonan} />}
+        {isBelumTerbit && <SkStatusBanner status={STATUS_SK.BELUM_TERBIT} permohonan={permohonan} />}
 
         {isBelumTerbit && permohonan?.isEdit && (
           <div style={{
-            background: '#FFF7ED', border: '1px solid #FED7AA',
+            background: isReadOnlyForm ? '#FEF2F2' : '#FFF7ED', 
+            border: `1px solid ${isReadOnlyForm ? '#FECACA' : '#FED7AA'}`,
             borderRadius: 8, padding: '10px 14px', marginBottom: 20,
             display: 'flex', alignItems: 'center', gap: 8,
-            fontSize: 11.5, color: '#92400E',
+            fontSize: 11.5, color: isReadOnlyForm ? '#B91C1C' : '#92400E',
           }}>
-            <span style={{ fontWeight: 700 }}>⏰ Batas perbaikan dokumen:</span>
+            <span style={{ fontWeight: 700 }}>
+              {isReadOnlyForm ? '❌ Masa perbaikan dokumen telah habis:' : '⏰ Batas perbaikan dokumen:'}
+            </span>
             <span>
               {new Date(permohonan.isEdit).toLocaleDateString('id-ID', {
                 day: 'numeric', month: 'long', year: 'numeric',
@@ -711,6 +738,7 @@ const PengajuanSK = () => {
           </div>
         )}
 
+        {/* SECTION: Info Box */}
         <div className="info-box-red" style={{ padding: '16px 20px', borderRadius: '10px', marginBottom: '32px' }}>
           <div className="info-content" style={{ display: 'flex', gap: '12px' }}>
             <div className="info-icon-circle" style={{ width: '32px', height: '32px', padding: '6px' }}>
@@ -775,22 +803,19 @@ const PengajuanSK = () => {
                 <User className="field-icon" size={16} />
                 <input type="text" value={namaDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px' }} />
               </div>
-              <p className="input-hint" style={{ fontSize: '10px', marginTop: '4px' }}>Nama terverifikasi otomatis dari sistem.</p>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>NIM (Nomor Induk Mahasiswa) *</label>
               <div className="input-with-icon">
                 <input type="text" value={nimDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed', fontSize: '12.5px', padding: '8px 12px', height: '40px' }} />
               </div>
-              <p className="input-hint" style={{ fontSize: '10px', marginTop: '4px' }}>NIM terverifikasi otomatis dari sistem.</p>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Nomor HP / WhatsApp Aktif *</label>
               <div className="input-with-icon">
                 <Phone className="field-icon" size={16} />
-                <input type="text" value={noHpDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px' }} placeholder="Nomor HP dari profil akun" />
+                <input type="text" value={noHpDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px' }} />
               </div>
-              <p className="input-hint" style={{ fontSize: '10px', marginTop: '4px' }}>Nomor HP terverifikasi otomatis dari sistem.</p>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Program Studi</label>
@@ -813,7 +838,8 @@ const PengajuanSK = () => {
                 placeholder="Masukkan judul tugas akhir dalam Bahasa Indonesia"
                 value={formData.judulIndo}
                 onChange={(e) => { setFormData(prev => ({ ...prev, judulIndo: e.target.value })); setSubmitError(null); }}
-                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px' }}
+                readOnly={isReadOnlyForm}
+                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px', backgroundColor: isReadOnlyForm ? '#F3F4F6' : '#fff', cursor: isReadOnlyForm ? 'not-allowed' : 'text' }}
               />
             </div>
           </div>
@@ -825,10 +851,10 @@ const PengajuanSK = () => {
                 placeholder="Enter your thesis/final project title in English"
                 value={formData.judulInggris}
                 onChange={(e) => { setFormData(prev => ({ ...prev, judulInggris: e.target.value })); setSubmitError(null); }}
-                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px' }}
+                readOnly={isReadOnlyForm}
+                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px', backgroundColor: isReadOnlyForm ? '#F3F4F6' : '#fff', cursor: isReadOnlyForm ? 'not-allowed' : 'text' }}
               />
             </div>
-            <p className="input-hint" style={{ fontSize: '10px', marginTop: '4px' }}>Pastikan judul sesuai dengan yang tertera di sistem iGracias.</p>
           </div>
 
           <div className="form-grid" style={{ gap: '16px', marginBottom: '20px' }}>
@@ -847,11 +873,10 @@ const PengajuanSK = () => {
                   placeholder={loadingDosen ? "Memuat data dosen..." : "Pilih Kode Dosen 1"}
                   options={lecturerOptions} styles={customSelectStyles}
                   value={formData.kode1} onChange={(val) => handleDosenChange('kode1', val)}
-                  isLoading={loadingDosen} isDisabled={loadingDosen}
+                  isLoading={loadingDosen} isDisabled={loadingDosen || isReadOnlyForm}
                   isClearable noOptionsMessage={() => "Dosen tidak ditemukan"} className="w-full"
                 />
               </div>
-              <p className="input-hint" style={{ fontSize: '10px', marginTop: '4px' }}>Pilih dari dropdown → nama akan terisi otomatis.</p>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Nama Dosen Pembimbing 2 *</label>
@@ -868,11 +893,10 @@ const PengajuanSK = () => {
                   placeholder={loadingDosen ? "Memuat data dosen..." : "Pilih Kode Dosen 2"}
                   options={lecturerOptions} styles={customSelectStyles}
                   value={formData.kode2} onChange={(val) => handleDosenChange('kode2', val)}
-                  isLoading={loadingDosen} isDisabled={loadingDosen}
+                  isLoading={loadingDosen} isDisabled={loadingDosen || isReadOnlyForm}
                   isClearable noOptionsMessage={() => "Dosen tidak ditemukan"} className="w-full"
                 />
               </div>
-              <p className="input-hint" style={{ fontSize: '10px', marginTop: '4px' }}>Pilih dari dropdown → nama akan terisi otomatis.</p>
             </div>
           </div>
 
@@ -880,45 +904,28 @@ const PengajuanSK = () => {
           <div className="form-group" style={{ marginBottom: 0 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               <label style={{ margin: 0, fontSize: '11.5px' }}>Kelompok Keilmuan</label>
-              <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
-                Otomatis diambil dari KK Dosen Pembimbing 1
-              </span>
+              <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>Otomatis diambil dari KK Dosen Pembimbing 1</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' }}>
               {kelompokKeilmuan.map((item) => {
                 const isSelected = formData.kelompok === item.label;
                 return (
                   <div key={item.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 12px', borderRadius: 6,
-                    border: `1px solid ${isSelected ? '#C0182A' : '#E5E7EB'}`,
-                    background: isSelected ? '#FEF2F2' : '#F9FAFB',
-                    cursor: 'default', transition: 'all 0.15s ease',
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6,
+                    border: `1px solid ${isSelected ? '#C0182A' : '#E5E7EB'}`, background: isSelected ? '#FEF2F2' : '#F9FAFB',
+                    cursor: 'default', opacity: isReadOnlyForm && !isSelected ? 0.6 : 1
                   }}>
                     <div style={{
-                      width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                      border: `1.5px solid ${isSelected ? '#C0182A' : '#D1D5DB'}`,
-                      background: isSelected ? '#C0182A' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 14, height: 14, borderRadius: '50%', flexShrink: 0, border: `1.5px solid ${isSelected ? '#C0182A' : '#D1D5DB'}`,
+                      background: isSelected ? '#C0182A' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {isSelected && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />}
                     </div>
-                    <span style={{
-                      fontSize: 10, fontWeight: isSelected ? 700 : 500,
-                      color: isSelected ? '#B91C1C' : '#6B7280',
-                      lineHeight: 1.3, userSelect: 'none',
-                    }}>
-                      {item.label}
-                    </span>
+                    <span style={{ fontSize: 10, fontWeight: isSelected ? 700 : 500, color: isSelected ? '#B91C1C' : '#6B7280', lineHeight: 1.3 }}>{item.label}</span>
                   </div>
                 );
               })}
             </div>
-            {!formData.kelompok && (
-              <p style={{ fontSize: 10, color: '#9CA3AF', marginTop: 8, fontStyle: 'italic' }}>
-                Pilih Dosen Pembimbing 1 terlebih dahulu untuk menentukan kelompok keilmuan.
-              </p>
-            )}
           </div>
         </section>
 
@@ -930,7 +937,7 @@ const PengajuanSK = () => {
 
           <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 11.5 }}>Berkas Lampiran Bukti Dosbing Sudah Diacc KK :</span>
-             <DownloadTemplateButton code="evidence-dosen-pembimbing" />
+             <TemplateActionButtons code="permohonan-skta-pengajuan-skta-evidence-approve-dospem-kk" />
           </div>
 
           {(isBelumTerbit || isExpired) && (
@@ -943,12 +950,12 @@ const PengajuanSK = () => {
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Unggah Dokumen Prasyarat {(!isBelumTerbit) ? '*' : ''}</label>
               <div 
-                className={`upload-area ${isDragging ? 'dragging' : ''}`} 
-                onClick={() => fileInputRef.current.click()}
+                className={`upload-area ${isDragging ? 'dragging' : ''} ${isReadOnlyForm ? 'disabled' : ''}`} 
+                onClick={() => !isReadOnlyForm && fileInputRef.current.click()}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                style={{ padding: '24px 16px', minHeight: '120px' }}
+                style={{ padding: '24px 16px', minHeight: '120px', opacity: isReadOnlyForm ? 0.5 : 1, cursor: isReadOnlyForm ? 'not-allowed' : 'pointer' }}
               >
                 <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf, .png, .jpg, .jpeg" />
                 <div className="upload-icon-circle" style={{ width: '40px', height: '40px', marginBottom: '10px' }}>
@@ -987,11 +994,7 @@ const PengajuanSK = () => {
                 )}
                 {!selectedFile && !fileError && (
                   <div className="empty-file-state" style={{ padding: '16px', border: '1px dashed #E5E7EB', borderRadius: '8px', textAlign: 'center', color: '#9CA3AF', fontSize: '11px' }}>
-                    {isExpired
-                      ? 'Wajib upload dokumen evidence untuk perpanjangan SK'
-                      : isBelumTerbit
-                        ? 'Opsional kosongkan jika evidence lama masih berlaku'
-                        : 'Belum ada file yang dipilih'}
+                    {isExpired ? 'Wajib upload dokumen untuk perpanjangan' : isBelumTerbit ? 'Opsional kosongkan jika evidence lama masih berlaku' : 'Belum ada file yang dipilih'}
                   </div>
                 )}
               </div>
@@ -1003,14 +1006,16 @@ const PengajuanSK = () => {
           <button
             className="btn-submit"
             onClick={handleSubmit}
-            disabled={pageStatus === 'submitting'}
+            disabled={pageStatus === 'submitting' || isReadOnlyForm}
             style={{
-              ...(pageStatus === 'submitting' ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
-              padding: '12px 32px', fontSize: '13px', borderRadius: '8px', background: '#C0182A', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer'
+              ...((pageStatus === 'submitting' || isReadOnlyForm) ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
+              padding: '12px 32px', fontSize: '13px', borderRadius: '8px', background: isReadOnlyForm ? '#6B7280' : '#C0182A', color: '#fff', fontWeight: 700, border: 'none'
             }}
           >
             {pageStatus === 'submitting' ? (
-              <><Loader size={14} style={{ animation: 'spin 1s linear infinite', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} /> Mengirim Pengajuan...</>
+              <><Loader size={14} style={{ animation: 'spin 1s linear infinite', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} /> Mengirim...</>
+            ) : isReadOnlyForm ? (
+              'Batas Waktu Habis'
             ) : isExpired ? (
               'Kirim Perpanjangan SK'
             ) : isBelumTerbit ? (
@@ -1021,14 +1026,31 @@ const PengajuanSK = () => {
           </button>
         </div>
       </div>
+    );
+  };
 
-      {showTemplateModal && (
-        <TemplateEvidenceModal
-          code="evidence-dosen-pembimbing"
-          onClose={() => setShowTemplateModal(false)}
-        />
-      )}
-    </LayoutWrapper>
+  return (
+    <div className={`flex bg-[#F4F6FB] min-h-screen ${isDesktopCollapsed ? 'desktop-collapsed' : ''}`}>
+      <style>{`
+        .topbar-toggle { display: flex !important; cursor: pointer; }
+        @media (min-width: 992px) {
+          .desktop-collapsed #sidebar { transform: translateX(-100%) !important; }
+          .desktop-collapsed #main-content { margin-left: 0 !important; }
+        }
+      `}</style>
+      <SidebarMahasiswa isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div id="main-content" className="flex-1 flex flex-col" style={{ transition: 'margin-left 0.22s ease' }}>
+        <header className="topbar">
+          <button className="topbar-toggle" onClick={handleToggleSidebar}>
+            <Menu size={20} color="#fff" />
+          </button>
+          <div className="topbar-brand text-white" style={{ fontSize: '15px' }}>{dynamicTitle}</div>
+        </header>
+        <main className="page-body px-4 py-6 md:px-8 md:py-8" style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+          {renderContent()}
+        </main>
+      </div>
+    </div>
   );
 };
 

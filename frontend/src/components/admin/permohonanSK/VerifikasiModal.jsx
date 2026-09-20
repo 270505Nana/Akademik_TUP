@@ -385,6 +385,7 @@ const VerifikasiModal = ({
             {/* TAHAP 2: VERIFIKASI */}
             {step === 2 && (
               <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }} className="dm-body" style={{ padding: 0 }}>
+                
                 {!isReadOnly && (
                   <div style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', marginBottom: 16 }}>
                     <button
@@ -401,6 +402,15 @@ const VerifikasiModal = ({
                     >
                       Tolak (Reject)
                     </button>
+                  </div>
+                )}
+
+                {/* Custom Alert Message dipindah ke atas */}
+                {validationError && (
+                  <div style={{ marginBottom: 16, padding: '12px 16px', background: '#FEF2F2', borderLeft: '4px solid #DC2626', borderRadius: '8px' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: '#B91C1C', fontWeight: 500 }}>
+                      {validationError}
+                    </p>
                   </div>
                 )}
 
@@ -558,14 +568,6 @@ const VerifikasiModal = ({
               </motion.div>
             )}
 
-            {/* Custom Alert Message */}
-            {validationError && (
-              <div style={{ marginTop: 16, padding: '10px 14px', background: '#FEF2F2', borderLeft: '4px solid #DC2626', borderRadius: 4 }}>
-                <p style={{ margin: 0, fontSize: 12, color: '#B91C1C', fontWeight: 500 }}>
-                  {validationError}
-                </p>
-              </div>
-            )}
           </div>
 
           {/* FOOTER */}
