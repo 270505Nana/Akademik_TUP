@@ -648,10 +648,16 @@ const getPermohonanSktaById = asyncHandler(async (req, res) => {
   res.json({ data: mapPermohonanToFrontend(data, req) });
 });
 
-// [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa
+// [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa (atau User Login)
 const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
-  const { mahasiswaId } = req.params;
-  const data = await sktaService.getLatestPermohonanByMahasiswaId(mahasiswaId);
+  const targetId = req.params.mahasiswaId || req.user?.id;
+
+  if (!targetId) {
+    res.status(400);
+    throw new Error("ID mahasiswa atau sesi login tidak valid");
+  }
+
+  const data = await sktaService.getLatestPermohonanByMahasiswaId(targetId);
 
   if (!data) {
     res.status(404);
