@@ -29,10 +29,118 @@ import {
   getSidangRegistrationByMahasiswaId as fetchSidangByMahasiswaId,
 } from "../services/sidangRegistrationService.js";
 
-// Sidang Registration List
+// Sidang Registration List (with search, studyProgramId filter, sort, and pagination)
 const listSidangRegistrations = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { total, sidangRegistrations } = await getSidangRegistrations(paginationParams);
+  const { search, studyProgramId, sortBy } = req.query;
+
+  const where = {
+    deletedAt: null,
+  };
+
+  // 1. Global Search across mahasiswa name, nim, and thesis title (Indonesia & English)
+  const searchTerm = (search || "").trim();
+  if (searchTerm) {
+    where.OR = [
+      {
+        mahasiswa: {
+          user: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+        },
+      },
+      {
+        mahasiswa: {
+          nim: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+      },
+      {
+        judulTugasAkhirIndonesia: {
+          contains: searchTerm,
+          mode: "insensitive",
+        },
+      },
+      {
+        judulTugasAkhirInggris: {
+          contains: searchTerm,
+          mode: "insensitive",
+        },
+      },
+    ];
+  }
+
+  // 2. Filter by Study Program ID
+  if (
+    studyProgramId &&
+    typeof studyProgramId === "string" &&
+    studyProgramId.trim() !== ""
+  ) {
+    where.mahasiswa = where.mahasiswa || {};
+    where.mahasiswa.studyProgramId = studyProgramId.trim();
+  }
+
+  // 3. Sorting (Single unified sortBy param matching other endpoints)
+  const sortParam = (sortBy || "").toLowerCase().trim();
+  let orderBy = { createdAt: "desc" };
+
+  if (sortParam === "nameasc" || sortParam === "a-z") {
+    orderBy = { mahasiswa: { user: { name: "asc" } } };
+  } else if (sortParam === "namedesc" || sortParam === "z-a") {
+    orderBy = { mahasiswa: { user: { name: "desc" } } };
+  } else if (sortParam === "nimasc") {
+    orderBy = { mahasiswa: { nim: "asc" } };
+  } else if (sortParam === "nimdesc") {
+    orderBy = { mahasiswa: { nim: "desc" } };
+  } else if (sortParam === "ipkasc") {
+    orderBy = { ipk: "asc" };
+  } else if (sortParam === "ipkdesc") {
+    orderBy = { ipk: "desc" };
+  } else if (sortParam === "sksasc") {
+    orderBy = { sks: "asc" };
+  } else if (sortParam === "sksdesc") {
+    orderBy = { sks: "desc" };
+  } else if (sortParam === "takasc") {
+    orderBy = { tak: "asc" };
+  } else if (sortParam === "takdesc") {
+    orderBy = { tak: "desc" };
+  } else if (sortParam === "tglsidangasc") {
+    orderBy = { tglSidang: "asc" };
+  } else if (sortParam === "tglsidangdesc") {
+    orderBy = { tglSidang: "desc" };
+  } else if (sortParam === "submittedatasc") {
+    orderBy = { submittedAt: "asc" };
+  } else if (sortParam === "submittedatdesc") {
+    orderBy = { submittedAt: "desc" };
+  } else if (
+    sortParam === "oldest" ||
+    sortParam === "createdatasc" ||
+    sortParam === "lama-baru"
+  ) {
+    orderBy = { createdAt: "asc" };
+  } else if (
+    sortParam === "newest" ||
+    sortParam === "createdatdesc" ||
+    sortParam === "baru-lama"
+  ) {
+    orderBy = { createdAt: "desc" };
+  } else if (sortParam === "updatedatasc") {
+    orderBy = { updatedAt: "asc" };
+  } else if (sortParam === "updatedatdesc") {
+    orderBy = { updatedAt: "desc" };
+  }
+
+  const { total, sidangRegistrations } = await getSidangRegistrations({
+    where,
+    orderBy,
+    skip: paginationParams.skip,
+    take: paginationParams.take,
+  });
 
   const data = sidangRegistrations.map((reg) =>
     mapSidangRegistrationToFrontend(reg, req),

@@ -28,11 +28,27 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/sidang-registrations:
  *   get:
- *     summary: Get all sidang registrations (paginated)
+ *     summary: Get all sidang registrations (with search, studyProgramId filter, sort, and pagination)
  *     tags: [Sidang Registration]
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search keyword across mahasiswa name, NIM, or judul tugas akhir (Indonesia / Inggris)
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: string
+ *         description: Filter by Study Program ID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [newest, oldest, nameAsc, nameDesc, nimAsc, nimDesc, ipkAsc, ipkDesc, sksAsc, sksDesc, takAsc, takDesc, tglSidangAsc, tglSidangDesc, submittedAtAsc, submittedAtDesc, updatedAtAsc, updatedAtDesc]
+ *         description: Sort option (newest for baru-lama, oldest for lama-baru, nameAsc/nameDesc, nimAsc/nimDesc, ipkAsc/ipkDesc, sksAsc/sksDesc, takAsc/takDesc, tglSidangAsc/tglSidangDesc, submittedAtAsc/submittedAtDesc, updatedAtAsc/updatedAtDesc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
