@@ -1,4 +1,5 @@
 import asyncHandler from "express-async-handler";
+import excel from "exceljs";
 import prisma from "../config/prisma.js";
 import {
   sendValidationError,
@@ -767,10 +768,68 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
   });
 });
 
+const exportJadwalSidang = asyncHandler(async (req, res) => {
+  const jadwalList = await prisma.sidangRegistration.findMany({
+    where: {
+      deletedAt: null,
+      tglSidang: { not: null },
+    },
+    include: penjadwalanSidangInclude,
+    orderBy: { tglSidang: "asc" }
+  });
+  const workbook = new excel.Workbook();
+  const worksheet = workbook.addWorksheet("Jadwal Sidang");
+
+  worksheet.columns = [
+    { header: "NIM", key: "nim", width: 15 },
+    { header: "TANGGAL", key: "tanggal", width: 15 },
+    { header: "RUANGAN", key: "ruangan", width: 15 },
+    { header: "SHIFT", key: "shift", width: 10 },
+    { header: "PENGUJI I", key: "penguji1", width: 15 },
+    { header: "PENGUJI II", key: "penguji2", width: 15 },
+  ];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  jadwalList.forEach((jadwal) => {
+    let formattedDate = '';
+    let formattedTime = '';
+
+    if (jadwal.tglSidang) {
+      const d = new Date(jadwal.tglSidang);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = String(d.getFullYear()).slice(-2);
+
+      formattedDate = `${day}-${month}-${year}`;
+
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      formattedTime = `${hours}:${mins}`;
+    }
+
+    worksheet.addRow({
+      nim: jadwal.mahasiswa?.nim || '',
+      tanggal: formattedDate,
+      ruangan: jadwal.ruanganSidang?.name || '',
+      shift: formattedTime,
+      penguji1: jadwal.dosenPenguji1?.kodeDosen || '',
+      penguji2: jadwal.dosenPenguji2?.kodeDosen || '',
+    });
+  });
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="jadwal_sidang.xlsx"',
+  );
+  await workbook.xlsx.write(res);
+  res.end();
+});
 export {
   listPenjadwalanSidang,
   setPengujiSidang,
   batchSetPengujiSidang,
   setJadwalSidang,
   batchSetJadwalSidang,
+  exportJadwalSidang,
 };

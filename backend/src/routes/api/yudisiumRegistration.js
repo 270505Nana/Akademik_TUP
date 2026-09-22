@@ -14,6 +14,7 @@ import {
   downloadYudisiumRegistrationFile,
   approveYudisiumRegistration,
   rejectYudisiumRegistration,
+  exportYudisium,
 } from '../../controllers/yudisiumRegistrationController.js';
 import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 
@@ -132,6 +133,24 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         description: Invalid token
  */
 router.get("/", verifyToken, listYudisiumRegistrations);
+
+/**
+ * @swagger
+ * /api/yudisium-registrations/export:
+ *   get:
+ *     summary: Export data pendaftar yudisium 
+ *     tags: [Yudisium Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Berhasil mengunduh file Excel
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya admin yang dapat mengakses)
+ */
+router.get("/export", verifyToken, isAdmin, exportYudisium);
 
 /**
  * @swagger

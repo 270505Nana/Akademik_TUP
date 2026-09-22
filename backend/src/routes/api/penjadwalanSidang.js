@@ -8,6 +8,7 @@ import {
   batchSetPengujiSidang,
   setJadwalSidang,
   batchSetJadwalSidang,
+  exportJadwalSidang,
 } from '../../controllers/penjadwalanSidangController.js';
 
 /**
@@ -74,6 +75,24 @@ import {
  *         description: Invalid token
  */
 router.get("/", verifyToken, listPenjadwalanSidang);
+
+/**
+ * @swagger
+ * /api/penjadwalan-sidang/export/igracias:
+ *   get:
+ *     summary: Export data jadwal sidang khusus format import iGracias
+ *     tags: [Penjadwalan Sidang]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Berhasil mengunduh file Excel format iGracias
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya admin yang dapat mengakses)
+ */
+router.get("/export/igracias", verifyToken, isAdmin, exportJadwalSidang);
 
 /**
  * @swagger
