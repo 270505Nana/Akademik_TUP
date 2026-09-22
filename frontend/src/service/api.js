@@ -88,7 +88,7 @@ export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, stud
   formData.append("mahasiswaId", String(mahasiswaId || studentId)); 
   
   if (dosenPembimbing1Id) formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
-  if (dosenPembimbing2Id) formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
+  if (dosenPembimbing2Id) formData.append("dosenPembimbing2Id", String(  dosenPembimbing2Id));
   if (researchGroupId) formData.append("researchGroupId", String(researchGroupId));
   
   if (evidence) formData.append("evidence", evidence);
@@ -741,6 +741,58 @@ export const getMahasiswaBimbingan = async (params = {}) => {
 export const getDosenDashboard = async () => {
   const response = await api.get('/api/dosen/dashboard');
   return response.data?.data ?? response.data;
+};
+
+// ------------------------------------------- TEMPLATE MANAGEMENT (CRUD) -------------------------------------------
+
+// Mengambil semua template 
+export const getAllTemplates = async (params = {}) => {
+  const response = await api.get('/api/templates', { params });
+  return response.data?.data ?? response.data;
+};
+
+// Menambah template persyaratan baru
+export const createTemplate = async (payload) => {
+  const formData = new FormData();
+  formData.append("name", payload.name);
+  formData.append("category", payload.category);
+  formData.append("isPublish", payload.isPublish);
+  formData.append("isRequired", payload.isRequired);
+  
+  if (payload.templateFile) {
+    formData.append("templateFile", payload.templateFile);
+  }
+
+  const response = await api.post("/api/templates", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data?.data ?? response.data;
+};
+
+// Memperbarui template persyaratan (termasuk status aktif/non-aktif)
+export const updateTemplate = async (id, payload) => {
+  const formData = new FormData();
+  
+  if (payload.name) formData.append("name", payload.name);
+  if (payload.category) formData.append("category", payload.category);
+  if (payload.isPublish !== undefined) formData.append("isPublish", payload.isPublish);
+  if (payload.isRequired !== undefined) formData.append("isRequired", payload.isRequired);
+  
+  // Hanya append file jika ada file baru yang diunggah
+  if (payload.templateFile instanceof File) {
+    formData.append("templateFile", payload.templateFile);
+  }
+
+  const response = await api.put(`/api/templates/${id}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data?.data ?? response.data;
+};
+
+// Menghapus template 
+export const deleteTemplate = async (id) => {
+  const response = await api.delete(`/api/templates/${id}`);
+  return response.data;
 };
 
 export default api;
