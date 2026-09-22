@@ -148,7 +148,10 @@ function PendaftaranSidangContent() {
 
   const mahasiswaId = student?.mahasiswaId || profile?.id || user?.id;
   const isStep1Locked = Boolean(registrationMeta?.submittedAt);
-  const isRevisionActive = Boolean(sidangAdminResponse?.isEdit !== null && sidangAdminResponse?.isEdit !== undefined && sidangAdminResponse?.message);
+  const isRevisionActive = !!(
+    sidangAdminResponse?.isEdit &&   // ada timestamp batas revisi dari admin
+    sidangAdminResponse?.message     // ada pesan catatan dari admin
+  );
   const revisionDueDateText = sidangAdminResponse?.isEdit
     ? new Date(sidangAdminResponse.isEdit).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
     : null;

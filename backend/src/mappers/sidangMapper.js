@@ -8,6 +8,9 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
   return {
     id: item.id,
     periodId: item.periodId,
+    sidangPeriodId: item.sidangPeriodId,
+    isEdit: item.isEdit,
+    message: item.message,
     mahasiswaId: item.mahasiswaId,
     program: item.program,
     sks: item.sks,
@@ -66,6 +69,7 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
           startDate: item.sidangPeriod.startDate,
           endDate: item.sidangPeriod.endDate,
           isActive: item.sidangPeriod.isActive,
+          isOpen: item.sidangPeriod.isOpen,
         }
       : null,
     sidangRegistrationUploads: uploads.map((u) => ({
