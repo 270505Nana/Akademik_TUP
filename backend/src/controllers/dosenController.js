@@ -9,12 +9,11 @@ import {
 // Daftar Semua Dosen (dengan search, filter, sort, dan pagination)
 export const listDosens = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search, researchGroupId, researchGroup, sortBy } = req.query;
+  const { search, researchGroupId, sortBy } = req.query;
 
   const { total, dosens } = await dosenService.getDosens({
     search,
     researchGroupId,
-    researchGroup,
     sortBy,
     ...paginationParams,
   });

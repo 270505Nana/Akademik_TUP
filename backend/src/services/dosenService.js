@@ -4,7 +4,6 @@ import { ROLES } from "../constants/index.js";
 export const getDosens = async ({
   search,
   researchGroupId,
-  researchGroup,
   sortBy,
   skip,
   take,
@@ -26,19 +25,6 @@ export const getDosens = async ({
   // Filter
   if (researchGroupId) {
     where.researchGroupId = researchGroupId.trim();
-  } else if (researchGroup) {
-    const isUUID =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        researchGroup.trim(),
-      );
-
-    if (isUUID) {
-      where.researchGroupId = researchGroup.trim();
-    } else {
-      where.researchGroup = {
-        name: { contains: researchGroup.trim(), mode: "insensitive" },
-      };
-    }
   }
 
   // Sort

@@ -35,10 +35,10 @@ const router = express.Router();
  *           type: string
  *         description: Search keyword across name, NIP, NIDN, or kode dosen
  *       - in: query
- *         name: researchGroup
+ *         name: researchGroupId
  *         schema:
  *           type: string
- *         description: Filter by Research Group ID or Name
+ *         description: Filter by Research Group ID
  *       - in: query
  *         name: sortBy
  *         schema:
