@@ -840,11 +840,19 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
     });
   });
 
-  let filename = "TAPA_Sidanga.xlsx";
+  let filename = "TAPA_Sidang.xlsx";
 
   if (selectedPeriod) {
-    const tahunAjaran = (selectedPeriod.period || "").replace(/\//g, "-");
-    const namaPeriode = (selectedPeriod.name || "").replace(/[\\/:*?"<>|]/g, "_");
+    const sanitizePart = (str) =>
+      (str || "")
+        .replace(/[/\\]/g, "")
+        .replace(/[:*?"<>|]/g, "")
+        .replace(/\s+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    const tahunAjaran = sanitizePart(selectedPeriod.period);
+    const namaPeriode = sanitizePart(selectedPeriod.name);
     filename = `TAPA_Sidang_${tahunAjaran}_${namaPeriode}.xlsx`;
   }
 

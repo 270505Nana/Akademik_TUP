@@ -1501,8 +1501,16 @@ const exportYudisium = asyncHandler(async (req, res) => {
   let filename = "List_Yudisium.xlsx";
 
   if (selectedPeriod) {
-    const tahunAjaran = (selectedPeriod.period || "").replace(/\//g, "_");
-    const namaPeriode = (selectedPeriod.name || "").replace(/[\\/:*?"<>|]/g, "_");
+    const sanitizePart = (str) =>
+      (str || "")
+        .replace(/[/\\]/g, "")
+        .replace(/[:*?"<>|]/g, "")
+        .replace(/\s+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    const tahunAjaran = sanitizePart(selectedPeriod.period);
+    const namaPeriode = sanitizePart(selectedPeriod.name);
     filename = `List_Yudisium_${tahunAjaran}_${namaPeriode}.xlsx`;
   }
 
