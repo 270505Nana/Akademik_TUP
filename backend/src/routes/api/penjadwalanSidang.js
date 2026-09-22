@@ -78,7 +78,7 @@ router.get("/", verifyToken, listPenjadwalanSidang);
 
 /**
  * @swagger
- * /api/penjadwalan-sidang/export/igracias:
+ * /api/penjadwalan-sidang/export:
  *   get:
  *     summary: Export data jadwal sidang khusus format import iGracias
  *     tags: [Penjadwalan Sidang]
@@ -92,7 +92,7 @@ router.get("/", verifyToken, listPenjadwalanSidang);
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  */
-router.get("/export/igracias", verifyToken, isAdmin, exportJadwalSidang);
+router.get("/export", verifyToken, isAdmin, exportJadwalSidang);
 
 /**
  * @swagger
