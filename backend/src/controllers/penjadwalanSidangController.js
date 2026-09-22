@@ -769,11 +769,34 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
 });
 
 const exportJadwalSidang = asyncHandler(async (req, res) => {
+
+  let targetPeriodId = req.query.sidangPeriodId;
+  let selectedPeriod = null;
+
+  if (targetPeriodId) {
+    selectedPeriod = await prisma.sidangPeriod.findUnique({
+      where: { id: targetPeriodId },
+    });
+  } else {
+    selectedPeriod = await prisma.sidangPeriod.findFirst({
+      where: { deletedAt: null },
+      orderBy: { endDate: "desc" },
+    });
+
+    if (selectedPeriod) {
+      targetPeriodId = selectedPeriod.id;
+    }
+  }
+  const whereClause = {
+    deletedAt: null,
+    tglSidang: { not: null },
+  };
+  if (targetPeriodId) {
+    whereClause.sidangPeriodId = targetPeriodId;
+  }
+
   const jadwalList = await prisma.sidangRegistration.findMany({
-    where: {
-      deletedAt: null,
-      tglSidang: { not: null },
-    },
+    where: whereClause,
     include: penjadwalanSidangInclude,
     orderBy: { tglSidang: "asc" }
   });
@@ -817,10 +840,18 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
     });
   });
 
+  let filename = "TAPA_Sidanga.xlsx";
+
+  if (selectedPeriod) {
+    const tahunAjaran = (selectedPeriod.period || "").replace(/\//g, "-");
+    const namaPeriode = (selectedPeriod.name || "").replace(/[\\/:*?"<>|]/g, "_");
+    filename = `TAPA_Sidang_${tahunAjaran}_${namaPeriode}.xlsx`;
+  }
+
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader(
     "Content-Disposition",
-    'attachment; filename="jadwal_sidang.xlsx"',
+    `attachment; filename="${filename}"`,
   );
   await workbook.xlsx.write(res);
   res.end();

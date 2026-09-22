@@ -1388,8 +1388,32 @@ const rejectYudisiumRegistration = asyncHandler(async (req, res) => {
 });
 
 const exportYudisium = asyncHandler(async (req, res) => {
+
+  let targetPeriodId = req.query.yudisiumPeriodId;
+  let selectedPeriod = null;
+
+  if (targetPeriodId) {
+    selectedPeriod = await prisma.yudisiumPeriod.findUnique({
+      where: { id: targetPeriodId },
+    });
+  } else {
+    selectedPeriod = await prisma.yudisiumPeriod.findFirst({
+      where: { category: "yudisium", deletedAt: null },
+      orderBy: { endDate: "desc" },
+    });
+
+    if (selectedPeriod) {
+      targetPeriodId = selectedPeriod.id;
+    }
+  }
+
+  const whereClause = { deletedAt: null };
+  if (targetPeriodId) {
+    whereClause.yudisiumPeriodId = targetPeriodId;
+  }
+
   const yudisiumList = await prisma.yudisiumRegistration.findMany({
-    where: { deletedAt: null },
+    where: whereClause,
     include: {
       dosenWali: true,
       mahasiswa: {
@@ -1474,10 +1498,18 @@ const exportYudisium = asyncHandler(async (req, res) => {
     });
   });
 
+  let filename = "List_Yudisium.xlsx";
+
+  if (selectedPeriod) {
+    const tahunAjaran = (selectedPeriod.period || "").replace(/\//g, "_");
+    const namaPeriode = (selectedPeriod.name || "").replace(/[\\/:*?"<>|]/g, "_");
+    filename = `List_Yudisium_${tahunAjaran}_${namaPeriode}.xlsx`;
+  }
+
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader(
     "Content-Disposition",
-    'attachment; filename="Pendaftar_Yudisium.xlsx"');
+    `attachment; filename="${filename}"`);
 
   await workbook.xlsx.write(res);
   res.end();

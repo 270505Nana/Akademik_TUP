@@ -142,6 +142,12 @@ router.get("/", verifyToken, listYudisiumRegistrations);
  *     tags: [Yudisium Registration]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: yudisiumPeriodId
+ *         schema:
+ *           type: string
+ *         description: ID Periode Yudisium. Jika dikosongkan, otomatis mengekspor data pada periode pelaksanaan yudisium terakhir.
  *     responses:
  *       200:
  *         description: Berhasil mengunduh file Excel
