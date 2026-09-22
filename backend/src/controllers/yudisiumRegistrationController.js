@@ -1,4 +1,5 @@
 import asyncHandler from "express-async-handler";
+import excel from "exceljs";
 import prisma from "../config/prisma.js";
 import path from "path";
 import {
@@ -1386,6 +1387,101 @@ const rejectYudisiumRegistration = asyncHandler(async (req, res) => {
   });
 });
 
+const exportYudisium = asyncHandler(async (req, res) => {
+  const yudisiumList = await prisma.yudisiumRegistration.findMany({
+    where: { deletedAt: null },
+    include: {
+      dosenWali: true,
+      mahasiswa: {
+        include: {
+          dosenWali: true,
+          sidangRegistrations: {
+            where: { deletedAt: null, tglSidang: { not: null } },
+            orderBy: { tglSidang: "desc" },
+          take: 1,
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const workbook = new excel.Workbook();
+  const worksheet = workbook.addWorksheet("Yudisium Registrations");
+
+  worksheet.columns = [
+    { header: "NIM", key: "nim", width: 15 },
+    { header: "TANGGAL SIDANG AKAD", key: "tglAkad", width: 22 },
+    { header: "BULAN SIDANG AKAD", key: "blnAkad", width: 20 },
+    { header: "TAHUN SIDANG AKAD", key: "thnAkad", width: 20 },
+    { header: "TANGGAL SIDANG TA/PA", key: "tglTa", width: 22 },
+    { header: "BULAN SIDANG TA/PA", key: "blnTa", width: 20 },
+    { header: "TAHUN SIDANG TA/PA", key: "thnTa", width: 20 },
+    { header: "TANGGAL SURAT", key: "tglSurat", width: 15 },
+    { header: "BULAN SURAT", key: "blnSurat", width: 20 },
+    { header: "TAHUN SURAT", key: "thnSurat", width: 20 },
+    { header: "NOMOR SURAT", key: "noSurat", width: 30 },
+    { header: "KODE DOSEN WALI", key: "kodeDoswal", width: 30 },
+    { header: "PREDIKAT YUDISIUM", key: "predikat", width: 20 },
+    { header: "STATUS", key: "status", width: 15 },
+    { header: "MEDIA JURNAL", key: "mediaJurnal", width: 15 },
+    { header: "TANGGAL UPLOAD JURNAL", key: "tglJurnal", width: 25 },
+    { header: "BULAN UPLOAD JURNAL", key: "blnJurnal", width: 25 },
+    { header: "TAHUN UPLOAD JURNAL", key: "thnJurnal", width: 25 },
+    { header: "AKUN GOOGLE SCHOLAR", key: "scholar", width: 30 },
+  ];
+
+  yudisiumList.forEach((yudisium) => {
+    let tglAkad = "", blnAkad = "", thnAkad = "";
+    if (yudisium.tglSidang) {
+      const d = new Date(yudisium.tglSidang);
+      tglAkad = d.getDate();
+      blnAkad = d.getMonth() + 1;
+      thnAkad = d.getFullYear();
+    }
+
+    let tglTa = "", blnTa = "", thnTa = "";
+    const sidangTA = yudisium.mahasiswa?.sidangRegistrations?.[0];
+    if (sidangTA?.tglSidang) {
+      const d = new Date(sidangTA.tglSidang);
+      tglTa = d.getDate();
+      blnTa = d.getMonth() + 1;
+      thnTa = d.getFullYear();
+    }
+
+    const kodeDosenWali = yudisium.mahasiswa?.dosenWali?.kodeDosen || yudisium.dosenWali?.kodeDosen || "";
+
+    worksheet.addRow({
+      nim: yudisium.mahasiswa?.nim || "",
+      tglAkad,
+      blnAkad,
+      thnAkad,
+      tglTa,
+      blnTa,
+      thnTa,
+      tglSurat: "",
+      blnSurat: "",
+      thnSurat: "",
+      noSurat: "",
+      kodeDoswal: kodeDosenWali,
+      predikat: yudisium.predikat || "",
+      status: yudisium.status || "",
+      mediaJurnal: "",
+      tglJurnal: "",
+      blnJurnal: "",
+      thnJurnal: "",
+      scholar: "",
+    });
+  });
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="Pendaftar_Yudisium.xlsx"');
+
+  await workbook.xlsx.write(res);
+  res.end();
+});
 export {
   listYudisiumRegistrations,
   getYudisiumRegistrationById,
@@ -1398,4 +1494,5 @@ export {
   downloadYudisiumRegistrationFile,
   approveYudisiumRegistration,
   rejectYudisiumRegistration,
+  exportYudisium,
 };
