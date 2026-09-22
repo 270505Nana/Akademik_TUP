@@ -279,8 +279,11 @@ const RegistrasiSidang = () => {
       const allList = list ?? [];
 
       const visible = allList.filter((r) => {
-        const hasResponse = !!(r.message || r.isEdit || r.sidangPeriodId);
-        return !r.isDraft || hasResponse;
+        // Tampilkan jika tidak draft (dalam proses, revisi diperbarui, siap sidang, dll.)
+        if (!r.isDraft) return true;
+        // isDraft=true: hanya tampilkan jika isEdit terisi (status PERLU_REVISI — mahasiswa perlu revisi)
+        // isDraft=true tanpa isEdit = PROSES_REGISTRASI → jangan tampilkan
+        return !!(r.isEdit);
       });
 
       const allPeriods = await getSidangPeriods().catch(() => []);
