@@ -745,7 +745,6 @@ export const getDosenDashboard = async () => {
 
 // ------------------------------------------- TEMPLATE MANAGEMENT (CRUD) -------------------------------------------
 
-// Mengambil semua template 
 export const getAllTemplates = async (params = {}) => {
   const response = await api.get('/api/templates', { params });
   return response.data?.data ?? response.data;
@@ -769,7 +768,7 @@ export const createTemplate = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
-// Memperbarui template persyaratan (termasuk status aktif/non-aktif)
+// Memperbarui template persyaratan
 export const updateTemplate = async (id, payload) => {
   const formData = new FormData();
   
@@ -778,12 +777,11 @@ export const updateTemplate = async (id, payload) => {
   if (payload.isPublish !== undefined) formData.append("isPublish", payload.isPublish);
   if (payload.isRequired !== undefined) formData.append("isRequired", payload.isRequired);
   
-  // Hanya append file jika ada file baru yang diunggah
   if (payload.templateFile instanceof File) {
     formData.append("templateFile", payload.templateFile);
   }
 
-  const response = await api.put(`/api/templates/${id}`, formData, {
+  const response = await api.patch(`/api/templates/${id}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data?.data ?? response.data;
@@ -792,6 +790,30 @@ export const updateTemplate = async (id, payload) => {
 // Menghapus template 
 export const deleteTemplate = async (id) => {
   const response = await api.delete(`/api/templates/${id}`);
+  return response.data;
+};
+
+// Toggle Publish Status
+export const toggleTemplatePublish = async (id) => {
+  const response = await api.patch(`/api/templates/${id}/toggle-publish`);
+  return response.data?.data ?? response.data; 
+};
+
+// Toggle Required Status
+export const toggleTemplateRequired = async (id) => {
+  const response = await api.patch(`/api/templates/${id}/toggle-required`);
+  return response.data?.data ?? response.data;
+};
+
+//  Blob  Preview Template
+export const getTemplatePreview = async (code) => {
+  const response = await api.get(`/api/templates/preview/${code}`, { responseType: 'blob' });
+  return response.data;
+};
+
+//  Blob  Download Template
+export const downloadTemplateFile = async (code) => {
+  const response = await api.get(`/api/templates/download/${code}`, { responseType: 'blob' });
   return response.data;
 };
 
