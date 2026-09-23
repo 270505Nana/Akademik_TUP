@@ -80,7 +80,7 @@ router.get("/", verifyToken, listPenjadwalanSidang);
  * @swagger
  * /api/penjadwalan-sidang/export:
  *   get:
- *     summary: Export data jadwal sidang khusus format import iGracias
+ *     summary: Export data jadwal sidang
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
