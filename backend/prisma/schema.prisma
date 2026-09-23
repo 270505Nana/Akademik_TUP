@@ -124,6 +124,7 @@ model StudyProgram {
   faculty   Faculty     @relation(fields: [facultyId], references: [id])
   facultyId String      @map("faculty_id")
   mahasiswa Mahasiswa[]
+  cloProdis CloProdi[]
 
   @@index([facultyId])
   @@index([deletedAt])
@@ -457,4 +458,53 @@ model Ruangan {
   @@index([isActive])
   @@index([deletedAt])
   @@map("ruangan")
+}
+
+model DokumenPanduanTugasAkhir {
+  id            String    @id @default(uuid())
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  code          String    @unique
+  name          String // Nama Berkas
+  description   String // Deskripsi Berkas
+  category      String
+  icon          String // icon name
+  type          String // file atau url
+  path          String // url atau storage path
+  isPublish     Boolean   @default(false) @map("is_publish")
+  queue         Int       @default(1)
+  showInPreview DateTime?
+
+  @@index([category])
+  @@index([isPublish])
+  @@index([deletedAt])
+  @@map("dokumen_panduan_tugas_akhir")
+}
+
+model CloProdi {
+  id             String        @id @default(uuid())
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+  name           String // Nama CLO: CLO 5.1
+  description    String // Deskripsi CLO
+  studyProgram   StudyProgram  @relation(fields: [studyProgramId], references: [id])
+  studyProgramId String        @map("study_program_id")
+  subcloProdis   SubcloProdi[]
+
+  @@map("clo_prodi")
+}
+
+model SubcloProdi {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  name        String // Nama Sub CLO: CLO 5.1.1
+  description String // Deskripsi CLO
+  cloProdi    CloProdi  @relation(fields: [cloProdiId], references: [id])
+  cloProdiId  String    @map("clo_prodi_id")
+
+  @@map("subclo_prodi")
 }
