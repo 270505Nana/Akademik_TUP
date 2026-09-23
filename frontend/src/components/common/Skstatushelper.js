@@ -3,6 +3,7 @@ export const STATUS_SK = {
   BELUM_TERBIT : 'belum-terbit',  // Admin reject, ada message + isEdit (deadline revisi)
   SUDAH_TERBIT : 'sudah-terbit',  // Semua syarat terpenuhi, file SK sudah ada
   EXPIRED      : 'expired',       // SK sudah terbit tapi expDate lewat
+  DRAFT        : 'draft',         // Mahasiswa menyimpan form tanpa bukti (khusus Perubahan)
 };
 
 export const SKTA_CATEGORY = {
@@ -28,19 +29,25 @@ export const unwrapResponse = (raw) => {
   return raw;
 };
 
-/**
- *
- * - 'dalam-proses' : belum ada keputusan admin (belum reject, belum approve)
- * - 'belum-terbit' : admin sudah reject (ada `message`)
- * - 'sudah-terbit' : hasTakenLanguageTest && hasUploadedFinalProposal && file SK ada
- * - 'expired'      : sudah-terbit tapi expDate sudah lewat
- *
- * @param {object|null} permohonan  hasil dari getSKTARequest() / unwrapResponse()
- * @returns {string}
- */
 export const determineStatus = (permohonan) => {
   if (!permohonan) return STATUS_SK.DALAM_PROSES;
 
+  // 1. CEK REVISI TERLEBIH DAHULU
+  if (permohonan.message || permohonan.isEdit) {
+    return STATUS_SK.BELUM_TERBIT; 
+  }
+
+  // 2. CEK DRAFT (Khusus Kategori Perubahan)
+  const draftCategories = [
+    SKTA_CATEGORY.PERUBAHAN_JUDUL,
+    SKTA_CATEGORY.PERUBAHAN_DOSEN_PEMBIMBING,
+    SKTA_CATEGORY.PERUBAHAN_JUDUL_DAN_DOSEN
+  ];
+  if (permohonan.isDraft === true && draftCategories.includes(permohonan.category)) {
+    return STATUS_SK.DRAFT;
+  }
+
+  // 3. CEK SUDAH TERBIT
   const hasLang     = permohonan.hasTakenLanguageTest     === true;
   const hasProposal = permohonan.hasUploadedFinalProposal === true;
   const hasFile     = !!permohonan.sktaUploadPath || !!permohonan.sktaDownloadUrl
@@ -48,19 +55,9 @@ export const determineStatus = (permohonan) => {
 
   if (hasLang && hasProposal && hasFile) return STATUS_SK.SUDAH_TERBIT;
 
-  // Admin sudah menolak (rejectPermohonanSkta) → ada message dan/atau deadline isEdit
-  if (permohonan.message || permohonan.isEdit) return STATUS_SK.BELUM_TERBIT;
-
   return STATUS_SK.DALAM_PROSES;
 };
 
-/**
- * determineSkStatus
- * Tambahan pengecekan expDate di atas determineStatus dasar.
- *
- * @param {object|null} permohonan
- * @returns {string}
- */
 export const determineSkStatus = (permohonan) => {
   const baseStatus = determineStatus(permohonan);
 
@@ -77,8 +74,11 @@ export const isSkEditable = (status, permohonan = null) => {
   if (status === STATUS_SK.EXPIRED) return true;
   if (status === STATUS_SK.BELUM_TERBIT) {
     if (!permohonan?.isEdit) return false;
-    return new Date(permohonan.isEdit) > new Date();
+    const deadline = new Date(permohonan.isEdit);
+    deadline.setHours(23, 59, 59, 999); 
+    return deadline > new Date();
   }
+  if (status === STATUS_SK.DRAFT) return true;
   return false;
 };
 
@@ -86,10 +86,14 @@ const MAIN_PAGE_CATEGORIES = [SKTA_CATEGORY.PERMOHONAN_BARU, SKTA_CATEGORY.PERPA
 
 export const getSubmissionMode = (permohonan) => {
   if (!permohonan) return 'create-baru';
-  if (!MAIN_PAGE_CATEGORIES.includes(permohonan.category)) return 'blocked';
+  
   const status = determineSkStatus(permohonan);
+  
   if (status === STATUS_SK.EXPIRED) return 'create-perpanjangan';
-  if (status === STATUS_SK.BELUM_TERBIT && isSkEditable(status, permohonan)) return 'patch-revisi';
+  if (!MAIN_PAGE_CATEGORIES.includes(permohonan.category)) return 'blocked';
+
+  if (status === STATUS_SK.BELUM_TERBIT) return 'patch-revisi';
+  
   return 'blocked';
 };
 

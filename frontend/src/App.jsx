@@ -17,10 +17,11 @@ import MahasiswaBimbingan from "./pages/dosen/MahasiswaBimbingan";
 import RegistrasiTATUP from "./pages/dosen/RegistrasiTATUP";
 import PenjadwalanSidang from "./pages/dosen/PenjadwalanSidang";
 import PengajuanSK from "./pages/mahasiswa/pengajuanSK";
+import PembaruanSK from "./pages/mahasiswa/pembaruanSK";
 import PermohonanSK from "./pages/admin/permohonanSK";
 import AturPeriodeSidang from "./pages/admin/aturperiodesidang";
 import AturPeriodeYudisium from "./pages/admin/aturperiodeyudisium";
-import AturBerkas          from "./pages/admin/requirementdocs";
+import AturBerkas          from "./pages/admin/KelolaBerkas";
 import UploadSKL           from "./pages/admin/UploadSKL";             
 import UploadTranskrip     from "./pages/admin/UploadTranskrip";             
 import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";  
@@ -73,6 +74,14 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["MAHASISWA"]} requireCompleteProfile={true}>
                 <PengajuanSK />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mahasiswa/pembaruan-sk"
+            element={
+              <ProtectedRoute allowedRoles={["MAHASISWA"]} requireCompleteProfile={true}>
+                <PembaruanSK />
               </ProtectedRoute>
             }
           />
