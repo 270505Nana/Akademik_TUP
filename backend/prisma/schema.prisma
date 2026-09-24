@@ -473,7 +473,7 @@ model DokumenPanduanTugasAkhir {
   description   String // Deskripsi Berkas
   category      String
   icon          String // icon name
-  type          String // file atau url
+  type          String    @default("url") // file atau url
   path          String // url atau storage path
   isPublish     Boolean   @default(false) @map("is_publish")
   queue         Int       @default(1)
