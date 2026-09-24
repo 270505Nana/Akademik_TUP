@@ -6,7 +6,7 @@ import '../dashboard.css';
 import { useAuth } from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
-import api, { downloadSK } from '../../service/api';
+import api, { downloadSK, getSidangPeriods, getYudisiumPeriods } from '../../service/api';
 import { determineSkStatus, STATUS_SK } from '../../components/common/Skstatushelper';
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus } from '../../components/admin/sidang/Sidangstatushelper';
 
@@ -72,12 +72,6 @@ const formatPeriodSubtitle = (periode) => {
   return periode.name || (periodVal ? `Tahun Ajaran ${periodVal}` : '');
 };
 
-const formatDateRange = (start, end) => {
-  const fmt = (d) =>
-    new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  return `${fmt(start)} – ${fmt(end)}`;
-};
-
 const formatDateRangeCompact = (start, end) => {
   if (!start || !end) return '—';
   const s = new Date(start);
@@ -96,37 +90,13 @@ const formatDateRangeCompact = (start, end) => {
 const formatDateShort = (d) =>
   new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
-const pickRelevantPeriod = (list = []) => {
-  if (!Array.isArray(list) || list.length === 0) return null;
-  const flat = [];
-  list.forEach(item => {
-    if (!item) return;
-    if (item.pendaftaran || item.pelaksanaan) {
-      if (item.pendaftaran) flat.push(item.pendaftaran);
-      if (item.pelaksanaan) flat.push(item.pelaksanaan);
-    } else {
-      flat.push(item);
-    }
-  });
-  if (flat.length === 0) return null;
-  const open = flat.find(p => p && p.isOpen === true);
-  if (open) return { ...open, state: 'aktif' };
-  
-  const now = new Date();
-  const upcoming = flat
-    .filter(p => p && new Date(p.startDate) > now)
-    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
-  if (upcoming.length > 0) return { ...upcoming[0], state: 'mendatang' };
-  const past = [...flat].sort((a, b) => new Date(b?.endDate || 0) - new Date(a?.endDate || 0));
-  return past.length > 0 ? { ...past[0], state: 'selesai' } : null;
-};
-
 const skBadgeStyle = (status) => {
   const map = {
     [STATUS_SK.SUDAH_TERBIT]: { bg: '#D1FAE5', color: '#059669', label: 'DISETUJUI' },
     [STATUS_SK.BELUM_TERBIT]: { bg: '#FEF3C7', color: '#D97706', label: 'PERLU REVISI' },
     [STATUS_SK.DALAM_PROSES]: { bg: '#DBEAFE', color: '#1D4ED8', label: 'DIVERIFIKASI' },
     [STATUS_SK.EXPIRED]: { bg: '#EDE9FE', color: '#5B21B6', label: 'KADALUARSA' },
+    [STATUS_SK.DRAFT]: { bg: '#F3F4F6', color: '#4B5563', label: 'DRAFT PENDAFTARAN' },
     null: { bg: '#F3F4F6', color: '#6B7280', label: 'TERKUNCI' },
   };
   return map[status] ?? map[null];
@@ -137,6 +107,7 @@ const skKeteranganText = (status) => {
   if (status === STATUS_SK.DALAM_PROSES) return 'Menunggu validasi dokumen SK TA oleh admin.';
   if (status === STATUS_SK.EXPIRED) return 'Masa berlaku SK TA telah habis, harap perpanjang.';
   if (status === STATUS_SK.BELUM_TERBIT) return 'Terdapat kesalahan pada pengajuan SK TA kamu.';
+  if (status === STATUS_SK.DRAFT) return 'Draft tersimpan. Lanjutkan upload dokumen untuk memproses pengajuan.';
   return 'Selesaikan pengajuan SK TA terlebih dahulu.';
 };
 
@@ -249,20 +220,6 @@ const DashboardMahasiswa = () => {
       const computedSkStatus = determineSkStatus(skta);
       setSkStatus(computedSkStatus);
 
-      const sidangPeriodsRaw = payload.sidangPeriods || [];
-      const yudisiumPeriodsRaw = payload.yudisiumPeriods || [];
-
-      const sDaftar = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran sidang'));
-      const sPelaksanaan = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'sidang'));
-      
-      const yDaftar = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran yudisium'));
-      const yPelaksanaan = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'yudisium'));
-
-      setSidangPeriode(sDaftar);
-      setSidangPelaksanaan(sPelaksanaan);
-      setYudisiumPeriode(yDaftar);
-      setYudisiumPelaksanaan(yPelaksanaan);
-
       if (computedSkStatus !== STATUS_SK.SUDAH_TERBIT) {
         setSidangRegStatus(STATUS_SIDANG.BELUM_DAFTAR);
         setSidangAssignedPeriode(null);
@@ -301,7 +258,7 @@ const DashboardMahasiswa = () => {
             : null
         );
         setSidangResponse(registration);
-
+      }
     } catch (err) {
       console.error("Gagal memuat data dashboard:", err);
       setSkStatus(null);
@@ -312,6 +269,10 @@ const DashboardMahasiswa = () => {
   }, [activeStudentId]);
 
   useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
     const fetchPeriode = async () => {
       setLoadingPeriode(true);
       try {
@@ -320,10 +281,8 @@ const DashboardMahasiswa = () => {
           getYudisiumPeriods().catch(() => []),
         ]);
 
-        // Parse sidang pair: each item has { pendaftaran, pelaksanaan }
         const pickFromPair = (list, key) => {
           if (!Array.isArray(list) || list.length === 0) return null;
-          // Pick the relevant group: prefer an open one, then upcoming, then most recent past
           const sorted = [...list].filter(Boolean);
           const openGroup = sorted.find(item => item?.[key]?.isOpen === true);
           if (openGroup) return openGroup[key] ?? null;
@@ -353,8 +312,8 @@ const DashboardMahasiswa = () => {
 
   const skTanggal = sktaRequest?.createdAt ? formatDateShort(sktaRequest.createdAt) : null;
   const deadlineSidang = pendaftaranSidang ? formatDateShort(pendaftaranSidang.endDate) : null;
-  const rowSidangLoading = loadingSk || loadingSidangReg;
   const skSudahTerbit = skStatus === STATUS_SK.SUDAH_TERBIT;
+  const isPembaruan = sktaRequest && (sktaRequest.category || '').includes('Perubahan');
 
   const renderKeteranganSidang = () => {
     if (loadingDashboard) return <span style={{ color: '#9CA3AF', fontSize: '11px' }}>—</span>;
@@ -433,7 +392,7 @@ const DashboardMahasiswa = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
               <div style={{ background: '#FAFBFD', borderRadius: '10px', padding: '16px', border: '1px solid #F3F4F6' }}>
                 <p style={{ fontSize: '9px', fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>PENDAFTARAN SIDANG</p>
-                {loadingDashboard ? (
+                {loadingPeriode ? (
                    <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val highlight">
@@ -444,7 +403,6 @@ const DashboardMahasiswa = () => {
                 )}
               </div>
 
-              {/* Pelaksanaan Sidang */}
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PELAKSANAAN SIDANG</p>
                 {loadingPeriode ? (
@@ -458,7 +416,6 @@ const DashboardMahasiswa = () => {
                 )}
               </div>
 
-              {/* Pendaftaran Yudisium */}
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PENDAFTARAN YUDISIUM</p>
                 {loadingPeriode ? (
@@ -472,7 +429,6 @@ const DashboardMahasiswa = () => {
                 )}
               </div>
 
-              {/* Pelaksanaan Yudisium */}
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PELAKSANAAN YUDISIUM</p>
                 {loadingPeriode ? (
@@ -530,19 +486,18 @@ const DashboardMahasiswa = () => {
                             <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Perpanjang SK</TextLinkAction>
                           ) : skStatus === STATUS_SK.SUDAH_TERBIT ? (
                             <>
-                              <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
+                              <TextLinkAction onClick={() => navigate(isPembaruan ? '/mahasiswa/pembaruan-sk' : '/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
                               {sktaRequest?.sktaDownloadUrl && (
                                 <TextLinkAction onClick={handleUnduhSK}>Unduh SK</TextLinkAction>
                               )}
                             </>
                           ) : (
-                            <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
+                            <TextLinkAction onClick={() => navigate(isPembaruan ? '/mahasiswa/pembaruan-sk' : '/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
                           )}
                         </div>
                       </td>
                     </tr>
 
-                    {/* Pendaftaran Sidang */}
                     <tr>
                       <td>
                          <div className="prog-tahapan-title">Pendaftaran Sidang</div>
@@ -581,7 +536,6 @@ const DashboardMahasiswa = () => {
                       </td>
                     </tr>
 
-                    {/* Pendaftaran Yudisium */}
                     <tr>
                       <td>
                          <div className="prog-tahapan-title">Pendaftaran Yudisium</div>
