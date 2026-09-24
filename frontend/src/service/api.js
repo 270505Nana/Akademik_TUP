@@ -79,15 +79,20 @@ export const getSKTARequest = async (studentId) => {
   }
 };
 
-export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, studentId, mahasiswaId, dosenPembimbing1Id, dosenPembimbing2Id, evidence, category }) => {
+export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, studentId, mahasiswaId, dosenPembimbing1Id, dosenPembimbing2Id, researchGroupId, evidence, category }) => {
   const formData = new FormData();
 
-  formData.append("judulProposalIndonesia", proposalTitleId);
-  formData.append("judulProposalInggris", proposalTitleEn);
+  if (proposalTitleId) formData.append("judulProposalIndonesia", proposalTitleId);
+  if (proposalTitleEn) formData.append("judulProposalInggris", proposalTitleEn);
+  
   formData.append("mahasiswaId", String(mahasiswaId || studentId)); 
-  formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
-  formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
-  formData.append("evidence", evidence);
+  
+  if (dosenPembimbing1Id) formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
+  if (dosenPembimbing2Id) formData.append("dosenPembimbing2Id", String(  dosenPembimbing2Id));
+  if (researchGroupId) formData.append("researchGroupId", String(researchGroupId));
+  
+  if (evidence) formData.append("evidence", evidence);
+  
   const endpoint = category 
     ? `/api/permohonan-skta?category=${encodeURIComponent(category)}` 
     : "/api/permohonan-skta";
@@ -98,15 +103,23 @@ export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, stud
   return response.data;
 };
 
-export const resubmitSKTARequest = async ({ sktaRequestId, studentId, mahasiswaId, proposalTitleId, proposalTitleEn, dosenPembimbing1Id, dosenPembimbing2Id, evidence }) => {
+export const submitFinalSKTARequest = async (payload) => {
+  const response = await api.post("/api/permohonan-skta/submit", payload, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
+
+export const resubmitSKTARequest = async ({ sktaRequestId, studentId, mahasiswaId, proposalTitleId, proposalTitleEn, dosenPembimbing1Id, dosenPembimbing2Id, researchGroupId, evidence }) => {
   const formData = new FormData();
   const activeStudentId = mahasiswaId || studentId;
-  if (activeStudentId) formData.append("mahasiswaId", String(activeStudentId));
-  formData.append("judulProposalIndonesia", proposalTitleId);
-  formData.append("judulProposalInggris", proposalTitleEn);
-  formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
-  formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   
+  if (activeStudentId) formData.append("mahasiswaId", String(activeStudentId));
+  if (proposalTitleId) formData.append("judulProposalIndonesia", proposalTitleId);
+  if (proposalTitleEn) formData.append("judulProposalInggris", proposalTitleEn);
+  if (dosenPembimbing1Id) formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
+  if (dosenPembimbing2Id) formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
+  if (researchGroupId) formData.append("researchGroupId", String(researchGroupId));
   if (evidence) formData.append("evidence", evidence);
 
   const response = await api.patch(`/api/permohonan-skta/${sktaRequestId}`, formData, {
@@ -314,6 +327,7 @@ export const rejectPermohonanSK = async (permohonanId, payload) => {
   const response = await api.put(`/api/permohonan-skta/${permohonanId}/reject`, {
     message: payload.message,
     adminId: payload.adminId,
+    isEdit: payload.isEdit, 
   });
   return response.data?.data ?? response.data;
 };
@@ -629,11 +643,6 @@ export const generateDokumenValidasiSkta = async (permohonanId) => {
 
 // ------------------------------------------- YUDISIUM REGISTRATIONS (ADMIN) -------------------------------------------
 
-/**
- * Ambil daftar registrasi yudisium dengan filter server-side.
- * Gunakan yudisiumPeriodId untuk menampilkan hanya mahasiswa dengan periode yudisium ter-assign.
- * @param {Object} params - Query params: { yudisiumPeriodId, studyProgramId, search, status, page, limit, ... }
- */
 export const getYudisiumRegistrations = async (params = {}) => {
   const response = await api.get('/api/yudisium-registrations', { params });
   return response.data?.data ?? response.data;
@@ -641,19 +650,11 @@ export const getYudisiumRegistrations = async (params = {}) => {
 
 // ------------------------------------------- SKL UPLOAD (ADMIN) -------------------------------------------
 
-/**
- * Ambil daftar semua SKL yang sudah diupload (dengan paginasi).
- * @param {Object} params - { page, limit }
- */
 export const listSklUploads = async (params = {}) => {
   const response = await api.get('/api/skl', { params });
   return response.data;
 };
 
-/**
- * Upload SKL untuk mahasiswa (upsert — jika sudah ada akan otomatis diperbarui).
- * @param {{ mahasiswaId: string, name: string, sklFile: File }} payload
- */
 export const uploadSkl = async ({ mahasiswaId, name, sklFile }) => {
   const formData = new FormData();
   formData.append('mahasiswaId', mahasiswaId);
@@ -665,10 +666,6 @@ export const uploadSkl = async ({ mahasiswaId, name, sklFile }) => {
   return response.data?.data ?? response.data;
 };
 
-/**
- * Download file SKL sebagai Blob (untuk preview inline).
- * @param {string} uploadId - ID record SKL
- */
 export const downloadSklFile = async (uploadId) => {
   const response = await api.get(`/api/skl/uploads/${uploadId}/download`, {
     responseType: 'blob',
@@ -678,19 +675,11 @@ export const downloadSklFile = async (uploadId) => {
 
 // ------------------------------------------- TRANSKRIP UPLOAD (ADMIN) -------------------------------------------
 
-/**
- * Ambil daftar semua Transkrip yang sudah diupload (dengan paginasi).
- * @param {Object} params - { page, limit }
- */
 export const listTranskripUploads = async (params = {}) => {
   const response = await api.get('/api/transkrip', { params });
   return response.data;
 };
 
-/**
- * Upload Transkrip untuk mahasiswa (upsert — jika sudah ada akan otomatis diperbarui).
- * @param {{ mahasiswaId: string, name: string, transkripFile: File }} payload
- */
 export const uploadTranskrip = async ({ mahasiswaId, name, transkripFile }) => {
   const formData = new FormData();
   formData.append('mahasiswaId', mahasiswaId);
@@ -702,10 +691,6 @@ export const uploadTranskrip = async ({ mahasiswaId, name, transkripFile }) => {
   return response.data?.data ?? response.data;
 };
 
-/**
- * Download file Transkrip sebagai Blob (untuk preview inline).
- * @param {string} uploadId - ID record Transkrip
- */
 export const downloadTranskripFile = async (uploadId) => {
   const response = await api.get(`/api/transkrip/uploads/${uploadId}/download`, {
     responseType: 'blob',
@@ -715,10 +700,6 @@ export const downloadTranskripFile = async (uploadId) => {
 
 // ------------------------------------------- MAHASISWA SKL & TRANSKRIP -------------------------------------------
 
-/**
- * Ambil data SKL/Transkrip milik mahasiswa (by mahasiswaId).
- * 404 berarti mahasiswa belum punya dokumen ter-upload, dikembalikan sebagai null.
- */
 export const getMySklUpload = async (mahasiswaId) => {
   if (!mahasiswaId) return null;
 
@@ -745,11 +726,6 @@ export const getMyTranskripUpload = async (mahasiswaId) => {
 
 // ------------------------------------------- DOSEN: MAHASISWA BIMBINGAN -------------------------------------------
 
-/**
- * Mendapatkan daftar mahasiswa bimbingan pendaftaran sidang untuk dosen yang sedang login.
- * @param {Object} params - { search, studyProgramId, sortBy, page, limit }
- * @returns {Promise<{ data: Array, pagination: Object }>}
- */
 export const getMahasiswaBimbingan = async (params = {}) => {
   const cleanParams = {};
   if (params.search && params.search.trim() !== '') cleanParams.search = params.search.trim();
@@ -762,13 +738,83 @@ export const getMahasiswaBimbingan = async (params = {}) => {
   return response.data;
 };
 
-/**
- * Mendapatkan data ringkasan dashboard untuk dosen yang sedang login.
- * @returns {Promise<Object>}
- */
 export const getDosenDashboard = async () => {
   const response = await api.get('/api/dosen/dashboard');
   return response.data?.data ?? response.data;
+};
+
+// ------------------------------------------- TEMPLATE MANAGEMENT (CRUD) -------------------------------------------
+
+export const getAllTemplates = async (params = {}) => {
+  const response = await api.get('/api/templates', { params });
+  return response.data?.data ?? response.data;
+};
+
+// Menambah template persyaratan baru
+export const createTemplate = async (payload) => {
+  const formData = new FormData();
+  formData.append("name", payload.name);
+  formData.append("category", payload.category);
+  formData.append("isPublish", payload.isPublish);
+  formData.append("isRequired", payload.isRequired);
+  
+  if (payload.templateFile) {
+    formData.append("templateFile", payload.templateFile);
+  }
+
+  const response = await api.post("/api/templates", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data?.data ?? response.data;
+};
+
+// Memperbarui template persyaratan
+export const updateTemplate = async (id, payload) => {
+  const formData = new FormData();
+  
+  if (payload.name) formData.append("name", payload.name);
+  if (payload.category) formData.append("category", payload.category);
+  if (payload.isPublish !== undefined) formData.append("isPublish", payload.isPublish);
+  if (payload.isRequired !== undefined) formData.append("isRequired", payload.isRequired);
+  
+  if (payload.templateFile instanceof File) {
+    formData.append("templateFile", payload.templateFile);
+  }
+
+  const response = await api.patch(`/api/templates/${id}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data?.data ?? response.data;
+};
+
+// Menghapus template 
+export const deleteTemplate = async (id) => {
+  const response = await api.delete(`/api/templates/${id}`);
+  return response.data;
+};
+
+// Toggle Publish Status
+export const toggleTemplatePublish = async (id) => {
+  const response = await api.patch(`/api/templates/${id}/toggle-publish`);
+  return response.data?.data ?? response.data; 
+};
+
+// Toggle Required Status
+export const toggleTemplateRequired = async (id) => {
+  const response = await api.patch(`/api/templates/${id}/toggle-required`);
+  return response.data?.data ?? response.data;
+};
+
+//  Blob  Preview Template
+export const getTemplatePreview = async (code) => {
+  const response = await api.get(`/api/templates/preview/${code}`, { responseType: 'blob' });
+  return response.data;
+};
+
+//  Blob  Download Template
+export const downloadTemplateFile = async (code) => {
+  const response = await api.get(`/api/templates/download/${code}`, { responseType: 'blob' });
+  return response.data;
 };
 
 export default api;

@@ -1,39 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, ChevronRight, ChevronLeft, CheckCircle2, XCircle, User, Hash, BookOpen, GraduationCap, FileText, Calendar, MessageSquare, Clock, Check, Loader, AlertTriangle, Download, Award, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { downloadYudisiumRegistrationUpload, getYudisiumRegistrationById, approveYudisiumRegistration, rejectYudisiumRegistration } from '../../../service/api';
+import { downloadYudisiumRegistrationUpload, getYudisiumRegistrationById, approveYudisiumRegistration, rejectYudisiumRegistration, getYudisiumPeriods } from '../../../service/api';
 
 const BERKAS_STATUS = { SESUAI: 'sesuai', BERMASALAH: 'bermasalah', UNCHECKED: 'unchecked' };
 
-// HELPER EKSTRAKSI DATA: Melindungi dari bungkus pagination backend (res.data.data)
-const extractDataArray = (data) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data.data && Array.isArray(data.data)) return data.data;
-  if (typeof data === 'object') return Object.values(data);
-  return [];
-};
-
 const getBerkasName = (upload) => {
   const slugStr = upload.category || upload.slug;
-  
-  let finalName = '';
-  
   if (!slugStr || slugStr === 'undefined' || slugStr === 'null') {
-    finalName = upload.name || upload.filename || 'Berkas';
-    finalName = finalName.replace(/\.[^/.]+$/, "");
-  } else {
-    let clean = String(slugStr)
-      .replace(/^yudisium-berkas-wajib-contoh-scan-/i, '')
-      .replace(/^yudisium-berkas-wajib-contoh-/i, '')
-      .replace(/^yudisium-berkas-wajib-/i, '')
-      .replace(/^yudisium-evidence-cumlaude-[^-]+-/i, '')
-      .replace(/^yudisium-/i, '')
-      .replace(/[-_]/g, ' ');
-      
-    finalName = clean.replace(/\b\w/g, l => l.toUpperCase()).trim();
+    return upload.name || upload.filename || 'Berkas';
   }
   
+  let clean = String(slugStr)
+    .replace(/^yudisium-berkas-wajib-contoh-scan-/i, '')
+    .replace(/^yudisium-berkas-wajib-contoh-/i, '')
+    .replace(/^yudisium-berkas-wajib-/i, '')
+    .replace(/^yudisium-evidence-cumlaude-[^-]+-/i, '')
+    .replace(/^yudisium-/i, '')
+    .replace(/[-_]/g, ' ');
+    
+  let finalName = clean.replace(/\b\w/g, l => l.toUpperCase()).trim();
   return finalName.replace(/^[0-9]+[\.\-]\s*/, '').trim();
 };
 
@@ -148,7 +134,7 @@ const NavBtn = ({ onClick, disabled, children, title }) => (
   </button>
 );
 
-const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDownload, loadingFileId, loadingUploads, fileError }) => {
+const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDownload, loadingFileId, loadingUploads, fileError, isReadOnly }) => {
   const currentIdx = uploads.findIndex(u => u.id === previewFile?.id);
   const currentStatus = berkasStatuses[previewFile?.id];
 
@@ -216,9 +202,14 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
               <NavBtn onClick={() => currentIdx > 0 && onPreview(uploads[currentIdx - 1])} disabled={currentIdx <= 0} title="Berkas sebelumnya">←</NavBtn>
               <NavBtn onClick={() => currentIdx < uploads.length - 1 && onPreview(uploads[currentIdx + 1])} disabled={currentIdx >= uploads.length - 1} title="Berkas selanjutnya">→</NavBtn>
               <div style={{ width: 1, height: 20, background: CLR.border, margin: '0 4px' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Verifikasi:</span>
-              <VerifButton active={currentStatus === BERKAS_STATUS.SESUAI} onClick={() => onToggle(previewFile.id, BERKAS_STATUS.SESUAI)} color={CLR.green} label="Sesuai / Valid" />
-              <VerifButton active={currentStatus === BERKAS_STATUS.BERMASALAH} onClick={() => onToggle(previewFile.id, BERKAS_STATUS.BERMASALAH)} color="#DC2626" label="Bermasalah" />
+              
+              {!isReadOnly && (
+                <>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Verifikasi:</span>
+                  <VerifButton active={currentStatus === BERKAS_STATUS.SESUAI} onClick={() => onToggle(previewFile.id, BERKAS_STATUS.SESUAI)} color={CLR.green} label="Sesuai / Valid" />
+                  <VerifButton active={currentStatus === BERKAS_STATUS.BERMASALAH} onClick={() => onToggle(previewFile.id, BERKAS_STATUS.BERMASALAH)} color="#DC2626" label="Bermasalah" />
+                </>
+              )}
               <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: '#9CA3AF', whiteSpace: 'nowrap' }}>{currentIdx + 1} / {uploads.length}</span>
             </div>
           </>
@@ -278,20 +269,31 @@ const Step3Revisi = ({ berkasStatuses, uploads, dueDate, setDueDate, message, se
   );
 };
 
-const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) => (
+const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads, loadingPeriods, isReadOnly }) => (
   <div>
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, marginBottom: 20 }}>
       <CheckCircle2 size={16} color={CLR.green} />
-      <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>Semua {uploads.length} berkas telah diverifikasi sesuai - pilih periode yudisium untuk mahasiswa ini</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>
+        {isReadOnly 
+          ? 'Berkas mahasiswa ini telah selesai diverifikasi dan disetujui.' 
+          : `Semua ${uploads.length} berkas telah diverifikasi sesuai - pilih periode yudisium untuk mahasiswa ini`}
+      </span>
     </div>
     <div>
       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}><Calendar size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Periode Pelaksanaan Yudisium *</label>
-      {periods.length === 0 ? (
-        <div style={{ padding: '16px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8, fontSize: 13, color: '#92400E', display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={16} /> Belum ada periode yudisium yang tersedia. Buat periode terlebih dahulu di menu Pengaturan Periode.</div>
+      
+      {loadingPeriods ? (
+        <div style={{ padding: '16px', textAlign: 'center', color: '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Memuat daftar periode...
+        </div>
+      ) : periods.length === 0 ? (
+        <div style={{ padding: '16px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8, fontSize: 13, color: '#92400E', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={16} /> Belum ada periode yudisium yang tersedia. Buat periode terlebih dahulu di menu Pengaturan Periode.
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {periods
-            .filter(p => new Date(p.endDate) >= new Date())
+            .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
             .map(p => {
               const now = new Date();
               const start = new Date(p.startDate);
@@ -304,13 +306,14 @@ const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) =>
 
               return (
                 <div
-                  key={p.id} onClick={() => onSelectPeriod(p.id)}
+                  key={p.id} onClick={() => !isReadOnly && onSelectPeriod(p.id)}
                   style={{
-                    padding: '14px 16px', borderRadius: 10, cursor: 'pointer',
+                    padding: '14px 16px', borderRadius: 10, cursor: isReadOnly ? 'default' : 'pointer',
                     border: `2px solid ${isSelected ? CLR.red : CLR.border}`,
                     background: isSelected ? '#FEF2F2' : '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     transition: 'all 0.15s',
+                    opacity: isReadOnly && !isSelected ? 0.5 : 1
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -334,7 +337,7 @@ const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) =>
   </div>
 );
 
-const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onClose, onSaved }) => {
+const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onClose, onSaved, isReadOnly }) => {
   const [step, setStep] = useState(1);
   const [berkasStatuses, setBerkasStatuses] = useState({});
   const [previewFile, setPreviewFile] = useState(null);
@@ -348,9 +351,34 @@ const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onC
   const [loadingUploads, setLoadingUploads] = useState(false);
   const [fileError, setFileError] = useState(null);
 
+  const [localPeriods, setLocalPeriods] = useState([]);
+  const [loadingPeriods, setLoadingPeriods] = useState(false);
+
   const m = registration?.mahasiswa || registration?.student;
   const prodiName = m?.studyProgram?.name ?? '-';
-  const periods = extractDataArray(periodMap); // PENGGUNAAN HELPER BARU
+
+  useEffect(() => {
+    setLoadingPeriods(true);
+    getYudisiumPeriods()
+      .then(res => {
+        let list = [];
+        if (Array.isArray(res)) list = res;
+        else if (res?.data && Array.isArray(res.data)) list = res.data;
+        else if (res?.data?.data && Array.isArray(res.data.data)) list = res.data.data;
+        setLocalPeriods(list);
+      })
+      .catch((err) => console.error("Gagal memuat daftar periode:", err))
+      .finally(() => setLoadingPeriods(false));
+  }, []);
+
+  const combinedPeriods = () => {
+    const parentPeriods = Object.values(periodMap ?? {});
+    const map = new Map();
+    parentPeriods.forEach(p => map.set(p.id, p));
+    localPeriods.forEach(p => map.set(p.id, p));
+    return Array.from(map.values());
+  };
+  const periods = combinedPeriods();
 
   useEffect(() => {
     const initial = registration?.yudisiumRegistrationUploads;
@@ -405,6 +433,7 @@ const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onC
   ).length;
 
   const handleToggle = (uploadId, status) => {
+    if (isReadOnly) return;
     setBerkasStatuses(prev => ({
       ...prev,
       [uploadId]: prev[uploadId] === status ? BERKAS_STATUS.UNCHECKED : status,
@@ -452,6 +481,7 @@ const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onC
   }, []);
 
   const handleSubmit = async () => {
+    if (isReadOnly) return;
     setSubmitError(null);
 
     if (hasBermasalah) {
@@ -528,12 +558,16 @@ const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onC
             )}
             {step === 2 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
-                <Step2 uploads={uploads} loadingUploads={loadingUploads} berkasStatuses={berkasStatuses} onToggle={handleToggle} previewFile={previewFile} onPreview={handlePreview} onDownload={handleDownload} loadingFileId={loadingFileId} fileError={fileError} />
+                <Step2 uploads={uploads} loadingUploads={loadingUploads} berkasStatuses={berkasStatuses} onToggle={handleToggle} previewFile={previewFile} onPreview={handlePreview} onDownload={handleDownload} loadingFileId={loadingFileId} fileError={fileError} isReadOnly={isReadOnly} />
               </motion.div>
             )}
             {step === 3 && (
               <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ padding: '0 24px 24px' }}>
-                {hasBermasalah ? <Step3Revisi berkasStatuses={berkasStatuses} uploads={uploads} dueDate={dueDate} setDueDate={setDueDate} message={message} setMessage={setMessage} /> : <Step3Approve periods={periods} selectedPeriodId={selectedPeriodId} onSelectPeriod={setSelectedPeriodId} uploads={uploads} />}
+                {hasBermasalah ? (
+                   <Step3Revisi berkasStatuses={berkasStatuses} uploads={uploads} dueDate={dueDate} setDueDate={setDueDate} message={message} setMessage={setMessage} />
+                ) : (
+                   <Step3Approve periods={periods} selectedPeriodId={selectedPeriodId} onSelectPeriod={setSelectedPeriodId} uploads={uploads} loadingPeriods={loadingPeriods} isReadOnly={isReadOnly} />
+                )}
                 {submitError && <div style={{ marginTop: 16, padding: '10px 14px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 13, color: '#DC2626', display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={15} />{submitError}</div>}
               </motion.div>
             )}
@@ -544,16 +578,40 @@ const VerifikasiYudisiumModal = ({ registration, academicStaffId, periodMap, onC
             {step > 1 && <button onClick={() => setStep(s => s - 1)} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: `1px solid ${CLR.border}`, background: '#fff', color: '#374151', cursor: 'pointer' }}><ChevronLeft size={16} /> Kembali</button>}
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            {step === 2 && uncheckedCount > 0 && <span style={{ fontSize: 11, color: CLR.orange, fontWeight: 600 }}>{uncheckedCount} berkas belum diverifikasi</span>}
-            <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: `1px solid ${CLR.border}`, background: '#fff', color: '#374151', cursor: 'pointer' }}>Batal</button>
+            {step === 2 && uncheckedCount > 0 && !isReadOnly && <span style={{ fontSize: 11, color: CLR.orange, fontWeight: 600 }}>{uncheckedCount} berkas belum diverifikasi</span>}
+            
+            <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: `1px solid ${CLR.border}`, background: '#fff', color: '#374151', cursor: 'pointer' }}>
+              {isReadOnly ? 'Tutup' : 'Batal'}
+            </button>
+            
             {step < 3 ? (
-              <button onClick={step === 1 ? () => setStep(2) : () => { if (allChecked) setStep(3); }} disabled={step === 2 && !allChecked} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700, background: step === 2 && !allChecked ? '#E2E8F0' : step === 2 && hasBermasalah ? CLR.orange : CLR.red, color: step === 2 && !allChecked ? '#94A3B8' : '#fff', border: 'none', cursor: step === 2 && !allChecked ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-                {step === 1 ? <> Lanjut Periksa Berkas <ChevronRight size={16} /></> : hasBermasalah ? <> Lanjut Set Revisi <ChevronRight size={16} /></> : <> Lanjut Pilih Periode <ChevronRight size={16} /></>}
+              <button 
+                onClick={() => {
+                  if (step === 1) setStep(2);
+                  else if (allChecked || isReadOnly) setStep(3);
+                }} 
+                disabled={step === 2 && !allChecked && !isReadOnly} 
+                style={{ 
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '10px 24px', 
+                  borderRadius: 8, fontSize: 13, fontWeight: 700, border: 'none', transition: 'all 0.2s',
+                  background: step === 2 && !allChecked && !isReadOnly ? '#E2E8F0' : (step === 2 && hasBermasalah && !isReadOnly ? CLR.orange : CLR.red), 
+                  color: step === 2 && !allChecked && !isReadOnly ? '#94A3B8' : '#fff', 
+                  cursor: step === 2 && !allChecked && !isReadOnly ? 'not-allowed' : 'pointer'
+                }}>
+                {step === 1 
+                  ? <> Lanjut Periksa Berkas <ChevronRight size={16} /></> 
+                  : (hasBermasalah && !isReadOnly 
+                     ? <> Lanjut Set Revisi <ChevronRight size={16} /></> 
+                     : (isReadOnly 
+                        ? <> Lanjut Detail <ChevronRight size={16} /></> 
+                        : <> Lanjut Pilih Periode <ChevronRight size={16} /></>))}
               </button>
             ) : (
-              <button onClick={handleSubmit} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700, background: isSubmitting ? '#E2E8F0' : hasBermasalah ? CLR.orange : CLR.green, color: isSubmitting ? '#94A3B8' : '#fff', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-                {isSubmitting ? <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Menyimpan...</> : hasBermasalah ? <><MessageSquare size={16} /> Kirim Revisi</> : <><CheckCircle2 size={16} /> Verifikasi & Setujui</>}
-              </button>
+              !isReadOnly && (
+                <button onClick={handleSubmit} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700, background: isSubmitting ? '#E2E8F0' : hasBermasalah ? CLR.orange : CLR.green, color: isSubmitting ? '#94A3B8' : '#fff', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+                  {isSubmitting ? <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Menyimpan...</> : hasBermasalah ? <><MessageSquare size={16} /> Kirim Revisi</> : <><CheckCircle2 size={16} /> Verifikasi & Setujui</>}
+                </button>
+              )
             )}
           </div>
         </div>

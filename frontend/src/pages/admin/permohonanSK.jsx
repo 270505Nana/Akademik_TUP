@@ -74,8 +74,9 @@ const PermohonanSK = () => {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const res      = await getAllSktaRequests();
+      const res = await getAllSktaRequests();
       const dataList = res?.data ?? res ?? [];
+      
       const groupByStudent = new Map();
       dataList.forEach(item => {
         const sid = item.studentId ?? item.mahasiswaId ?? item.student?.id ?? item.mahasiswa?.id;
@@ -238,12 +239,14 @@ const PermohonanSK = () => {
         await rejectPermohonanSK(permohonanId, {
           message: payload.catatan,
           adminId: user.id,
+          isEdit: payload.isEdit,
         });
         showAlert('success', 'Berhasil', `Pengajuan untuk ${mhsName} berhasil ditolak.`);
       } else {
         await approvePermohonanSK(permohonanId, {
           hasUploadedFinalProposal: payload.checks.proposal,
           hasTakenLanguageTest: payload.checks.bahasa,
+          // Menggunakan batasPerbaikan untuk expDate (Kadaluwarsa SK)
           expDate: payload.batasPerbaikan,
           adminId: user.id,
           sktaFile: payload.uploadedFile,
@@ -656,4 +659,4 @@ const PermohonanSK = () => {
   );
 };
 
-export default PermohonanSK;  
+export default PermohonanSK;

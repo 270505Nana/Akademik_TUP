@@ -6,14 +6,16 @@ import '../dashboard.css';
 import { useAuth } from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
-import {
-  getSKTARequest,
-  getSidangPeriods,
-  getYudisiumPeriods,
-  getSidangRegistrationByStudentId,
-} from '../../service/api';
+import api, { downloadSK } from '../../service/api';
 import { determineSkStatus, STATUS_SK } from '../../components/common/Skstatushelper';
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus } from '../../components/admin/sidang/Sidangstatushelper';
+
+const extractData = (res) => {
+  if (!res) return {};
+  if (res.data && res.data.data) return res.data.data;
+  if (res.data) return res.data;
+  return res;
+};
 
 const normalizeRegistration = (raw) => {
   if (Array.isArray(raw)) return raw[0] ?? null;
@@ -109,6 +111,7 @@ const pickRelevantPeriod = (list = []) => {
   if (flat.length === 0) return null;
   const open = flat.find(p => p && p.isOpen === true);
   if (open) return { ...open, state: 'aktif' };
+  
   const now = new Date();
   const upcoming = flat
     .filter(p => p && new Date(p.startDate) > now)
@@ -137,18 +140,42 @@ const skKeteranganText = (status) => {
   return 'Selesaikan pengajuan SK TA terlebih dahulu.';
 };
 
-// Komponen Badge dipisah menjadi mode 'solid' (untuk status) dan 'text-only' (untuk keterangan)
 const RowBadge = ({ style: s, isTextOnly = false }) => (
   <span 
-    className={`badge-prog ${isTextOnly ? 'text-only' : 'solid'}`} 
-    style={{ background: isTextOnly ? 'transparent' : s.bg, color: s.color }}
+    style={{
+      background: isTextOnly ? 'transparent' : s.bg,
+      color: s.color,
+      fontSize: isTextOnly ? '11px' : '8.5px',
+      fontWeight: isTextOnly ? 600 : 800,
+      padding: isTextOnly ? 0 : '4px 8px',
+      borderRadius: '4px',
+      textTransform: isTextOnly ? 'none' : 'uppercase',
+      letterSpacing: isTextOnly ? 'normal' : '0.04em',
+      display: 'inline-block'
+    }}
   >
     {s.label}
   </span>
 );
 
 const TextLinkAction = ({ onClick, children, disabled }) => (
-  <button onClick={onClick} disabled={disabled} className="btn-text-link">
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      fontSize: '11px',
+      fontWeight: 800,
+      background: 'none',
+      border: 'none',
+      color: disabled ? '#9CA3AF' : '#C0182A',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      padding: 0,
+      textDecoration: 'none',
+      transition: 'color 0.2s',
+    }}
+    onMouseEnter={(e) => !disabled && (e.currentTarget.style.color = '#8B0F1E')}
+    onMouseLeave={(e) => !disabled && (e.currentTarget.style.color = '#C0182A')}
+  >
     {children}
   </button>
 );
@@ -168,12 +195,12 @@ const DashboardMahasiswa = () => {
   const angkatanDisplay = student?.angkatan || null;
   const dosenWaliDisplay = student?.dosenWaliNama || null;
 
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
+  
   const [skStatus, setSkStatus] = useState(null);
   const [sktaRequest, setSktaRequest] = useState(null);
-  const [loadingSk, setLoadingSk] = useState(true);
 
   const [sidangRegStatus, setSidangRegStatus] = useState(null);
-  const [loadingSidangReg, setLoadingSidangReg] = useState(false);
   const [sidangAssignedPeriode, setSidangAssignedPeriode] = useState(null);
   const [sidangResponse, setSidangResponse] = useState(null);
 
@@ -206,42 +233,44 @@ const DashboardMahasiswa = () => {
     }
   };
 
-  const fetchSkStatus = useCallback(async () => {
-    if (!activeStudentId) { setLoadingSk(false); return; }
-    setLoadingSk(true);
-    try {
-      const request = await getSKTARequest(activeStudentId);
-      if (!request) {
-        setSkStatus(null);
-        setSktaRequest(null);
-        setLoadingSk(false);
-        return;
-      }
-      setSktaRequest(request);
-      setSkStatus(determineSkStatus(request));
-    } catch (err) {
-      console.error('Gagal fetch SK status:', err);
-      setSkStatus(null);
-    } finally {
-      setLoadingSk(false);
+  const fetchDashboardData = useCallback(async () => {
+    if (!activeStudentId) {
+      setLoadingDashboard(false);
+      return;
     }
-  }, [activeStudentId]);
 
-  useEffect(() => { fetchSkStatus(); }, [fetchSkStatus]);
+    setLoadingDashboard(true);
+    try {
+      const res = await api.get('/api/mahasiswa/dashboard');
+      const payload = extractData(res);
 
-  useEffect(() => {
-    const fetchSidangRegStatus = async () => {
-      if (!activeStudentId || skStatus !== STATUS_SK.SUDAH_TERBIT) {
+      const skta = payload.sktaRequest || null;
+      setSktaRequest(skta);
+      const computedSkStatus = determineSkStatus(skta);
+      setSkStatus(computedSkStatus);
+
+      const sidangPeriodsRaw = payload.sidangPeriods || [];
+      const yudisiumPeriodsRaw = payload.yudisiumPeriods || [];
+
+      const sDaftar = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran sidang'));
+      const sPelaksanaan = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'sidang'));
+      
+      const yDaftar = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran yudisium'));
+      const yPelaksanaan = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'yudisium'));
+
+      setSidangPeriode(sDaftar);
+      setSidangPelaksanaan(sPelaksanaan);
+      setYudisiumPeriode(yDaftar);
+      setYudisiumPelaksanaan(yPelaksanaan);
+
+      if (computedSkStatus !== STATUS_SK.SUDAH_TERBIT) {
         setSidangRegStatus(STATUS_SIDANG.BELUM_DAFTAR);
         setSidangAssignedPeriode(null);
-        setLoadingSidangReg(false);
-        return;
-      }
-
-      setLoadingSidangReg(true);
-      try {
-        const rawRegistrations = await getSidangRegistrationByStudentId(activeStudentId);
-        const registration = normalizeRegistration(rawRegistrations);
+        setSidangResponse(null);
+      } else {
+        const rawSidangReg = payload.sidangRegistrations || [];
+        const registration = normalizeRegistration(rawSidangReg);
+        setSidangResponse(registration);
 
         if (!registration) {
           setSidangRegStatus(determineSidangStatus(null, null, null));
@@ -273,17 +302,14 @@ const DashboardMahasiswa = () => {
         );
         setSidangResponse(registration);
 
-      } catch (err) {
-        console.error('Gagal fetch sidang registration status:', err);
-        setSidangRegStatus(null);
-        setSidangAssignedPeriode(null);
-      } finally {
-        setLoadingSidangReg(false);
-      }
-    };
-
-    if (!loadingSk) fetchSidangRegStatus();
-  }, [skStatus, loadingSk, activeStudentId]);
+    } catch (err) {
+      console.error("Gagal memuat data dashboard:", err);
+      setSkStatus(null);
+      setSidangRegStatus(null);
+    } finally {
+      setLoadingDashboard(false);
+    }
+  }, [activeStudentId]);
 
   useEffect(() => {
     const fetchPeriode = async () => {
@@ -330,16 +356,15 @@ const DashboardMahasiswa = () => {
   const rowSidangLoading = loadingSk || loadingSidangReg;
   const skSudahTerbit = skStatus === STATUS_SK.SUDAH_TERBIT;
 
-  // Helper render keterangan sidang (kolom Keterangan / Revisi)
   const renderKeteranganSidang = () => {
-    if (rowSidangLoading) return <span style={{ color: '#9CA3AF' }}>—</span>;
-    if (!skSudahTerbit) return <span style={{ color: '#9CA3AF' }}>Selesaikan pengajuan SK TA terlebih dahulu.</span>;
+    if (loadingDashboard) return <span style={{ color: '#9CA3AF', fontSize: '11px' }}>—</span>;
+    if (!skSudahTerbit) return <span style={{ color: '#9CA3AF', fontSize: '11px' }}>Selesaikan pengajuan SK TA terlebih dahulu.</span>;
     
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ color: '#4B5563' }}>{getSidangKeteranganText(sidangRegStatus, sidangAssignedPeriode)}</span>
+        <span style={{ color: '#4B5563', fontWeight: 500, fontSize: '11px' }}>{getSidangKeteranganText(sidangRegStatus, sidangAssignedPeriode)}</span>
         {sidangRegStatus === STATUS_SIDANG.PERLU_REVISI && sidangResponse?.message && (
-          <span style={{ color: '#C0182A', fontWeight: 700 }}>Catatan: {sidangResponse.message}</span>
+          <span style={{ color: '#C0182A', fontWeight: 700, fontSize: '10.5px' }}>Catatan: {sidangResponse.message}</span>
         )}
       </div>
     );
@@ -352,20 +377,19 @@ const DashboardMahasiswa = () => {
 
       <div id="main-content" className="flex-1 flex flex-col">
         <header className="topbar">
-          <button className="topbar-toggle" onClick={() => setSidebarOpen(true)}>
+          <button className="topbar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
             <Menu size={20} />
           </button>
           <div className="topbar-brand text-white">Beranda</div>
         </header>
 
-        <main className="page-body px-6 py-8 md:px-10 md:py-10" style={{ maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+        <main className="page-body px-4 py-6 md:px-8 md:py-8" style={{ maxWidth: '1080px', margin: '0 auto', width: '100%' }}>
 
-          {/* Halo User Card */}
-          <div className="dash-card-clean dash-welcome">
-            <h2 className="dash-welcome-title">
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px 30px', border: '1px solid #E9EDF5', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '8px', letterSpacing: '-0.02em' }}>
               Halo {namaDisplay}! <span style={{ display: 'inline-block', transformOrigin: 'bottom right', animation: 'bounce 1s infinite' }}>👋</span>
             </h2>
-            <div className="dash-welcome-meta">
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#6B7280', marginBottom: '16px', fontWeight: 600 }}>
               {nimDisplay && <span style={{ color: '#374151' }}>NIM: {nimDisplay}</span>}
               {prodiDisplay && <><span style={{ color: '#D1D5DB' }}>•</span><span style={{ color: '#374151' }}>{prodiDisplay}</span></>}
               {kelasDisplay && <><span style={{ color: '#D1D5DB' }}>•</span><span style={{ color: '#374151' }}>Kelas {kelasDisplay}</span></>}
@@ -373,12 +397,12 @@ const DashboardMahasiswa = () => {
             </div>
             
             {dosenWaliDisplay && (
-              <p style={{ fontSize: '15px', color: '#6B7280', marginBottom: '20px' }}>
+              <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '16px' }}>
                 Dosen Wali: <span style={{ fontWeight: 600, color: '#1F2937' }}>{dosenWaliDisplay}</span>
               </p>
             )}
             
-            <p className="dash-welcome-desc">
+            <p style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.6, maxWidth: '900px', margin: 0 }}>
               Semangat pengerjaan Tugas Akhirnya! Pastikan semua berkas persyaratanmu sudah
               lengkap dan tervalidasi
               {deadlineSidang ? (
@@ -390,15 +414,14 @@ const DashboardMahasiswa = () => {
             </p>
           </div>
 
-          {/* Timeline Card */}
-          <div className="dash-card-clean dash-timeline">
-            <div className="dash-timeline-header">
+          <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E9EDF5', borderLeft: '4px solid #C0182A', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', padding: '24px 30px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
               <div>
                 <div className="dash-timeline-overline">Timeline Pendaftaran Sidang TA & Yudisium</div>
                 <h3 className="dash-timeline-title">
                   Periode Aktif: {formatPeriodSubtitle(pendaftaranSidang) || formatPeriodSubtitle(pendaftaranYudisium) || 'Belum Tersedia'}
                 </h3>
-                <p className="dash-timeline-subtitle">Jadwal penting untuk pelaksanaan sidang semester ini.</p>
+                <p style={{ fontSize: '11.5px', color: '#6B7280', margin: 0 }}>Jadwal penting untuk pelaksanaan sidang semester ini.</p>
               </div>
               <div>
                 <span className="dash-timeline-status">
@@ -407,12 +430,11 @@ const DashboardMahasiswa = () => {
               </div>
             </div>
 
-            <div className="dash-timeline-grid">
-              {/* Pendaftaran Sidang */}
-              <div className="dash-timeline-item">
-                <p className="dash-timeline-label">PENDAFTARAN SIDANG</p>
-                {loadingPeriode ? (
-                   <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+              <div style={{ background: '#FAFBFD', borderRadius: '10px', padding: '16px', border: '1px solid #F3F4F6' }}>
+                <p style={{ fontSize: '9px', fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>PENDAFTARAN SIDANG</p>
+                {loadingDashboard ? (
+                   <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
                    <p className="dash-timeline-val highlight">
                      {pendaftaranSidang
@@ -466,44 +488,42 @@ const DashboardMahasiswa = () => {
             </div>
           </div>
 
-          {/* Tabel Progres */}
-          <div className="dash-progress">
-            <div className="dash-progress-header">
-              <h4 className="dash-progress-title">Detail Progres Registrasi</h4>
-              <span className="dash-progress-meta">Terakhir diperbarui: {formatDateShort(new Date())}</span>
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '0 6px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', margin: 0 }}>Detail Progres Registrasi</h4>
+              <span style={{ fontSize: '10px', color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Terakhir diperbarui: {formatDateShort(new Date())}</span>
             </div>
 
-            <div className="dash-card-clean">
-              <div className="prog-table-wrap">
-                <table className="prog-table">
+            <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E9EDF5', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto', width: '100%' }}>
+                <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
-                    <tr>
-                      <th className="col-tahapan">Tahapan</th>
-                      <th className="col-status">Status</th>
-                      <th className="col-ket">Keterangan / Revisi</th>
-                      <th className="col-aksi">Aksi</th>
+                    <tr style={{ borderBottom: '2px solid #F3F4F6' }}>
+                      <th style={{ padding: '14px 24px', fontSize: '9px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', width: '28%' }}>Tahapan</th>
+                      <th style={{ padding: '14px 12px', fontSize: '9px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', width: '20%' }}>Status</th>
+                      <th style={{ padding: '14px 12px', fontSize: '9px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', width: '37%' }}>Keterangan / Revisi</th>
+                      <th style={{ padding: '14px 24px', fontSize: '9px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', width: '15%', textAlign: 'right' }}>Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
 
-                    {/* Pengajuan SK */}
-                    <tr>
-                      <td>
-                         <div className="prog-tahapan-title">Pengajuan SK TA</div>
-                         <div className="prog-tahapan-sub">
-                           {loadingSk ? 'Memuat...' : skTanggal ? `Diajukan: ${skTanggal}` : 'Belum diajukan'}
+                    <tr style={{ borderBottom: '1px solid #F3F4F6', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FAFBFD'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      <td style={{ padding: '16px 24px', verticalAlign: 'top' }}>
+                         <div style={{ fontSize: '12px', fontWeight: 800, color: '#111827', marginBottom: '4px' }}>Pengajuan SK TA</div>
+                         <div style={{ fontSize: '10.5px', color: '#6B7280', fontWeight: 500 }}>
+                           {loadingDashboard ? 'Memuat...' : skTanggal ? `Diajukan: ${skTanggal}` : 'Belum diajukan'}
                          </div>
                       </td>
-                      <td className="col-status">
-                        {loadingSk ? <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} /> : <RowBadge style={skBadgeStyle(skStatus)} />}
+                      <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
+                        {loadingDashboard ? <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} /> : <RowBadge style={skBadgeStyle(skStatus)} />}
                       </td>
-                      <td className="col-ket">
-                        {loadingSk ? <span style={{ color: '#9CA3AF' }}>—</span> : <RowBadge isTextOnly style={{ color: '#4B5563', label: skKeteranganText(skStatus) }} />}
+                      <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
+                        {loadingDashboard ? <span style={{ color: '#9CA3AF', fontSize: '11px' }}>—</span> : <RowBadge isTextOnly style={{ color: '#4B5563', label: skKeteranganText(skStatus) }} />}
                       </td>
-                      <td className="col-aksi">
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
-                          {loadingSk ? (
-                            <span style={{ color: '#9CA3AF', fontSize: '12px' }}>—</span>
+                      <td style={{ padding: '16px 24px', verticalAlign: 'top', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                          {loadingDashboard ? (
+                            <span style={{ color: '#9CA3AF', fontSize: '11px' }}>—</span>
                           ) : skStatus === null ? (
                             <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Mulai Pengajuan</TextLinkAction>
                           ) : skStatus === STATUS_SK.EXPIRED ? (
@@ -530,22 +550,22 @@ const DashboardMahasiswa = () => {
                            {pendaftaranSidang ? `Daftar s.d. ${formatDateShort(pendaftaranSidang.endDate)}` : 'Belum ada periode'}
                          </div>
                       </td>
-                      <td className="col-status">
-                        {rowSidangLoading ? (
-                          <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                      <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
+                        {loadingDashboard ? (
+                          <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                         ) : !skSudahTerbit ? (
                           <RowBadge style={LOCKED_BADGE} />
                         ) : (
                           <RowBadge style={toRowBadge(SIDANG_STATUS_CONFIG[sidangRegStatus] ?? SIDANG_STATUS_CONFIG[STATUS_SIDANG.BELUM_DAFTAR])} />
                         )}
                       </td>
-                      <td className="col-ket">
+                      <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
                         {renderKeteranganSidang()}
                       </td>
-                      <td className="col-aksi">
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
-                          {rowSidangLoading ? (
-                            <span style={{ color: '#9CA3AF', fontSize: '12px' }}>—</span>
+                      <td style={{ padding: '16px 24px', verticalAlign: 'top', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                          {loadingDashboard ? (
+                            <span style={{ color: '#9CA3AF', fontSize: '11px' }}>—</span>
                           ) : !skSudahTerbit ? (
                             <TextLinkAction disabled>Daftar</TextLinkAction>
                           ) : sidangRegStatus === STATUS_SIDANG.BELUM_DAFTAR ? (
@@ -569,15 +589,19 @@ const DashboardMahasiswa = () => {
                            {pendaftaranYudisium ? `Daftar s.d. ${formatDateShort(pendaftaranYudisium.endDate)}` : 'Belum ada periode'}
                          </div>
                       </td>
-                      <td className="col-status">
-                        {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
+                      <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
+                        {loadingDashboard ? (
+                          <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                        ) : !skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
                           <RowBadge style={LOCKED_BADGE} />
                         ) : (
                           <RowBadge style={{ bg: '#DBEAFE', color: '#1E40AF', label: 'SIAP DAFTAR' }} />
                         )}
                       </td>
-                      <td className="col-ket">
-                        {!skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
+                      <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
+                        {loadingDashboard ? (
+                          <span style={{ color: '#9CA3AF', fontSize: '11px' }}>—</span>
+                        ) : !skSudahTerbit || ![STATUS_SIDANG.PENDAFTARAN_DITERIMA, STATUS_SIDANG.SIAP_SIDANG].includes(sidangRegStatus) ? (
                           <RowBadge isTextOnly style={{ color: '#9CA3AF', label: 'Selesaikan Pendaftaran Sidang terlebih dahulu.' }} />
                         ) : (
                           <RowBadge isTextOnly style={{ color: '#4B5563', label: 'Silakan lengkapi berkas yudisium kamu.' }} />
@@ -602,8 +626,8 @@ const DashboardMahasiswa = () => {
 
         </main>
 
-        <footer className="page-footer" style={{ borderTop: '1px solid #E9EDF5', background: '#fff', padding: '16px', marginTop: 'auto' }}>
-          <p style={{ fontSize: '11px', color: '#9CA3AF', textAlign: 'center', fontWeight: 600, margin: 0 }}>Telkom University Purwokerto — Divisi Akademik dan Sistem Informasi</p>
+        <footer className="page-footer" style={{ borderTop: '1px solid #E9EDF5', background: '#fff', padding: '12px', marginTop: 'auto' }}>
+          <p style={{ fontSize: '9.5px', color: '#9CA3AF', textAlign: 'center', fontWeight: 600, margin: 0 }}>Telkom University Purwokerto — Divisi Akademik dan Sistem Informasi</p>
         </footer>
       </div>
     </div>

@@ -24,8 +24,11 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
     navigate("/login", { replace: true });
   };
 
-  const toggleMenu = (label) => {
-    setExpandedMenus((prev) => ({ ...prev, [label]: !prev[label] }));
+  const handleToggle = (label, isActive) => {
+    setExpandedMenus((prev) => {
+      const currentState = prev[label] !== undefined ? prev[label] : isActive;
+      return { ...prev, [label]: !currentState };
+    });
   };
 
   const menuSidebar = [
@@ -67,6 +70,7 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
 
   const getSubPath = (sub) => {
     if (sub === "Permohonan Penerbitan SK") return "/mahasiswa/pengajuan-sk";
+    if (sub === "Pembaruan SK Tugas Akhir") return "/mahasiswa/pembaruan-sk";
     if (sub === "Registrasi Sidang") return "/mahasiswa/pendaftaran-sidang";
     if (sub === "Registrasi Yudisium") return "/mahasiswa/pendaftaran-yudisium";
     if (sub === "Unduh SKL & Transkrip" || sub === "Unduh SKL dan Transkrip") return "/mahasiswa/unduh-berkas";
@@ -75,6 +79,102 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
 
   return (
     <>
+      <style>
+        {`
+          :root {
+            --sidebar-width: 220px !important;
+          }
+          #sidebar {
+            width: var(--sidebar-width) !important;
+          }
+          .sidebar-logo {
+            padding: 16px !important;
+            gap: 10px !important;
+          }
+          .logo-icon {
+            width: 28px !important;
+            height: 28px !important;
+            font-size: 14px !important;
+            border-radius: 6px !important;
+            flex-shrink: 0 !important;
+          }
+          .logo-text {
+            font-size: 16px !important;
+          }
+          .sidebar-nav {
+            padding: 12px !important;
+            gap: 2px !important;
+            user-select: none !important;
+          }
+          .nav-section-label {
+            font-size: 10px !important;
+            margin: 16px 10px 4px 2px !important;
+          }
+          .nav-link-main {
+            font-size: 12px !important;
+            padding: 10px 12px !important;
+            border-radius: 8px !important;
+            gap: 10px !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            outline: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+          }
+          .nav-icon {
+            width: 16px !important;
+            height: 16px !important;
+            flex-shrink: 0 !important;
+          }
+          .nav-arrow {
+            margin-left: auto !important;
+            flex-shrink: 0 !important;
+          }
+          .sub-nav {
+            margin: 2px 0 2px 14px !important;
+            padding: 0 !important;
+            list-style: none !important;
+          }
+          .sub-nav a {
+            font-size: 11.5px !important;
+            padding: 8px 12px 8px 16px !important;
+            display: block !important;
+            line-height: 1.4 !important;
+            white-space: normal !important;
+            outline: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+          }
+          .sidebar-user {
+            padding: 16px 12px !important;
+            gap: 10px !important;
+          }
+          .avatar {
+            width: 32px !important;
+            height: 32px !important;
+            font-size: 13px !important;
+            flex-shrink: 0 !important;
+          }
+          .user-name {
+            font-size: 12px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+          }
+          .user-role {
+            font-size: 10px !important;
+          }
+          .logout-btn {
+            padding: 8px !important;
+            flex-shrink: 0 !important;
+            outline: none !important;
+          }
+          .logout-btn svg {
+            width: 15px !important;
+            height: 15px !important;
+          }
+        `}
+      </style>
+
       {showLogoutConfirm && (
         <div
           style={{
@@ -187,6 +287,10 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
                       (sub) => getSubPath(sub) === location.pathname,
                     ));
 
+                const isMenuOpen = expandedMenus[item.label] !== undefined 
+                  ? expandedMenus[item.label] 
+                  : isActive;
+
                 return (
                   <div className="nav-item-group" key={iIdx}>
                     {item.path ? (
@@ -201,13 +305,20 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
                     ) : (
                       <div
                         className={`nav-link-main ${isActive ? "active" : ""}`}
-                        onClick={() => item.subItems && toggleMenu(item.label)}
-                        aria-expanded={expandedMenus[item.label]}
+                        onClick={() => item.subItems && handleToggle(item.label, isActive)}
+                        aria-expanded={isMenuOpen}
                       >
                         {item.icon}
                         {item.label}
                         {item.subItems && (
-                          <ChevronDown className="nav-arrow" size={14} />
+                          <ChevronDown 
+                            className="nav-arrow" 
+                            size={14} 
+                            style={{ 
+                              transform: isMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 0.2s'
+                            }} 
+                          />
                         )}
                       </div>
                     )}
@@ -216,10 +327,8 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
                       <motion.div
                         initial={false}
                         animate={{
-                          height:
-                            expandedMenus[item.label] || isActive ? "auto" : 0,
-                          opacity:
-                            expandedMenus[item.label] || isActive ? 1 : 0,
+                          height: isMenuOpen ? "auto" : 0,
+                          opacity: isMenuOpen ? 1 : 0,
                         }}
                         className="overflow-hidden"
                       >
@@ -252,7 +361,6 @@ const SidebarMahasiswa = ({ isOpen, onClose }) => {
         <div className="sidebar-user">
           <div className="avatar">{avatarChar}</div>
           <div className="user-info">
-            {/* Nama dari StudentContext */}
             <div className="user-name">{namaDisplay}</div>
             <div className="user-role">
               {user?.role === "MAHASISWA"
