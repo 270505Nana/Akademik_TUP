@@ -154,6 +154,64 @@ export const getAllDosen = async (params = {}) => {
   return response.data;
 };
 
+/**
+ * Mendapatkan daftar penjadwalan sidang (Dosen / Ketua KK).
+ * @param {Object} params - Query params (page, limit, pagination)
+ * @returns {Promise<{ data: Array, pagination: Object }>}
+ */
+export const getPenjadwalanSidang = async (params = {}) => {
+  try {
+    const response = await api.get('/api/penjadwalan-sidang', { params });
+    return response.data;
+  } catch (err) {
+    console.error('Error fetching penjadwalan sidang:', err);
+    throw err;
+  }
+};
+
+/**
+ * Mendapatkan opsi dosen penguji (GET /api/dosen?pagination=false&limit=all)
+ * @param {Object} params - Query params opsional (researchGroupId dsb)
+ * @returns {Promise<Array>} List dosen penguji
+ */
+export const getPengujiOptions = async (params = {}) => {
+  try {
+    const queryParams = {
+      pagination: 'false',
+      limit: 'all',
+      sortBy: 'nameAsc',
+      ...params,
+    };
+    const response = await api.get('/api/dosen', { params: queryParams });
+    const list = response.data?.data ?? response.data;
+    return Array.isArray(list) ? list : [];
+  } catch (err) {
+    console.error('Error fetching penguji options:', err);
+    throw err;
+  }
+};
+
+/**
+ * Set dosen penguji sidang untuk satu pendaftaran (Ketua KK only).
+ * @param {string} id - Sidang registration ID (UUID)
+ * @param {{ dosenPenguji1Id: string, dosenPenguji2Id: string }} payload
+ * @returns {Promise<{ message: string, data: object }>}
+ */
+export const setPengujiSidang = async (id, payload) => {
+  const response = await api.put(`/api/penjadwalan-sidang/${id}/set-penguji`, payload);
+  return response.data;
+};
+
+/**
+ * Set dosen penguji sidang secara batch (Ketua KK only).
+ * @param {Array<{ id: string, dosenPenguji1Id: string, dosenPenguji2Id: string }>} payload
+ * @returns {Promise<{ message: string, data: Array }>}
+ */
+export const setPengujiSidangBatch = async (payload) => {
+  const response = await api.put('/api/penjadwalan-sidang/set-penguji/batch', payload);
+  return response.data;
+};
+
 export const getResearchGroups = async () => {
   const response = await api.get('/api/research-groups');
   return response.data?.data ?? response.data;

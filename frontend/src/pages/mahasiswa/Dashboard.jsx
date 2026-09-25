@@ -111,7 +111,7 @@ const pickRelevantPeriod = (list = []) => {
   if (flat.length === 0) return null;
   const open = flat.find(p => p && p.isOpen === true);
   if (open) return { ...open, state: 'aktif' };
-  
+
   const now = new Date();
   const upcoming = flat
     .filter(p => p && new Date(p.startDate) > now)
@@ -141,7 +141,7 @@ const skKeteranganText = (status) => {
 };
 
 const RowBadge = ({ style: s, isTextOnly = false }) => (
-  <span 
+  <span
     style={{
       background: isTextOnly ? 'transparent' : s.bg,
       color: s.color,
@@ -196,7 +196,7 @@ const DashboardMahasiswa = () => {
   const dosenWaliDisplay = student?.dosenWaliNama || null;
 
   const [loadingDashboard, setLoadingDashboard] = useState(true);
-  
+
   const [skStatus, setSkStatus] = useState(null);
   const [sktaRequest, setSktaRequest] = useState(null);
 
@@ -254,7 +254,7 @@ const DashboardMahasiswa = () => {
 
       const sDaftar = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran sidang'));
       const sPelaksanaan = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'sidang'));
-      
+
       const yDaftar = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran yudisium'));
       const yPelaksanaan = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'yudisium'));
 
@@ -302,6 +302,7 @@ const DashboardMahasiswa = () => {
         );
         setSidangResponse(registration);
 
+      }
     } catch (err) {
       console.error("Gagal memuat data dashboard:", err);
       setSkStatus(null);
@@ -359,7 +360,7 @@ const DashboardMahasiswa = () => {
   const renderKeteranganSidang = () => {
     if (loadingDashboard) return <span style={{ color: '#9CA3AF', fontSize: '11px' }}>—</span>;
     if (!skSudahTerbit) return <span style={{ color: '#9CA3AF', fontSize: '11px' }}>Selesaikan pengajuan SK TA terlebih dahulu.</span>;
-    
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <span style={{ color: '#4B5563', fontWeight: 500, fontSize: '11px' }}>{getSidangKeteranganText(sidangRegStatus, sidangAssignedPeriode)}</span>
@@ -395,13 +396,13 @@ const DashboardMahasiswa = () => {
               {kelasDisplay && <><span style={{ color: '#D1D5DB' }}>•</span><span style={{ color: '#374151' }}>Kelas {kelasDisplay}</span></>}
               {angkatanDisplay && <><span style={{ color: '#D1D5DB' }}>•</span><span style={{ color: '#374151' }}>Angkatan {angkatanDisplay}</span></>}
             </div>
-            
+
             {dosenWaliDisplay && (
               <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '16px' }}>
                 Dosen Wali: <span style={{ fontWeight: 600, color: '#1F2937' }}>{dosenWaliDisplay}</span>
               </p>
             )}
-            
+
             <p style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.6, maxWidth: '900px', margin: 0 }}>
               Semangat pengerjaan Tugas Akhirnya! Pastikan semua berkas persyaratanmu sudah
               lengkap dan tervalidasi
@@ -434,13 +435,13 @@ const DashboardMahasiswa = () => {
               <div style={{ background: '#FAFBFD', borderRadius: '10px', padding: '16px', border: '1px solid #F3F4F6' }}>
                 <p style={{ fontSize: '9px', fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>PENDAFTARAN SIDANG</p>
                 {loadingDashboard ? (
-                   <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                  <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
-                   <p className="dash-timeline-val highlight">
-                     {pendaftaranSidang
-                       ? formatDateRangeCompact(pendaftaranSidang.startDate, pendaftaranSidang.endDate)
-                       : <span className="empty">-</span>}
-                   </p>
+                  <p className="dash-timeline-val highlight">
+                    {pendaftaranSidang
+                      ? formatDateRangeCompact(pendaftaranSidang.startDate, pendaftaranSidang.endDate)
+                      : <span className="empty">-</span>}
+                  </p>
                 )}
               </div>
 
@@ -448,13 +449,13 @@ const DashboardMahasiswa = () => {
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PELAKSANAAN SIDANG</p>
                 {loadingPeriode ? (
-                   <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                  <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
-                   <p className="dash-timeline-val">
-                     {pelaksanaanSidang
-                       ? formatDateRangeCompact(pelaksanaanSidang.startDate, pelaksanaanSidang.endDate)
-                       : <span className="empty">-</span>}
-                   </p>
+                  <p className="dash-timeline-val">
+                    {pelaksanaanSidang
+                      ? formatDateRangeCompact(pelaksanaanSidang.startDate, pelaksanaanSidang.endDate)
+                      : <span className="empty">-</span>}
+                  </p>
                 )}
               </div>
 
@@ -462,13 +463,13 @@ const DashboardMahasiswa = () => {
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PENDAFTARAN YUDISIUM</p>
                 {loadingPeriode ? (
-                   <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                  <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
-                   <p className="dash-timeline-val">
-                     {pendaftaranYudisium
-                       ? formatDateRangeCompact(pendaftaranYudisium.startDate, pendaftaranYudisium.endDate)
-                       : <span className="empty">-</span>}
-                   </p>
+                  <p className="dash-timeline-val">
+                    {pendaftaranYudisium
+                      ? formatDateRangeCompact(pendaftaranYudisium.startDate, pendaftaranYudisium.endDate)
+                      : <span className="empty">-</span>}
+                  </p>
                 )}
               </div>
 
@@ -476,13 +477,13 @@ const DashboardMahasiswa = () => {
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PELAKSANAAN YUDISIUM</p>
                 {loadingPeriode ? (
-                   <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+                  <Loader size={16} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
                 ) : (
-                   <p className="dash-timeline-val">
-                     {pelaksanaanYudisium
-                       ? formatDateRangeCompact(pelaksanaanYudisium.startDate, pelaksanaanYudisium.endDate)
-                       : <span className="empty">-</span>}
-                   </p>
+                  <p className="dash-timeline-val">
+                    {pelaksanaanYudisium
+                      ? formatDateRangeCompact(pelaksanaanYudisium.startDate, pelaksanaanYudisium.endDate)
+                      : <span className="empty">-</span>}
+                  </p>
                 )}
               </div>
             </div>
@@ -509,10 +510,10 @@ const DashboardMahasiswa = () => {
 
                     <tr style={{ borderBottom: '1px solid #F3F4F6', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FAFBFD'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                       <td style={{ padding: '16px 24px', verticalAlign: 'top' }}>
-                         <div style={{ fontSize: '12px', fontWeight: 800, color: '#111827', marginBottom: '4px' }}>Pengajuan SK TA</div>
-                         <div style={{ fontSize: '10.5px', color: '#6B7280', fontWeight: 500 }}>
-                           {loadingDashboard ? 'Memuat...' : skTanggal ? `Diajukan: ${skTanggal}` : 'Belum diajukan'}
-                         </div>
+                        <div style={{ fontSize: '12px', fontWeight: 800, color: '#111827', marginBottom: '4px' }}>Pengajuan SK TA</div>
+                        <div style={{ fontSize: '10.5px', color: '#6B7280', fontWeight: 500 }}>
+                          {loadingDashboard ? 'Memuat...' : skTanggal ? `Diajukan: ${skTanggal}` : 'Belum diajukan'}
+                        </div>
                       </td>
                       <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
                         {loadingDashboard ? <Loader size={14} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} /> : <RowBadge style={skBadgeStyle(skStatus)} />}
@@ -545,10 +546,10 @@ const DashboardMahasiswa = () => {
                     {/* Pendaftaran Sidang */}
                     <tr>
                       <td>
-                         <div className="prog-tahapan-title">Pendaftaran Sidang</div>
-                         <div className="prog-tahapan-sub">
-                           {pendaftaranSidang ? `Daftar s.d. ${formatDateShort(pendaftaranSidang.endDate)}` : 'Belum ada periode'}
-                         </div>
+                        <div className="prog-tahapan-title">Pendaftaran Sidang</div>
+                        <div className="prog-tahapan-sub">
+                          {pendaftaranSidang ? `Daftar s.d. ${formatDateShort(pendaftaranSidang.endDate)}` : 'Belum ada periode'}
+                        </div>
                       </td>
                       <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
                         {loadingDashboard ? (
@@ -584,10 +585,10 @@ const DashboardMahasiswa = () => {
                     {/* Pendaftaran Yudisium */}
                     <tr>
                       <td>
-                         <div className="prog-tahapan-title">Pendaftaran Yudisium</div>
-                         <div className="prog-tahapan-sub">
-                           {pendaftaranYudisium ? `Daftar s.d. ${formatDateShort(pendaftaranYudisium.endDate)}` : 'Belum ada periode'}
-                         </div>
+                        <div className="prog-tahapan-title">Pendaftaran Yudisium</div>
+                        <div className="prog-tahapan-sub">
+                          {pendaftaranYudisium ? `Daftar s.d. ${formatDateShort(pendaftaranYudisium.endDate)}` : 'Belum ada periode'}
+                        </div>
                       </td>
                       <td style={{ padding: '16px 12px', verticalAlign: 'top' }}>
                         {loadingDashboard ? (
