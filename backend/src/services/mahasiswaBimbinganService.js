@@ -157,6 +157,11 @@ export const getMahasiswaBimbingan = async ({
               orderBy: { createdAt: "desc" },
               take: 1,
             },
+            yudisiumRegistrations: {
+              where: { deletedAt: null },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            }
           },
         },
       },
