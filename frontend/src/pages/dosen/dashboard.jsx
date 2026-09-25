@@ -7,7 +7,7 @@ import FooterDosen from '../../components/common/FooterDosen';
 import { useAuth } from '../../context/AuthContext';
 import { getDosenDashboard } from '../../service/api';
 import '../dashboard.css';
-import '../../components/dosen/css/dashboard.css';
+import '../../components/dosen/dashboard/dashboard.css';
 
 const PERAN_CLASS = {
   'Penguji 1': 'badge-penguji',

@@ -1,60 +1,40 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Menu, HelpCircle, Bell, Search, Download,
-  FileText, ChevronDown, ChevronLeft, ChevronRight,
-  X, Clock, AlertCircle, Calendar, Loader,
+  Menu, Search, Download,
+  FileText, ChevronLeft, ChevronRight,
+  X, AlertCircle, Loader,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarDosen from '../../components/sidebar/SidebarDosen';
+import SKTAModal from '../../components/dosen/mahasiswabimbingan/SKTAModal';
+import { STATUS_CONFIG } from '../../components/dosen/mahasiswabimbingan/StatusConfig';
 import FooterDosen from '../../components/common/FooterDosen';
 import api, { getStudyPrograms, getMahasiswaBimbingan } from '../../service/api';
 import { generateDokumenValidasiBlob } from '../../components/admin/permohonanSK/Dokumenvalidasipdf';
 import '../dashboard.css';
-import '../../components/dosen/css/mahasiswaBimbingan.css';
-// TODO: Filter status masih blm aktif tapi sementara karena backend belum menyediakan query param status. Uncomment kl di be udah ada
-/*
-const STATUS_CONFIG = {
-  'SK Terbit': {
-    label: 'SK Terbit',
-    bg: '#DCFCE7',
-    color: '#15803D',
-    border: '#BBF7D0',
-  },
-  'SK Belum Terbit': {
-    label: 'SK Belum Terbit',
-    bg: '#FEE2E2',
-    color: '#991B1B',
-    border: '#FECACA',
-  },
-  'Dalam Proses': {
-    label: 'Dalam Proses',
-    bg: '#DBEAFE',
-    color: '#1E40AF',
-    border: '#BFDBFE',
-  },
-  'Mengirim Revisi': {
-    label: 'Mengirim Revisi',
-    bg: '#FEF3C7',
-    color: '#92400E',
-    border: '#FDE68A',
-  },
-  'Kadaluarsa': {
-    label: 'Kadaluarsa',
-    bg: '#F3F4F6',
-    color: '#4B5563',
-    border: '#E5E7EB',
-  },
-};
+import Telulogo from '../../assets/logo-telkom.png';
+import '../../components/dosen/mahasiswabimbingan/mahasiswabimbingan.css';
 
-const STATUS_OPTIONS = [
-  { value: '', label: 'All Statuses' },
-  { value: 'SK Terbit', label: 'SK Terbit' },
-  { value: 'SK Belum Terbit', label: 'SK Belum Terbit' },
-  { value: 'Dalam Proses', label: 'Dalam Proses' },
-  { value: 'Mengirim Revisi', label: 'Mengirim Revisi' },
-  { value: 'Kadaluarsa', label: 'Kadaluarsa' },
+// Tentukan nilai "belum mulai" per tahap, dipakai untuk mencari tahap paling jauh progresnya
+const STEP_DEFINITIONS = [
+  { label: 'SKTA', field: 'statusSk', emptyValue: 'SK Belum Terbit' },
+  { label: 'Sidang', field: 'statusRegistrasi', emptyValue: 'Menunggu Pendaftaran' },
+  { label: 'Yudisium', field: 'statusYudisium', emptyValue: 'Belum Daftar' },
 ];
-*/
+
+// Cari status terkini: tahap paling jauh (terakhir) yang sudah ada progres.
+// Kalau semua tahap masih di titik awal, tampilkan status tahap pertama (SKTA).
+const getCurrentStatus = (item) => {
+  for (let i = STEP_DEFINITIONS.length - 1; i >= 0; i--) {
+    const step = STEP_DEFINITIONS[i];
+    const value = item[step.field];
+    if (value && value !== step.emptyValue) {
+      return { label: step.label, value };
+    }
+  }
+  const firstStep = STEP_DEFINITIONS[0];
+  return { label: firstStep.label, value: item[firstStep.field] || firstStep.emptyValue };
+};
 
 // --- Helper inisial avatar mahasiswa ---
 const getInitials = (name = '') => {
@@ -64,284 +44,6 @@ const getInitials = (name = '') => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
-// --- Sub-komponen: Modal Surat Keputusan Tugas Akhir (SK TA) ---
-const SKTAModal = ({ student, onClose }) => {
-  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
-  const [loadingPdf, setLoadingPdf] = useState(false);
-  const [errorPdf, setErrorPdf] = useState(null);
-
-  const mhs = student?.mahasiswa || {};
-  const studentName = mhs.name || 'Mahasiswa';
-  const studentNim = mhs.nim || '-';
-  const prodiName = mhs.studyProgram?.name || '-';
-  const isTerbit = student?.status === 'SK Terbit';
-
-  useEffect(() => {
-    if (!student || !isTerbit) {
-      setPdfBlobUrl(null);
-      return;
-    }
-
-    let isMounted = true;
-    setLoadingPdf(true);
-    setErrorPdf(null);
-
-    const loadPdfDoc = async () => {
-      try {
-        if (student.sktaDownloadUrl) {
-          const response = await api.get(student.sktaDownloadUrl, {
-            responseType: 'blob',
-          });
-          if (isMounted) {
-            const url = URL.createObjectURL(response.data);
-            setPdfBlobUrl(url);
-          }
-          return;
-        }
-
-        const payloadData = {
-          nim: studentNim,
-          namaMahasiswa: studentName,
-          programStudi: prodiName,
-          judulTAId: student.judulTugasAkhirIndonesia || '-',
-          judulTAEn: student.judulTugasAkhirInggris || student.judulTugasAkhirIndonesia || '-',
-          dosenPembimbing1: '-',
-          dosenPembimbing2: '-',
-          tanggalBerlakuSK: student.createdAt || new Date().toISOString(),
-          tanggalBerakhirSK: null,
-          statusAktif: 'AKTIF',
-          logoUrl: logoTelkom,
-        };
-
-        const blob = await generateDokumenValidasiBlob(payloadData);
-        if (isMounted) {
-          const url = URL.createObjectURL(blob);
-          setPdfBlobUrl(url);
-        }
-      } catch (err) {
-        console.error('Gagal memuat preview dokumen SK TA:', err);
-        if (isMounted) setErrorPdf('Gagal memuat dokumen PDF SK TA.');
-      } finally {
-        if (isMounted) setLoadingPdf(false);
-      }
-    };
-
-    loadPdfDoc();
-
-    return () => {
-      isMounted = false;
-      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
-    };
-  }, [student, isTerbit, studentName, studentNim, prodiName]);
-
-  if (!student) return null;
-
-  const handleDownload = () => {
-    if (!pdfBlobUrl) return;
-    const cleanName = studentName.replace(/[/\\?%*:|"<>]/g, '').trim();
-    const cleanNim = studentNim.replace(/[/\\?%*:|"<>]/g, '').trim();
-    const a = document.createElement('a');
-    a.href = pdfBlobUrl;
-    a.download = `SK TA_${cleanName}_${cleanNim}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  return (
-    <div className="mb-modal-overlay" onClick={onClose}>
-      <motion.div
-        initial={{ scale: 0.94, opacity: 0, y: 10 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.94, opacity: 0, y: 10 }}
-        onClick={(e) => e.stopPropagation()}
-        className={`mb-modal-content ${isTerbit ? 'is-terbit' : ''}`}
-      >
-        <div className="mb-modal-header">
-          <div className="mb-modal-header-left">
-            <div className="mb-modal-icon-badge">
-              <FileText size={20} />
-            </div>
-            <div>
-              <h3 className="mb-modal-title">Surat Keputusan Tugas Akhir</h3>
-              <p className="mb-modal-sub">
-                {studentName} &bull; NIM: {studentNim} &bull; {prodiName}
-              </p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="mb-modal-close-btn" title="Tutup Modal">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="mb-modal-body-pdf">
-          {isTerbit ? (
-            loadingPdf ? (
-              <div className="mb-pdf-loading-wrap">
-                <Loader size={32} color="#FFFFFF" className="mb-spinner" />
-                <span className="mb-pdf-loading-text">Memuat Dokumen SK TA...</span>
-              </div>
-            ) : errorPdf ? (
-              <div className="mb-pdf-error-wrap">
-                <AlertCircle size={36} color="#EF4444" className="mb-pdf-error-icon" />
-                <span className="mb-pdf-error-text">{errorPdf}</span>
-              </div>
-            ) : pdfBlobUrl ? (
-              <iframe
-                src={pdfBlobUrl}
-                title={`SK TA - ${studentName}`}
-                width="100%"
-                height="100%"
-                className="mb-pdf-iframe"
-              />
-            ) : null
-          ) : (
-            <div className="mb-pdf-unreleased-wrap">
-              <div className="mb-pdf-unreleased-icon">
-                <AlertCircle size={28} />
-              </div>
-              <h4 className="mb-pdf-unreleased-title">
-                Dokumen SK TA belum tersedia
-              </h4>
-              <p className="mb-pdf-unreleased-desc">
-                Mahasiswa <strong>{studentName}</strong> belum memiliki SK Tugas Akhir yang diterbitkan oleh bagian Akademik.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="mb-modal-footer">
-          <button type="button" onClick={onClose} className="btn-detail mb-modal-btn-close">
-            Tutup
-          </button>
-          {isTerbit && pdfBlobUrl && (
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="btn-verif mb-modal-btn-download"
-            >
-              <Download size={14} /> Unduh
-            </button>
-          )}
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-// --- Sub-komponen: Modal Log Bimbingan Mahasiswa ---
-const LogModal = ({ student, onClose }) => {
-  if (!student) return null;
-
-  const mhs = student.mahasiswa || {};
-  const studentName = mhs.name || 'Mahasiswa';
-  const studentNim = mhs.nim || '-';
-  const prodiName = mhs.studyProgram?.name || '-';
-  const thesisTitle = student.judulTugasAkhirIndonesia || student.judulTugasAkhirInggris || '-';
-  const logs = Array.isArray(student.logs) ? student.logs : [];
-
-  return (
-    <div className="mb-modal-overlay" onClick={onClose}>
-      <motion.div
-        initial={{ scale: 0.94, opacity: 0, y: 10 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.94, opacity: 0, y: 10 }}
-        onClick={(e) => e.stopPropagation()}
-        className="mb-log-modal-content"
-      >
-        <div className="mb-log-header">
-          <div>
-            <div className="mb-log-header-top-row">
-              <span className="mb-log-header-tag">Log Bimbingan Mahasiswa</span>
-              <span className="mb-log-header-count">• Total {logs.length} Pertemuan</span>
-            </div>
-            <h3 className="mb-log-header-name">
-              {studentName}
-            </h3>
-            <p className="mb-log-header-sub">
-              NIM: {studentNim} &bull; {prodiName}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="mb-modal-close-btn"
-            title="Tutup Modal"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="mb-log-thesis-box">
-          <span className="mb-log-thesis-label">
-            Judul Tugas Akhir
-          </span>
-          <span className="mb-log-thesis-title">
-            {thesisTitle}
-          </span>
-        </div>
-
-        <div className="mb-log-body-scroll">
-          {logs.length === 0 ? (
-            <div className="mb-log-empty">
-              <Clock size={36} color="#CBD5E1" className="mb-log-empty-icon" />
-              <div className="mb-log-empty-title">Belum Ada Catatan Bimbingan</div>
-              <div className="mb-log-empty-desc">Mahasiswa ini belum mengisi log bimbingan.</div>
-            </div>
-          ) : (
-            logs.map((log, idx) => (
-              <div
-                key={log.id || idx}
-                className="mb-log-card"
-              >
-                <div className="mb-log-card-top">
-                  <div className="mb-log-session-row">
-                    <span className="mb-log-session-badge">
-                      {log.session || `Sesi ${idx + 1}`}
-                    </span>
-                    <span className="mb-log-date">
-                      <Calendar size={13} color="#94A3B8" />
-                      {log.date || '-'}
-                    </span>
-                  </div>
-                  <span
-                    className={`mb-log-status-badge ${log.status === 'Selesai' ? 'is-selesai' : 'is-progress'}`}
-                  >
-                    {log.status || 'Bimbingan'} {log.progress ? `(${log.progress})` : ''}
-                  </span>
-                </div>
-
-                <div className="mb-log-topic-wrap">
-                  <div className="mb-log-topic-label">
-                    Aktivitas / Topik Bahasan
-                  </div>
-                  <div className="mb-log-topic-value">
-                    {log.topic || '-'}
-                  </div>
-                </div>
-
-                <div className="mb-log-notes-box">
-                  <div className="mb-log-notes-label">
-                    Catatan Pembimbing:
-                  </div>
-                  <div className="mb-log-notes-value">
-                    {log.notes || 'Tidak ada catatan khusus.'}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="mb-log-footer">
-          <button type="button" onClick={onClose} className="btn-detail mb-log-footer-btn">
-            Tutup
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
 
 // --- Komponen Utama: Mahasiswa Bimbingan ---
 const MahasiswaBimbingan = () => {
@@ -370,7 +72,6 @@ const MahasiswaBimbingan = () => {
   const [studyPrograms, setStudyPrograms] = useState([]);
   const [prodiFetchError, setProdiFetchError] = useState(false);
   const [isLoadingProdi, setIsLoadingProdi] = useState(true);
-  const [logModalStudent, setLogModalStudent] = useState(null);
   const [skModalStudent, setSkModalStudent] = useState(null);
 
 
@@ -627,17 +328,17 @@ const MahasiswaBimbingan = () => {
                 className={`mb-filter-select ${prodiFetchError ? 'has-error' : ''}`}
               >
                 {isLoadingProdi ? (<option value="">Prodi </option>) :
-                 prodiFetchError ? (<option value="">Gagal memuat program studi</option>) : 
-                 (
-                  <>
-                    <option value="">Semua Prodi</option>
-                    {studyPrograms.map((prodi) => (
-                      <option key={prodi.id} value={prodi.id}>
-                        {prodi.name}
-                      </option>
-                    ))}
-                  </>
-                )}
+                  prodiFetchError ? (<option value="">Gagal memuat program studi</option>) :
+                    (
+                      <>
+                        <option value="">Semua Prodi</option>
+                        {studyPrograms.map((prodi) => (
+                          <option key={prodi.id} value={prodi.id}>
+                            {prodi.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
               </select>
 
               {prodiFetchError && (
@@ -646,22 +347,6 @@ const MahasiswaBimbingan = () => {
                 </span>
               )}
             </div>
-
-            {/*
-            // TODO: Filter status masih blm aktif tapi sementara karena backend belum menyediakan query param status. Uncomment kl di be udah ada
-              <select
-                value={selectedStatus}
-                onChange={(e) => onStatusChange(e.target.value)}
-                className="mb-filter-select"
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            */}
           </div>
 
           {/* Render: Tabel Mahasiswa Bimbingan */}
@@ -671,7 +356,8 @@ const MahasiswaBimbingan = () => {
                 <thead>
                   <tr>
                     <th className="mb-table-th col-num">NO</th>
-                    <th className="mb-table-th">STUDENT &amp; THESIS</th>
+                    <th className="mb-table-th col-student">MAHASISWA</th>
+                    <th className="mb-table-th col-thesis">JUDUL TUGAS AKHIR</th>
                     <th className="mb-table-th col-prodi">PRODI</th>
                     <th className="mb-table-th col-status">STATUS</th>
                     <th className="mb-table-th col-actions">ACTIONS</th>
@@ -680,16 +366,16 @@ const MahasiswaBimbingan = () => {
                 <tbody>
                   {isLoadingStudents ? (
                     <tr>
-                      <td colSpan={5}>
+                      <td colSpan={6}>
                         <div className="mb-loading-state">
                           <Loader size={20} className="mb-spinner" />
-                          <span>Memuat data mahasiswa bimbingan...</span>
+                          <span className="mb-loading-text">Memuat data mahasiswa bimbingan...</span>
                         </div>
                       </td>
                     </tr>
                   ) : studentsError ? (
                     <tr>
-                      <td colSpan={5}>
+                      <td colSpan={6}>
                         <div className="mb-empty-state">
                           <AlertCircle size={20} color="#EF4444" className="mb-empty-icon" />
                           <div className="mb-empty-title mb-empty-title-error">
@@ -710,7 +396,7 @@ const MahasiswaBimbingan = () => {
                     </tr>
                   ) : students.length === 0 ? (
                     <tr>
-                      <td colSpan={5}>
+                      <td colSpan={6}>
                         <div className="mb-empty-state">
                           <div className="mb-empty-title">
                             Tidak ada mahasiswa bimbingan ditemukan
@@ -728,9 +414,11 @@ const MahasiswaBimbingan = () => {
                       const studentNim = mhs.nim || '-';
                       const prodiName = mhs.studyProgram?.name || '-';
                       const thesisTitle = item.judulTugasAkhirIndonesia || item.judulTugasAkhirInggris || '-';
-                      const statusKey = item.status || 'SK Belum Terbit';
-                      const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG['SK Belum Terbit'];
                       const rowNum = (currentPage - 1) * numericLimit + idx + 1;
+
+                      // Status terkini: tahap paling jauh progresnya, dihitung dari 3 field yang BE kirim
+                      const currentStatus = getCurrentStatus(item);
+                      const currentStatusCfg = STATUS_CONFIG[currentStatus.value] || STATUS_CONFIG['SK Belum Terbit'];
 
                       return (
                         <tr
@@ -738,7 +426,8 @@ const MahasiswaBimbingan = () => {
                           className={`mb-table-tr ${idx < students.length - 1 ? 'has-border' : ''}`}
                         >
                           <td className="mb-table-td col-num">{rowNum}</td>
-                          <td className="mb-table-td">
+                          {/* Kolom Mahasiswa: avatar + nama + NIM */}
+                          <td className="mb-table-td col-student">
                             <div className="mb-student-flex">
                               <div className="mb-avatar-initials">
                                 {getInitials(studentName)}
@@ -746,42 +435,40 @@ const MahasiswaBimbingan = () => {
                               <div className="mb-student-info">
                                 <div className="mb-student-name">{studentName}</div>
                                 <div className="mb-student-nim">{studentNim}</div>
-                                <div className="mb-thesis-label">THESIS TITLE</div>
-                                <div className="mb-thesis-title">{thesisTitle}</div>
                               </div>
                             </div>
+                          </td>
+                          {/* Kolom Judul Tugas Akhir */}
+                          <td className="mb-table-td col-thesis">
+                            <span className="mb-thesis-title">{thesisTitle}</span>
                           </td>
                           <td className="mb-table-td">
                             <span className="mb-prodi-text">{prodiName}</span>
                           </td>
+                          {/* Kolom Status: hanya tampilkan status terkini (tahap paling jauh progresnya) */}
                           <td className="mb-table-td mb-table-td-center">
-                            <span
-                              className="mb-status-badge"
-                              style={{
-                                background: statusCfg.bg,
-                                color: statusCfg.color,
-                                border: `1.5px solid ${statusCfg.border}`,
-                              }}
-                            >
-                              {statusCfg.label}
-                            </span>
+                            <div className="mb-status-current">
+                              <span className="mb-status-current-label">{currentStatus.label}</span>
+                              <span
+                                className="mb-status-badge"
+                                style={{
+                                  background: currentStatusCfg.bg,
+                                  color: currentStatusCfg.color,
+                                  border: `1.5px solid ${currentStatusCfg.border}`,
+                                }}
+                              >
+                                {currentStatusCfg.label}
+                              </span>
+                            </div>
                           </td>
                           <td className="mb-table-td mb-table-td-center">
                             <div className="mb-actions-flex">
                               <button
                                 type="button"
                                 onClick={() => setSkModalStudent(item)}
-                                className="mb-btn-action"
+                                className="mb-btn-action mb-btn-skta"
                               >
                                 Lihat SK TA
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setLogModalStudent(item)}
-                                className="mb-btn-action"
-                              >
-                                <span>Lihat Log</span>
-                                <ChevronDown size={14} />
                               </button>
                             </div>
                           </td>
@@ -793,91 +480,63 @@ const MahasiswaBimbingan = () => {
               </table>
             </div>
 
-            {/* Render: Server-Side Pagination Controls */}
-            {!isLoadingStudents && !studentsError && students.length > 0 && (
-              <div className="mb-pagination-container">
-                <div className="mb-pagination-info">
-                  Showing <strong>{startIndex}</strong> to <strong>{endIndex}</strong> of{' '}
-                  <strong>{paginationMeta.total}</strong> entries
-                </div>
+            {/* Render: Pagination Controls — selalu ditampilkan (mengikuti pola PenjadwalanSidang), termasuk saat loading/error/kosong */}
+            <div className="mb-pagination-container">
+              <div className="mb-pagination-info">
+                Menampilkan {startIndex} - {endIndex} dari {' '}{paginationMeta.total} data
+              </div>
 
-                <div className="mb-pagination-right">
-                  <div className="mb-pagination-limit-wrap">
-                    <span>Baris per halaman:</span>
-                    <select
-                      value={limit}
-                      onChange={(e) => {
-                        setLimit(Number(e.target.value));
-                        setCurrentPage(1);
-                      }}
-                      className="mb-pagination-limit-select"
-                    >
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                    </select>
-                  </div>
+              <div className="mb-pagination-right">
+                <div className="mb-pagination-controls">
+                  <button
+                    type="button"
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="mb-page-btn nav-btn"
+                    title="Halaman Sebelumnya"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
 
-                  <div className="mb-pagination-controls">
-                    <button
-                      type="button"
-                      disabled={currentPage <= 1}
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      className="mb-page-btn nav-btn"
-                      title="Halaman Sebelumnya"
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-
-                    {getPageNumbers().map((item, idx) => {
-                      if (item === '...') {
-                        return (
-                          <span key={`ellipsis-${idx}`} className="mb-page-ellipsis">
-                            ...
-                          </span>
-                        );
-                      }
-                      const pageNum = Number(item);
-                      const isActive = pageNum === currentPage;
+                  {getPageNumbers().map((item, idx) => {
+                    if (item === '...') {
                       return (
-                        <button
-                          key={pageNum}
-                          type="button"
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`mb-page-btn num-btn ${isActive ? 'active' : ''}`}
-                        >
-                          {pageNum}
-                        </button>
+                        <span key={`ellipsis-${idx}`} className="mb-page-ellipsis">
+                          ...
+                        </span>
                       );
-                    })}
+                    }
+                    const pageNum = Number(item);
+                    const isActive = pageNum === currentPage;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`mb-page-btn num-btn ${isActive ? 'active' : ''}`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
 
-                    <button
-                      type="button"
-                      disabled={currentPage >= paginationMeta.totalPages || paginationMeta.total === 0}
-                      onClick={() => setCurrentPage((p) => Math.min(paginationMeta.totalPages, p + 1))}
-                      className="mb-page-btn nav-btn"
-                      title="Halaman Berikutnya"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    disabled={currentPage >= paginationMeta.totalPages || paginationMeta.total === 0}
+                    onClick={() => setCurrentPage((p) => Math.min(paginationMeta.totalPages, p + 1))}
+                    className="mb-page-btn nav-btn"
+                    title="Halaman Berikutnya"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </main>
 
         <FooterDosen />
       </div>
-
-      <AnimatePresence>
-        {logModalStudent && (
-          <LogModal
-            student={logModalStudent}
-            onClose={() => setLogModalStudent(null)}
-          />
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {skModalStudent && (

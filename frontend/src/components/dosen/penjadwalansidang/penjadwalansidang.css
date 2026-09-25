@@ -1,0 +1,725 @@
+/* --- Content Header & Info Banner --- */
+.ps-header-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ps-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px 0;
+}
+
+.ps-subtitle {
+  font-size: 13px;
+  color: #6B7280;
+  margin: 0;
+}
+
+.ps-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  padding: 10px 14px;
+  max-width: 380px;
+  flex: 0 0 auto;
+}
+
+.ps-info-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ps-info-text {
+  font-size: 12px;
+  color: #1D4ED8;
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* --- Filter & Action Bar --- */
+.ps-filter-container {
+  background: #FFFFFF;
+  border: 1px solid #E9EDF5;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.ps-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+}
+
+.ps-search-icon {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+}
+
+.ps-search-input {
+  width: 100%;
+  padding-left: 36px;
+  padding-right: 14px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  background: #FFFFFF;
+  color: #111827;
+  transition: border-color 0.2s;
+}
+
+.ps-search-input:focus {
+  border-color: #C0182A;
+}
+
+.ps-prodi-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ps-prodi-select {
+  padding: 8px 12px;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #111827;
+  background: #FFFFFF;
+  outline: none;
+  cursor: pointer;
+  min-width: 200px;
+  transition: border-color 0.2s;
+}
+
+.ps-prodi-select:focus {
+  border-color: #C0182A;
+}
+
+.ps-prodi-select.loading {
+  background: #F8FAFC;
+  cursor: not-allowed;
+}
+
+.ps-prodi-select.error {
+  border-color: #FCA5A5;
+  color: #991B1B;
+  background: #FEF2F2;
+  cursor: not-allowed;
+}
+
+.ps-error-text {
+  font-size: 11px;
+  color: #DC2626;
+  line-height: 1.3;
+}
+
+.ps-action-group {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ps-unsaved-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #92400E;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.ps-btn-simpan-all {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, filter 0.2s, transform 0.2s, background 0.2s;
+  background: #C0182A;
+  color: #FFFFFF;
+}
+
+.ps-btn-simpan-all:hover:not(.disabled) {
+  background: #8B0F1E;
+}
+
+.ps-btn-simpan-all.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  filter: grayscale(0.5);
+  background: #C0182A;
+}
+
+/* --- Table Card & Table Base --- */
+.ps-table-card {
+  background: #FFFFFF;
+  border: 1px solid #E9EDF5;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* Override generic .table-scroll-wrap max-height for this page — tabel selalu tampil penuh, tanpa scroll internal */
+.ps-table-scroll {
+  max-height: none;
+}
+
+.ps-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.ps-thead-row {
+  background: #F8FAFC;
+  border-bottom: 2px solid #E2E8F0;
+}
+
+.ps-th {
+  padding: 8px 5px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.ps-th-center {
+  text-align: center;
+}
+
+.ps-th-left {
+  text-align: left;
+}
+
+/* Lebar kolom tabel — dipetakan dari konfigurasi kolom di halaman */
+.ps-col-no {
+  width: 32px;
+}
+
+.ps-col-mhs {
+  width: 190px;
+}
+
+.ps-col-dosbim {
+  width: 155px;
+}
+
+.ps-col-penguji {
+  width: 125px;
+}
+
+.ps-col-tanggal {
+  width: 115px;
+}
+
+.ps-col-waktu {
+  width: 90px;
+}
+
+.ps-col-ruangan {
+  width: 130px;
+}
+
+.ps-col-aksi {
+  width: 70px;
+}
+
+.ps-tr {
+  transition: background 0.15s;
+}
+
+.ps-tr-bordered {
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.ps-tr:hover {
+  background: #FBFCFE;
+}
+
+/* --- Cells --- */
+.ps-td-no {
+  padding: 6px 3px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 11.5px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.ps-td-mhs {
+  padding: 6px 6px;
+  vertical-align: middle;
+}
+
+.ps-mhs-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.ps-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid #E2E8F0;
+}
+
+.ps-mhs-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.ps-mhs-name {
+  font-weight: 700;
+  font-size: 12px;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+  display: inline-block;
+  margin-bottom: 1px;
+}
+
+.ps-mhs-nim {
+  font-size: 11px;
+  color: #6B7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.ps-mhs-prodi {
+  font-size: 10.5px;
+  color: #9CA3AF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  margin-top: 1px;
+}
+
+.ps-td-dosbim {
+  padding: 6px 5px;
+  vertical-align: middle;
+}
+
+.ps-dosbim-text {
+  font-size: 11.5px;
+  color: #374151;
+  font-weight: 500;
+  display: block;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.3;
+  max-width: 160px;
+}
+
+.ps-td-penguji {
+  padding: 6px 5px;
+  vertical-align: middle;
+}
+
+/* --- Searchable Dropdown Penguji (PengujiSearchable) --- */
+.ps-penguji-searchable-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* Trigger button */
+.ps-penguji-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 5px 7px;
+  border-radius: 6px;
+  border: 1.5px solid #E2E8F0;
+  background: #FFFFFF;
+  cursor: pointer;
+  gap: 4px;
+  transition: border-color 0.2s, background 0.2s;
+  min-height: 28px;
+  box-sizing: border-box;
+}
+
+.ps-penguji-trigger.empty {
+  border-color: #FDE68A;
+  background: #FFFDF5;
+}
+
+.ps-penguji-trigger.unsaved {
+  border-color: #BFDBFE;
+  background: #F8FAFF;
+}
+
+.ps-penguji-trigger.saved {
+  border-color: #E2E8F0;
+  background: #FFFFFF;
+}
+
+.ps-penguji-trigger:hover {
+  border-color: #C0182A;
+}
+
+.ps-penguji-trigger-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.ps-penguji-trigger-label.empty {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.ps-penguji-trigger-icons {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.ps-penguji-clear {
+  font-size: 13px;
+  color: #9CA3AF;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 1px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+
+.ps-penguji-clear:hover {
+  color: #DC2626;
+}
+
+/* Dropdown panel */
+.ps-penguji-dropdown {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 200px;
+}
+
+.ps-penguji-dropdown-portal {
+  z-index: 9999;
+}
+
+/* Search bar inside dropdown */
+.ps-penguji-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #F1F5F9;
+  background: #F8FAFC;
+}
+
+.ps-penguji-search-input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 12px;
+  background: transparent;
+  color: #111827;
+}
+
+.ps-penguji-search-input::placeholder {
+  color: #94A3B8;
+}
+
+/* Options list */
+.ps-penguji-list {
+  overflow-y: auto;
+  max-height: 180px;
+  padding: 4px 0;
+}
+
+.ps-penguji-option {
+  padding: 7px 12px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ps-penguji-option:hover {
+  background: #F1F5F9;
+}
+
+.ps-penguji-option.selected {
+  background: #FEF2F2;
+  color: #991B1B;
+  font-weight: 600;
+}
+
+.ps-penguji-empty {
+  padding: 14px 12px;
+  font-size: 12px;
+  color: #94A3B8;
+  text-align: center;
+  font-style: italic;
+}
+
+.ps-validation-msg {
+  font-size: 10px;
+  color: #DC2626;
+  margin-top: 2px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ps-td-locked {
+  padding: 6px 5px;
+  vertical-align: middle;
+}
+
+.ps-locked-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  cursor: pointer;
+  color: #374151;
+  font-size: 11px;
+  font-weight: 500;
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 0;
+  max-width: 100%;
+  user-select: none;
+}
+
+.ps-locked-cell.compact {
+  padding: 5px 5px;
+}
+
+.ps-locked-cell.empty {
+  color: #94A3B8;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.ps-locked-cell:hover {
+  border-color: #C0182A;
+  background: #FFF0F1;
+}
+
+.ps-locked-text {
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.35;
+  display: inline-block;
+}
+
+.ps-locked-cell svg {
+  margin-top: 1px;
+}
+
+.ps-td-aksi {
+  padding: 6px 4px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.ps-btn-simpan-row {
+  padding: 5px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: opacity 0.2s, filter 0.2s, background 0.2s;
+  background: #C0182A;
+  color: #FFFFFF;
+}
+
+.ps-btn-simpan-row.active {
+  cursor: pointer;
+  opacity: 1;
+  filter: none;
+}
+
+.ps-btn-simpan-row.active:hover {
+  background: #8B0F1E;
+}
+
+.ps-btn-simpan-row.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: grayscale(0.5);
+  background: #C0182A;
+}
+
+.ps-empty-row {
+  text-align: center;
+  padding: 50px 16px;
+  color: #9CA3AF;
+}
+
+.ps-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+/* Varian judul empty-state untuk kondisi error fetch */
+.ps-empty-title-error {
+  color: #DC2626;
+}
+
+.ps-empty-desc {
+  font-size: 12px;
+}
+
+/* --- Loading state — disamakan dengan .mb-loading-state di halaman Mahasiswa Bimbingan --- */
+.ps-loading-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #64748B;
+}
+
+.ps-loading-text {
+  font-size: 13px;
+}
+
+/* --- Spinner utility --- */
+@keyframes ps-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ps-spin {
+  animation: ps-spin 1s linear infinite;
+}
+
+/* --- Pagination Footer --- */
+.ps-pagination-wrap {
+  padding: 14px 20px;
+  border-top: 1px solid #E9EDF5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: #FFFFFF;
+}
+
+.ps-pagination-info {
+  font-size: 13px;
+  color: #64748B;
+}
+
+.ps-pagination-info strong {
+  color: #111827;
+}
+
+.ps-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ps-page-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.ps-page-arrow:disabled {
+  color: #CBD5E1;
+  cursor: not-allowed;
+}
+
+.ps-page-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748B;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ps-page-num:hover:not(.active) {
+  background: #F1F5F9;
+}
+
+.ps-page-num.active {
+  border: none;
+  background: #C0182A;
+  color: #FFFFFF;
+  font-weight: 700;
+}

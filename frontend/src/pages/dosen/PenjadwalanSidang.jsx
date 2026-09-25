@@ -1,251 +1,137 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Menu, HelpCircle, Bell, Search, Lock,
-  ChevronLeft, ChevronRight, Save, Info,
+  ChevronLeft, ChevronRight, Save, Info, Loader2, Loader,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarDosen from '../../components/sidebar/SidebarDosen';
 import FooterDosen from '../../components/common/FooterDosen';
-import { getStudyPrograms } from '../../service/api';
+import { getStudyPrograms, getPenjadwalanSidang, getPengujiOptions, setPengujiSidang, setPengujiSidangBatch } from '../../service/api';
+import { getInitials, getAvatarTheme, formatTanggal, formatWaktu } from '../../components/dosen/penjadwalansidang/Helpers';
+import PengujiSearchable from '../../components/dosen/penjadwalansidang/PengujiSearchable';
 import '../dashboard.css';
+import '../../components/dosen/penjadwalansidang/penjadwalansidang.css';
 
-// ---------------------------------------------------------------------------
-// Mock data mahasiswa yang akan dijadwalkan sidangnya.
-// TODO: replace with API call — GET /api/dosen/penjadwalan-sidang
-// ---------------------------------------------------------------------------
-const MOCK_DAFTAR_PENGUJI = [
-  'Dr. Rina Permata, M.Kom.',
-  'Dr. Anwar Sanusi, M.T.',
-  'Prof. Hendra Wijaya, M.Kom.',
-  'Dr. Siti Aminah, M.Si.',
-  'Ir. Maya Setiawan, M.T.',
-  'Dr. Budi Santoso, S.T., M.Kom.',
-];
-
-// TODO: replace with API call — GET /api/dosen/penjadwalan-sidang/mahasiswa
-const MOCK_MAHASISWA = [
-  {
-    id: 1,
-    nama: 'Andi Pratama',
-    nim: '2010400',
-    prodi: 'S1 Rekayasa Perangkat Lunak',
-    initials: 'AP',
-    avatarBg: '#DBEAFE',
-    avatarColor: '#1E40AF',
-    dosenPembimbing: 'Dr. Budi Santoso, S.T., M.Kom.',
-    penguji1: 'Dr. Rina Permata, M.Kom.',
-    penguji2: 'Dr. Anwar Sanusi, M.T.',
-    jadwal: null,
-    ruangan: null,
-  },
-  {
-    id: 2,
-    nama: 'Siti Nurhalliza',
-    nim: '2010455',
-    prodi: 'S1 Sistem Informasi',
-    initials: 'SN',
-    avatarBg: '#FEE2E2',
-    avatarColor: '#991B1B',
-    dosenPembimbing: 'Prof. Hendra Wijaya, M.Kom.',
-    penguji1: 'Dr. Siti Aminah, M.Si.',
-    penguji2: null,
-    jadwal: null,
-    ruangan: null,
-  },
-  {
-    id: 3,
-    nama: 'Kevin Sanjaya',
-    nim: '2010412',
-    prodi: 'S1 Informatika',
-    initials: 'KS',
-    avatarBg: '#D1FAE5',
-    avatarColor: '#065F46',
-    dosenPembimbing: 'Ir. Maya Setiawan, M.T.',
-    penguji1: 'Dr. Rina Permata, M.Kom.',
-    penguji2: 'Dr. Anwar Sanusi, M.T.',
-    jadwal: 'Senin, 24 Agu 2026',
-    ruangan: 'Lab 302',
-  },
-  {
-    id: 4,
-    nama: 'Diana Larasati',
-    nim: '2010488',
-    prodi: 'S1 Rekayasa Perangkat Lunak',
-    initials: 'DL',
-    avatarBg: '#FEF3C7',
-    avatarColor: '#92400E',
-    dosenPembimbing: 'Dr. Budi Santoso, S.T., M.Kom.',
-    penguji1: 'Prof. Hendra Wijaya, M.Kom.',
-    penguji2: 'Dr. Siti Aminah, M.Si.',
-    jadwal: null,
-    ruangan: null,
-  },
-  {
-    id: 5,
-    nama: 'Fajar Setiawan',
-    nim: '2010420',
-    prodi: 'S1 Sistem Informasi',
-    initials: 'FA',
-    avatarBg: '#E0E7FF',
-    avatarColor: '#3730A3',
-    dosenPembimbing: 'Ir. Maya Setiawan, M.T.',
-    penguji1: null,
-    penguji2: null,
-    jadwal: null,
-    ruangan: null,
-  },
-  {
-    id: 6,
-    nama: 'Rizky Ramadhan',
-    nim: '2010391',
-    prodi: 'S1 Informatika',
-    initials: 'RR',
-    avatarBg: '#FEE2E2',
-    avatarColor: '#991B1B',
-    dosenPembimbing: 'Dr. Rina Permata, M.Kom.',
-    penguji1: 'Dr. Anwar Sanusi, M.T.',
-    penguji2: null,
-    jadwal: null,
-    ruangan: null,
-  },
-  {
-    id: 7,
-    nama: 'Putri Ayu Lestari',
-    nim: '2010377',
-    prodi: 'S1 Rekayasa Perangkat Lunak',
-    initials: 'PL',
-    avatarBg: '#D1FAE5',
-    avatarColor: '#065F46',
-    dosenPembimbing: 'Prof. Hendra Wijaya, M.Kom.',
-    penguji1: 'Dr. Siti Aminah, M.Si.',
-    penguji2: 'Ir. Maya Setiawan, M.T.',
-    jadwal: 'Rabu, 26 Agu 2026',
-    ruangan: 'GKB 201',
-  },
-  {
-    id: 8,
-    nama: 'Hendra Kurniawan',
-    nim: '2010334',
-    prodi: 'S1 Sistem Informasi',
-    initials: 'HK',
-    avatarBg: '#DBEAFE',
-    avatarColor: '#1E40AF',
-    dosenPembimbing: 'Dr. Budi Santoso, S.T., M.Kom.',
-    penguji1: null,
-    penguji2: null,
-    jadwal: null,
-    ruangan: null,
-  },
-];
+/* ==============================================================================
+   MODE PAGINASI: CLIENT-SIDE
+   ------------------------------------------------------------------------------
+   Alasan & Hasil Investigasi Backend:
+   1. Backend GET /api/penjadwalan-sidang mendukung query `limit` & `pagination=false`
+      melalui paginationHelper (limit: 'all' / limit: 20).
+   2. Backend saat ini BELUM mendukung filter `search` (nama/NIM) dan `selectedProdi`
+      pada endpoint /api/penjadwalan-sidang (hanya menyaring deletedAt & researchGroupId).
+   3. Oleh karena itu, data di-fetch sekaligus (limit: 20 / all) dari backend,
+      kemudian filtering (search query, filter prodi) dan paginasi (PAGE_SIZE = 5)
+      dihitung secara konsisten di client-side (frontend) agar pencarian dan filter
+      prodi berjalan instan, akurat, dan reaktif tanpa request network berulang.
+   ============================================================================== */
 
 const PAGE_SIZE = 5;
-const MahasiswaAvatar = ({ student }) => (
-  <div
-    style={{
-      width: 38,
-      height: 38,
-      borderRadius: '50%',
-      background: student.avatarBg || '#FEE2E2',
-      color: student.avatarColor || '#991B1B',
-      fontWeight: 700,
-      fontSize: 13,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-      border: '1.5px solid #E2E8F0',
-    }}
-  >
-    {student.initials}
-  </div>
-);
 
-// Sel kolom read-only (Jadwal / Ruangan) dengan ikon gembok.
-// Klik → trigger toast "hanya Admin" melalui onLockedClick callback.
-const LockedCell = ({ value, onLockedClick }) => (
-  <div
-    onClick={onLockedClick}
-    title="Klik untuk info lebih lanjut"
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 6,
-      padding: '7px 10px',
-      borderRadius: 8,
-      background: '#F8FAFC',
-      border: '1.5px solid #E2E8F0',
-      cursor: 'pointer',
-      color: value ? '#374151' : '#94A3B8',
-      fontSize: 13,
-      fontWeight: value ? 500 : 400,
-      fontStyle: value ? 'normal' : 'italic',
-      transition: 'border-color 0.2s, background 0.2s',
-      minWidth: 160,
-      userSelect: 'none',
-    }}
-    onMouseEnter={e => {
-      e.currentTarget.style.borderColor = '#C0182A';
-      e.currentTarget.style.background = '#FFF0F1';
-    }}
-    onMouseLeave={e => {
-      e.currentTarget.style.borderColor = '#E2E8F0';
-      e.currentTarget.style.background = '#F8FAFC';
-    }}
-  >
-    <Lock size={13} color="#94A3B8" style={{ flexShrink: 0 }} />
-    {value || '— Belum ditentukan'}
-  </div>
-);
+// Konfigurasi kolom tabel — lebar kolom dipetakan ke class CSS (ps-col-*), bukan inline style.
+const TABLE_COLUMNS = [
+  { label: 'No', className: 'ps-col-no', align: 'center' },
+  { label: 'Mahasiswa', className: 'ps-col-mhs', align: 'left' },
+  { label: 'Dosen Pembimbing', className: 'ps-col-dosbim', align: 'left' },
+  { label: 'Penguji 1', className: 'ps-col-penguji', align: 'left' },
+  { label: 'Penguji 2', className: 'ps-col-penguji', align: 'left' },
+  { label: 'Tanggal', className: 'ps-col-tanggal', align: 'left' },
+  { label: 'Waktu', className: 'ps-col-waktu', align: 'left' },
+  { label: 'Ruangan', className: 'ps-col-ruangan', align: 'left' },
+  { label: 'Aksi', className: 'ps-col-aksi', align: 'center' },
+];
 
-// Dropdown pemilihan penguji.
-const PengujiSelect = ({ value, placeholder, otherValue, onChange }) => {
-  const available = MOCK_DAFTAR_PENGUJI.filter(p => p !== otherValue);
-
+// Komponen Avatar Mahasiswa
+const MahasiswaAvatar = ({ student }) => {
+  const theme = getAvatarTheme(student.nama);
   return (
-    <select
-      value={value || ''}
-      onChange={e => onChange(e.target.value || null)}
+    <div
+      className="ps-avatar"
       style={{
-        width: '100%',
-        padding: '7px 10px',
-        border: '1.5px solid #E2E8F0',
-        borderRadius: 8,
-        fontSize: 13,
-        fontWeight: 500,
-        color: value ? '#374151' : '#94A3B8',
-        background: '#FFFFFF',
-        outline: 'none',
-        cursor: 'pointer',
-        minWidth: 180,
-        transition: 'border-color 0.2s',
+        background: theme.bg,
+        color: theme.color,
       }}
-      onFocus={e => { e.target.style.borderColor = '#C0182A'; }}
-      onBlur={e => { e.target.style.borderColor = '#E2E8F0'; }}
     >
-      <option value="">{placeholder}</option>
-      {available.map(p => (
-        <option key={p} value={p}>{p}</option>
-      ))}
-    </select>
+      {student.initials || getInitials(student.nama)}
+    </div>
+  );
+};
+
+// Sel kolom read-only (Tanggal / Waktu / Ruangan) dengan ikon gembok
+const LockedCell = ({ value, onLockedClick, isCompact = false }) => {
+  const isEmpty = !value;
+  return (
+    <div
+      onClick={onLockedClick}
+      title={value ? `${value} (Hanya Admin)` : 'Belum ditentukan (Hanya Admin)'}
+      className={`ps-locked-cell ${isCompact ? 'compact' : ''} ${isEmpty ? 'empty' : ''}`}
+    >
+      <Lock size={11} color="#94A3B8" style={{ flexShrink: 0 }} />
+      <span className="ps-locked-text">
+        {value || '—'}
+      </span>
+    </div>
   );
 };
 
 const PenjadwalanSidang = () => {
-  const [sidebarOpen, setSidebarOpen]     = useState(false);
-  const [searchQuery, setSearchQuery]     = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedProdi, setSelectedProdi] = useState('');
-  const [currentPage, setCurrentPage]     = useState(1);
-  const [toasts, setToasts]               = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [toasts, setToasts] = useState([]);
 
-  const [prodiOptions, setProdiOptions]   = useState([
-    { value: '', label: 'All Major' }
-  ]);
+  // Prodi Options
+  const [prodiOptions, setProdiOptions] = useState([{ value: '', label: 'Semua Prodi' }]);
   const [prodiFetchError, setProdiFetchError] = useState(false);
   const [isLoadingProdi, setIsLoadingProdi] = useState(true);
-  const [mahasiswaList, setMahasiswaList] = useState(MOCK_MAHASISWA);
+
+  // Dosen Penguji Options dari API
+  const [pengujiOptions, setPengujiOptions] = useState([]);
+  const [isLoadingPenguji, setIsLoadingPenguji] = useState(true);
+  const [pengujiFetchError, setPengujiFetchError] = useState(false);
+
+  // Data Penjadwalan Sidang dari API (menggantikan mahasiswaList & MOCK)
+  const [sidangList, setSidangList] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [dataFetchError, setDataFetchError] = useState(false);
+
+  // Draft lokal & status per row: 'saved' | 'unsaved' | 'incomplete'
+  const [rowStatus, setRowStatus] = useState({});
+  const [rowSaving, setRowSaving] = useState({});
+
+  // Cek apakah ada perubahan belum disimpan (dirty state)
+  const unsavedCount = useMemo(() => {
+    return Object.values(rowStatus).filter(s => s === 'unsaved').length;
+  }, [rowStatus]);
+
+  // Dirty state: window beforeunload warning jika ada row unsaved
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (unsavedCount > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+    if (unsavedCount > 0) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [unsavedCount]);
+
+  // Toast Notification helper
+  const showToast = (message, type = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
+  };
+
+  // 1. Fetch Program Studi
   useEffect(() => {
     let isMounted = true;
-
     const fetchStudyPrograms = async () => {
       try {
         setIsLoadingProdi(true);
@@ -255,7 +141,7 @@ const PenjadwalanSidang = () => {
         if (isMounted) {
           const activeProdi = data.filter(sp => sp.isActive !== false);
           const dynamicOptions = [
-            { value: '', label: 'All Major' },
+            { value: '', label: 'Semua Prodi' },
             ...activeProdi.map(sp => ({
               value: sp.name,
               label: sp.name,
@@ -280,33 +166,176 @@ const PenjadwalanSidang = () => {
     return () => { isMounted = false; };
   }, []);
 
-  const showToast = (message, type = 'info') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
-  };
+  // 2. Fetch Opsi Penguji (GET /api/dosen) → map ke { value: id, label: 'KODE - Nama', researchGroupId }
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPenguji = async () => {
+      try {
+        setIsLoadingPenguji(true);
+        setPengujiFetchError(false);
+        const dosens = await getPengujiOptions();
+        if (isMounted) {
+          const mapped = dosens.map(d => ({
+            value: d.id,
+            label: d.kodeDosen ? `${d.kodeDosen} - ${d.name}` : d.name,
+            researchGroupId: d.researchGroupId || null,
+          }));
+          setPengujiOptions(mapped);
+          setPengujiFetchError(false);
+        }
+      } catch (err) {
+        console.error('Gagal memuat daftar dosen penguji:', err);
+        if (isMounted) {
+          setPengujiOptions([]);
+          setPengujiFetchError(true);
+        }
+      } finally {
+        if (isMounted) setIsLoadingPenguji(false);
+      }
+    };
 
-  // Handler klik kolom Jadwal / Ruangan (read-only field)
+    fetchPenguji();
+    return () => { isMounted = false; };
+  }, []);
+
+  // 3. Fetch Data Penjadwalan Sidang (GET /api/penjadwalan-sidang)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSidangData = async () => {
+      try {
+        setIsLoadingData(true);
+        setDataFetchError(false);
+        // Menggunakan limit: 20 agar seluruh data sidang termuat untuk client-side filtering & pagination
+        const res = await getPenjadwalanSidang({ limit: 20 });
+        const rawList = Array.isArray(res) ? res : res?.data || [];
+
+        if (isMounted) {
+          const mapped = rawList.map(item => {
+            const mhs = item.mahasiswa || {};
+            const prodiName = mhs.studyProgram?.name || '-';
+            const dosenPembimbingName = item.dosenPembimbing1?.name || '-';
+            // Penguji disimpan sebagai ID dosen (untuk searchable dropdown)
+            const penguji1Id = item.dosenPenguji1?.id || null;
+            const penguji2Id = item.dosenPenguji2?.id || null;
+            const ruanganName = item.ruanganSidang
+              ? `${item.ruanganSidang.name}${item.ruanganSidang.gedung ? ` (${item.ruanganSidang.gedung})` : ''}`
+              : null;
+            // researchGroupId dari dosenPembimbing1 untuk filter penguji by KK
+            const researchGroupId = item.dosenPembimbing1?.researchGroupId || item.researchGroupId || null;
+
+            return {
+              id: item.id,
+              raw: item,
+              nama: mhs.name || 'Mahasiswa',
+              nim: mhs.nim || '-',
+              prodi: prodiName,
+              initials: getInitials(mhs.name || 'M'),
+              dosenPembimbing: dosenPembimbingName,
+              penguji1: penguji1Id,
+              penguji2: penguji2Id,
+              jadwal: formatTanggal(item.tglSidang),
+              waktu: formatWaktu(item.tglSidang),
+              ruangan: ruanganName,
+              researchGroupId,
+            };
+          });
+
+          // Inisialisasi status per row
+          const initialStatus = {};
+          mapped.forEach(item => {
+            const isComplete = Boolean(item.penguji1 && item.penguji2);
+            initialStatus[item.id] = isComplete ? 'saved' : 'incomplete';
+          });
+
+          setSidangList(mapped);
+          setRowStatus(initialStatus);
+          setDataFetchError(false);
+        }
+      } catch (err) {
+        console.error('Gagal memuat data penjadwalan sidang:', err);
+        if (isMounted) {
+          setSidangList([]);
+          setDataFetchError(true);
+        }
+      } finally {
+        if (isMounted) setIsLoadingData(false);
+      }
+    };
+
+    fetchSidangData();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Handler klik kolom Jadwal / Waktu / Ruangan (read-only field)
   const handleLockedFieldClick = () => {
     showToast('Kolom ini hanya dapat diisi oleh Admin.', 'warning');
   };
 
-  const handlePengujiChange = (id, field, value) => {
-    setMahasiswaList(prev =>
-      prev.map(m => m.id === id ? { ...m, [field]: value } : m)
-    );
+  // Handler perubahan dropdown Penguji (value = dosen id)
+  const handlePengujiChange = useCallback((id, field, value) => {
+    setSidangList(prev => {
+      const updatedList = prev.map(m => (m.id === id ? { ...m, [field]: value } : m));
+      const targetMhs = updatedList.find(m => m.id === id);
+
+      if (!targetMhs.penguji1 || !targetMhs.penguji2) {
+        setRowStatus(rs => ({ ...rs, [id]: 'incomplete' }));
+      } else {
+        setRowStatus(rs => ({ ...rs, [id]: 'unsaved' }));
+      }
+      return updatedList;
+    });
+  }, []);
+
+  // Simpan per baris (Aksi) — value = dosen id
+  const handleSaveRow = async (mhs) => {
+    const status = rowStatus[mhs.id];
+    if (status !== 'unsaved') return;
+
+    setRowSaving(prev => ({ ...prev, [mhs.id]: true }));
+    try {
+      await setPengujiSidang(mhs.id, {
+        dosenPenguji1Id: mhs.penguji1,
+        dosenPenguji2Id: mhs.penguji2,
+      });
+      setRowStatus(prev => ({ ...prev, [mhs.id]: 'saved' }));
+      showToast(`✅ Penguji ${mhs.nama} berhasil disimpan.`, 'success');
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || 'Terjadi kesalahan saat menyimpan penguji.';
+      showToast(`❌ ${message}`, 'error');
+    } finally {
+      setRowSaving(prev => ({ ...prev, [mhs.id]: false }));
+    }
   };
 
-  const handleSimpanData = () => {
-    console.log('[PenjadwalanSidang] Data yang akan disimpan:', mahasiswaList);
-    showToast('Data penguji berhasil disimpan!', 'success');
+  // Simpan semua row yang unsaved — payload pakai dosen id
+  const handleSimpanData = async () => {
+    if (unsavedCount === 0) return;
+    const unsavedRows = sidangList.filter(m => rowStatus[m.id] === 'unsaved');
+    const payload = unsavedRows.map(m => ({
+      id: m.id,
+      dosenPenguji1Id: m.penguji1,
+      dosenPenguji2Id: m.penguji2,
+    }));
+    try {
+      await setPengujiSidangBatch(payload);
+      setRowStatus(prev => {
+        const next = { ...prev };
+        unsavedRows.forEach(m => { next[m.id] = 'saved'; });
+        return next;
+      });
+      showToast('Semua perubahan penguji berhasil disimpan!', 'success');
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || 'Terjadi kesalahan saat menyimpan data batch.';
+      showToast(`❌ ${message}`, 'error');
+    }
   };
 
+  // Filter client-side berdasarkan search keyword & prodi
   const filteredData = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     const prodiFilter = selectedProdi.toLowerCase().trim();
 
-    return mahasiswaList.filter(m => {
+    return sidangList.filter(m => {
       const matchSearch =
         !q ||
         m.nama.toLowerCase().includes(q) ||
@@ -324,16 +353,16 @@ const PenjadwalanSidang = () => {
 
       return matchSearch && matchProdi;
     });
-  }, [mahasiswaList, searchQuery, selectedProdi]);
+  }, [sidangList, searchQuery, selectedProdi]);
 
-  const totalEntries  = filteredData.length;
-  const totalPages    = Math.ceil(totalEntries / PAGE_SIZE) || 1;
-  const startIndex    = (currentPage - 1) * PAGE_SIZE;
-  const endIndex      = Math.min(startIndex + PAGE_SIZE, totalEntries);
+  const totalEntries = filteredData.length;
+  const totalPages = Math.ceil(totalEntries / PAGE_SIZE) || 1;
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = Math.min(startIndex + PAGE_SIZE, totalEntries);
   const paginatedData = filteredData.slice(startIndex, endIndex);
 
   const handleSearchChange = (val) => { setSearchQuery(val); setCurrentPage(1); };
-  const handleProdiChange  = (val) => { setSelectedProdi(val); setCurrentPage(1); };
+  const handleProdiChange = (val) => { setSelectedProdi(val); setCurrentPage(1); };
 
   return (
     <>
@@ -349,121 +378,50 @@ const PenjadwalanSidang = () => {
             <Menu size={20} />
           </button>
           <div className="topbar-brand topbar-brand-dosen">Penjadwalan Sidang</div>
-          <div className="topbar-right">
-            <button className="topbar-icon-btn" title="Bantuan" aria-label="Bantuan">
-              <HelpCircle size={20} />
-            </button>
-            <button className="topbar-icon-btn" title="Notifikasi" aria-label="Notifikasi">
-              <Bell size={20} />
-            </button>
-          </div>
         </header>
 
         <main className="page-body">
           {/* Content Header: judul halaman + info banner */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 16,
-            }}
-          >
+          <div className="ps-header-wrap">
             <div>
-              <h1 style={{ fontSize: 24, fontWeight: 800, color: '#111827', margin: 0, marginBottom: 6 }}>
-                Penjadwalan Sidang
-              </h1>
-              <p style={{ fontSize: 13, color: '#6B7280', margin: 0 }}>
+              <h1 className="ps-title">Penjadwalan Sidang</h1>
+              <p className="ps-subtitle">
                 Tentukan dosen penguji mahasiswa untuk proses penjadwalan sidang.
               </p>
             </div>
 
             {/* Info banner — menjelaskan alur data ke Admin */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 10,
-                background: '#EFF6FF',
-                border: '1px solid #BFDBFE',
-                borderRadius: 10,
-                padding: '10px 14px',
-                maxWidth: 380,
-                flex: '0 0 auto',
-              }}
-            >
-              <Info size={16} color="#3B82F6" style={{ flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: 12, color: '#1D4ED8', margin: 0, lineHeight: 1.55 }}>
-                Setelah dosen penguji ditentukan, data akan dikirim ke Admin untuk penjadwalan hari, tanggal, dan ruangan.
+            <div className="ps-info-banner">
+              <Info size={16} color="#3B82F6" className="ps-info-icon" />
+              <p className="ps-info-text">
+                Setelah dosen penguji ditentukan, data akan dikirim ke Admin untuk penjadwalan tanggal, waktu dan ruangan.
               </p>
             </div>
           </div>
 
           {/* Search & Filter Bar + tombol Simpan Data */}
-          <div
-            style={{
-              background: '#FFFFFF',
-              border: '1px solid #E9EDF5',
-              borderRadius: 12,
-              padding: '12px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              flexWrap: 'wrap',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-            }}
-          >
+          <div className="ps-filter-container">
             {/* Search Input */}
-            <div style={{ position: 'relative', flex: 1, minWidth: 220, display: 'flex', alignItems: 'center' }}>
-              <Search size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, pointerEvents: 'none' }} />
+            <div className="ps-search-wrap">
+              <Search size={15} color="#9CA3AF" className="ps-search-icon" />
               <input
                 id="penjadwalan-search"
                 type="text"
                 placeholder="Cari nama mahasiswa atau NIM..."
                 value={searchQuery}
                 onChange={e => handleSearchChange(e.target.value)}
-                style={{
-                  width: '100%',
-                  paddingLeft: 36,
-                  paddingRight: 14,
-                  paddingTop: 8,
-                  paddingBottom: 8,
-                  border: '1.5px solid #E2E8F0',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  outline: 'none',
-                  background: '#FFFFFF',
-                  color: '#111827',
-                  transition: 'border-color 0.2s',
-                }}
-                onFocus={e => { e.target.style.borderColor = '#C0182A'; }}
-                onBlur={e => { e.target.style.borderColor = '#E2E8F0'; }}
+                className="ps-search-input"
               />
             </div>
 
-            {/* Filter Program Studi — Dinamis dari Database API */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {/* Filter Program Studi */}
+            <div className="ps-prodi-wrap">
               <select
                 id="penjadwalan-filter-prodi"
                 value={selectedProdi}
                 onChange={e => handleProdiChange(e.target.value)}
                 disabled={isLoadingProdi || prodiFetchError}
-                style={{
-                  padding: '8px 12px',
-                  border: `1.5px solid ${prodiFetchError ? '#FCA5A5' : '#E2E8F0'}`,
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: prodiFetchError ? '#991B1B' : '#374151',
-                  background: prodiFetchError ? '#FEF2F2' : isLoadingProdi ? '#F8FAFC' : '#FFFFFF',
-                  outline: 'none',
-                  cursor: (isLoadingProdi || prodiFetchError) ? 'not-allowed' : 'pointer',
-                  minWidth: 200,
-                  transition: 'border-color 0.2s',
-                }}
-                onFocus={e => { e.target.style.borderColor = '#C0182A'; }}
-                onBlur={e => { e.target.style.borderColor = '#E2E8F0'; }}
+                className={`ps-prodi-select ${isLoadingProdi ? 'loading' : ''} ${prodiFetchError ? 'error' : ''}`}
               >
                 {isLoadingProdi ? (
                   <option value="">Memuat program studi...</option>
@@ -476,71 +434,42 @@ const PenjadwalanSidang = () => {
                 )}
               </select>
               {prodiFetchError && (
-                <span style={{ fontSize: 11, color: '#DC2626', lineHeight: 1.3 }}>
+                <span className="ps-error-text">
                   Gagal memuat data program studi. Silakan muat ulang halaman.
                 </span>
               )}
             </div>
 
             {/* Tombol Simpan Data — reuse class btn-verif dari dashboard.css */}
-            <button
-              id="penjadwalan-btn-simpan"
-              className="btn-verif"
-              onClick={handleSimpanData}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 7,
-                padding: '9px 20px',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-                marginLeft: 'auto',
-              }}
-            >
-              <Save size={14} />
-              Simpan Data
-            </button>
+            <div className="ps-action-group">
+              {unsavedCount > 0 && (
+                <span className="ps-unsaved-badge">
+                  {unsavedCount} perubahan belum disimpan
+                </span>
+              )}
+              <button
+                id="penjadwalan-btn-simpan"
+                className={`btn-verif ps-btn-simpan-all ${unsavedCount === 0 ? 'disabled' : ''}`}
+                disabled={unsavedCount === 0}
+                onClick={handleSimpanData}
+              >
+                <Save size={14} />
+                Simpan Data
+              </button>
+            </div>
           </div>
 
           {/* Tabel Penjadwalan Sidang — scrollable horizontal di layar kecil */}
-          <div
-            style={{
-              background: '#FFFFFF',
-              border: '1px solid #E9EDF5',
-              borderRadius: 12,
-              overflow: 'hidden',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-            }}
-          >
-            <div className="table-scroll-wrap" style={{ maxHeight: 'none' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+          <div className="ps-table-card">
+            <div className="table-scroll-wrap ps-table-scroll">
+              <table className="ps-table">
                 {/* Table Header */}
                 <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
-                    {[
-                      { label: 'Mahasiswa' },
-                      { label: 'Dosen Pembimbing', width: 180 },
-                      { label: 'Penguji 1',         width: 210 },
-                      { label: 'Penguji 2',         width: 210 },
-                      { label: 'Jadwal',            width: 190 },
-                      { label: 'Ruangan',           width: 190 },
-                    ].map(col => (
+                  <tr className="ps-thead-row">
+                    {TABLE_COLUMNS.map(col => (
                       <th
                         key={col.label}
-                        style={{
-                          padding: '13px 18px',
-                          fontSize: 11,
-                          fontWeight: 800,
-                          color: '#64748B',
-                          textTransform: 'uppercase',
-                          textAlign: 'left',
-                          letterSpacing: '0.04em',
-                          width: col.width,
-                          whiteSpace: 'nowrap',
-                        }}
+                        className={`ps-th ${col.align === 'center' ? 'ps-th-center' : 'ps-th-left'} ${col.className}`}
                       >
                         {col.label}
                       </th>
@@ -550,122 +479,173 @@ const PenjadwalanSidang = () => {
 
                 {/* Table Body */}
                 <tbody>
-                  {paginatedData.length === 0 ? (
+                  {isLoadingData ? (
                     <tr>
-                      <td
-                        colSpan={6}
-                        style={{ textAlign: 'center', padding: '60px 20px', color: '#9CA3AF' }}
-                      >
-                        <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+                      <td colSpan={9} className="ps-empty-row">
+                        <div className="ps-loading-inline">
+                          <Loader size={20} className="ps-spin" />
+                          <span className="ps-loading-text">Memuat data penjadwalan sidang...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : dataFetchError ? (
+                    <tr>
+                      <td colSpan={9} className="ps-empty-row">
+                        <div className="ps-empty-title ps-empty-title-error">
+                          Gagal memuat data penjadwalan sidang
+                        </div>
+                        <div className="ps-empty-desc">
+                          Terjadi kesalahan saat menghubungi server. Silakan coba muat ulang halaman.
+                        </div>
+                      </td>
+                    </tr>
+                  ) : paginatedData.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="ps-empty-row">
+                        <div className="ps-empty-title">
                           Tidak ada mahasiswa ditemukan
                         </div>
-                        <div style={{ fontSize: 13 }}>
+                        <div className="ps-empty-desc">
                           Coba sesuaikan kata kunci pencarian atau filter program studi.
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    paginatedData.map((m, idx) => (
-                      <tr
-                        key={m.id}
-                        style={{
-                          borderBottom: idx < paginatedData.length - 1 ? '1px solid #F1F5F9' : 'none',
-                          transition: 'background 0.15s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#FBFCFE'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; }}
-                      >
-                        {/* Kolom: Identitas Mahasiswa */}
-                        <td style={{ padding: '16px 18px', verticalAlign: 'middle' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <MahasiswaAvatar student={m} />
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: 14, color: '#111827', marginBottom: 1 }}>
-                                {m.nama}
-                              </div>
-                              <div style={{ fontSize: 12, color: '#6B7280' }}>
-                                {m.nim} &bull; {m.prodi}
+                    paginatedData.map((m, idx) => {
+                      const currentStatus = rowStatus[m.id] || (m.penguji1 && m.penguji2 ? 'saved' : 'incomplete');
+                      const isSaving = Boolean(rowSaving[m.id]);
+                      const isUnsaved = currentStatus === 'unsaved';
+
+                      return (
+                        <tr
+                          key={m.id}
+                          className={`ps-tr ${idx < paginatedData.length - 1 ? 'ps-tr-bordered' : ''}`}
+                        >
+                          {/* 1. Kolom: No */}
+                          <td className="ps-td-no">
+                            {startIndex + idx + 1}
+                          </td>
+
+                          {/* 2. Kolom: Identitas Mahasiswa */}
+                          <td className="ps-td-mhs">
+                            <div className="ps-mhs-wrap">
+                              <MahasiswaAvatar student={m} />
+                              <div className="ps-mhs-info">
+                                <div>
+                                  <span title={m.nama} className="ps-mhs-name">
+                                    {m.nama}
+                                  </span>
+                                </div>
+                                <div title={m.nim} className="ps-mhs-nim">
+                                  {m.nim}
+                                </div>
+                                <div title={m.prodi} className="ps-mhs-prodi">
+                                  {m.prodi}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* Kolom: Dosen Pembimbing (read-only, tidak diedit dosen) */}
-                        <td style={{ padding: '16px 18px', verticalAlign: 'middle' }}>
-                          <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
-                            {m.dosenPembimbing}
-                          </span>
-                        </td>
+                          {/* 3. Kolom: Dosen Pembimbing */}
+                          <td className="ps-td-dosbim">
+                            <span className="ps-dosbim-text">
+                              {m.dosenPembimbing}
+                            </span>
+                          </td>
 
-                        {/* Kolom: Penguji 1 (editable dropdown) */}
-                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                          <PengujiSelect
-                            value={m.penguji1}
-                            placeholder="Pilih Penguji 1"
-                            otherValue={m.penguji2}
-                            onChange={val => handlePengujiChange(m.id, 'penguji1', val)}
-                          />
-                        </td>
+                          {/* 4. Kolom: Penguji 1 — searchable, filter by KK researchGroupId */}
+                          <td className="ps-td-penguji">
+                            <PengujiSearchable
+                              value={m.penguji1}
+                              placeholder={isLoadingPenguji ? 'Memuat...' : 'Pilih Penguji 1'}
+                              otherValue={m.penguji2}
+                              options={m.researchGroupId
+                                ? pengujiOptions.filter(p => p.researchGroupId === m.researchGroupId)
+                                : pengujiOptions}
+                              status={currentStatus}
+                              onChange={val => handlePengujiChange(m.id, 'penguji1', val)}
+                            />
+                            {!m.penguji1 && (
+                              <div className="ps-validation-msg">
+                                Penguji 1 wajib diisi
+                              </div>
+                            )}
+                          </td>
 
-                        {/* Kolom: Penguji 2 (editable dropdown) */}
-                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                          <PengujiSelect
-                            value={m.penguji2}
-                            placeholder="Pilih Penguji 2"
-                            otherValue={m.penguji1}
-                            onChange={val => handlePengujiChange(m.id, 'penguji2', val)}
-                          />
-                        </td>
+                          {/* 5. Kolom: Penguji 2 — searchable, filter by KK researchGroupId */}
+                          <td className="ps-td-penguji">
+                            <PengujiSearchable
+                              value={m.penguji2}
+                              placeholder={isLoadingPenguji ? 'Memuat...' : 'Pilih Penguji 2'}
+                              otherValue={m.penguji1}
+                              options={m.researchGroupId
+                                ? pengujiOptions.filter(p => p.researchGroupId === m.researchGroupId)
+                                : pengujiOptions}
+                              status={currentStatus}
+                              onChange={val => handlePengujiChange(m.id, 'penguji2', val)}
+                            />
+                            {!m.penguji2 && (
+                              <div className="ps-validation-msg">
+                                Penguji 2 wajib diisi
+                              </div>
+                            )}
+                          </td>
 
-                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                          <LockedCell value={m.jadwal} onLockedClick={handleLockedFieldClick} />
-                        </td>
+                          {/* 6. Kolom: Tanggal */}
+                          <td className="ps-td-locked">
+                            <LockedCell value={m.jadwal} onLockedClick={handleLockedFieldClick} />
+                          </td>
 
-                        {/* Kolom: Ruangan (read-only — diisi Admin, klik tampilkan toast) */}
-                        <td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-                          <LockedCell value={m.ruangan} onLockedClick={handleLockedFieldClick} />
-                        </td>
-                      </tr>
-                    ))
+                          {/* 7. Kolom: Waktu */}
+                          <td className="ps-td-locked">
+                            <LockedCell value={m.waktu || null} onLockedClick={handleLockedFieldClick} isCompact={true} />
+                          </td>
+
+                          {/* 8. Kolom: Ruangan */}
+                          <td className="ps-td-locked">
+                            <LockedCell value={m.ruangan} onLockedClick={handleLockedFieldClick} />
+                          </td>
+
+                          {/* 9. Kolom: Aksi */}
+                          <td className="ps-td-aksi">
+                            <button
+                              className={`btn-verif ps-btn-simpan-row ${(!isUnsaved || isSaving) ? 'disabled' : 'active'}`}
+                              disabled={!isUnsaved || isSaving}
+                              onClick={() => handleSaveRow(m)}
+                            >
+                              {isSaving ? (
+                                <>
+                                  <Loader2 size={11} className="ps-spin" />
+                                  <span>Simpan</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Save size={11} />
+                                  <span>Simpan</span>
+                                </>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
 
-            <div
-              style={{
-                padding: '14px 20px',
-                borderTop: '1px solid #E9EDF5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: 12,
-                background: '#FFFFFF',
-              }}
-            >
-              <div style={{ fontSize: 13, color: '#64748B' }}>
-                Showing{' '}
-                <strong style={{ color: '#111827' }}>{totalEntries > 0 ? startIndex + 1 : 0}</strong>
-                {' '}to{' '}
-                <strong style={{ color: '#111827' }}>{endIndex}</strong>
-                {' '}of{' '}
-                <strong style={{ color: '#111827' }}>{totalEntries}</strong>
-                {' '}entries
+            {/* Pagination Controls */}
+            <div className="ps-pagination-wrap">
+              <div className="ps-pagination-info">
+                Menampilkan{' '}{totalEntries > 0 ? startIndex + 1 : 0}
+                {' '}-{' '}{endIndex}{' '}dari{' '}{totalEntries}{' '}data
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="ps-pagination-controls">
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  style={{
-                    width: 32, height: 32, borderRadius: 8,
-                    border: '1px solid #E2E8F0', background: '#FFFFFF',
-                    color: currentPage === 1 ? '#CBD5E1' : '#374151',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.15s',
-                  }}
+                  className="ps-page-arrow"
                   title="Halaman Sebelumnya"
                 >
                   <ChevronLeft size={16} />
@@ -677,17 +657,7 @@ const PenjadwalanSidang = () => {
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        border: isActive ? 'none' : '1px solid transparent',
-                        background: isActive ? '#7F1D1D' : 'transparent',
-                        color: isActive ? '#FFFFFF' : '#64748B',
-                        fontWeight: isActive ? 700 : 600,
-                        fontSize: 13, cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#F1F5F9'; }}
-                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                      className={`ps-page-num ${isActive ? 'active' : ''}`}
                     >
                       {pageNum}
                     </button>
@@ -697,14 +667,7 @@ const PenjadwalanSidang = () => {
                 <button
                   disabled={currentPage === totalPages || totalEntries === 0}
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  style={{
-                    width: 32, height: 32, borderRadius: 8,
-                    border: '1px solid #E2E8F0', background: '#FFFFFF',
-                    color: currentPage === totalPages || totalEntries === 0 ? '#CBD5E1' : '#374151',
-                    cursor: currentPage === totalPages || totalEntries === 0 ? 'not-allowed' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.15s',
-                  }}
+                  className="ps-page-arrow"
                   title="Halaman Berikutnya"
                 >
                   <ChevronRight size={16} />
