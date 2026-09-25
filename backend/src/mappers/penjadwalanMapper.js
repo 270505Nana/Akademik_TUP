@@ -14,5 +14,6 @@ export const mapPenjadwalanSidangToFrontend = (item) => {
     dosenPenguji2: mapDosen(item.dosenPenguji2),
     tglSidang: item.tglSidang,
     ruanganSidang: mapRuangan(item.ruanganSidang),
+    isLocked: item.isLocked ?? false,
   };
 };

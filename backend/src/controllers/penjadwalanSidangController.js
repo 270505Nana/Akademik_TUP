@@ -233,6 +233,13 @@ const setPengujiSidang = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
+  if (registration.isLocked) {
+    res.status(400);
+    throw new Error(
+      "Pendaftaran sidang telah dikunci oleh admin. Dosen penguji tidak dapat diubah.",
+    );
+  }
+
   const [dosen1, dosen2] = await Promise.all([
     prisma.dosen.findUnique({
       where: { id: dosenPenguji1Id },
@@ -374,6 +381,17 @@ const batchSetPengujiSidang = asyncHandler(async (req, res) => {
       res.status(404);
       throw new Error(`Pendaftaran sidang dengan ID ${id} tidak ditemukan`);
     }
+  }
+
+  const lockedRegistrations = registrations.filter((reg) => reg.isLocked);
+  if (lockedRegistrations.length > 0) {
+    const lockedNames = lockedRegistrations
+      .map((reg) => reg.mahasiswa?.user?.name || reg.id)
+      .join(", ");
+    res.status(400);
+    throw new Error(
+      `Tidak dapat mengubah dosen penguji karena pendaftaran sidang berikut telah dikunci oleh admin: ${lockedNames}`,
+    );
   }
 
   const allDosenIds = new Set();
@@ -864,6 +882,40 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
   await workbook.xlsx.write(res);
   res.end();
 });
+
+// Toggle / Set Lock Sidang Registration (Admin Only)
+const toggleLockSidangRegistration = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { isLocked } = req.body || {};
+
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!registration || registration.deletedAt) {
+    res.status(404);
+    throw new Error("Pendaftaran sidang tidak ditemukan");
+  }
+
+  const newLockStatus =
+    typeof isLocked === "boolean" ? isLocked : !registration.isLocked;
+
+  const updatedRegistration = await prisma.sidangRegistration.update({
+    where: { id },
+    data: {
+      isLocked: newLockStatus,
+    },
+    include: penjadwalanSidangInclude,
+  });
+
+  res.json({
+    message: newLockStatus
+      ? "Pendaftaran sidang berhasil dikunci"
+      : "Kunci pendaftaran sidang berhasil dibuka",
+    data: mapPenjadwalanSidangToFrontend(updatedRegistration),
+  });
+});
+
 export {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -871,4 +923,5 @@ export {
   setJadwalSidang,
   batchSetJadwalSidang,
   exportJadwalSidang,
+  toggleLockSidangRegistration,
 };
