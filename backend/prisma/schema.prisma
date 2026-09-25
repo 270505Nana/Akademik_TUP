@@ -531,7 +531,7 @@ model JenisAsesmenClo {
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
   deletedAt  DateTime? @map("deleted_at")
-  content    String    @db.Text // jenis asesmen
+  content    String    @db.Text // deskripsi jenis asesmen
   bobot      Decimal   @db.Decimal(5, 2) // bobot nilai misal 20% -> 0.2
   cloProdi   CloProdi  @relation(fields: [cloProdiId], references: [id], onDelete: Cascade)
   cloProdiId String    @map("clo_prodi_id")
@@ -545,7 +545,7 @@ model SkemaPenilaiProdi {
   updatedAt      DateTime     @updatedAt @map("updated_at")
   deletedAt      DateTime?    @map("deleted_at")
   type           String // Contoh: pembimbing_1, pembimbing_2, penguji_1, penguji_2
-  bobot          Decimal      @db.Decimal(5, 2) // bobot nilai misal 20% -> 0.2
+  bobot          Decimal      @db.Decimal(5, 2) // bobot nilai misal 60% -> 0.6
   studyProgram   StudyProgram @relation(fields: [studyProgramId], references: [id], onDelete: Cascade)
   studyProgramId String       @map("study_program_id")
 

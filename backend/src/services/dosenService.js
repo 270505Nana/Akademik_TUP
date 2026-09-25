@@ -137,6 +137,22 @@ export const upsertDosen = async (
       data: { name },
     });
 
+    const targetStudyProgramId =
+      studyProgramId || dosenRecord?.studyProgramId;
+
+    // Jika dosen ini diset sebagai ketua prodi (isKetuaProdi === true),
+    // pastikan dosen lain di program studi yang sama dinonaktifkan (isKetuaProdi: false)
+    if (isKetuaProdi === true && targetStudyProgramId) {
+      await tx.dosen.updateMany({
+        where: {
+          studyProgramId: targetStudyProgramId,
+          isKetuaProdi: true,
+          userId: { not: userId },
+        },
+        data: { isKetuaProdi: false },
+      });
+    }
+
     return await tx.dosen.upsert({
       where: { userId },
       update: {
