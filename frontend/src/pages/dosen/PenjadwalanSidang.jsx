@@ -12,23 +12,8 @@ import PengujiSearchable from '../../components/dosen/penjadwalansidang/PengujiS
 import '../dashboard.css';
 import '../../components/dosen/penjadwalansidang/penjadwalansidang.css';
 
-/* ==============================================================================
-   MODE PAGINASI: CLIENT-SIDE
-   ------------------------------------------------------------------------------
-   Alasan & Hasil Investigasi Backend:
-   1. Backend GET /api/penjadwalan-sidang mendukung query `limit` & `pagination=false`
-      melalui paginationHelper (limit: 'all' / limit: 20).
-   2. Backend saat ini BELUM mendukung filter `search` (nama/NIM) dan `selectedProdi`
-      pada endpoint /api/penjadwalan-sidang (hanya menyaring deletedAt & researchGroupId).
-   3. Oleh karena itu, data di-fetch sekaligus (limit: 20 / all) dari backend,
-      kemudian filtering (search query, filter prodi) dan paginasi (PAGE_SIZE = 5)
-      dihitung secara konsisten di client-side (frontend) agar pencarian dan filter
-      prodi berjalan instan, akurat, dan reaktif tanpa request network berulang.
-   ============================================================================== */
-
 const PAGE_SIZE = 5;
 
-// Konfigurasi kolom tabel — lebar kolom dipetakan ke class CSS (ps-col-*), bukan inline style.
 const TABLE_COLUMNS = [
   { label: 'No', className: 'ps-col-no', align: 'center' },
   { label: 'Mahasiswa', className: 'ps-col-mhs', align: 'left' },
@@ -41,7 +26,6 @@ const TABLE_COLUMNS = [
   { label: 'Aksi', className: 'ps-col-aksi', align: 'center' },
 ];
 
-// Komponen Avatar Mahasiswa
 const MahasiswaAvatar = ({ student }) => {
   const theme = getAvatarTheme(student.nama);
   return (
@@ -57,7 +41,6 @@ const MahasiswaAvatar = ({ student }) => {
   );
 };
 
-// Sel kolom read-only (Tanggal / Waktu / Ruangan) dengan ikon gembok
 const LockedCell = ({ value, onLockedClick, isCompact = false }) => {
   const isEmpty = !value;
   return (
@@ -81,31 +64,21 @@ const PenjadwalanSidang = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [toasts, setToasts] = useState([]);
 
-  // Prodi Options
   const [prodiOptions, setProdiOptions] = useState([{ value: '', label: 'Semua Prodi' }]);
   const [prodiFetchError, setProdiFetchError] = useState(false);
   const [isLoadingProdi, setIsLoadingProdi] = useState(true);
-
-  // Dosen Penguji Options dari API
   const [pengujiOptions, setPengujiOptions] = useState([]);
   const [isLoadingPenguji, setIsLoadingPenguji] = useState(true);
   const [pengujiFetchError, setPengujiFetchError] = useState(false);
-
-  // Data Penjadwalan Sidang dari API (menggantikan mahasiswaList & MOCK)
   const [sidangList, setSidangList] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [dataFetchError, setDataFetchError] = useState(false);
-
-  // Draft lokal & status per row: 'saved' | 'unsaved' | 'incomplete'
   const [rowStatus, setRowStatus] = useState({});
   const [rowSaving, setRowSaving] = useState({});
-
-  // Cek apakah ada perubahan belum disimpan (dirty state)
   const unsavedCount = useMemo(() => {
     return Object.values(rowStatus).filter(s => s === 'unsaved').length;
   }, [rowStatus]);
 
-  // Dirty state: window beforeunload warning jika ada row unsaved
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (unsavedCount > 0) {
@@ -166,7 +139,6 @@ const PenjadwalanSidang = () => {
     return () => { isMounted = false; };
   }, []);
 
-  // 2. Fetch Opsi Penguji (GET /api/dosen) → map ke { value: id, label: 'KODE - Nama', researchGroupId }
   useEffect(() => {
     let isMounted = true;
     const fetchPenguji = async () => {
@@ -198,14 +170,12 @@ const PenjadwalanSidang = () => {
     return () => { isMounted = false; };
   }, []);
 
-  // 3. Fetch Data Penjadwalan Sidang (GET /api/penjadwalan-sidang)
   useEffect(() => {
     let isMounted = true;
     const fetchSidangData = async () => {
       try {
         setIsLoadingData(true);
         setDataFetchError(false);
-        // Menggunakan limit: 20 agar seluruh data sidang termuat untuk client-side filtering & pagination
         const res = await getPenjadwalanSidang({ limit: 20 });
         const rawList = Array.isArray(res) ? res : res?.data || [];
 
@@ -214,13 +184,11 @@ const PenjadwalanSidang = () => {
             const mhs = item.mahasiswa || {};
             const prodiName = mhs.studyProgram?.name || '-';
             const dosenPembimbingName = item.dosenPembimbing1?.name || '-';
-            // Penguji disimpan sebagai ID dosen (untuk searchable dropdown)
             const penguji1Id = item.dosenPenguji1?.id || null;
             const penguji2Id = item.dosenPenguji2?.id || null;
             const ruanganName = item.ruanganSidang
               ? `${item.ruanganSidang.name}${item.ruanganSidang.gedung ? ` (${item.ruanganSidang.gedung})` : ''}`
               : null;
-            // researchGroupId dari dosenPembimbing1 untuk filter penguji by KK
             const researchGroupId = item.dosenPembimbing1?.researchGroupId || item.researchGroupId || null;
 
             return {
@@ -401,7 +369,6 @@ const PenjadwalanSidang = () => {
 
           {/* Search & Filter Bar + tombol Simpan Data */}
           <div className="ps-filter-container">
-            {/* Search Input */}
             <div className="ps-search-wrap">
               <Search size={15} color="#9CA3AF" className="ps-search-icon" />
               <input
@@ -450,11 +417,9 @@ const PenjadwalanSidang = () => {
             </div>
           </div>
 
-          {/* Tabel Penjadwalan Sidang — scrollable horizontal di layar kecil */}
           <div className="ps-table-card">
             <div className="table-scroll-wrap ps-table-scroll">
               <table className="ps-table">
-                {/* Table Header */}
                 <thead>
                   <tr className="ps-thead-row">
                     {TABLE_COLUMNS.map(col => (
@@ -468,7 +433,6 @@ const PenjadwalanSidang = () => {
                   </tr>
                 </thead>
 
-                {/* Table Body */}
                 <tbody>
                   {isLoadingData ? (
                     <tr>
@@ -537,14 +501,12 @@ const PenjadwalanSidang = () => {
                             </div>
                           </td>
 
-                          {/* 3. Kolom: Dosen Pembimbing */}
                           <td className="ps-td-dosbim">
                             <span className="ps-dosbim-text">
                               {m.dosenPembimbing}
                             </span>
                           </td>
 
-                          {/* 4. Kolom: Penguji 1 — searchable, filter by KK researchGroupId */}
                           <td className="ps-td-penguji">
                             <PengujiSearchable
                               value={m.penguji1}
@@ -563,7 +525,6 @@ const PenjadwalanSidang = () => {
                             )}
                           </td>
 
-                          {/* 5. Kolom: Penguji 2 — searchable, filter by KK researchGroupId */}
                           <td className="ps-td-penguji">
                             <PengujiSearchable
                               value={m.penguji2}
@@ -582,22 +543,18 @@ const PenjadwalanSidang = () => {
                             )}
                           </td>
 
-                          {/* 6. Kolom: Tanggal */}
                           <td className="ps-td-locked">
                             <LockedCell value={m.jadwal} onLockedClick={handleLockedFieldClick} />
                           </td>
 
-                          {/* 7. Kolom: Waktu */}
                           <td className="ps-td-locked">
                             <LockedCell value={m.waktu || null} onLockedClick={handleLockedFieldClick} isCompact={true} />
                           </td>
 
-                          {/* 8. Kolom: Ruangan */}
                           <td className="ps-td-locked">
                             <LockedCell value={m.ruangan} onLockedClick={handleLockedFieldClick} />
                           </td>
 
-                          {/* 9. Kolom: Aksi */}
                           <td className="ps-td-aksi">
                             <button
                               className={`btn-verif ps-btn-simpan-row ${(!isUnsaved || isSaving) ? 'disabled' : 'active'}`}
@@ -670,7 +627,7 @@ const PenjadwalanSidang = () => {
 
         <FooterDosen />
 
-        {/* Toast Notification — reuse .toast-container-custom & .simta-toast dari dashboard.css */}
+        {/* Toast Notification  */}
         <div className="toast-container-custom">
           <AnimatePresence>
             {toasts.map(toast => (

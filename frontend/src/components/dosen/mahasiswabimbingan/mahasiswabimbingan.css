@@ -160,7 +160,6 @@
   background: #FBFCFE;
 }
 
-/* Padding baris tabel dipadatkan (disamakan dengan .ps-td-* di Penjadwalan Sidang) */
 .mb-table-td {
   padding: 8px 10px;
   vertical-align: top;
@@ -175,12 +174,10 @@
   vertical-align: middle;
 }
 
-/* Kolom mahasiswa: vertikal align tengah agar avatar sejajar */
 .mb-table-td.col-student {
   vertical-align: middle;
 }
 
-/* Kolom judul: padding kiri-kanan lebih lega */
 .mb-table-td.col-thesis {
   padding: 8px 16px;
   vertical-align: middle;
@@ -251,7 +248,6 @@
   align-items: center;
 }
 
-/* --- Tombol aksi generik (mis: Coba Lagi) — ukuran disamakan dengan .ps-btn-simpan-row --- */
 .mb-btn-action {
   padding: 6px 10px;
   border-radius: 8px;
@@ -365,7 +361,6 @@
   margin-inline: auto;
 }
 
-/* --- Pagination Footer — padding disamakan dengan .ps-pagination-wrap --- */
 .mb-pagination-container {
   padding: 14px 20px;
   border-top: 1px solid #E9EDF5;
@@ -547,11 +542,9 @@
   flex-direction: column;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
   overflow: hidden;
-  /* tinggi mengikuti konten saat SK belum terbit */
   max-height: 90vh;
 }
 
-/* Saat SK sudah terbit, modal perlu tinggi penuh agar iframe PDF terlihat */
 .mb-modal-content.is-terbit {
   height: 88vh;
 }
@@ -614,16 +607,13 @@
   color: #111827;
 }
 
-/* Body PDF: flex-grow hanya saat ada konten PDF (is-terbit), tidak ketika unreleased */
 .mb-modal-body-pdf {
   flex: 1;
   background: #525659;
   position: relative;
-  /* default: tinggi minimal agar PDF bisa tampil */
   min-height: 480px;
 }
 
-/* Saat SK belum terbit: tinggi mengikuti konten, tidak ada sisa ruang gelap */
 .mb-modal-body-pdf.is-unreleased {
   flex: none;
   min-height: unset;
@@ -640,7 +630,6 @@
   flex-shrink: 0;
 }
 
-/* --- SKTA Modal: loading state --- */
 .mb-pdf-loading-wrap {
   display: flex;
   flex-direction: column;
@@ -657,7 +646,6 @@
   font-weight: 600;
 }
 
-/* --- SKTA Modal: error state --- */
 .mb-pdf-error-wrap {
   display: flex;
   flex-direction: column;
@@ -678,13 +666,11 @@
   font-weight: 700;
 }
 
-/* --- SKTA Modal: iframe --- */
 .mb-pdf-iframe {
   border: none;
   display: block;
 }
 
-/* --- SKTA Modal: unreleased state --- */
 .mb-pdf-unreleased-wrap {
   padding: 48px 24px;
   background: #FFFFFF;
@@ -718,14 +704,12 @@
   line-height: 1.5;
 }
 
-/* --- SKTA Modal: footer buttons --- */
 .mb-modal-btn-close {
   padding: 8px 20px;
   border-radius: 8px;
   font-size: 13px;
 }
 
-/* Tombol Unduh di modal: merah brand, konsisten */
 .mb-modal-btn-download {
   display: inline-flex;
   align-items: center;

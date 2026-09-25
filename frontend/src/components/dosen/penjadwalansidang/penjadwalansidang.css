@@ -185,7 +185,6 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-/* Override generic .table-scroll-wrap max-height for this page — tabel selalu tampil penuh, tanpa scroll internal */
 .ps-table-scroll {
   max-height: none;
 }
@@ -617,7 +616,6 @@
   margin-bottom: 4px;
 }
 
-/* Varian judul empty-state untuk kondisi error fetch */
 .ps-empty-title-error {
   color: #DC2626;
 }
@@ -626,7 +624,6 @@
   font-size: 12px;
 }
 
-/* --- Loading state — disamakan dengan .mb-loading-state di halaman Mahasiswa Bimbingan --- */
 .ps-loading-inline {
   display: flex;
   flex-direction: column;
