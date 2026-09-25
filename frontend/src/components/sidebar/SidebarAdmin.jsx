@@ -9,6 +9,7 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
   const { logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // Icon diperkecil menjadi size 13
   const menuSidebar = [
     {
       label: 'Utama',
@@ -80,6 +81,7 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
         </div>
       )}
 
+      {/* Lebar sidebar diperkecil menjadi 220px */}
       <aside id="sidebar" className={isOpen ? 'open' : ''} style={{ display: 'flex', flexDirection: 'column', width: '220px' }}>
         
         <div className="sidebar-logo" style={{ padding: '12px 16px', borderBottom: '1px solid #F1F5F9', marginBottom: '8px' }}>
