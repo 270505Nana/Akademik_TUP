@@ -1,4 +1,3 @@
-// Helper format inisial mahasiswa (dipakai di avatar).
 export const getInitials = (name = '') => {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 0 || !parts[0]) return 'M';
@@ -6,7 +5,6 @@ export const getInitials = (name = '') => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 };
 
-// Helper warna avatar deterministik berdasarkan nama.
 export const getAvatarTheme = (name = '') => {
   const themes = [
     { bg: '#DBEAFE', color: '#1E40AF' },

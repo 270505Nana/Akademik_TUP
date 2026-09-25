@@ -15,15 +15,12 @@ import '../dashboard.css';
 import Telulogo from '../../assets/logo-telkom.png';
 import '../../components/dosen/mahasiswabimbingan/mahasiswabimbingan.css';
 
-// Tentukan nilai "belum mulai" per tahap, dipakai untuk mencari tahap paling jauh progresnya
 const STEP_DEFINITIONS = [
   { label: 'SKTA', field: 'statusSk', emptyValue: 'SK Belum Terbit' },
   { label: 'Sidang', field: 'statusRegistrasi', emptyValue: 'Menunggu Pendaftaran' },
   { label: 'Yudisium', field: 'statusYudisium', emptyValue: 'Belum Daftar' },
 ];
 
-// Cari status terkini: tahap paling jauh (terakhir) yang sudah ada progres.
-// Kalau semua tahap masih di titik awal, tampilkan status tahap pertama (SKTA).
 const getCurrentStatus = (item) => {
   for (let i = STEP_DEFINITIONS.length - 1; i >= 0; i--) {
     const step = STEP_DEFINITIONS[i];
@@ -36,7 +33,6 @@ const getCurrentStatus = (item) => {
   return { label: firstStep.label, value: item[firstStep.field] || firstStep.emptyValue };
 };
 
-// --- Helper inisial avatar mahasiswa ---
 const getInitials = (name = '') => {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 0 || !parts[0]) return 'M';
@@ -52,11 +48,6 @@ const MahasiswaBimbingan = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedProdi, setSelectedProdi] = useState('');
   const [sortBy, setSortBy] = useState('newest');
-
-  // TODO: Filter status masih blm aktif tapi sementara karena backend belum menyediakan query param status. Uncomment kl di be udah ada
-  /*
-  const [selectedStatus, setSelectedStatus] = useState('');
-  */
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [students, setStudents] = useState([]);
@@ -102,7 +93,6 @@ const MahasiswaBimbingan = () => {
     };
   }, []);
 
-  // --- Handler debounce search query (~300ms) ---
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -111,12 +101,10 @@ const MahasiswaBimbingan = () => {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Reset page ke 1 jika filter atau sorting berganti
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch, selectedProdi, sortBy]);
 
-  // --- Fetch data Mahasiswa Bimbingan dari API backend ---
   const fetchMahasiswaBimbingan = useCallback(async () => {
     setIsLoadingStudents(true);
     setStudentsError(null);
@@ -165,10 +153,6 @@ const MahasiswaBimbingan = () => {
     setSelectedProdi('');
     setSortBy('newest');
     setCurrentPage(1);
-    /*
-    // TODO: Filter status dinonaktifkan sementara karena backend belum menyediakan query param status (status dihitung dinamis di service, bukan kolom DB). Uncomment jika BE sudah mendukungnya.
-    setSelectedStatus('');
-    */
   };
 
   const handleExportData = async () => {
@@ -230,7 +214,6 @@ const MahasiswaBimbingan = () => {
     }
   };
 
-  // --- Perhitungan range pagination ---
   const numericLimit = typeof limit === 'number' ? limit : parseInt(limit, 10) || 10;
   const startIndex = paginationMeta.total > 0 ? (paginationMeta.page - 1) * numericLimit + 1 : 0;
   const endIndex = Math.min(paginationMeta.page * numericLimit, paginationMeta.total);
@@ -279,7 +262,6 @@ const MahasiswaBimbingan = () => {
         </header>
 
         <main className="page-body">
-          {/* Header Konten & Tombol Aksi */}
           <div className="mb-page-header">
             <div className="mb-page-header-text">
               <h1 className="mb-page-title">
@@ -291,7 +273,6 @@ const MahasiswaBimbingan = () => {
             </div>
 
             <div className="mb-page-header-actions">
-              {/* Tombol Filter dihapus dari UI — reset filter tetap bisa dipanggil via handleResetFilter jika dibutuhkan secara programatik */}
 
               <button
                 type="button"
@@ -307,7 +288,6 @@ const MahasiswaBimbingan = () => {
 
           {/* Render: Filter & Pencarian */}
           <div className="mb-filter-container">
-            {/* Search Input (Debounced) */}
             <div className="mb-filter-search-wrap">
               <Search size={16} className="mb-filter-search-icon" />
               <input
@@ -349,7 +329,6 @@ const MahasiswaBimbingan = () => {
             </div>
           </div>
 
-          {/* Render: Tabel Mahasiswa Bimbingan */}
           <div className="mb-table-card">
             <div className="mb-table-wrap">
               <table className="mb-table">
@@ -416,7 +395,6 @@ const MahasiswaBimbingan = () => {
                       const thesisTitle = item.judulTugasAkhirIndonesia || item.judulTugasAkhirInggris || '-';
                       const rowNum = (currentPage - 1) * numericLimit + idx + 1;
 
-                      // Status terkini: tahap paling jauh progresnya, dihitung dari 3 field yang BE kirim
                       const currentStatus = getCurrentStatus(item);
                       const currentStatusCfg = STATUS_CONFIG[currentStatus.value] || STATUS_CONFIG['SK Belum Terbit'];
 
@@ -426,7 +404,6 @@ const MahasiswaBimbingan = () => {
                           className={`mb-table-tr ${idx < students.length - 1 ? 'has-border' : ''}`}
                         >
                           <td className="mb-table-td col-num">{rowNum}</td>
-                          {/* Kolom Mahasiswa: avatar + nama + NIM */}
                           <td className="mb-table-td col-student">
                             <div className="mb-student-flex">
                               <div className="mb-avatar-initials">
@@ -445,7 +422,6 @@ const MahasiswaBimbingan = () => {
                           <td className="mb-table-td">
                             <span className="mb-prodi-text">{prodiName}</span>
                           </td>
-                          {/* Kolom Status: hanya tampilkan status terkini (tahap paling jauh progresnya) */}
                           <td className="mb-table-td mb-table-td-center">
                             <div className="mb-status-current">
                               <span className="mb-status-current-label">{currentStatus.label}</span>
@@ -480,7 +456,6 @@ const MahasiswaBimbingan = () => {
               </table>
             </div>
 
-            {/* Render: Pagination Controls — selalu ditampilkan (mengikuti pola PenjadwalanSidang), termasuk saat loading/error/kosong */}
             <div className="mb-pagination-container">
               <div className="mb-pagination-info">
                 Menampilkan {startIndex} - {endIndex} dari {' '}{paginationMeta.total} data

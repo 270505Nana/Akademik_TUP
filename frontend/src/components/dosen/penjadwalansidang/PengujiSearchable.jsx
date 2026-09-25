@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
-// Searchable dropdown penguji — compact variant, value = dosen.id.
 const PengujiSearchable = ({ value, placeholder, otherValue, options = [], onChange, status }) => {
   const [isOpen, setIsOpen]   = useState(false);
   const [query, setQuery]     = useState('');
@@ -23,7 +22,6 @@ const PengujiSearchable = ({ value, placeholder, otherValue, options = [], onCha
     statusClass = 'unsaved';
   }
 
-  // Hitung posisi trigger setiap kali dropdown dibuka.
   const updateCoords = useCallback(() => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
@@ -38,7 +36,6 @@ const PengujiSearchable = ({ value, placeholder, otherValue, options = [], onCha
   useEffect(() => {
     if (isOpen) {
       updateCoords();
-      // Reposisi saat scroll/resize supaya dropdown tetap menempel ke trigger.
       window.addEventListener('scroll', updateCoords, true);
       window.addEventListener('resize', updateCoords);
       return () => {
@@ -48,7 +45,6 @@ const PengujiSearchable = ({ value, placeholder, otherValue, options = [], onCha
     }
   }, [isOpen, updateCoords]);
 
-  // Click-outside close — cek trigger DAN dropdown portal.
   useEffect(() => {
     const handleOutside = (e) => {
       const clickedTrigger = wrapperRef.current && wrapperRef.current.contains(e.target);

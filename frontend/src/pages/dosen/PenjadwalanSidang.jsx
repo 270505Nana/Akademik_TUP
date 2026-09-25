@@ -440,22 +440,13 @@ const PenjadwalanSidang = () => {
               )}
             </div>
 
-            {/* Tombol Simpan Data — reuse class btn-verif dari dashboard.css */}
+            {/* Badge jumlah perubahan belum disimpan */}
             <div className="ps-action-group">
               {unsavedCount > 0 && (
                 <span className="ps-unsaved-badge">
                   {unsavedCount} perubahan belum disimpan
                 </span>
               )}
-              <button
-                id="penjadwalan-btn-simpan"
-                className={`btn-verif ps-btn-simpan-all ${unsavedCount === 0 ? 'disabled' : ''}`}
-                disabled={unsavedCount === 0}
-                onClick={handleSimpanData}
-              >
-                <Save size={14} />
-                Simpan Data
-              </button>
             </div>
           </div>
 
