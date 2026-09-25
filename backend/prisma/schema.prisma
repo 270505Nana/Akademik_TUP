@@ -78,8 +78,13 @@ model Dosen {
   nidn                             String?                          @unique
   kodeDosen                        String                           @map("kode_dosen")
   isKetuaKK                        Boolean                          @default(false) @map("is_ketua_kk")
+  isKetuaProdi                     Boolean                          @default(false) @map("is_ketua_prodi")
+  isKepalaUrusanAkademik           String?                          @map("is_kepala_urusan_akademik")
+  signature                        String?
   researchGroup                    ResearchGroup                    @relation(fields: [researchGroupId], references: [id])
   researchGroupId                  String                           @map("research_group_id")
+  studyProgram                     StudyProgram?                    @relation(fields: [studyProgramId], references: [id])
+  studyProgramId                   String?                          @map("study_program_id")
   user                             User                             @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId                           String                           @unique @map("user_id")
   mahasiswa                        Mahasiswa[]
@@ -100,6 +105,7 @@ model Dosen {
   dosenPenilaiRevisi               FormulirRevisiTugasAkhirDetail[] @relation("DosenPenilaiRevisi")
 
   @@index([researchGroupId])
+  @@index([studyProgramId])
   @@index([deletedAt])
   @@map("dosen")
 }
@@ -131,6 +137,7 @@ model StudyProgram {
   mahasiswa          Mahasiswa[]
   cloProdis          CloProdi[]
   skemaPenilaiProdis SkemaPenilaiProdi[]
+  dosens             Dosen[]
 
   @@index([facultyId])
   @@index([deletedAt])

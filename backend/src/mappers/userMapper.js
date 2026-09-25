@@ -41,7 +41,11 @@ export const mapDosen = (dosen) => {
     nidn: dosen.nidn,
     kodeDosen: dosen.kodeDosen,
     isKetuaKK: dosen.isKetuaKK,
+    isKetuaProdi: dosen.isKetuaProdi,
+    isKepalaUrusanAkademik: dosen.isKepalaUrusanAkademik,
+    signature: dosen.signature || null,
     researchGroupId: dosen.researchGroupId,
+    studyProgramId: dosen.studyProgramId || null,
     userId: dosen.userId,
     name: dosen.user?.name || "",
     email: dosen.user?.email || "",
@@ -51,6 +55,14 @@ export const mapDosen = (dosen) => {
           id: dosen.researchGroup.id,
           name: dosen.researchGroup.name,
           isActive: dosen.researchGroup.isActive,
+        }
+      : undefined,
+    studyProgram: dosen.studyProgram
+      ? {
+          id: dosen.studyProgram.id,
+          name: dosen.studyProgram.name,
+          isActive: dosen.studyProgram.isActive,
+          facultyId: dosen.studyProgram.facultyId,
         }
       : undefined,
   };
