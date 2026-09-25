@@ -298,6 +298,7 @@ model SidangRegistration {
   dosenPenguji1Id              String?                       @map("dosen_penguji_1_id")
   dosenPenguji2                Dosen?                        @relation("Penguji2", fields: [dosenPenguji2Id], references: [id]) // Dosen Penguji 2
   dosenPenguji2Id              String?                       @map("dosen_penguji_2_id")
+  isLocked                     Boolean                       @default(false) @map("is_locked")
   // Tolak Permohonan
   message                      String?
   isEdit                       DateTime?                     @map("is_edit")
