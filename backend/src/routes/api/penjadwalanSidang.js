@@ -84,7 +84,7 @@ router.get("/", verifyToken, listPenjadwalanSidang);
  * @swagger
  * /api/penjadwalan-sidang/{id}/toggle-lock:
  *   patch:
- *     summary: Toggle or set lock status of sidang registration (Admin only)
+ *     summary: Toggle lock status of sidang registration (Admin only)
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -95,16 +95,6 @@ router.get("/", verifyToken, listPenjadwalanSidang);
  *         schema:
  *           type: string
  *         description: Sidang registration ID (UUID)
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               isLocked:
- *                 type: boolean
- *                 description: Explicit lock status (optional, toggles current value if omitted)
  *     responses:
  *       200:
  *         description: Status kunci pendaftaran sidang berhasil diperbarui

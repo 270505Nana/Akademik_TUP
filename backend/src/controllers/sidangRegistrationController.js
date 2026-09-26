@@ -1161,7 +1161,6 @@ const rejectSidangRegistration = asyncHandler(async (req, res) => {
 // Toggle Lock Sidang Registration (Admin Only)
 const toggleLockSidangRegistration = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { isLocked } = req.body || {};
 
   const registration = await prisma.sidangRegistration.findUnique({
     where: { id },
@@ -1172,19 +1171,16 @@ const toggleLockSidangRegistration = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
-  const newLockStatus =
-    typeof isLocked === "boolean" ? isLocked : !registration.isLocked;
-
   const updatedRegistration = await prisma.sidangRegistration.update({
     where: { id },
     data: {
-      isLocked: newLockStatus,
+      isLocked: !registration.isLocked,
     },
     include: sidangInclude,
   });
 
   res.json({
-    message: newLockStatus
+    message: updatedRegistration.isLocked
       ? "Pendaftaran sidang berhasil dikunci"
       : "Kunci pendaftaran sidang berhasil dibuka",
     data: mapSidangRegistrationToFrontend(updatedRegistration, req),
