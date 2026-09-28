@@ -13,6 +13,8 @@ import {
   rejectPermohonanSkta,
   generateDokumenValidasiSkta,
   uploadDokumenValidasiSkta,
+  generateFormulirSkta,
+  uploadFormulirSkta,
   getLatestPermohonanSktaByMahasiswaId,
   downloadValidasi,
   exportSktaZip,
@@ -559,9 +561,6 @@ router.put(
  *             required:
  *               - dokumenFile
  *             properties:
- *               name:
- *                 type: string
- *                 description: Custom display name for the document
  *               dokumenFile:
  *                 type: string
  *                 format: binary
@@ -590,6 +589,77 @@ router.post(
     { name: "file", maxCount: 1 },
   ]),
   uploadDokumenValidasiSkta
+);
+
+/**
+ * @swagger
+ * /api/permohonan-skta/{id}/generate/formulir-skta:
+ *   get:
+ *     summary: Retrieve existing Formulir SKTA from database
+ *     tags: [Permohonan SKTA]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Retrieve existing Formulir SKTA
+ *       400:
+ *         description: Formulir SKTA hanya dapat diakses untuk permohonan yang sudah disubmit
+ *       404:
+ *         description: Berkas formulir SKTA not found
+ *   post:
+ *     summary: Upload and store generated Formulir SKTA file in berkasMahasiswa
+ *     tags: [Permohonan SKTA]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - dokumenFile
+ *             properties:
+ *               dokumenFile:
+ *                 type: string
+ *                 format: binary
+ *                 description: PDF file of the formulir SKTA document
+ *     responses:
+ *       201:
+ *         description: Berkas formulir SKTA berhasil diunggah
+ *       400:
+ *         description: Validation error atau permohonan masih draft
+ *       404:
+ *         description: Permohonan SKTA not found
+ */
+router.get(
+  "/:id/generate/formulir-skta",
+  verifyToken,
+  isAdmin,
+  generateFormulirSkta
+);
+
+router.post(
+  "/:id/generate/formulir-skta",
+  verifyToken,
+  isAdmin,
+  upload("berkas-mahasiswa").fields([
+    { name: "dokumenFile", maxCount: 1 },
+    { name: "file", maxCount: 1 },
+  ]),
+  uploadFormulirSkta
 );
 
 /**
