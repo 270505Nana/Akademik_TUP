@@ -1,4 +1,3 @@
-
 /* --- Container Filter & Search --- */
 .mb-filter-container {
   background: #FFFFFF;
@@ -109,9 +108,10 @@
   text-align: left;
 }
 
+/* Ukuran & padding header disamakan dengan .ps-th di halaman Penjadwalan Sidang */
 .mb-table-th {
-  padding: 14px 20px;
-  font-size: 11px;
+  padding: 8px 10px;
+  font-size: 10.5px;
   font-weight: 800;
   color: #64748B;
   text-transform: uppercase;
@@ -121,9 +121,21 @@
 }
 
 .mb-table-th.col-num {
-  padding: 14px 18px;
+  padding: 8px 10px;
   width: 48px;
   text-align: center;
+}
+
+/* Kolom Mahasiswa: cukup untuk avatar + nama + NIM */
+.mb-table-th.col-student {
+  width: 200px;
+  min-width: 180px;
+}
+
+/* Kolom Judul Tugas Akhir: lebar besar agar teks panjang nyaman */
+.mb-table-th.col-thesis {
+  min-width: 280px;
+  padding: 8px 16px;
 }
 
 .mb-table-th.col-prodi {
@@ -136,7 +148,7 @@
 }
 
 .mb-table-th.col-actions {
-  width: 160px;
+  width: 130px;
   text-align: center;
 }
 
@@ -149,69 +161,71 @@
 }
 
 .mb-table-td {
-  padding: 20px;
+  padding: 8px 10px;
   vertical-align: top;
 }
 
 .mb-table-td.col-num {
-  padding: 20px 18px;
+  padding: 8px 10px;
   text-align: center;
-  font-size: 13px;
+  font-size: 11.5px;
   color: #64748B;
   font-weight: 600;
+  vertical-align: middle;
+}
+
+.mb-table-td.col-student {
+  vertical-align: middle;
+}
+
+.mb-table-td.col-thesis {
+  padding: 8px 16px;
+  vertical-align: middle;
 }
 
 .mb-student-flex {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  align-items: center;
+  gap: 7px;
 }
 
+/* Avatar diperkecil ke ukuran yang sama dengan .ps-avatar */
 .mb-avatar-initials {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #FEE2E2;
   color: #991B1B;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border: 1.5px solid #E2E8F0;
 }
 
 .mb-student-name {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 12px;
   color: #111827;
   margin-bottom: 1px;
 }
 
 .mb-student-nim {
-  font-size: 12px;
+  font-size: 11px;
   color: #6B7280;
-  margin-bottom: 8px;
-}
-
-.mb-thesis-label {
-  font-size: 10px;
-  font-weight: 800;
-  color: #94A3B8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 2px;
 }
 
 .mb-thesis-title {
-  font-size: 13px;
+  font-size: 11.5px;
   color: #334155;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .mb-prodi-text {
-  font-size: 13px;
+  font-size: 11.5px;
   color: #374151;
   font-weight: 500;
 }
@@ -231,21 +245,21 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
-  min-width: 120px;
+  align-items: center;
 }
 
 .mb-btn-action {
-  padding: 7px 12px;
+  padding: 6px 10px;
   border-radius: 8px;
   border: 1.5px solid #D1D5DB;
   background: #FFFFFF;
   color: #374151;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
@@ -256,6 +270,25 @@
   color: #C0182A;
 }
 
+/* --- Tombol Lihat SK TA: warna merah brand --- */
+.mb-btn-skta {
+  background: #C0182A;
+  color: #FFFFFF;
+  border-color: #C0182A;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.mb-btn-skta:hover {
+  background: #8B0F1E;
+  border-color: #8B0F1E;
+  color: #FFFFFF;
+}
+
+/* --- Empty & Loading States --- */
 .mb-empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -263,14 +296,14 @@
 }
 
 .mb-empty-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #374151;
   margin-bottom: 4px;
 }
 
 .mb-empty-desc {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .mb-loading-state {
@@ -293,10 +326,43 @@
   }
 }
 
-/* --- Pagination Footer --- */
-/* --- Pagination Footer --- */
+/* --- Table row border & empty state icon --- */
+.mb-table-tr.has-border {
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.mb-student-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mb-table-td-center {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.mb-empty-icon {
+  margin-bottom: 8px;
+}
+
+.mb-loading-text {
+  font-size: 13px;
+}
+
+.mb-empty-title-error {
+  color: #991B1B;
+}
+
+.mb-empty-desc-error {
+  margin-bottom: 12px;
+}
+
+.mb-btn-retry {
+  margin-inline: auto;
+}
+
 .mb-pagination-container {
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-top: 1px solid #E9EDF5;
   display: flex;
   align-items: center;
@@ -307,12 +373,6 @@
   border-radius: 0 0 12px 12px;
 }
 
-.mb-pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
 .mb-pagination-info {
   font-size: 13px;
   color: #64748B;
@@ -320,6 +380,12 @@
 
 .mb-pagination-info strong {
   color: #111827;
+}
+
+.mb-pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .mb-pagination-controls {
@@ -376,7 +442,7 @@
 }
 
 .mb-page-btn.num-btn.active {
-  background: #7A1F2B;
+  background: #C0182A;
   color: #FFFFFF;
   font-weight: 700;
 }
@@ -400,7 +466,61 @@
   cursor: pointer;
 }
 
-/* --- Modals (SK TA & Log) --- */
+/* --- Page Header --- */
+.mb-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.mb-page-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px;
+}
+
+.mb-page-desc {
+  font-size: 13px;
+  color: #6B7280;
+  margin: 0;
+}
+
+.mb-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mb-btn-export {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #C0182A;
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(192, 24, 42, 0.25);
+  transition: background 0.2s;
+}
+
+.mb-btn-export:hover:not(:disabled) {
+  background: #8B0F1E;
+}
+
+.mb-btn-export:disabled {
+  background: #9CA3AF;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* --- Modals (SK TA) --- */
 .mb-modal-overlay {
   position: fixed;
   inset: 0;
@@ -418,23 +538,15 @@
   border-radius: 16px;
   width: 100%;
   max-width: 860px;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
   overflow: hidden;
+  max-height: 90vh;
 }
 
-.mb-log-modal-content {
-  background: #FFFFFF;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 680px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
+.mb-modal-content.is-terbit {
+  height: 88vh;
 }
 
 .mb-modal-header {
@@ -497,9 +609,15 @@
 
 .mb-modal-body-pdf {
   flex: 1;
-  min-height: 480px;
   background: #525659;
   position: relative;
+  min-height: 480px;
+}
+
+.mb-modal-body-pdf.is-unreleased {
+  flex: none;
+  min-height: unset;
+  background: #FFFFFF;
 }
 
 .mb-modal-footer {
@@ -512,156 +630,6 @@
   flex-shrink: 0;
 }
 
-.mb-pdf-unreleased-wrap {
-  padding: 48px 24px;
-  background: #FFFFFF;
-  text-align: center;
-}
-
-.mb-pdf-unreleased-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #FEE2E2;
-  color: #991B1B;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-}
-
-.mb-log-header-tag {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #C0182A;
-  background: #FFF0F1;
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-
-.mb-log-body-scroll {
-  padding: 20px 24px;
-  overflow-y: auto;
-  max-height: 440px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/* --- Page Header --- */
-.mb-page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.mb-page-title {
-  font-size: 24px;
-  font-weight: 800;
-  color: #111827;
-  margin: 0 0 6px;
-}
-
-.mb-page-desc {
-  font-size: 13px;
-  color: #6B7280;
-  margin: 0;
-}
-
-.mb-page-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.mb-btn-export {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 18px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  background: #C0182A;
-  color: #FFFFFF;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(192, 24, 42, 0.25);
-  transition: background 0.2s;
-}
-
-.mb-btn-export:hover:not(:disabled) {
-  background: #8B0F1E;
-}
-
-.mb-btn-export:disabled {
-  background: #9CA3AF;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-/* --- Table row border & empty state icon --- */
-.mb-table-tr.has-border {
-  border-bottom: 1px solid #F1F5F9;
-}
-
-.mb-student-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.mb-table-td-center {
-  text-align: center;
-}
-
-.mb-empty-icon {
-  margin-bottom: 8px;
-}
-
-.mb-empty-title-error {
-  color: #991B1B;
-}
-
-.mb-empty-desc-error {
-  margin-bottom: 12px;
-}
-
-.mb-btn-retry {
-  margin-inline: auto;
-}
-
-/* --- Pagination Footer (tambahan) --- */
-.mb-pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.mb-page-ellipsis {
-  padding: 0 4px;
-  color: #94A3B8;
-  font-size: 13px;
-}
-
-.mb-page-btn.nav-btn:hover:not(:disabled) {
-  border-color: #C0182A;
-  color: #C0182A;
-}
-
-.mb-page-btn.num-btn.active {
-  background: #7A1F2B;
-}
-
-/* --- SKTA Modal: dynamic height --- */
-.mb-modal-content.is-terbit {
-  height: 88vh;
-}
-
-/* --- SKTA Modal: loading state --- */
 .mb-pdf-loading-wrap {
   display: flex;
   flex-direction: column;
@@ -678,7 +646,6 @@
   font-weight: 600;
 }
 
-/* --- SKTA Modal: error state --- */
 .mb-pdf-error-wrap {
   display: flex;
   flex-direction: column;
@@ -699,13 +666,29 @@
   font-weight: 700;
 }
 
-/* --- SKTA Modal: iframe --- */
 .mb-pdf-iframe {
   border: none;
   display: block;
 }
 
-/* --- SKTA Modal: unreleased state --- */
+.mb-pdf-unreleased-wrap {
+  padding: 48px 24px;
+  background: #FFFFFF;
+  text-align: center;
+}
+
+.mb-pdf-unreleased-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #FEE2E2;
+  color: #991B1B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
 .mb-pdf-unreleased-title {
   font-size: 16px;
   font-weight: 800;
@@ -716,13 +699,11 @@
 .mb-pdf-unreleased-desc {
   font-size: 13px;
   color: #6B7280;
-  margin: 0;
+  margin: 0 auto;
   max-width: 440px;
-  margin-inline: auto;
   line-height: 1.5;
 }
 
-/* --- SKTA Modal: footer buttons --- */
 .mb-modal-btn-close {
   padding: 8px 20px;
   border-radius: 8px;
@@ -730,7 +711,7 @@
 }
 
 .mb-modal-btn-download {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 7px;
   padding: 8px 22px;
@@ -739,199 +720,45 @@
   font-weight: 700;
   border: none;
   cursor: pointer;
+  background: #C0182A;
+  color: #FFFFFF;
+  transition: background 0.2s;
 }
 
-/* --- Log Modal: header --- */
-.mb-log-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #E9EDF5;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  background: #FFFFFF;
+.mb-modal-btn-download:hover {
+  background: #8B0F1E;
 }
 
-.mb-log-header-top-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.mb-log-header-count {
-  font-size: 12px;
-  color: #6B7280;
-}
-
-.mb-log-header-name {
-  font-size: 18px;
-  font-weight: 800;
-  color: #111827;
-  margin: 0;
-}
-
-.mb-log-header-sub {
-  font-size: 12px;
-  color: #6B7280;
-  margin: 2px 0 0;
-}
-
-/* --- Log Modal: judul TA box --- */
-.mb-log-thesis-box {
-  padding: 14px 24px;
-  background: #F8FAFC;
-  border-bottom: 1px solid #E9EDF5;
+.mb-status-current {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 4px;
 }
 
-.mb-log-thesis-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748B;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.mb-status-current-item {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  align-items: center;
+  column-gap: 8px;
 }
 
-.mb-log-thesis-title {
-  font-size: 13px;
+.mb-status-current-label {
+  font-size: 9px;
   font-weight: 600;
-  color: #1E293B;
-  line-height: 1.45;
-}
-
-/* --- Log Modal: empty state --- */
-.mb-log-empty {
-  text-align: center;
-  padding: 40px 20px;
   color: #9CA3AF;
-}
-
-.mb-log-empty-icon {
-  margin-bottom: 8px;
-}
-
-.mb-log-empty-title {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.mb-log-empty-desc {
-  font-size: 12px;
-}
-
-/* --- Log Modal: log card --- */
-.mb-log-card {
-  border: 1px solid #E9EDF5;
-  border-radius: 12px;
-  padding: 16px 18px;
-  background: #FFFFFF;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-}
-
-.mb-log-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.mb-log-session-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mb-log-session-badge {
-  font-size: 12px;
-  font-weight: 800;
-  color: #C0182A;
-  background: #FFF0F1;
-  padding: 3px 10px;
-  border-radius: 6px;
-}
-
-.mb-log-date {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #64748B;
-}
-
-.mb-log-status-badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 9999px;
-}
-
-.mb-log-status-badge.is-selesai {
-  background: #DCFCE7;
-  color: #15803D;
-  border: 1px solid #BBF7D0;
-}
-
-.mb-log-status-badge.is-progress {
-  background: #DBEAFE;
-  color: #1D4ED8;
-  border: 1px solid #BFDBFE;
-}
-
-.mb-log-topic-wrap {
-  margin-bottom: 8px;
-}
-
-.mb-log-topic-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #94A3B8;
   text-transform: uppercase;
-  margin-bottom: 2px;
+  letter-spacing: 0.03em;
+  line-height: 1;
 }
 
-.mb-log-topic-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1E293B;
-  line-height: 1.4;
-}
-
-.mb-log-notes-box {
-  background: #F8FAFC;
-  border-left: 3px solid #C0182A;
-  border-radius: 0 8px 8px 0;
-  padding: 10px 12px;
-}
-
-.mb-log-notes-label {
+.mb-status-current .mb-status-badge {
+  display: inline-block;
   font-size: 11px;
-  font-weight: 700;
-  color: #C0182A;
-  margin-bottom: 2px;
-}
-
-.mb-log-notes-value {
-  font-size: 12px;
-  color: #475569;
-  line-height: 1.5;
-}
-
-/* --- Log Modal: footer --- */
-.mb-log-footer {
-  padding: 14px 24px;
-  border-top: 1px solid #E9EDF5;
-  background: #F8FAFC;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.mb-log-footer-btn {
-  padding: 8px 22px;
-  border-radius: 8px;
-  font-size: 13px;
   font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  text-align: center;
 }

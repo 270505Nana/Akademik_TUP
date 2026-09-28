@@ -19,6 +19,10 @@ import transkripUploadRouter from './transkripUpload.js';
 import ruanganRouter from './ruangan.js';
 import mahasiswaBimbinganRouter from './mahasiswaBimbingan.js';
 import healthRouter from './health.js';
+import cloRouter from './clo.js';
+import subcloRouter from './subclo.js';
+import jenisAsesmenRouter from './jenisAsesmen.js';
+import skemaPenilaiRouter from './skemaPenilai.js';
 
 const router = express.Router();
 
@@ -42,5 +46,9 @@ router.use("/yudisium-registrations", yudisiumRegistrationRouter);
 router.use("/skl", sklUploadRouter);
 router.use("/transkrip", transkripUploadRouter);
 router.use("/ruangan", ruanganRouter);
+router.use("/clo", cloRouter);
+router.use("/subclo", subcloRouter);
+router.use("/jenis-asesmen", jenisAsesmenRouter);
+router.use("/skema-penilai", skemaPenilaiRouter);
 
 export default router;

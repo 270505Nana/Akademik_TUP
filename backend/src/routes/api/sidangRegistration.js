@@ -14,6 +14,7 @@ import {
   downloadSidangRegistrationFile,
   approveSidangRegistration,
   rejectSidangRegistration,
+  toggleLockSidangRegistration,
 } from '../../controllers/sidangRegistrationController.js';
 import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 
@@ -28,11 +29,27 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/sidang-registrations:
  *   get:
- *     summary: Get all sidang registrations (paginated)
+ *     summary: Get all sidang registrations (with search, studyProgramId filter, sort, and pagination)
  *     tags: [Sidang Registration]
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search keyword across mahasiswa name, NIM, or judul tugas akhir (Indonesia / Inggris)
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: string
+ *         description: Filter by Study Program ID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [newest, oldest, nameAsc, nameDesc, nimAsc, nimDesc, ipkAsc, ipkDesc, sksAsc, sksDesc, takAsc, takDesc, tglSidangAsc, tglSidangDesc, submittedAtAsc, submittedAtDesc, updatedAtAsc, updatedAtDesc]
+ *         description: Sort option (newest for baru-lama, oldest for lama-baru, nameAsc/nameDesc, nimAsc/nimDesc, ipkAsc/ipkDesc, sksAsc/sksDesc, takAsc/takDesc, tglSidangAsc/tglSidangDesc, submittedAtAsc/submittedAtDesc, updatedAtAsc/updatedAtDesc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -471,5 +488,41 @@ router.put("/:id/approve", verifyToken, isAdmin, approveSidangRegistration);
  *         description: Registration or admin not found
  */
 router.put("/:id/reject", verifyToken, isAdmin, rejectSidangRegistration);
+
+/**
+ * @swagger
+ * /api/sidang-registrations/{id}/toggle-lock:
+ *   patch:
+ *     summary: Toggle lock status of sidang registration (Admin only)
+ *     tags: [Sidang Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     responses:
+ *       200:
+ *         description: Status kunci pendaftaran sidang berhasil diperbarui
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya admin yang dapat mengakses)
+ *       404:
+ *         description: Sidang registration not found
+ */
+router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistration);
 
 export default router;

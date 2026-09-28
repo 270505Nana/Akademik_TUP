@@ -63,6 +63,33 @@ export const determineBimbinganStatus = (reg) => {
 
   return "SK Belum Terbit";
 };
+//sk2
+export const determineStatusSk = (reg) => {
+  const latestSkta = reg.mahasiswa?.permohonanSkta?.[0];
+  const now = new Date();
+  const expDate = reg.sktaExpDate || latestSkta?.expDate;
+
+  if (expDate && new Date(expDate) <= now) return "Kadaluarsa";
+  if (Boolean(latestSkta?.sktaUploadPath)) return "SK Terbit";
+  return "SK Belum Terbit";
+};
+//sidang
+export const determineStatusRegistrasi = (reg) => {
+  if (reg.isEdit !== null && reg.isEdit !== undefined) return "Mengirim Revisi";
+  if ((!reg.isDraft || reg.submittedAt !== null) && !reg.sidangPeriodId) return "Dalam Proses";
+  if (reg.sidangPeriodId) return "Disetujui / Dijadwalkan";
+  return "Menunggu Pendaftaran";
+};
+//yudi
+export const determineStatusYudisium = (reg) => {
+  const yudisium = reg.mahasiswa?.yudisiumRegistrations?.[0];
+  
+  if (!yudisium) return "Belum Daftar";
+  if (yudisium.status === "APPROVED" || yudisium.status === "Disetujui") return "Lulus Yudisium";
+  if (yudisium.status === "REVISION" || yudisium.status === "Revisi") return "Revisi Berkas";
+  
+  return "Dalam Proses Yudisium";
+};
 
 /**
  * Mapping data pendaftaran sidang mahasiswa bimbingan ke format response API
@@ -83,6 +110,11 @@ export const mapMahasiswaBimbinganToFrontend = (reg, req) => {
     judulTugasAkhirIndonesia: reg.judulTugasAkhirIndonesia,
     judulTugasAkhirInggris: reg.judulTugasAkhirInggris,
     status: determineBimbinganStatus(reg),
+
+    statusRegistrasi: determineStatusRegistrasi(reg),
+    statusSk: determineStatusSk(reg),
+    statusYudisium: determineStatusYudisium(reg),
+
     sktaDownloadUrl,
   };
 };

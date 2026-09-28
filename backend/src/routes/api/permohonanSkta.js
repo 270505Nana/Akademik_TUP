@@ -257,25 +257,46 @@ router.post(
 
 /**
  * @swagger
+ * /api/permohonan-skta/mahasiswa:
+ *   get:
+ *     summary: Get latest Permohonan SKTA for current authenticated mahasiswa
+ *     tags: [Permohonan SKTA]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Latest Permohonan SKTA data retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
+ *       404:
+ *         description: Permohonan SKTA data not found
+ *
  * /api/permohonan-skta/mahasiswa/{mahasiswaId}:
  *   get:
- *     summary: Get latest Permohonan SKTA by mahasiswa ID
+ *     summary: Get latest Permohonan SKTA by mahasiswa ID or User ID (defaults to login user if omitted)
  *     tags: [Permohonan SKTA]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: mahasiswaId
- *         required: true
+ *         required: false
  *         schema:
  *           type: string
- *         description: Mahasiswa ID (UUID)
+ *         description: Mahasiswa ID or User ID (UUID). If omitted, falls back to current login user.
  *     responses:
  *       200:
  *         description: Latest Permohonan SKTA data retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
  *       404:
  *         description: Permohonan SKTA data not found
  */
+router.get("/mahasiswa", verifyToken, getLatestPermohonanSktaByMahasiswaId);
 router.get("/mahasiswa/:mahasiswaId", verifyToken, getLatestPermohonanSktaByMahasiswaId);
 
 /**

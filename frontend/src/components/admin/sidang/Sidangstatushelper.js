@@ -85,7 +85,9 @@ export const determineSidangStatus = (registration, response, period) => {
   // 4. isDraft === false, sidangPeriodId ada + period match → SIAP_SIDANG / PENDAFTARAN_DITERIMA
   const matchedPeriod = period || registration.sidangPeriod;
   if (!registration.isDraft && registration.sidangPeriodId && matchedPeriod) {
-    return matchedPeriod.isOpen
+    // isOpen dari periodMap (GET /api/sidang-periods), fallback ke isActive jika isOpen tidak tersedia
+    const isOpen = matchedPeriod.isOpen ?? matchedPeriod.isActive ?? false;
+    return isOpen
       ? STATUS_SIDANG.SIAP_SIDANG
       : STATUS_SIDANG.PENDAFTARAN_DITERIMA;
   }

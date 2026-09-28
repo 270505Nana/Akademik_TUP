@@ -1,4 +1,5 @@
 import asyncHandler from "express-async-handler";
+import excel from "exceljs";
 import prisma from "../config/prisma.js";
 import {
   sendValidationError,
@@ -232,6 +233,13 @@ const setPengujiSidang = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
+  if (registration.isLocked) {
+    res.status(400);
+    throw new Error(
+      "Pendaftaran sidang telah dikunci oleh admin. Dosen penguji tidak dapat diubah.",
+    );
+  }
+
   const [dosen1, dosen2] = await Promise.all([
     prisma.dosen.findUnique({
       where: { id: dosenPenguji1Id },
@@ -373,6 +381,17 @@ const batchSetPengujiSidang = asyncHandler(async (req, res) => {
       res.status(404);
       throw new Error(`Pendaftaran sidang dengan ID ${id} tidak ditemukan`);
     }
+  }
+
+  const lockedRegistrations = registrations.filter((reg) => reg.isLocked);
+  if (lockedRegistrations.length > 0) {
+    const lockedNames = lockedRegistrations
+      .map((reg) => reg.mahasiswa?.user?.name || reg.id)
+      .join(", ");
+    res.status(400);
+    throw new Error(
+      `Tidak dapat mengubah dosen penguji karena pendaftaran sidang berikut telah dikunci oleh admin: ${lockedNames}`,
+    );
   }
 
   const allDosenIds = new Set();
@@ -767,10 +786,138 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
   });
 });
 
+const exportJadwalSidang = asyncHandler(async (req, res) => {
+
+  let targetPeriodId = req.query.sidangPeriodId;
+  let selectedPeriod = null;
+
+  if (targetPeriodId) {
+    selectedPeriod = await prisma.sidangPeriod.findUnique({
+      where: { id: targetPeriodId },
+    });
+  } else {
+    selectedPeriod = await prisma.sidangPeriod.findFirst({
+      where: { deletedAt: null },
+      orderBy: { endDate: "desc" },
+    });
+
+    if (selectedPeriod) {
+      targetPeriodId = selectedPeriod.id;
+    }
+  }
+  const whereClause = {
+    deletedAt: null,
+    tglSidang: { not: null },
+  };
+  if (targetPeriodId) {
+    whereClause.sidangPeriodId = targetPeriodId;
+  }
+
+  const jadwalList = await prisma.sidangRegistration.findMany({
+    where: whereClause,
+    include: penjadwalanSidangInclude,
+    orderBy: { tglSidang: "asc" }
+  });
+  const workbook = new excel.Workbook();
+  const worksheet = workbook.addWorksheet("Jadwal Sidang");
+
+  worksheet.columns = [
+    { header: "NIM", key: "nim", width: 15 },
+    { header: "TANGGAL", key: "tanggal", width: 15 },
+    { header: "RUANGAN", key: "ruangan", width: 15 },
+    { header: "SHIFT", key: "shift", width: 10 },
+    { header: "PENGUJI I", key: "penguji1", width: 15 },
+    { header: "PENGUJI II", key: "penguji2", width: 15 },
+  ];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  jadwalList.forEach((jadwal) => {
+    let formattedDate = '';
+    let formattedTime = '';
+
+    if (jadwal.tglSidang) {
+      const d = new Date(jadwal.tglSidang);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = String(d.getFullYear()).slice(-2);
+
+      formattedDate = `${day}-${month}-${year}`;
+
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      formattedTime = `${hours}:${mins}`;
+    }
+
+    worksheet.addRow({
+      nim: jadwal.mahasiswa?.nim || '',
+      tanggal: formattedDate,
+      ruangan: jadwal.ruanganSidang?.name || '',
+      shift: formattedTime,
+      penguji1: jadwal.dosenPenguji1?.kodeDosen || '',
+      penguji2: jadwal.dosenPenguji2?.kodeDosen || '',
+    });
+  });
+
+  let filename = "TAPA_Sidang.xlsx";
+
+  if (selectedPeriod) {
+    const sanitizePart = (str) =>
+      (str || "")
+        .replace(/[/\\]/g, "")
+        .replace(/[:*?"<>|]/g, "")
+        .replace(/\s+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    const tahunAjaran = sanitizePart(selectedPeriod.period);
+    const namaPeriode = sanitizePart(selectedPeriod.name);
+    filename = `TAPA_Sidang_${tahunAjaran}_${namaPeriode}.xlsx`;
+  }
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${filename}"`,
+  );
+  await workbook.xlsx.write(res);
+  res.end();
+});
+
+// Toggle Lock Sidang Registration (Admin Only)
+const toggleLockSidangRegistration = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!registration || registration.deletedAt) {
+    res.status(404);
+    throw new Error("Pendaftaran sidang tidak ditemukan");
+  }
+
+  const updatedRegistration = await prisma.sidangRegistration.update({
+    where: { id },
+    data: {
+      isLocked: !registration.isLocked,
+    },
+    include: penjadwalanSidangInclude,
+  });
+
+  res.json({
+    message: updatedRegistration.isLocked
+      ? "Pendaftaran sidang berhasil dikunci"
+      : "Kunci pendaftaran sidang berhasil dibuka",
+    data: mapPenjadwalanSidangToFrontend(updatedRegistration),
+  });
+});
+
 export {
   listPenjadwalanSidang,
   setPengujiSidang,
   batchSetPengujiSidang,
   setJadwalSidang,
   batchSetJadwalSidang,
+  exportJadwalSidang,
+  toggleLockSidangRegistration,
 };

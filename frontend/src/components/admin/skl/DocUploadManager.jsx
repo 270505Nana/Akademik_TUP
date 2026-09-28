@@ -61,6 +61,18 @@ const getPeriodStatus = (start, end, isOpen) => {
   return isOpen ? 'Aktif' : 'Nonaktif';
 };
 
+const formatPeriodName = (p) => {
+  if (!p) return '-';
+  const nameLower = (p.name || '').toLowerCase();
+  const semester = nameLower.includes('genap') ? 'Genap'
+    : (nameLower.includes('ganjil') ? 'Ganjil' : null);
+
+  if (semester) {
+    return `Semester ${semester} ${p.period || ''}`.trim();
+  }
+  return p.name || (p.period ? `Tahun Ajaran ${p.period}` : '-');
+};
+
 // Helper untuk mem-parsing response periode yudisium baik berupa flat list maupun pair category
 const parseYudisiumPeriods = (raw) => {
   const periodsArray = Array.isArray(raw) ? raw : (raw?.data ?? []);
@@ -68,7 +80,6 @@ const parseYudisiumPeriods = (raw) => {
   periodsArray.forEach((item) => {
     if (!item) return;
     if ('pelaksanaan' in item || 'pendaftaran' in item) {
-      // Prioritaskan pelaksanaan yudisium untuk SKL/Transkrip, atau fallback ke pendaftaran jika pelaksanaan belum ada
       const p = item.pelaksanaan || item.pendaftaran;
       if (p && p.id) result.push(p);
     } else if (item.id) {
@@ -191,7 +202,7 @@ const DocUploadManager = ({
   useEffect(() => {
     getStudyPrograms()
       .then((data) => setProdiList(Array.isArray(data) ? data : []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   /*  Fetch data mahasiswa dengan filter server-side yudisiumPeriodId  */
@@ -223,8 +234,7 @@ const DocUploadManager = ({
           nim: mhs.nim ?? '-',
           name: mhs.user?.name ?? mhs.name ?? '-',
           prodi: mhs.studyProgram?.name ?? '-',
-          periode: periodObj?.name ?? reg.yudisiumPeriod?.name ?? reg.yudisiumPeriodId ?? '-',
-          periodeId: periodObj?.id ?? reg.yudisiumPeriodId ?? null,
+          periode: periodObj ? formatPeriodName(periodObj) : (reg.yudisiumPeriodId ?? '-'), periodeId: periodObj?.id ?? reg.yudisiumPeriodId ?? null,
           periodeEndDate: periodObj?.endDate ?? null,
           uploaded: false,
           uploadId: null,
@@ -319,11 +329,11 @@ const DocUploadManager = ({
       .filter((s) => {
         if (!searchDebounced) return true;
         return s.name.toLowerCase().includes(searchDebounced) ||
-               s.nim.toLowerCase().includes(searchDebounced);
+          s.nim.toLowerCase().includes(searchDebounced);
       })
       .filter((s) => {
         if (!filterStatus) return true;
-        if (filterStatus === 'uploaded')   return s.uploaded === true;
+        if (filterStatus === 'uploaded') return s.uploaded === true;
         if (filterStatus === 'unuploaded') return s.uploaded === false;
         return true;
       })
@@ -331,12 +341,12 @@ const DocUploadManager = ({
   }, [students, searchDebounced, filterStatus, filterProdi]);
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
-  const paginated  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus, filterProdi, filterPeriodeId]);
 
   const getStatusCount = (key) => {
-    if (key === 'uploaded')   return students.filter((s) => s.uploaded).length;
+    if (key === 'uploaded') return students.filter((s) => s.uploaded).length;
     if (key === 'unuploaded') return students.filter((s) => !s.uploaded).length;
     return students.length;
   };
@@ -391,8 +401,8 @@ const DocUploadManager = ({
   };
 
   const handleFileChange = (e) => validateFile(e.target.files[0]);
-  const handleDragOver  = (e) => e.preventDefault();
-  const handleDrop      = (e) => { e.preventDefault(); validateFile(e.dataTransfer.files[0]); };
+  const handleDragOver = (e) => e.preventDefault();
+  const handleDrop = (e) => { e.preventDefault(); validateFile(e.dataTransfer.files[0]); };
 
   /* Kirim file ke API lalu update state lokal */
   const handleSaveUpload = async () => {
@@ -412,13 +422,13 @@ const DocUploadManager = ({
         prev.map((s) =>
           s.mahasiswaId === selectedStudent.mahasiswaId
             ? {
-                ...s,
-                uploaded: true,
-                uploadId: result?.id ?? s.uploadId,
-                uploadDate: formatDateId(result?.updatedAt ?? result?.createdAt ?? new Date()),
-                fileName: result?.name ?? docName,
-                downloadUrl: result?.downloadUrl ?? null,
-              }
+              ...s,
+              uploaded: true,
+              uploadId: result?.id ?? s.uploadId,
+              uploadDate: formatDateId(result?.updatedAt ?? result?.createdAt ?? new Date()),
+              fileName: result?.name ?? docName,
+              downloadUrl: result?.downloadUrl ?? null,
+            }
             : s
         )
       );
@@ -588,7 +598,10 @@ const DocUploadManager = ({
                           <span>Loading periode...</span>
                         ) : (
                           <span>
-                            {periodeList.find(p => p.id === filterPeriodeId)?.name || 'Semua Periode'}
+                            {(() => {
+                              const selected = periodeList.find(p => p.id === filterPeriodeId);
+                              return selected ? formatPeriodName(selected) : 'Semua Periode';
+                            })()}
                           </span>
                         )}
                         <ChevronDown
@@ -630,7 +643,7 @@ const DocUploadManager = ({
                                     className={`sk-prodi-dropdown-option ${filterPeriodeId === p.id ? 'selected' : ''}`}
                                     onClick={() => handleSelectPeriode(p.id)}
                                   >
-                                    <span>{p.name || '-'}</span>
+                                    <span>{formatPeriodName(p)}</span>
                                     {filterPeriodeId === p.id && <Check size={14} />}
                                   </div>
                                 );
@@ -647,16 +660,16 @@ const DocUploadManager = ({
                       onClick={handleRefreshPeriods}
                       disabled={loadingPeriods}
                       title="Refresh periode yudisium"
-                      style={{ 
-                        padding: '5px 8px', 
+                      style={{
+                        padding: '5px 8px',
                         fontSize: '10px',
                         opacity: loadingPeriods ? 0.6 : 1,
                         minWidth: 'auto',
                         marginLeft: 4
                       }}
                     >
-                      <RefreshCw size={11} style={{ 
-                        animation: loadingPeriods ? 'spin 1s linear infinite' : 'none' 
+                      <RefreshCw size={11} style={{
+                        animation: loadingPeriods ? 'spin 1s linear infinite' : 'none'
                       }} />
                     </button>
                   </div>

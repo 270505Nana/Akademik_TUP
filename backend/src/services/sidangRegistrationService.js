@@ -24,7 +24,18 @@ export const sidangInclude = {
       user: true,
     },
   },
+  dosenPenguji1: {
+    include: {
+      user: true,
+    },
+  },
+  dosenPenguji2: {
+    include: {
+      user: true,
+    },
+  },
   researchGroup: true,
+  ruanganSidang: true,
   admin: {
     include: {
       user: true,
@@ -124,16 +135,20 @@ export const checkSidangEditable = async (registrationId) => {
   return { exists: true, editable: true };
 };
 
-export const getSidangRegistrations = async ({ skip, take }) => {
+export const getSidangRegistrations = async ({
+  where = {},
+  orderBy = { createdAt: "desc" },
+  skip,
+  take,
+} = {}) => {
   const [total, sidangRegistrations] = await Promise.all([
-    prisma.sidangRegistration.count(),
+    prisma.sidangRegistration.count({ where }),
     prisma.sidangRegistration.findMany({
+      where,
       skip,
       take,
       include: sidangInclude,
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy,
     }),
   ]);
 

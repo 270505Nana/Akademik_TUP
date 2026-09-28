@@ -110,9 +110,30 @@ export const getPermohonanSktaById = async (id) => {
   });
 };
 
-export const getLatestPermohonanByMahasiswaId = async (mahasiswaId) => {
+export const getLatestPermohonanByMahasiswaId = async (idOrUserId) => {
+  if (!idOrUserId) return null;
+
+  let resolvedMahasiswaId = idOrUserId;
+
+  const student = await prisma.mahasiswa.findFirst({
+    where: {
+      OR: [{ id: idOrUserId }, { userId: idOrUserId }],
+      deletedAt: null,
+    },
+  });
+
+  if (student) {
+    resolvedMahasiswaId = student.id;
+  }
+
   return await prisma.permohonanSkta.findFirst({
-    where: { mahasiswaId },
+    where: {
+      OR: [
+        { mahasiswaId: resolvedMahasiswaId },
+        { mahasiswa: { userId: idOrUserId } },
+      ],
+      deletedAt: null,
+    },
     orderBy: {
       createdAt: "desc",
     },

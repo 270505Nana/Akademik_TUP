@@ -1,4 +1,5 @@
 import asyncHandler from "express-async-handler";
+import excel from "exceljs";
 import prisma from "../config/prisma.js";
 import path from "path";
 import {
@@ -1386,6 +1387,141 @@ const rejectYudisiumRegistration = asyncHandler(async (req, res) => {
   });
 });
 
+const exportYudisium = asyncHandler(async (req, res) => {
+
+  let targetPeriodId = req.query.yudisiumPeriodId;
+  let selectedPeriod = null;
+
+  if (targetPeriodId) {
+    selectedPeriod = await prisma.yudisiumPeriod.findUnique({
+      where: { id: targetPeriodId },
+    });
+  } else {
+    selectedPeriod = await prisma.yudisiumPeriod.findFirst({
+      where: { category: "yudisium", deletedAt: null },
+      orderBy: { endDate: "desc" },
+    });
+
+    if (selectedPeriod) {
+      targetPeriodId = selectedPeriod.id;
+    }
+  }
+
+  const whereClause = { deletedAt: null };
+  if (targetPeriodId) {
+    whereClause.yudisiumPeriodId = targetPeriodId;
+  }
+
+  const yudisiumList = await prisma.yudisiumRegistration.findMany({
+    where: whereClause,
+    include: {
+      dosenWali: true,
+      mahasiswa: {
+        include: {
+          dosenWali: true,
+          sidangRegistrations: {
+            where: { deletedAt: null, tglSidang: { not: null } },
+            orderBy: { tglSidang: "desc" },
+          take: 1,
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const workbook = new excel.Workbook();
+  const worksheet = workbook.addWorksheet("Yudisium Registrations");
+
+  worksheet.columns = [
+    { header: "NIM", key: "nim", width: 15 },
+    { header: "TANGGAL SIDANG AKAD", key: "tglAkad", width: 22 },
+    { header: "BULAN SIDANG AKAD", key: "blnAkad", width: 20 },
+    { header: "TAHUN SIDANG AKAD", key: "thnAkad", width: 20 },
+    { header: "TANGGAL SIDANG TA/PA", key: "tglTa", width: 22 },
+    { header: "BULAN SIDANG TA/PA", key: "blnTa", width: 20 },
+    { header: "TAHUN SIDANG TA/PA", key: "thnTa", width: 20 },
+    { header: "TANGGAL SURAT", key: "tglSurat", width: 15 },
+    { header: "BULAN SURAT", key: "blnSurat", width: 20 },
+    { header: "TAHUN SURAT", key: "thnSurat", width: 20 },
+    { header: "NOMOR SURAT", key: "noSurat", width: 30 },
+    { header: "KODE DOSEN WALI", key: "kodeDoswal", width: 30 },
+    { header: "PREDIKAT YUDISIUM", key: "predikat", width: 20 },
+    { header: "STATUS", key: "status", width: 15 },
+    { header: "MEDIA JURNAL", key: "mediaJurnal", width: 15 },
+    { header: "TANGGAL UPLOAD JURNAL", key: "tglJurnal", width: 25 },
+    { header: "BULAN UPLOAD JURNAL", key: "blnJurnal", width: 25 },
+    { header: "TAHUN UPLOAD JURNAL", key: "thnJurnal", width: 25 },
+    { header: "AKUN GOOGLE SCHOLAR", key: "scholar", width: 30 },
+  ];
+
+  yudisiumList.forEach((yudisium) => {
+    let tglAkad = "", blnAkad = "", thnAkad = "";
+    if (yudisium.tglSidang) {
+      const d = new Date(yudisium.tglSidang);
+      tglAkad = d.getDate();
+      blnAkad = d.getMonth() + 1;
+      thnAkad = d.getFullYear();
+    }
+
+    let tglTa = "", blnTa = "", thnTa = "";
+    const sidangTA = yudisium.mahasiswa?.sidangRegistrations?.[0];
+    if (sidangTA?.tglSidang) {
+      const d = new Date(sidangTA.tglSidang);
+      tglTa = d.getDate();
+      blnTa = d.getMonth() + 1;
+      thnTa = d.getFullYear();
+    }
+
+    const kodeDosenWali = yudisium.mahasiswa?.dosenWali?.kodeDosen || yudisium.dosenWali?.kodeDosen || "";
+
+    worksheet.addRow({
+      nim: yudisium.mahasiswa?.nim || "",
+      tglAkad,
+      blnAkad,
+      thnAkad,
+      tglTa,
+      blnTa,
+      thnTa,
+      tglSurat: "",
+      blnSurat: "",
+      thnSurat: "",
+      noSurat: "",
+      kodeDoswal: kodeDosenWali,
+      predikat: yudisium.predikat || "",
+      status: yudisium.status || "",
+      mediaJurnal: "",
+      tglJurnal: "",
+      blnJurnal: "",
+      thnJurnal: "",
+      scholar: "",
+    });
+  });
+
+  let filename = "List_Yudisium.xlsx";
+
+  if (selectedPeriod) {
+    const sanitizePart = (str) =>
+      (str || "")
+        .replace(/[/\\]/g, "")
+        .replace(/[:*?"<>|]/g, "")
+        .replace(/\s+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    const tahunAjaran = sanitizePart(selectedPeriod.period);
+    const namaPeriode = sanitizePart(selectedPeriod.name);
+    filename = `List_Yudisium_${tahunAjaran}_${namaPeriode}.xlsx`;
+  }
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${filename}"`);
+
+  await workbook.xlsx.write(res);
+  res.end();
+});
 export {
   listYudisiumRegistrations,
   getYudisiumRegistrationById,
@@ -1398,4 +1534,5 @@ export {
   downloadYudisiumRegistrationFile,
   approveYudisiumRegistration,
   rejectYudisiumRegistration,
+  exportYudisium,
 };

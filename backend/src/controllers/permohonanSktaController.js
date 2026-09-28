@@ -20,8 +20,6 @@ import {
 } from "../services/storageService.js";
 import { mapPermohonanToFrontend } from "../mappers/index.js";
 import * as sktaService from "../services/sktaService.js";
-import * as mahasiswaService from "../services/mahasiswaService.js";
-import * as dosenService from "../services/dosenService.js";
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
@@ -648,10 +646,16 @@ const getPermohonanSktaById = asyncHandler(async (req, res) => {
   res.json({ data: mapPermohonanToFrontend(data, req) });
 });
 
-// [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa
+// [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa (atau User Login)
 const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
-  const { mahasiswaId } = req.params;
-  const data = await sktaService.getLatestPermohonanByMahasiswaId(mahasiswaId);
+  const targetId = req.params.mahasiswaId || req.user?.id;
+
+  if (!targetId) {
+    res.status(400);
+    throw new Error("ID mahasiswa atau sesi login tidak valid");
+  }
+
+  const data = await sktaService.getLatestPermohonanByMahasiswaId(targetId);
 
   if (!data) {
     res.status(404);
@@ -890,9 +894,15 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
     throw new Error("Permohonan SKTA tidak ditemukan");
   }
 
-  if (permohonan.isDraft) {
+  if (
+    permohonan.isDraft &&
+    !permohonan.wasRejectedBefore &&
+    !permohonan.isEdit
+  ) {
     res.status(400);
-    throw new Error("Permohonan SKTA masih berupa draft dan belum disubmit");
+    throw new Error(
+      "Permohonan SKTA masih berupa draft awal dan belum pernah diajukan",
+    );
   }
 
   // Cek admin (mencakup admin.id, user.id, atau fallback ke user token)

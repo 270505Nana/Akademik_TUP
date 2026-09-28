@@ -1,10 +1,11 @@
 import prisma from "../config/prisma.js";
 import { ROLES } from "../constants/index.js";
+import { uploadFile, deleteFile } from "./storageService.js";
 
 export const getDosens = async ({
   search,
   researchGroupId,
-  researchGroup,
+  studyProgramId,
   sortBy,
   skip,
   take,
@@ -26,19 +27,10 @@ export const getDosens = async ({
   // Filter
   if (researchGroupId) {
     where.researchGroupId = researchGroupId.trim();
-  } else if (researchGroup) {
-    const isUUID =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        researchGroup.trim(),
-      );
+  }
 
-    if (isUUID) {
-      where.researchGroupId = researchGroup.trim();
-    } else {
-      where.researchGroup = {
-        name: { contains: researchGroup.trim(), mode: "insensitive" },
-      };
-    }
+  if (studyProgramId) {
+    where.studyProgramId = studyProgramId.trim();
   }
 
   // Sort
@@ -67,6 +59,7 @@ export const getDosens = async ({
       include: {
         user: true,
         researchGroup: true,
+        studyProgram: true,
       },
     }),
   ]);
@@ -77,13 +70,13 @@ export const getDosens = async ({
 export const getDosenByIdOrUserId = async (idOrUserId) => {
   let dosen = await prisma.dosen.findUnique({
     where: { id: idOrUserId },
-    include: { user: true, researchGroup: true },
+    include: { user: true, researchGroup: true, studyProgram: true },
   });
 
   if (!dosen) {
     dosen = await prisma.dosen.findUnique({
       where: { userId: idOrUserId },
-      include: { user: true, researchGroup: true },
+      include: { user: true, researchGroup: true, studyProgram: true },
     });
   }
 
@@ -98,7 +91,17 @@ export const getDosenByIdOrUserId = async (idOrUserId) => {
 
 export const upsertDosen = async (
   idOrUserId,
-  { name, nip, nidn, kodeDosen, researchGroupId, isKetuaKK },
+  {
+    name,
+    nip,
+    nidn,
+    kodeDosen,
+    researchGroupId,
+    studyProgramId,
+    isKetuaKK,
+    isKetuaProdi,
+    isKepalaUrusanAkademik,
+  },
 ) => {
   let dosenRecord = await prisma.dosen.findUnique({
     where: { id: idOrUserId },
@@ -134,6 +137,22 @@ export const upsertDosen = async (
       data: { name },
     });
 
+    const targetStudyProgramId =
+      studyProgramId || dosenRecord?.studyProgramId;
+
+    // Jika dosen ini diset sebagai ketua prodi (isKetuaProdi === true),
+    // pastikan dosen lain di program studi yang sama dinonaktifkan (isKetuaProdi: false)
+    if (isKetuaProdi === true && targetStudyProgramId) {
+      await tx.dosen.updateMany({
+        where: {
+          studyProgramId: targetStudyProgramId,
+          isKetuaProdi: true,
+          userId: { not: userId },
+        },
+        data: { isKetuaProdi: false },
+      });
+    }
+
     return await tx.dosen.upsert({
       where: { userId },
       update: {
@@ -141,21 +160,99 @@ export const upsertDosen = async (
         nidn: nidn || null,
         kodeDosen,
         researchGroupId,
+        studyProgramId,
         ...(isKetuaKK !== undefined ? { isKetuaKK } : {}),
+        ...(isKetuaProdi !== undefined ? { isKetuaProdi } : {}),
+        ...(isKepalaUrusanAkademik !== undefined
+          ? { isKepalaUrusanAkademik: isKepalaUrusanAkademik || null }
+          : {}),
       },
       create: {
         nip,
         nidn: nidn || null,
         kodeDosen,
         researchGroupId,
+        studyProgramId,
         isKetuaKK: isKetuaKK || false,
+        isKetuaProdi: isKetuaProdi || false,
+        isKepalaUrusanAkademik: isKepalaUrusanAkademik || null,
         userId,
       },
       include: {
         user: true,
         researchGroup: true,
+        studyProgram: true,
       },
     });
+  });
+};
+
+export const uploadSignature = async (userId, file) => {
+  if (!file) {
+    const error = new Error("File tanda tangan wajib diunggah");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const dosen = await prisma.dosen.findUnique({
+    where: { userId },
+    include: { user: true, researchGroup: true, studyProgram: true },
+  });
+
+  if (!dosen || dosen.deletedAt) {
+    const error = new Error("Data dosen tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Hapus file tanda tangan lama jika ada
+  if (dosen.signature) {
+    await deleteFile(dosen.signature);
+  }
+
+  // Upload file tanda tangan baru ke folder 'signatures'
+  const uploaded = await uploadFile({
+    buffer: file.buffer,
+    originalname: file.originalname,
+    folder: "signatures",
+    mimetype: file.mimetype,
+  });
+
+  return await prisma.dosen.update({
+    where: { id: dosen.id },
+    data: { signature: uploaded.filepath },
+    include: {
+      user: true,
+      researchGroup: true,
+      studyProgram: true,
+    },
+  });
+};
+
+export const deleteSignature = async (userId) => {
+  const dosen = await prisma.dosen.findUnique({
+    where: { userId },
+    include: { user: true, researchGroup: true, studyProgram: true },
+  });
+
+  if (!dosen || dosen.deletedAt) {
+    const error = new Error("Data dosen tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (dosen.signature) {
+    await deleteFile(dosen.signature);
+  }
+
+  return await prisma.dosen.update({
+    where: { id: dosen.id },
+    data: { signature: null },
+    include: {
+      user: true,
+      researchGroup: true,
+      studyProgram: true,
+    },
   });
 };
 
@@ -165,6 +262,6 @@ export const toggleKetuaKK = async (idOrUserId) => {
   return await prisma.dosen.update({
     where: { id: dosen.id },
     data: { isKetuaKK: !dosen.isKetuaKK },
-    include: { user: true, researchGroup: true },
+    include: { user: true, researchGroup: true, studyProgram: true },
   });
 };
