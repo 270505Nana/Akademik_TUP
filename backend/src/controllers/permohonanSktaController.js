@@ -20,8 +20,6 @@ import {
 } from "../services/storageService.js";
 import { mapPermohonanToFrontend } from "../mappers/index.js";
 import * as sktaService from "../services/sktaService.js";
-import * as mahasiswaService from "../services/mahasiswaService.js";
-import * as dosenService from "../services/dosenService.js";
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
@@ -896,9 +894,15 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
     throw new Error("Permohonan SKTA tidak ditemukan");
   }
 
-  if (permohonan.isDraft) {
+  if (
+    permohonan.isDraft &&
+    !permohonan.wasRejectedBefore &&
+    !permohonan.isEdit
+  ) {
     res.status(400);
-    throw new Error("Permohonan SKTA masih berupa draft dan belum disubmit");
+    throw new Error(
+      "Permohonan SKTA masih berupa draft awal dan belum pernah diajukan",
+    );
   }
 
   // Cek admin (mencakup admin.id, user.id, atau fallback ke user token)
