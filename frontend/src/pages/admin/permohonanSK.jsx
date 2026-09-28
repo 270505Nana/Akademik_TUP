@@ -246,7 +246,6 @@ const PermohonanSK = () => {
         await approvePermohonanSK(permohonanId, {
           hasUploadedFinalProposal: payload.checks.proposal,
           hasTakenLanguageTest: payload.checks.bahasa,
-          // Menggunakan batasPerbaikan untuk expDate (Kadaluwarsa SK)
           expDate: payload.batasPerbaikan,
           adminId: user.id,
           sktaFile: payload.uploadedFile,
@@ -256,7 +255,14 @@ const PermohonanSK = () => {
       handleCloseVerifikasi();
       await fetchRequests();
     } catch (err) {
-      showAlert('error', 'Gagal', err.response?.data?.message || 'Terjadi kesalahan');
+      // PERBAIKAN: Tangkap error Draft dari BE dan jadikan lebih mudah dipahami
+      let errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat memproses data.';
+      
+      if (errorMsg.toLowerCase().includes('draft')) {
+        errorMsg = 'Gagal memperpanjang masa revisi. Mahasiswa belum men-submit ulang perbaikan berkas (Status masih Draft).';
+      }
+      
+      showAlert('error', 'Gagal', errorMsg);
     }
   };
 
