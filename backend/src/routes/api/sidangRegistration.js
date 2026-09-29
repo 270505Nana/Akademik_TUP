@@ -435,7 +435,7 @@ router.get(
  *                 type: string
  *               skemaSidangFinal:
  *                 type: string
- *                 description: Skema sidang final yang disetujui (opsional, default sama dengan skemaSidang jika dikosongkan)
+ *                 description: Skema sidang final yang disetujui (opsional)
  *               sidangRegistrationUploadIds:
  *                 type: array
  *                 items:

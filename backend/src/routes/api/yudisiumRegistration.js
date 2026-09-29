@@ -583,10 +583,10 @@ router.get(
  *                 type: string
  *               pengajuanCumlaudeFinal:
  *                 type: string
- *                 description: Status pengajuan cumlaude final yang disetujui (opsional, default sama dengan pengajuanCumlaude jika dikosongkan)
+ *                 description: Status pengajuan cumlaude final yang disetujui (opsional)
  *               skemaCumlaudeFinal:
  *                 type: string
- *                 description: Skema cumlaude final yang disetujui (opsional, default sama dengan skemaCumlaude jika dikosongkan)
+ *                 description: Skema cumlaude final yang disetujui (opsional)
  *               yudisiumRegistrationUploadIds:
  *                 type: array
  *                 items:

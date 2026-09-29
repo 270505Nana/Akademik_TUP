@@ -1299,20 +1299,16 @@ const approveYudisiumRegistration = asyncHandler(async (req, res) => {
   }
 
   const finalPengajuanCumlaude =
-    pengajuanCumlaudeFinal !== undefined &&
-    pengajuanCumlaudeFinal !== null &&
     typeof pengajuanCumlaudeFinal === "string" &&
     pengajuanCumlaudeFinal.trim() !== ""
       ? pengajuanCumlaudeFinal.trim()
-      : registration.pengajuanCumlaude;
+      : null;
 
   const finalSkemaCumlaude =
-    skemaCumlaudeFinal !== undefined &&
-    skemaCumlaudeFinal !== null &&
     typeof skemaCumlaudeFinal === "string" &&
     skemaCumlaudeFinal.trim() !== ""
       ? skemaCumlaudeFinal.trim()
-      : registration.skemaCumlaude;
+      : null;
 
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },

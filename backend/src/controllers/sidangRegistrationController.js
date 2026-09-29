@@ -1069,12 +1069,9 @@ const approveSidangRegistration = asyncHandler(async (req, res) => {
   }
 
   const finalSkemaSidang =
-    skemaSidangFinal !== undefined &&
-    skemaSidangFinal !== null &&
-    typeof skemaSidangFinal === "string" &&
-    skemaSidangFinal.trim() !== ""
+    typeof skemaSidangFinal === "string" && skemaSidangFinal.trim() !== ""
       ? skemaSidangFinal.trim()
-      : registration.skemaSidang;
+      : null;
 
   const updatedRegistration = await prisma.sidangRegistration.update({
     where: { id },
