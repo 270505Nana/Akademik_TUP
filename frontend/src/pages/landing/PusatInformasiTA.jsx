@@ -5,7 +5,7 @@ import {
   Search,
   ChevronRight,
 } from 'lucide-react';
-import { getLucideIcon } from '../../utils/iconMapper';  
+import { getLucideIcon } from '../../utils/iconMapper';
 
 const publicApi = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
@@ -139,7 +139,7 @@ const PusatInformasiTA = () => {
               />
             </div>
 
-            <Link to="/login" className="lp-btn lp-btn-primary">
+            <Link to="/login" className="lp-btn lp-btn-outline">
               Login SSO
             </Link>
           </nav>
