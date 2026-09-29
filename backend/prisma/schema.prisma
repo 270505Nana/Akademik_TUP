@@ -290,6 +290,7 @@ model SidangRegistration {
   sidangRegistrationPeriodId   String?                       @map("sidang_registration_period_id")
   // Setuju
   skemaSidangFinal             String?                       @map("skema_sidang_final") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
+  jalurNonSidangFinal          String?                       @map("jalur_non_sidang_final") // Contoh isi: "Publikasi Jurnal", "Proceeding International", "HKI"
   sidangPeriod                 SidangPeriod?                 @relation("SidangPeriod", fields: [sidangPeriodId], references: [id])
   sidangPeriodId               String?                       @map("sidang_period_id")
   // Penjadwalan

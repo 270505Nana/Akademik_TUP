@@ -29,7 +29,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/sidang-registrations:
  *   get:
- *     summary: Get all sidang registrations (with search, studyProgramId filter, sort, and pagination)
+ *     summary: Get all sidang registrations (with search, studyProgramId, skemaSidang, status filter, sort, and pagination)
  *     tags: [Sidang Registration]
  *     security:
  *       - bearerAuth: []
@@ -44,6 +44,18 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *         description: Filter by Study Program ID
+ *       - in: query
+ *         name: skemaSidang
+ *         schema:
+ *           type: string
+ *           example: Capstone
+ *         description: Filter pendaftaran sidang berdasarkan skema sidang (mengutamakan skemaSidangFinal jika sudah diisi/disetujui)
+ *       - in: query
+ *         name: jalurNonSidang
+ *         schema:
+ *           type: string
+ *           example: "Publikasi Jurnal"
+ *         description: Filter pendaftaran sidang berdasarkan jalur non sidang (mengutamakan jalurNonSidangFinal jika sudah diisi/disetujui)
  *       - in: query
  *         name: status
  *         schema:
@@ -447,6 +459,9 @@ router.get(
  *               skemaSidangFinal:
  *                 type: string
  *                 description: Skema sidang final yang disetujui (opsional)
+ *               jalurNonSidangFinal:
+ *                 type: string
+ *                 description: Jalur non sidang final yang disetujui (opsional)
  *               sidangRegistrationUploadIds:
  *                 type: array
  *                 items:

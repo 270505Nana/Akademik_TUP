@@ -34,6 +34,7 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
     skemaSidang: item.skemaSidang,
     skemaSidangFinal: item.skemaSidangFinal,
     jalurNonSidang: item.jalurNonSidang,
+    jalurNonSidangFinal: item.jalurNonSidangFinal,
     lulusTesBahasa: item.lulusTesBahasa,
     skorTesBahasa: item.skorTesBahasa,
     status: status,
