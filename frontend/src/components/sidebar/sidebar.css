@@ -71,6 +71,30 @@
   padding: 20px 24px 8px;
 }
 
+/* -------------------------------------------------------------------------
+   Tambahan: Styling Header Section dengan Icon (Dipakai oleh Mahasiswa & Admin) 
+   ------------------------------------------------------------------------- */
+.nav-section-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--primary);
+  text-transform: uppercase;
+  padding: 20px 24px 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-section-header .nav-icon {
+  font-size: 16px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+/* ------------------------------------------------------------------------- */
+
 .sidebar-nav { padding: 0; flex: 1; }
 
 .nav-item-group { margin-bottom: 0; }
@@ -124,35 +148,35 @@
 
 .nav-link-main[aria-expanded="true"] .nav-arrow { transform: rotate(180deg); }
 
+/* --- PERUBAHAN SUB MENU --- */
 .sub-nav {
-  padding: 4px 0 4px 36px;
+  padding: 4px 0; /* Padding kiri-kanan dibuat 0 agar background rata dari ujung ke ujung */
   list-style: none;
 }
 
 .sub-nav li a {
   display: block;
-  padding: 7px 12px;
+  padding: 10px 24px 10px 56px; /* Teks dijorokkan ke dalam dengan padding-left */
   font-size: 12.5px;
   color: #64748b;
   text-decoration: none;
-  border-radius: var(--radius-sm);
+  border-radius: 0; /* Border radius dihapus agar bentuknya blok kotak */
   transition: all var(--transition);
-  border-left: 2px solid transparent;
+  border-right: 3px solid transparent; /* Persiapan untuk garis indikator kanan */
 }
 
 .sub-nav li a:hover {
   color: var(--primary);
   background: var(--sidebar-hover);
-  border-left-color: var(--primary);
 }
 
-/* Styling untuk sub-menu yang sedang aktif (halaman yang sedang dibuka) */
 .sub-nav li a.active {
   color: var(--primary);
   background: var(--sidebar-active);
-  border-left-color: var(--primary);
   font-weight: 600;
+  border-right: 3px solid var(--primary); /* Garis indikator aktif ditaruh di sebelah kanan (sama persis dengan Beranda) */
 }
+/* -------------------------- */
 
 .sidebar-user {
   padding: 14px 16px;
