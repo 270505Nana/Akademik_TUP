@@ -45,6 +45,17 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *           type: string
  *         description: Filter by Study Program ID
  *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - "Dalam Proses"
+ *             - "Perlu Revisi"
+ *             - "Revisi Diajukan"
+ *             - "Pendaftaran Diterima"
+ *             - "Siap Sidang"
+ *         description: Filter pendaftaran sidang berdasarkan status
+ *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string

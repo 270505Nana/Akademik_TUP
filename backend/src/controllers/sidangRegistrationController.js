@@ -29,10 +29,10 @@ import {
   getSidangRegistrationByMahasiswaId as fetchSidangByMahasiswaId,
 } from "../services/sidangRegistrationService.js";
 
-// Sidang Registration List (with search, studyProgramId filter, sort, and pagination)
+// Sidang Registration List (with search, studyProgramId, status filter, sort, and pagination)
 const listSidangRegistrations = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search, studyProgramId, sortBy } = req.query;
+  const { search, studyProgramId, status, sortBy } = req.query;
 
   const where = {
     deletedAt: null,
@@ -85,7 +85,24 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
     where.mahasiswa.studyProgramId = studyProgramId.trim();
   }
 
-  // 3. Sorting (Single unified sortBy param matching other endpoints)
+  // 3. Filter by Status
+  if (status && typeof status === "string" && status.trim() !== "") {
+    const s = status.trim();
+    if (s.toLowerCase() === "siap sidang") {
+      where.status = "Pendaftaran Diterima";
+      where.sidangPeriod = {
+        isOpen: true,
+        deletedAt: null,
+      };
+    } else {
+      where.status = {
+        equals: s,
+        mode: "insensitive",
+      };
+    }
+  }
+
+  // 4. Sorting (Single unified sortBy param matching other endpoints)
   const sortParam = (sortBy || "").toLowerCase().trim();
   let orderBy = { createdAt: "desc" };
 
@@ -819,6 +836,12 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     await deleteUploadsByCategory(id, sudahSlugs);
   }
 
+  const isRevision =
+    existingRegistration.status === "Perlu Revisi" ||
+    existingRegistration.isEdit !== null ||
+    existingRegistration.message !== null;
+
+  updateData.status = isRevision ? "Revisi Diajukan" : "Dalam Proses";
   updateData.isDraft = false; // Finalize submit
   updateData.submittedAt = new Date(); // Record student submission time
 
@@ -1079,6 +1102,7 @@ const approveSidangRegistration = asyncHandler(async (req, res) => {
       adminId,
       sidangPeriodId,
       skemaSidangFinal: finalSkemaSidang,
+      status: "Pendaftaran Diterima",
       message: null,
       isEdit: null,
     },
@@ -1157,6 +1181,7 @@ const rejectSidangRegistration = asyncHandler(async (req, res) => {
       message,
       isEdit: isEdit ? new Date(isEdit) : null,
       sidangPeriodId: null,
+      status: "Perlu Revisi",
       isDraft: isEdit ? true : false,
       submittedAt: isEdit ? null : undefined,
     },

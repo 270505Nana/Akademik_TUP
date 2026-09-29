@@ -284,6 +284,7 @@ model SidangRegistration {
   jalurNonSidang               String[]                      @map("jalur_non_sidang") // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
   lulusTesBahasa               Boolean?                      @map("lulus_tes_bahasa")
   // submited
+  status                       String?
   submittedAt                  DateTime?                     @map("submitted_at")
   sidangRegistrationPeriod     SidangPeriod?                 @relation("SidangRegistrationPeriod", fields: [sidangRegistrationPeriodId], references: [id])
   sidangRegistrationPeriodId   String?                       @map("sidang_registration_period_id")
