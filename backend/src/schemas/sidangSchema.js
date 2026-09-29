@@ -31,6 +31,11 @@ export const approveSidangSchema = z.object({
   sidangPeriodId: z
     .string({ required_error: "Sidang Period ID wajib diisi" })
     .uuid("Sidang Period ID tidak valid"),
+  skemaSidangFinal: z.string().trim().optional().nullable(),
+  sidangRegistrationUploadIds: z
+    .array(z.string().uuid("ID berkas tidak valid"))
+    .optional()
+    .nullable(),
 });
 
 /**
@@ -45,4 +50,8 @@ export const rejectSidangSchema = z.object({
     .trim()
     .min(1, "Pesan penolakan/revisi wajib diisi"),
   isEdit: z.string().optional().nullable(),
+  sidangRegistrationUploadIds: z
+    .array(z.string().uuid("ID berkas tidak valid"))
+    .optional()
+    .nullable(),
 });

@@ -27,6 +27,7 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
     adminId: item.adminId,
     researchGroupId: item.researchGroupId,
     skemaSidang: item.skemaSidang,
+    skemaSidangFinal: item.skemaSidangFinal,
     jalurNonSidang: item.jalurNonSidang,
     lulusTesBahasa: item.lulusTesBahasa,
     skorTesBahasa: item.skorTesBahasa,

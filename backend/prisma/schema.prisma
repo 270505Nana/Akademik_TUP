@@ -288,6 +288,7 @@ model SidangRegistration {
   sidangRegistrationPeriod     SidangPeriod?                 @relation("SidangRegistrationPeriod", fields: [sidangRegistrationPeriodId], references: [id])
   sidangRegistrationPeriodId   String?                       @map("sidang_registration_period_id")
   // Setuju
+  skemaSidangFinal             String?                       @map("skema_sidang_final") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
   sidangPeriod                 SidangPeriod?                 @relation("SidangPeriod", fields: [sidangPeriodId], references: [id])
   sidangPeriodId               String?                       @map("sidang_period_id")
   // Penjadwalan
@@ -386,8 +387,8 @@ model YudisiumRegistration {
   tak                          Int?
   tglSidang                    DateTime?                    @map("tgl_sidang")
   skemaSidang                  String?                      @map("skema_sidang") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
-  pengajuanCumlaude            String?                      @map("pengajuan_cumlaude")
-  skemaCumlaude                String?                      @map("skema_cumlaude")
+  pengajuanCumlaude            String?                      @map("pengajuan_cumlaude") // Non Cumlaude, Cumlaude, Summa Cumlaude
+  skemaCumlaude                String?                      @map("skema_cumlaude") // Publikasi Jurnal, Pameran, Lomba, HKI
   evidenCumlaude               String?                      @map("eviden_cumlaude") @db.Text
   predikat                     String?
   status                       String?
@@ -401,6 +402,8 @@ model YudisiumRegistration {
   yudisiumRegistrationPeriod   YudisiumPeriod?              @relation("YudisiumRegistrationPeriod", fields: [yudisiumRegistrationPeriodId], references: [id])
   yudisiumRegistrationPeriodId String?                      @map("yudisium_registration_period_id")
   // Setuju
+  pengajuanCumlaudeFinal       String?                      @map("pengajuan_cumlaude_final") // Non Cumlaude, Cumlaude, Summa Cumlaude
+  skemaCumlaudeFinal           String?                      @map("skema_cumlaude_final") // Publikasi Jurnal, Pameran, Lomba, HKI
   yudisiumPeriod               YudisiumPeriod?              @relation("YudisiumPeriod", fields: [yudisiumPeriodId], references: [id])
   yudisiumPeriodId             String?                      @map("yudisium_period_id")
   // Tolak Permohonan

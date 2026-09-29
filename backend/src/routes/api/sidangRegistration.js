@@ -433,6 +433,14 @@ router.get(
  *                 type: string
  *               sidangPeriodId:
  *                 type: string
+ *               skemaSidangFinal:
+ *                 type: string
+ *                 description: Skema sidang final yang disetujui (opsional, default sama dengan skemaSidang jika dikosongkan)
+ *               sidangRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Daftar ID berkas yang valid
  *     responses:
  *       200:
  *         description: Sidang registration approved successfully
@@ -477,6 +485,11 @@ router.put("/:id/approve", verifyToken, isAdmin, approveSidangRegistration);
  *               isEdit:
  *                 type: string
  *                 format: date-time
+ *               sidangRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Daftar ID berkas yang valid (berkas di luar list ini akan ditandai isValid = false / perlu revisi)
  *     responses:
  *       200:
  *         description: Sidang registration rejected / revision requested successfully

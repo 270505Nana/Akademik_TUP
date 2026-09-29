@@ -1001,7 +1001,12 @@ const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
 // Approve Sidang Registration (Admin Response)
 const approveSidangRegistration = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { adminId, sidangPeriodId, sidangRegistrationUploadIds } = req.body;
+  const {
+    adminId,
+    sidangPeriodId,
+    sidangRegistrationUploadIds,
+    skemaSidangFinal,
+  } = req.body;
 
   const errors = [];
   if (isNil(adminId)) {
@@ -1063,11 +1068,20 @@ const approveSidangRegistration = asyncHandler(async (req, res) => {
     });
   }
 
+  const finalSkemaSidang =
+    skemaSidangFinal !== undefined &&
+    skemaSidangFinal !== null &&
+    typeof skemaSidangFinal === "string" &&
+    skemaSidangFinal.trim() !== ""
+      ? skemaSidangFinal.trim()
+      : registration.skemaSidang;
+
   const updatedRegistration = await prisma.sidangRegistration.update({
     where: { id },
     data: {
       adminId,
       sidangPeriodId,
+      skemaSidangFinal: finalSkemaSidang,
       message: null,
       isEdit: null,
     },
