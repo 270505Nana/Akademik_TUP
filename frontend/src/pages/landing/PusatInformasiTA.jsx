@@ -1,118 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import {
-  HelpCircle,
-  Calendar,
-  GitBranch,
-  FileText,
-  BookOpen,
-  Settings,
-  FileCheck,
-  RefreshCw,
   Search,
   ChevronRight,
 } from 'lucide-react';
-import '../../components/landing/landing.css';
+import { getLucideIcon } from '../../utils/iconMapper';  
 
-// Data informasi sementara sebelum nantinya diambil dari Spreadsheet (data-driven)
-const INFORMATION_CATEGORIES = [
-  {
-    id: 'pendaftaran-sidang',
-    title: 'Pendaftaran Sidang',
-    items: [
-      {
-        id: 'faq-sidang',
-        title: 'Cek FAQ Sidang',
-        description: 'Pertanyaan yang sering muncul',
-        icon: HelpCircle,
-        link: '#',
-      },
-      {
-        id: 'timeline-sidang',
-        title: 'Timeline Sidang Tugas Akhir',
-        description: 'Surat Edaran Timeline Sidang Tugas Akhir',
-        icon: Calendar,
-        link: '#',
-      },
-      {
-        id: 'alur-sidang',
-        title: 'Alur Pelaksanaan Sidang TA',
-        description: 'Prosedur pendaftaran sidang',
-        icon: GitBranch,
-        link: '#',
-      },
-      {
-        id: 'syarat-sidang-reguler',
-        title: 'Syarat Berkas Sidang Reguler',
-        description: 'Syarat Sidang Reguler',
-        icon: FileText,
-        link: '#',
-      },
-      {
-        id: 'syarat-non-sidang',
-        title: 'Syarat Berkas Non-Sidang',
-        description: 'Syarat Non-Sidang',
-        icon: FileText,
-        link: '#',
-      },
-    ],
-  },
-  {
-    id: 'panduan-aturan-ta',
-    title: 'Panduan & Aturan TA',
-    items: [
-      {
-        id: 'template-buku-ta',
-        title: 'Template Buku TA',
-        description: 'Format penulisan resmi UPPS',
-        icon: FileText,
-        link: '#',
-      },
-      {
-        id: 'panduan-umum-ta',
-        title: 'Panduan Umum Tugas Akhir TUP',
-        description: 'Baca dulu panduan umum Tugas Akhir TUP',
-        icon: BookOpen,
-        link: '#',
-      },
-      {
-        id: 'panduan-teknis-ta',
-        title: 'Panduan Teknis Tugas Akhir TUP',
-        description: 'Panduan Teknis Mengisi Menu TA/PA di iGracias',
-        icon: Settings,
-        link: '#',
-      },
-    ],
-  },
-  {
-    id: 'sk-tugas-akhir',
-    title: 'SK Tugas Akhir',
-    items: [
-      {
-        id: 'pembaruan-sk-ta',
-        title: 'Pembaruan SK TA',
-        description: 'Syarat perpanjangan masa berlaku',
-        icon: FileCheck,
-        link: '#',
-      },
-      {
-        id: 'alur-pembaharuan-sk-ta',
-        title: 'Alur Pembaharuan SK TA',
-        description: 'Panduan proses pembaharuan SK TA',
-        icon: RefreshCw,
-        link: '#',
-      },
-    ],
-  },
-];
+const publicApi = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
+});
 
-// Component card untuk setiap dokumen/informasi
 const InformationCard = ({ item }) => {
-  const IconComponent = item.icon;
-
   const handleClick = () => {
-    if (item.link && item.link !== '#') {
-      window.open(item.link, '_blank', 'noopener,noreferrer');
+    if (item.url && item.url !== '#') {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -130,10 +32,10 @@ const InformationCard = ({ item }) => {
     >
       <div className="info-card-content">
         <div className="info-card-icon">
-          {IconComponent && <IconComponent size={20} />}
+          {getLucideIcon(item.icon, 20)}
         </div>
         <div className="info-card-text">
-          <h3 className="info-card-title">{item.title}</h3>
+          <h3 className="info-card-title">{item.name}</h3>
           <p className="info-card-desc">{item.description}</p>
         </div>
       </div>
@@ -144,17 +46,19 @@ const InformationCard = ({ item }) => {
   );
 };
 
-// Component kolom kategori yang menampilkan daftar card informasi dan mendukung fitur filter pencarian
 const InformationCategory = ({ category, searchQuery }) => {
   const filteredItems = useMemo(() => {
-    if (!searchQuery) return category.items;
+    const rawItems = Array.isArray(category.data) ? [...category.data] : [];
+    const sorted = rawItems.sort((a, b) => (a.queue || 0) - (b.queue || 0));
+
+    if (!searchQuery) return sorted;
     const q = searchQuery.toLowerCase().trim();
-    return category.items.filter(
+    return sorted.filter(
       (item) =>
-        item.title.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q)
+        (item.name || '').toLowerCase().includes(q) ||
+        (item.description || '').toLowerCase().includes(q)
     );
-  }, [category.items, searchQuery]);
+  }, [category.data, searchQuery]);
 
   if (filteredItems.length === 0 && searchQuery) {
     return null;
@@ -163,11 +67,11 @@ const InformationCategory = ({ category, searchQuery }) => {
   return (
     <div className="info-category-column">
       <div className="info-category-header">
-        <h2 className="info-category-title">{category.title}</h2>
+        <h2 className="info-category-title">{category.category}</h2>
       </div>
       <div className="info-card-list">
-        {filteredItems.map((item) => (
-          <InformationCard key={item.id} item={item} />
+        {filteredItems.map((item, idx) => (
+          <InformationCard key={item.id || idx} item={item} />
         ))}
       </div>
     </div>
@@ -176,7 +80,38 @@ const InformationCategory = ({ category, searchQuery }) => {
 
 // Component halaman utama Pusat Informasi Tugas Akhir
 const PusatInformasiTA = () => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+
+    publicApi
+      .get("/api/pusat-informasi/public")
+      .then((response) => {
+        if (isMounted) {
+          const resData = response.data?.data ?? [];
+          setCategories(Array.isArray(resData) ? resData : []);
+        }
+      })
+      .catch((error) => {
+        console.error("Gagal memuat pusat informasi publik:", error);
+        if (isMounted) {
+          setCategories([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="landing-page info-page">
@@ -211,7 +146,6 @@ const PusatInformasiTA = () => {
         </div>
       </header>
 
-      {/* Konten Utama */}
       <main style={{ flex: 1, padding: '40px 0 64px' }}>
         <div className="lp-container">
           <div className="info-header">
@@ -221,22 +155,30 @@ const PusatInformasiTA = () => {
             </p>
           </div>
 
-          {/* Mapping data berdasarkan kategori untuk ditampilkan pada layout tiga kolom */}
-          <div className="info-grid">
-            {INFORMATION_CATEGORIES.map((cat) => (
-              <InformationCategory
-                key={cat.id}
-                category={cat}
-                searchQuery={searchQuery}
-              />
-            ))}
-          </div>
+          {/* Loading, Empty, dan Grid Data State */}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6B7280' }}>
+              <p style={{ fontSize: '16px', fontWeight: 500 }}>Memuat data informasi...</p>
+            </div>
+          ) : categories.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6B7280' }}>
+              <p style={{ fontSize: '15px' }}>Belum ada informasi yang dipublikasikan saat ini.</p>
+            </div>
+          ) : (
+            <div className="info-grid">
+              {categories.map((cat, idx) => (
+                <InformationCategory
+                  key={cat.category || idx}
+                  category={cat}
+                  searchQuery={searchQuery}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </main>
-
     </div>
   );
 };
 
 export default PusatInformasiTA;
-

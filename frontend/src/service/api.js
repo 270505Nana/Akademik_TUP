@@ -875,4 +875,41 @@ export const downloadTemplateFile = async (code) => {
   return response.data;
 };
 
+// ------------------------------------------- PUSAT INFORMASI (CRUD) -------------------------------------------
+
+export const getAllPusatInformasi = async (params = {}) => {
+  const response = await api.get('/api/pusat-informasi', { params });
+  return response.data;
+};
+
+export const getPusatInformasiById = async (id) => {
+  const response = await api.get(`/api/pusat-informasi/${id}`);
+  return response.data?.data ?? response.data;
+};
+
+export const createPusatInformasi = async (payload) => {
+  const response = await api.post('/api/pusat-informasi', payload);
+  return response.data;
+};
+
+export const updatePusatInformasi = async (id, payload) => {
+  const response = await api.put(`/api/pusat-informasi/${id}`, payload);
+  return response.data;
+};
+
+export const deletePusatInformasi = async (id) => {
+  const response = await api.delete(`/api/pusat-informasi/${id}`);
+  return response.data;
+};
+
+export const getPusatInformasiPreview = async () => {
+  const response = await api.get('/api/pusat-informasi/preview');
+  return response.data;
+};
+
+export const getPusatInformasiPublic = async () => {
+  const response = await api.get('/api/pusat-informasi/public');
+  return response.data;
+};
+
 export default api;
