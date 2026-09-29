@@ -34,6 +34,7 @@ export const mapYudisiumRegistrationToFrontend = (item, req) => {
     yudisiumRegistrationPeriodId: item.yudisiumRegistrationPeriodId,
     yudisiumPeriodId: item.yudisiumPeriodId,
     isCumlaudeEligible: item.isCumlaudeEligible,
+    status: item.status,
     statusKelulusan: item.statusKelulusan,
     isDraft: item.isDraft,
     submittedAt: item.submittedAt,

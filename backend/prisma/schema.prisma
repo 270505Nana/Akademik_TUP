@@ -399,6 +399,7 @@ model YudisiumRegistration {
   dosenPembimbing2             Dosen?                       @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
   dosenPembimbing2Id           String?                      @map("dosen_pembimbing_2_id") // di form yang baru tidak menyertakan Dospem 2
   // submitted
+  status                       String?
   submittedAt                  DateTime?                    @map("submitted_at")
   yudisiumRegistrationPeriod   YudisiumPeriod?              @relation("YudisiumRegistrationPeriod", fields: [yudisiumRegistrationPeriodId], references: [id])
   yudisiumRegistrationPeriodId String?                      @map("yudisium_registration_period_id")

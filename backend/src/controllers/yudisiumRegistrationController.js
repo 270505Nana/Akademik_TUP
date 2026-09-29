@@ -35,6 +35,7 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   const {
     search,
     studyProgramId,
+    status,
     sortBy,
   } = req.query;
 
@@ -87,6 +88,14 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   ) {
     where.mahasiswa = where.mahasiswa || {};
     where.mahasiswa.studyProgramId = studyProgramId.trim();
+  }
+
+  // 3. Filter by Status
+  if (status && typeof status === "string" && status.trim() !== "") {
+    where.status = {
+      equals: status.trim(),
+      mode: "insensitive",
+    };
   }
 
   // 3. Sorting (Single unified sortBy param matching other endpoints)
@@ -913,6 +922,12 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     }
   }
 
+  const isRevision =
+    existingRegistration.status === "Perlu Revisi" ||
+    existingRegistration.isEdit !== null ||
+    existingRegistration.message !== null;
+
+  updateData.status = isRevision ? "Revisi Diajukan" : "Dalam Proses";
   updateData.isDraft = false;
   updateData.submittedAt = new Date();
 
@@ -1176,6 +1191,11 @@ const approveYudisiumRegistration = asyncHandler(async (req, res) => {
       ? skemaCumlaudeFinal.trim()
       : null;
 
+  const hasCumlaudeFinal = Boolean(finalPengajuanCumlaude && finalSkemaCumlaude);
+  const status = hasCumlaudeFinal
+    ? "Hasil Sidang Ditetapkan"
+    : "Menunggu Sidang Yudisium";
+
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: {
@@ -1183,6 +1203,7 @@ const approveYudisiumRegistration = asyncHandler(async (req, res) => {
       yudisiumPeriodId,
       pengajuanCumlaudeFinal: finalPengajuanCumlaude,
       skemaCumlaudeFinal: finalSkemaCumlaude,
+      status,
       message: null,
       isEdit: null,
     },
@@ -1261,6 +1282,7 @@ const rejectYudisiumRegistration = asyncHandler(async (req, res) => {
       message,
       isEdit: isEdit ? new Date(isEdit) : null,
       yudisiumPeriodId: null,
+      status: "Perlu Revisi",
       isDraft: isEdit ? true : false,
       submittedAt: isEdit ? null : undefined,
     },
