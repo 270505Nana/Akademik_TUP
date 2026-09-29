@@ -34,6 +34,12 @@ export const approveYudisiumSchema = z.object({
   yudisiumPeriodId: z
     .string({ required_error: "ID Periode Yudisium wajib diisi" })
     .uuid("ID Periode Yudisium tidak valid"),
+  pengajuanCumlaudeFinal: z.string().trim().optional().nullable(),
+  skemaCumlaudeFinal: z.string().trim().optional().nullable(),
+  yudisiumRegistrationUploadIds: z
+    .array(z.string().uuid("ID berkas tidak valid"))
+    .optional()
+    .nullable(),
 });
 
 /**
@@ -48,4 +54,8 @@ export const rejectYudisiumSchema = z.object({
     .trim()
     .min(1, "Pesan penolakan/revisi wajib diisi"),
   isEdit: z.string().optional().nullable(),
+  yudisiumRegistrationUploadIds: z
+    .array(z.string().uuid("ID berkas tidak valid"))
+    .optional()
+    .nullable(),
 });

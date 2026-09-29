@@ -581,10 +581,17 @@ router.get(
  *                 type: string
  *               yudisiumPeriodId:
  *                 type: string
+ *               pengajuanCumlaudeFinal:
+ *                 type: string
+ *                 description: Status pengajuan cumlaude final yang disetujui (opsional, default sama dengan pengajuanCumlaude jika dikosongkan)
+ *               skemaCumlaudeFinal:
+ *                 type: string
+ *                 description: Skema cumlaude final yang disetujui (opsional, default sama dengan skemaCumlaude jika dikosongkan)
  *               yudisiumRegistrationUploadIds:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 description: Daftar ID berkas yang valid
  *     responses:
  *       200:
  *         description: Yudisium registration approved successfully

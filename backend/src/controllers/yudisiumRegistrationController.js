@@ -1230,7 +1230,13 @@ const downloadYudisiumRegistrationFile = asyncHandler(async (req, res) => {
 // Approve Yudisium Registration (Admin Response)
 const approveYudisiumRegistration = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { adminId, yudisiumPeriodId, yudisiumRegistrationUploadIds } = req.body;
+  const {
+    adminId,
+    yudisiumPeriodId,
+    yudisiumRegistrationUploadIds,
+    pengajuanCumlaudeFinal,
+    skemaCumlaudeFinal,
+  } = req.body;
 
   const errors = [];
   if (isNil(adminId)) {
@@ -1292,11 +1298,29 @@ const approveYudisiumRegistration = asyncHandler(async (req, res) => {
     });
   }
 
+  const finalPengajuanCumlaude =
+    pengajuanCumlaudeFinal !== undefined &&
+    pengajuanCumlaudeFinal !== null &&
+    typeof pengajuanCumlaudeFinal === "string" &&
+    pengajuanCumlaudeFinal.trim() !== ""
+      ? pengajuanCumlaudeFinal.trim()
+      : registration.pengajuanCumlaude;
+
+  const finalSkemaCumlaude =
+    skemaCumlaudeFinal !== undefined &&
+    skemaCumlaudeFinal !== null &&
+    typeof skemaCumlaudeFinal === "string" &&
+    skemaCumlaudeFinal.trim() !== ""
+      ? skemaCumlaudeFinal.trim()
+      : registration.skemaCumlaude;
+
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: {
       adminId,
       yudisiumPeriodId,
+      pengajuanCumlaudeFinal: finalPengajuanCumlaude,
+      skemaCumlaudeFinal: finalSkemaCumlaude,
       message: null,
       isEdit: null,
     },
