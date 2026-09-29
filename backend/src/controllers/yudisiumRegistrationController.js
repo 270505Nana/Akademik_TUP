@@ -29,24 +29,12 @@ import {
   getYudisiumRegistrationByMahasiswaId as fetchYudisiumByMahasiswaId,
 } from "../services/yudisiumRegistrationService.js";
 
-// Yudisium Registration List (with search, filter, sort, and pagination)
+// Yudisium Registration List (with search, studyProgramId filter, sort, and pagination)
 const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
   const {
     search,
-    status,
-    isDraft,
-    yudisiumRegistrationPeriodId,
-    yudisiumPeriodId,
     studyProgramId,
-    facultyId,
-    tahunAngkatan,
-    program,
-    skemaSidang,
-    pengajuanCumlaude,
-    skemaCumlaude,
-    berminatWirausaha,
-    dosenWaliId,
     sortBy,
   } = req.query;
 
@@ -91,52 +79,7 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
     ];
   }
 
-  // 2. Status Filter
-  if (status && typeof status === "string" && status.trim() !== "") {
-    const s = status.trim().toLowerCase();
-    if (s === "draft") {
-      where.isDraft = true;
-      where.isEdit = null;
-    } else if (s === "submitted") {
-      where.isDraft = false;
-      where.yudisiumPeriodId = null;
-      where.message = null;
-      where.isEdit = null;
-    } else if (s === "approved") {
-      where.yudisiumPeriodId = { not: null };
-    } else if (s === "rejected") {
-      where.message = { not: null };
-      where.isEdit = null;
-      where.yudisiumPeriodId = null;
-    } else if (s === "revision") {
-      where.isEdit = { not: null };
-    }
-  }
-
-  // Explicit isDraft filter if provided
-  const parsedIsDraft = parseBoolean(isDraft);
-  if (parsedIsDraft !== undefined) {
-    where.isDraft = parsedIsDraft;
-  }
-
-  // 3. Periode Yudisium (Pendaftaran dan Pelaksanaan)
-  if (
-    yudisiumRegistrationPeriodId &&
-    typeof yudisiumRegistrationPeriodId === "string" &&
-    yudisiumRegistrationPeriodId.trim() !== ""
-  ) {
-    where.yudisiumRegistrationPeriodId = yudisiumRegistrationPeriodId.trim();
-  }
-
-  if (
-    yudisiumPeriodId &&
-    typeof yudisiumPeriodId === "string" &&
-    yudisiumPeriodId.trim() !== ""
-  ) {
-    where.yudisiumPeriodId = yudisiumPeriodId.trim();
-  }
-
-  // 4. Akademik & Program Studi Mahasiswa
+  // 2. Filter by Study Program ID
   if (
     studyProgramId &&
     typeof studyProgramId === "string" &&
@@ -146,84 +89,7 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
     where.mahasiswa.studyProgramId = studyProgramId.trim();
   }
 
-  if (facultyId && typeof facultyId === "string" && facultyId.trim() !== "") {
-    where.mahasiswa = where.mahasiswa || {};
-    where.mahasiswa.studyProgram = {
-      ...where.mahasiswa.studyProgram,
-      facultyId: facultyId.trim(),
-    };
-  }
-
-  if (
-    tahunAngkatan !== undefined &&
-    tahunAngkatan !== null &&
-    String(tahunAngkatan).trim() !== ""
-  ) {
-    const parsedAngkatan = parseInt(tahunAngkatan, 10);
-    if (!isNaN(parsedAngkatan)) {
-      where.mahasiswa = where.mahasiswa || {};
-      where.mahasiswa.tahunAngkatan = parsedAngkatan;
-    }
-  }
-
-  // Program (Reguler / Alih Jenjang)
-  if (program && typeof program === "string" && program.trim() !== "") {
-    where.program = {
-      contains: program.trim(),
-      mode: "insensitive",
-    };
-  }
-
-  // Skema Sidang
-  if (
-    skemaSidang &&
-    typeof skemaSidang === "string" &&
-    skemaSidang.trim() !== ""
-  ) {
-    where.skemaSidang = {
-      contains: skemaSidang.trim(),
-      mode: "insensitive",
-    };
-  }
-
-  // Dosen Wali
-  if (
-    dosenWaliId &&
-    typeof dosenWaliId === "string" &&
-    dosenWaliId.trim() !== ""
-  ) {
-    where.dosenWaliId = dosenWaliId.trim();
-  }
-
-  // 5. Cumlaude & Wirausaha
-  if (
-    pengajuanCumlaude &&
-    typeof pengajuanCumlaude === "string" &&
-    pengajuanCumlaude.trim() !== ""
-  ) {
-    where.pengajuanCumlaude = {
-      contains: pengajuanCumlaude.trim(),
-      mode: "insensitive",
-    };
-  }
-
-  if (
-    skemaCumlaude &&
-    typeof skemaCumlaude === "string" &&
-    skemaCumlaude.trim() !== ""
-  ) {
-    where.skemaCumlaude = {
-      contains: skemaCumlaude.trim(),
-      mode: "insensitive",
-    };
-  }
-
-  const parsedWirausaha = parseBoolean(berminatWirausaha);
-  if (parsedWirausaha !== undefined) {
-    where.berminatWirausaha = parsedWirausaha;
-  }
-
-  // 6. Sorting (Single unified sortBy param matching other endpoints)
+  // 3. Sorting (Single unified sortBy param matching other endpoints)
   const sortParam = (sortBy || "").toLowerCase().trim();
   let orderBy = { createdAt: "desc" };
 
