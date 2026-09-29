@@ -50,10 +50,10 @@ export const AuthProvider = ({ children }) => {
   // login
   const login = async (userData) => {
     // Bersihkan sesi lama sebelum menyimpan data sesi baru
+    // (Kecuali student_data karena kita sudah mem-fetchnya sebelum login dipanggil)
     localStorage.removeItem("simta_user");
     localStorage.removeItem("simta_profile");
     localStorage.removeItem("simta_token");
-    localStorage.removeItem("student_data");
 
     const { token: tkn, ...rest } = userData;
 
