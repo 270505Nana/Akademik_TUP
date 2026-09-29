@@ -2,62 +2,18 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import {
-  Award, BookOpen, ClipboardCheck, FilePlus2, Gavel, GraduationCap, Mic2, MapPin,
+  BookOpen, FilePlus2, Gavel, GraduationCap, Mic2, MapPin,
+  MessageCircle, Users,
 } from "lucide-react";
 import CountdownBanner from "../../components/landing/CountdownBanner";
 import DocumentCard from "../../components/landing/DocumentCard";
 import heroImage from "../../assets/Telu.webp";
+import { getLucideIcon } from "../../utils/iconMapper";
 import '../../components/landing/landing.css';
 
 const publicApi = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
 });
-
-const TA_DOCUMENTS = [
-  {
-    id: 1,
-    title: "Panduan Tugas Akhir",
-    description:
-      "Panduan komprehensif penulisan, format dokumen, hingga prosedur pendaftaran sidang.",
-    link: "#",
-    accent: "red",
-    linkLabel: "📄 Lihat Panduan (PDF)",
-    icon: <BookOpen size={20} />,
-  },
-  {
-    id: 2,
-    title: "Aturan Luaran TA",
-    description:
-      "Ketentuan Cumlaude dan Summa Cumlaude serta panduan penggunaan Artificial Intelligence (AI) dalam Tugas Akhir.",
-    link: "#",
-    accent: "gold",
-    linkLabel: "📄 Lihat Panduan (PDF)",
-    icon: <Gavel size={20} />,
-  },
-];
-
-const YUDISIUM_DOCUMENTS = [
-  {
-    id: 3,
-    title: "Panduan Pendaftaran Yudisium",
-    description:
-      "Langkah-langkah pendaftaran yudisium online, pengumpulan berkas fisik, dan persetujuan dari kaprodi.",
-    link: "#",
-    accent: "red",
-    linkLabel: "📄 Lihat Dokumen (PDF)",
-    icon: <ClipboardCheck size={20} />,
-  },
-  {
-    id: 4,
-    title: "Syarat Berkas Yudisium & Syarat Kelulusan (Cumlaude & Summa Cumlaude)",
-    description:
-      "Kriteria kelulusan dengan predikat Cumlaude dan Summa Cumlaude, termasuk ketentuan IPK, masa studi, serta nilai akademik.",
-    link: "#",
-    accent: "gold",
-    linkLabel: "📄 Lihat Dokumen (PDF)",
-    icon: <Award size={20} />,
-  },
-];
 
 const TA_STAGES = [
   { step: 1, label: "Pengajuan Judul", icon: <FilePlus2 size={22} />, tone: "red" },
@@ -89,6 +45,7 @@ const formatPeriodSubtitle = (periode) => {
 const LandingPage = () => {
   const [periodeSidang, setPeriodeSidang] = useState(null);
   const [periodeYudisium, setPeriodeYudisium] = useState(null);
+  const [dokumenPreview, setDokumenPreview] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -99,6 +56,7 @@ const LandingPage = () => {
         if (isMounted) {
           setPeriodeSidang(response.data?.periodeSidang ?? null);
           setPeriodeYudisium(response.data?.periodeYudisium ?? null);
+          setDokumenPreview(response.data?.dokumenPanduanTugasAkhir ?? []);
         }
       })
       .catch((error) => {
@@ -106,6 +64,7 @@ const LandingPage = () => {
         if (isMounted) {
           setPeriodeSidang(null);
           setPeriodeYudisium(null);
+          setDokumenPreview([]);
         }
       });
 
@@ -113,6 +72,14 @@ const LandingPage = () => {
       isMounted = false;
     };
   }, []);
+
+  //semua dokumen preview dari semua kategori digabung dulu. Yang kategorinya mengandung "yudisium" masuk ke section Yudisium, sisanya masuk ke section Pusat Informasi Tugas Akhir.
+  const allPreviewDocs = (dokumenPreview || []).flatMap((g) => g.data ?? []);
+  const isYudisiumDoc = (doc) =>
+    (doc.category || "").toLowerCase().includes("yudisium");
+
+  const yudisiumDocs = allPreviewDocs.filter(isYudisiumDoc);
+  const taDocs = allPreviewDocs.filter((doc) => !isYudisiumDoc(doc));
 
   return (
     <div className="landing-page">
@@ -122,7 +89,7 @@ const LandingPage = () => {
           <nav className="lp-nav" aria-label="Navigasi utama">
             <a href="#pusat-informasi">PUSAT INFORMASI</a>
             <a href="#bantuan">BANTUAN</a>
-            <Link to="/login" className="lp-btn lp-btn-primary">Login SSO</Link>
+            <Link to="/login" className="lp-btn lp-btn-outline">Login SSO</Link>
           </nav>
         </div>
       </header>
@@ -138,7 +105,7 @@ const LandingPage = () => {
               <p className="lp-hero-desc">
                 Temukan berbagai informasi dan layanan Tugas Akhir dalam satu portal. SIMTA hadir untuk membantu mahasiswa Telkom University Purwokerto mengakses kebutuhan administrasi Tugas Akhir dengan lebih praktis dan terintegrasi.
               </p>
-              <a href="#pusat-informasi" className="lp-btn lp-btn-primary">Panduan PDF</a>
+              <a href="#pusat-informasi" className="lp-btn lp-btn-outline">Panduan PDF</a>
             </div>
             <div className="lp-hero-visual">
               <div className="lp-hero-visual-frame">
@@ -197,9 +164,23 @@ const LandingPage = () => {
             />
 
             <div className="lp-doc-grid" id="dokumen-ta">
-              {TA_DOCUMENTS.map((doc) => (
-                <DocumentCard key={doc.id} {...doc} />
-              ))}
+              {taDocs.length > 0 ? (
+                taDocs.map((doc, index) => (
+                  <DocumentCard
+                    key={doc.id || index}
+                    title={doc.name}
+                    description={doc.description}
+                    link={doc.url}
+                    linkLabel="📄 Lihat Dokumen"
+                    icon={getLucideIcon(doc.icon, 20)}
+                    accent={index % 2 === 0 ? "red" : "gold"}
+                  />
+                ))
+              ) : (
+                <p style={{ color: "#6B7280", fontSize: "14px", fontStyle: "italic", gridColumn: "1 / -1", margin: "16px 0" }}>
+                  Belum ada dokumen tersedia
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -220,26 +201,81 @@ const LandingPage = () => {
             />
 
             <div className="lp-doc-grid">
-              {YUDISIUM_DOCUMENTS.map((doc) => (
-                <DocumentCard key={doc.id} {...doc} />
-              ))}
+              {yudisiumDocs.length > 0 ? (
+                yudisiumDocs.map((doc, index) => (
+                  <DocumentCard
+                    key={doc.id || index}
+                    title={doc.name}
+                    description={doc.description}
+                    link={doc.url}
+                    linkLabel="📄 Lihat Dokumen"
+                    icon={getLucideIcon(doc.icon, 20)}
+                    accent={index % 2 === 0 ? "red" : "gold"}
+                  />
+                ))
+              ) : (
+                <p style={{ color: "#6B7280", fontSize: "14px", fontStyle: "italic", gridColumn: "1 / -1", margin: "16px 0" }}>
+                  Belum ada dokumen tersedia
+                </p>
+              )}
             </div>
           </div>
         </section>
       </main>
 
       <footer className="lp-footer" id="bantuan">
-        <div className="lp-container lp-footer-inner">
-          <div>
-            <p className="lp-footer-brand">SIMTA</p>
-            <p className="lp-footer-copy">© 2026 Telkom University. All rights reserved.</p>
+        <div className="lp-container">
+          <div className="lp-footer-grid">
+            <div className="lp-footer-col lp-footer-brand-col">
+              <p className="lp-footer-brand">SIMTA</p>
+              <p className="lp-footer-tagline">
+                Sistem Informasi Manajemen Tugas Akhir Telkom University Purwokerto.
+                Membantu mahasiswa mengakses layanan administrasi Tugas Akhir secara terpadu.
+              </p>
+            </div>
+
+            <div className="lp-footer-col">
+              <h4 className="lp-footer-heading">Tautan Layanan</h4>
+              <nav className="lp-footer-links" aria-label="Tautan layanan">
+                <a href="https://telkomuniversity.ac.id" target="_blank" rel="noopener noreferrer">Website Telkom University</a>
+                <a href="https://igracias.telkomuniversity.ac.id" target="_blank" rel="noopener noreferrer">i-Gracias</a>
+                <a href="https://openlibrary.telkomuniversity.ac.id" target="_blank" rel="noopener noreferrer">Perpustakaan</a>
+                <a href="https://baa.telkomuniversity.ac.id" target="_blank" rel="noopener noreferrer">Layanan Akademik</a>
+              </nav>
+            </div>
+
+            <div className="lp-footer-col">
+              <h4 className="lp-footer-heading">Bantuan Tugas Akhir</h4>
+              <a
+                href="https://wa.me/6285117001281"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="lp-footer-contact"
+              >
+                <span className="lp-footer-contact-icon">
+                  <MessageCircle size={16} />
+                </span>
+                <span className="lp-footer-contact-text">
+                  <strong>WhatsApp Admin</strong>
+                  <span className="lp-footer-contact-sub">0851-1700-1281</span>
+                </span>
+              </a>
+
+              <a href="#" className="lp-footer-contact">
+                <span className="lp-footer-contact-icon">
+                  <Users size={16} />
+                </span>
+                <span className="lp-footer-contact-text">
+                  <strong>Saluran Informasi TA</strong>
+                  <span className="lp-footer-contact-sub">Jadwal &amp; pengumuman Tugas Akhir</span>
+                </span>
+              </a>
+            </div>
           </div>
-          <nav className="lp-footer-links" aria-label="Tautan bantuan">
-            <a href="https://telkomuniversity.ac.id" target="_blank" rel="noopener noreferrer">Website Telkom University</a>
-            <a href="https://igracias.telkomuniversity.ac.id" target="_blank" rel="noopener noreferrer">i-Gracias</a>
-            <a href="https://openlibrary.telkomuniversity.ac.id" target="_blank" rel="noopener noreferrer">Perpustakaan</a>
-            <a href="https://baa.telkomuniversity.ac.id" target="_blank" rel="noopener noreferrer">Layanan Akademik</a>
-          </nav>
+
+          <div className="lp-footer-bottom">
+            <p className="lp-footer-copy">© 2026 Telkom University Purwokerto. All rights reserved.</p>
+          </div>
         </div>
       </footer>
     </div>

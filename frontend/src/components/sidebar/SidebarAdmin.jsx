@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Calendar, Database, FileCheck, FileText, LogOut } from 'lucide-react'; 
+import { Home, Calendar, Database, FileCheck, FileText, LogOut } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../components/sidebar/sidebar.css';
@@ -11,52 +11,53 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
 
   // Icon diperkecil menjadi size 13
   const menuSidebar = [
-    {
-      label: 'Utama',
-      icon: <Home size={13} />,
-      items: [
-        { label: 'Beranda', path: '/akademik/dashboard' }
-      ]
-    },
-    {
-      label: 'Kelola Periode',
-      icon: <Calendar size={13} />,
-      items: [
-        { label: 'Kelola Periode Sidang',   path: '/akademik/atur-periode/sidang'   },
-        { label: 'Kelola Periode Yudisium', path: '/akademik/atur-periode/yudisium' },
-      ]
-    },
-    {
-      label: 'Manajemen Akademik',
-      icon: <Database size={13} />,
-      items: [
-        { label: 'Manajemen Data Akademik',      path: '/akademik/data-dosen'  },
-        { label: 'Manajemen Persyaratan Berkas', path: '/akademik/atur-berkas' }
-      ]
-    },
-    {
-      label: 'Layanan Akhir Studi',
-      icon: <FileCheck size={13} />,
-      items: [
-        { label: 'Administrasi Sidang',   path: '/akademik/registrasi-sidang-all' },
-        { label: 'Penjadwalan Sidang',    path: '/akademik/penjadwalan-sidang'    }, 
-        { label: 'Administrasi Yudisium', path: '/akademik/verifikasi-yudisium'   }
-      ]
-    },
-    {
-      label: 'Layanan SK & SKL',
-      icon: <FileText size={13} />,
-      items: [
-        { label: 'Permohonan SK TA', path: '/akademik/permohonan-sk'    },
-        { label: 'Upload SKL',       path: '/akademik/upload-skl'       },
-        { label: 'Upload Transkrip', path: '/akademik/upload-transkrip' },
-      ]
-    }
-  ];
+  {
+    label: 'Utama',
+    icon: <Home size={13} />,
+    items: [
+      { label: 'Beranda', path: '/akademik/dashboard' }
+    ]
+  },
+  {
+    label: 'Kelola Periode',
+    icon: <Calendar size={13} />,
+    items: [
+      { label: 'Kelola Periode Sidang', path: '/akademik/atur-periode/sidang' },
+      { label: 'Kelola Periode Yudisium', path: '/akademik/atur-periode/yudisium' },
+    ]
+  },
+  {
+    label: 'Manajemen Akademik',
+    icon: <Database size={13} />,
+    items: [
+      { label: 'Manajemen Data Dosen', path: '/akademik/data-dosen' },
+      { label: 'Manajemen Data Pusat Informasi', path: '/akademik/pusat-informasi' },
+      { label: 'Manajemen Persyaratan Berkas', path: '/akademik/atur-berkas' }
+    ]
+  },
+  {
+    label: 'Layanan Akhir Studi',
+    icon: <FileCheck size={13} />,
+    items: [
+      { label: 'Administrasi Sidang', path: '/akademik/registrasi-sidang-all' },
+      { label: 'Penjadwalan Sidang', path: '/akademik/penjadwalan-sidang' },
+      { label: 'Administrasi Yudisium', path: '/akademik/verifikasi-yudisium' }
+    ]
+  },
+  {
+    label: 'Layanan SK & SKL',
+    icon: <FileText size={13} />,
+    items: [
+      { label: 'Permohonan SK TA', path: '/akademik/permohonan-sk' },
+      { label: 'Upload SKL', path: '/akademik/upload-skl' },
+      { label: 'Upload Transkrip', path: '/akademik/upload-transkrip' },
+    ]
+  }
+];
 
-  const handleLogout    = ()  => setShowLogoutConfirm(true);
-  const confirmLogout   = ()  => { setShowLogoutConfirm(false); logout(); navigate('/login', { replace: true }); };
-  const cancelLogout    = ()  => setShowLogoutConfirm(false);
+  const handleLogout = () => setShowLogoutConfirm(true);
+  const confirmLogout = () => { setShowLogoutConfirm(false); logout(); navigate('/login', { replace: true }); };
+  const cancelLogout = () => setShowLogoutConfirm(false);
 
   return (
     <>
@@ -83,7 +84,7 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
 
       {/* Lebar sidebar diperkecil menjadi 220px */}
       <aside id="sidebar" className={isOpen ? 'open' : ''} style={{ display: 'flex', flexDirection: 'column', width: '220px' }}>
-        
+
         <div className="sidebar-logo" style={{ padding: '12px 16px', borderBottom: '1px solid #F1F5F9', marginBottom: '8px' }}>
           <div className="logo-icon" style={{ background: '#C0182A', color: 'white', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>S</div>
           <span className="logo-text" style={{ color: '#C0182A', fontWeight: 800, fontSize: '15px', marginLeft: '8px', letterSpacing: '1px' }}>SIMTA</span>
@@ -92,7 +93,7 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
         <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto', paddingBottom: '12px' }}>
           {menuSidebar.map((section, sIdx) => (
             <div key={sIdx} style={{ marginBottom: '12px' }}>
-              
+
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 fontSize: '10px', fontWeight: 700, color: '#C0182A', textTransform: 'uppercase',
