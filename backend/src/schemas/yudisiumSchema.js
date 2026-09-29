@@ -19,6 +19,7 @@ export const saveYudisiumDraftSchema = z.object({
   pengajuanCumlaude: z.string().trim().optional().nullable(),
   skemaCumlaude: z.string().trim().optional().nullable(),
   evidenCumlaude: z.string().trim().optional().nullable(),
+  statusKelulusan: z.string().trim().optional().nullable(),
   berminatWirausaha: z.boolean().optional().nullable(),
   yudisiumRegistrationPeriodId: z.string().uuid("ID Periode Registrasi tidak valid").optional().nullable(),
   yudisiumPeriodId: z.string().uuid("ID Periode Yudisium tidak valid").optional().nullable(),

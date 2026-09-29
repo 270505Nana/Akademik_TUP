@@ -1375,7 +1375,7 @@ const exportYudisium = asyncHandler(async (req, res) => {
       noSurat: "",
       kodeDoswal: kodeDosenWali,
       predikat: yudisium.predikat || "",
-      status: yudisium.status || "",
+      status: yudisium.statusKelulusan || "",
       mediaJurnal: "",
       tglJurnal: "",
       blnJurnal: "",
