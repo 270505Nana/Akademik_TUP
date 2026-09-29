@@ -32,6 +32,7 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
     skorTesBahasa: item.skorTesBahasa,
     status: item.status,
     isDraft: item.isDraft,
+    isLocked: item.isLocked ?? false,
     submittedAt: item.submittedAt,
     reviewNotes: item.reviewNotes,
     tglSidang: item.tglSidang,

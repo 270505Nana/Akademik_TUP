@@ -51,7 +51,7 @@ const getCloProdis = asyncHandler(async (req, res) => {
             take: paginationParams.take,
             include: {
                 studyProgram: true,
-                subcloProdis: {
+                subcloProdi: {
                     where: { deletedAt: null },
                 }
             },
@@ -68,7 +68,7 @@ const getCloProdiById = asyncHandler(async (req, res) => {
         where: { id },
         include: {
             studyProgram: true,
-            subcloProdis: {
+            subcloProdi: {
                 where: { deletedAt: null },
             },
         },

@@ -22,7 +22,14 @@ export const upsertDosenSchema = z.object({
     .trim()
     .min(1, "ID kelompok keahlian wajib diisi"),
     // .uuid("ID kelompok keahlian tidak valid"),
+  studyProgramId: z
+    .string({ required_error: "Program Studi wajib dipilih" })
+    .trim()
+    .min(1, "Program Studi wajib dipilih"),
+    // .uuid("ID Program Studi tidak valid"),
   isKetuaKK: z.boolean().optional(),
+  isKetuaProdi: z.boolean().optional(),
+  isKepalaUrusanAkademik: z.string().trim().optional().nullable(),
 });
 
 // Schema Mahasiswa

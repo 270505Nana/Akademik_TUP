@@ -6,7 +6,7 @@ import '../dashboard.css';
 import { useAuth } from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 
-import api, { downloadSK } from '../../service/api';
+import api, { downloadSK, getSidangPeriods, getYudisiumPeriods } from '../../service/api';
 import { determineSkStatus, STATUS_SK } from '../../components/common/Skstatushelper';
 import { STATUS_SIDANG, SIDANG_STATUS_CONFIG, determineSidangStatus } from '../../components/admin/sidang/Sidangstatushelper';
 
@@ -72,12 +72,6 @@ const formatPeriodSubtitle = (periode) => {
   return periode.name || (periodVal ? `Tahun Ajaran ${periodVal}` : '');
 };
 
-const formatDateRange = (start, end) => {
-  const fmt = (d) =>
-    new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  return `${fmt(start)} – ${fmt(end)}`;
-};
-
 const formatDateRangeCompact = (start, end) => {
   if (!start || !end) return '—';
   const s = new Date(start);
@@ -127,6 +121,7 @@ const skBadgeStyle = (status) => {
     [STATUS_SK.BELUM_TERBIT]: { bg: '#FEF3C7', color: '#D97706', label: 'PERLU REVISI' },
     [STATUS_SK.DALAM_PROSES]: { bg: '#DBEAFE', color: '#1D4ED8', label: 'DIVERIFIKASI' },
     [STATUS_SK.EXPIRED]: { bg: '#EDE9FE', color: '#5B21B6', label: 'KADALUARSA' },
+    [STATUS_SK.DRAFT]: { bg: '#F3F4F6', color: '#4B5563', label: 'DRAFT PENDAFTARAN' },
     null: { bg: '#F3F4F6', color: '#6B7280', label: 'TERKUNCI' },
   };
   return map[status] ?? map[null];
@@ -137,6 +132,7 @@ const skKeteranganText = (status) => {
   if (status === STATUS_SK.DALAM_PROSES) return 'Menunggu validasi dokumen SK TA oleh admin.';
   if (status === STATUS_SK.EXPIRED) return 'Masa berlaku SK TA telah habis, harap perpanjang.';
   if (status === STATUS_SK.BELUM_TERBIT) return 'Terdapat kesalahan pada pengajuan SK TA kamu.';
+  if (status === STATUS_SK.DRAFT) return 'Draft tersimpan. Lanjutkan upload dokumen untuk memproses pengajuan.';
   return 'Selesaikan pengajuan SK TA terlebih dahulu.';
 };
 
@@ -313,6 +309,10 @@ const DashboardMahasiswa = () => {
   }, [activeStudentId]);
 
   useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
     const fetchPeriode = async () => {
       setLoadingPeriode(true);
       try {
@@ -321,10 +321,8 @@ const DashboardMahasiswa = () => {
           getYudisiumPeriods().catch(() => []),
         ]);
 
-        // Parse sidang pair: each item has { pendaftaran, pelaksanaan }
         const pickFromPair = (list, key) => {
           if (!Array.isArray(list) || list.length === 0) return null;
-          // Pick the relevant group: prefer an open one, then upcoming, then most recent past
           const sorted = [...list].filter(Boolean);
           const openGroup = sorted.find(item => item?.[key]?.isOpen === true);
           if (openGroup) return openGroup[key] ?? null;
@@ -354,8 +352,8 @@ const DashboardMahasiswa = () => {
 
   const skTanggal = sktaRequest?.createdAt ? formatDateShort(sktaRequest.createdAt) : null;
   const deadlineSidang = pendaftaranSidang ? formatDateShort(pendaftaranSidang.endDate) : null;
-  const rowSidangLoading = loadingSk || loadingSidangReg;
   const skSudahTerbit = skStatus === STATUS_SK.SUDAH_TERBIT;
+  const isPembaruan = sktaRequest && (sktaRequest.category || '').includes('Perubahan');
 
   const renderKeteranganSidang = () => {
     if (loadingDashboard) return <span style={{ color: '#9CA3AF', fontSize: '11px' }}>—</span>;
@@ -445,7 +443,6 @@ const DashboardMahasiswa = () => {
                 )}
               </div>
 
-              {/* Pelaksanaan Sidang */}
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PELAKSANAAN SIDANG</p>
                 {loadingPeriode ? (
@@ -459,7 +456,6 @@ const DashboardMahasiswa = () => {
                 )}
               </div>
 
-              {/* Pendaftaran Yudisium */}
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PENDAFTARAN YUDISIUM</p>
                 {loadingPeriode ? (
@@ -473,7 +469,6 @@ const DashboardMahasiswa = () => {
                 )}
               </div>
 
-              {/* Pelaksanaan Yudisium */}
               <div className="dash-timeline-item">
                 <p className="dash-timeline-label">PELAKSANAAN YUDISIUM</p>
                 {loadingPeriode ? (
@@ -531,19 +526,18 @@ const DashboardMahasiswa = () => {
                             <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Perpanjang SK</TextLinkAction>
                           ) : skStatus === STATUS_SK.SUDAH_TERBIT ? (
                             <>
-                              <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
+                              <TextLinkAction onClick={() => navigate(isPembaruan ? '/mahasiswa/pembaruan-sk' : '/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
                               {sktaRequest?.sktaDownloadUrl && (
                                 <TextLinkAction onClick={handleUnduhSK}>Unduh SK</TextLinkAction>
                               )}
                             </>
                           ) : (
-                            <TextLinkAction onClick={() => navigate('/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
+                            <TextLinkAction onClick={() => navigate(isPembaruan ? '/mahasiswa/pembaruan-sk' : '/mahasiswa/pengajuan-sk')}>Lihat Detail</TextLinkAction>
                           )}
                         </div>
                       </td>
                     </tr>
 
-                    {/* Pendaftaran Sidang */}
                     <tr>
                       <td>
                         <div className="prog-tahapan-title">Pendaftaran Sidang</div>
@@ -582,7 +576,6 @@ const DashboardMahasiswa = () => {
                       </td>
                     </tr>
 
-                    {/* Pendaftaran Yudisium */}
                     <tr>
                       <td>
                         <div className="prog-tahapan-title">Pendaftaran Yudisium</div>

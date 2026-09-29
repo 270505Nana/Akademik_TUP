@@ -97,6 +97,7 @@ export const determineSidangStatus = (registration, response, period) => {
     return STATUS_SIDANG.REVISI_DIPERBARUI;
   }
 
-  // 6. isDraft === false, sisanya → DALAM_PROSES
+  // 6. isDraft === false, sisanya → DALAM_PROSES, jdi dia di cek terakhiran, abis semua semua di cek dia br nnti masukin ke sttis dalam proses
+  // cmnnnn kl yg skema baru belum di update
   return STATUS_SIDANG.DALAM_PROSES;
 };

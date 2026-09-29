@@ -14,6 +14,7 @@ import {
   downloadSidangRegistrationFile,
   approveSidangRegistration,
   rejectSidangRegistration,
+  toggleLockSidangRegistration,
 } from '../../controllers/sidangRegistrationController.js';
 import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 
@@ -487,5 +488,41 @@ router.put("/:id/approve", verifyToken, isAdmin, approveSidangRegistration);
  *         description: Registration or admin not found
  */
 router.put("/:id/reject", verifyToken, isAdmin, rejectSidangRegistration);
+
+/**
+ * @swagger
+ * /api/sidang-registrations/{id}/toggle-lock:
+ *   patch:
+ *     summary: Toggle lock status of sidang registration (Admin only)
+ *     tags: [Sidang Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     responses:
+ *       200:
+ *         description: Status kunci pendaftaran sidang berhasil diperbarui
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya admin yang dapat mengakses)
+ *       404:
+ *         description: Sidang registration not found
+ */
+router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistration);
 
 export default router;

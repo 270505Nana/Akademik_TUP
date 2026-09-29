@@ -9,6 +9,7 @@ import {
   setJadwalSidang,
   batchSetJadwalSidang,
   exportJadwalSidang,
+  toggleLockSidangRegistration,
 } from '../../controllers/penjadwalanSidangController.js';
 
 /**
@@ -67,6 +68,9 @@ import {
  *                       ruanganSidang:
  *                         type: object
  *                         nullable: true
+ *                       isLocked:
+ *                         type: boolean
+ *                         description: Lock status to prevent examiners changes by dosen
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
@@ -75,6 +79,42 @@ import {
  *         description: Invalid token
  */
 router.get("/", verifyToken, listPenjadwalanSidang);
+
+/**
+ * @swagger
+ * /api/penjadwalan-sidang/{id}/toggle-lock:
+ *   patch:
+ *     summary: Toggle lock status of sidang registration (Admin only)
+ *     tags: [Penjadwalan Sidang]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     responses:
+ *       200:
+ *         description: Status kunci pendaftaran sidang berhasil diperbarui
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya admin yang dapat mengakses)
+ *       404:
+ *         description: Sidang registration not found
+ */
+router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistration);
 
 /**
  * @swagger
@@ -145,7 +185,7 @@ router.get("/export", verifyToken, isAdmin, exportJadwalSidang);
  *                   items:
  *                     type: object
  *       400:
- *         description: Validation error / Jadwal bentrok
+ *         description: Validation error / Jadwal bentrok / Sidang terkunci
  *       401:
  *         description: Token not found
  *       403:
@@ -255,7 +295,7 @@ router.put("/set-jadwal/batch", verifyToken, isAdmin, batchSetJadwalSidang);
  *                 data:
  *                   type: object
  *       400:
- *         description: Validation error
+ *         description: Validation error / Sidang terkunci
  *       401:
  *         description: Token not found
  *       403:

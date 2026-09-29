@@ -1158,6 +1158,35 @@ const rejectSidangRegistration = asyncHandler(async (req, res) => {
   });
 });
 
+// Toggle Lock Sidang Registration (Admin Only)
+const toggleLockSidangRegistration = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!registration || registration.deletedAt) {
+    res.status(404);
+    throw new Error("Pendaftaran sidang tidak ditemukan");
+  }
+
+  const updatedRegistration = await prisma.sidangRegistration.update({
+    where: { id },
+    data: {
+      isLocked: !registration.isLocked,
+    },
+    include: sidangInclude,
+  });
+
+  res.json({
+    message: updatedRegistration.isLocked
+      ? "Pendaftaran sidang berhasil dikunci"
+      : "Kunci pendaftaran sidang berhasil dibuka",
+    data: mapSidangRegistrationToFrontend(updatedRegistration, req),
+  });
+});
+
 export {
   listSidangRegistrations,
   getSidangRegistrationById,
@@ -1170,4 +1199,5 @@ export {
   downloadSidangRegistrationFile,
   approveSidangRegistration,
   rejectSidangRegistration,
+  toggleLockSidangRegistration,
 };
