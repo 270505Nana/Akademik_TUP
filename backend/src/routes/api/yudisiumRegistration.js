@@ -29,7 +29,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/yudisium-registrations:
  *   get:
- *     summary: Get all yudisium registrations (with search, filter, sort, and pagination)
+ *     summary: Get all yudisium registrations (with search, studyProgramId, skemaSidang, pengajuanCumlaude, skemaCumlaude, status filter, sort, and pagination)
  *     tags: [Yudisium Registration]
  *     security:
  *       - bearerAuth: []
@@ -44,6 +44,24 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *         description: Filter by Study Program ID
+ *       - in: query
+ *         name: skemaSidang
+ *         schema:
+ *           type: string
+ *           example: Capstone
+ *         description: Filter pendaftaran yudisium berdasarkan skema sidang
+ *       - in: query
+ *         name: pengajuanCumlaude
+ *         schema:
+ *           type: string
+ *           example: Cumlaude
+ *         description: Filter pendaftaran yudisium berdasarkan pengajuan cumlaude (mengutamakan pengajuanCumlaudeFinal jika sudah diisi/disetujui)
+ *       - in: query
+ *         name: skemaCumlaude
+ *         schema:
+ *           type: string
+ *           example: Publikasi Jurnal
+ *         description: Filter pendaftaran yudisium berdasarkan skema cumlaude (mengutamakan skemaCumlaudeFinal jika sudah diisi/disetujui)
  *       - in: query
  *         name: status
  *         schema:

@@ -29,12 +29,15 @@ import {
   getYudisiumRegistrationByMahasiswaId as fetchYudisiumByMahasiswaId,
 } from "../services/yudisiumRegistrationService.js";
 
-// Yudisium Registration List (with search, studyProgramId filter, sort, and pagination)
+// Yudisium Registration List (with search, studyProgramId, skemaSidang, pengajuanCumlaude, skemaCumlaude, status filter, sort, and pagination)
 const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
   const {
     search,
     studyProgramId,
+    skemaSidang,
+    pengajuanCumlaude,
+    skemaCumlaude,
     status,
     sortBy,
   } = req.query;
@@ -46,38 +49,41 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   // 1. Global Search across mahasiswa name, nim, and thesis title
   const searchTerm = (search || "").trim();
   if (searchTerm) {
-    where.OR = [
-      {
-        mahasiswa: {
-          user: {
-            name: {
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        {
+          mahasiswa: {
+            user: {
+              name: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+        },
+        {
+          mahasiswa: {
+            nim: {
               contains: searchTerm,
               mode: "insensitive",
             },
           },
         },
-      },
-      {
-        mahasiswa: {
-          nim: {
+        {
+          judulTugasAkhirIndonesia: {
             contains: searchTerm,
             mode: "insensitive",
           },
         },
-      },
-      {
-        judulTugasAkhirIndonesia: {
-          contains: searchTerm,
-          mode: "insensitive",
+        {
+          judulTugasAkhirInggris: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
         },
-      },
-      {
-        judulTugasAkhirInggris: {
-          contains: searchTerm,
-          mode: "insensitive",
-        },
-      },
-    ];
+      ],
+    });
   }
 
   // 2. Filter by Study Program ID
@@ -90,7 +96,79 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
     where.mahasiswa.studyProgramId = studyProgramId.trim();
   }
 
-  // 3. Filter by Status
+  // 3. Filter by Skema Sidang
+  if (
+    skemaSidang &&
+    typeof skemaSidang === "string" &&
+    skemaSidang.trim() !== ""
+  ) {
+    where.skemaSidang = {
+      equals: skemaSidang.trim(),
+      mode: "insensitive",
+    };
+  }
+
+  // 4. Filter by Pengajuan Cumlaude (utamakan pengajuanCumlaudeFinal jika ada isinya)
+  if (
+    pengajuanCumlaude &&
+    typeof pengajuanCumlaude === "string" &&
+    pengajuanCumlaude.trim() !== ""
+  ) {
+    const pengajuan = pengajuanCumlaude.trim();
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        {
+          pengajuanCumlaudeFinal: {
+            equals: pengajuan,
+            mode: "insensitive",
+          },
+        },
+        {
+          OR: [
+            { pengajuanCumlaudeFinal: null },
+            { pengajuanCumlaudeFinal: "" },
+          ],
+          pengajuanCumlaude: {
+            equals: pengajuan,
+            mode: "insensitive",
+          },
+        },
+      ],
+    });
+  }
+
+  // 5. Filter by Skema Cumlaude (utamakan skemaCumlaudeFinal jika ada isinya)
+  if (
+    skemaCumlaude &&
+    typeof skemaCumlaude === "string" &&
+    skemaCumlaude.trim() !== ""
+  ) {
+    const skema = skemaCumlaude.trim();
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        {
+          skemaCumlaudeFinal: {
+            equals: skema,
+            mode: "insensitive",
+          },
+        },
+        {
+          OR: [
+            { skemaCumlaudeFinal: null },
+            { skemaCumlaudeFinal: "" },
+          ],
+          skemaCumlaude: {
+            equals: skema,
+            mode: "insensitive",
+          },
+        },
+      ],
+    });
+  }
+
+  // 6. Filter by Status
   if (status && typeof status === "string" && status.trim() !== "") {
     where.status = {
       equals: status.trim(),
