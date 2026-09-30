@@ -196,7 +196,7 @@ const SkStatusBanner = ({ status, permohonan }) => {
     [STATUS_SK.EXPIRED]: {
       bg: '#F5F3FF', border: '#DDD6FE', icon: <RefreshCw size={16} color="#7C3AED" />,
       title: 'SK Pembimbing TA Sudah Kadaluarsa',
-      desc: 'SK Pembimbing Tugas Akhir kamu telah melewati batas masa berlaku. Kamu perlu mengajukan permohonan pembaruan SK melalui formulir di bawah ini. Data pengajuan sebelumnya sudah terisi otomatis, kamu cukup perbarui jika ada perubahan.',
+      desc: 'SK Pembimbing Tugas Akhir kamu telah melewati batas masa berlaku. Kamu perlu mengajukan permohonan perpanjangan SK melalui formulir di bawah ini. Data pengajuan telah di-lock untuk mencegah perubahan.',
       badgeBg: '#EDE9FE', badgeColor: '#5B21B6', badgeText: 'Kadaluarsa',
     },
   };
@@ -273,7 +273,8 @@ const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, submissio
   if (!kode2 || !kode2.value)               return 'Dosen Pembimbing 2 wajib dipilih.';
   if (String(kode1.value) === String(kode2.value)) return 'Dosen Pembimbing 1 dan 2 tidak boleh sama.';
   
-  if ((submissionMode === 'create-baru' || submissionMode === 'create-perpanjangan') && !actualFile) {
+  // Validasi Frontend BENAR-BENAR MENGIZINKAN KOSONG untuk perpanjangan dan revisi
+  if (submissionMode === 'create-baru' && !actualFile) {
     return 'Dokumen evidence wajib diunggah.';
   }
   return null;
@@ -371,27 +372,50 @@ const PengajuanSK = () => {
         setSubmissionMode(mode);
 
         if (mode === 'create-perpanjangan' || mode === 'patch-revisi') {
-          const matchedKode1 = lecturerOptions.find(
-            opt => String(opt.value) === String(latest.dosenPembimbing1Id)
-          );
-          const matchedKode2 = lecturerOptions.find(
-            opt => String(opt.value) === String(latest.dosenPembimbing2Id)
-          );
-          const matchedKK = matchedKode1?.researchGroupId != null
-            ? kelompokKeilmuan.find(
-                kk => String(kk.researchGroupId) === String(matchedKode1.researchGroupId)
-              )
-            : null;
+          const d1 = latest.dosenPembimbing1;
+          const d2 = latest.dosenPembimbing2;
+
+          let matchedKode1 = null;
+          if (d1) {
+            matchedKode1 = {
+              value: String(d1.id),
+              label: `${d1.kodeDosen || ''} — ${d1.name || ''}`,
+              nama: d1.name || '',
+              researchGroupId: d1.researchGroupId || null,
+            };
+          } else {
+            matchedKode1 = lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing1Id));
+          }
+
+          let matchedKode2 = null;
+          if (d2) {
+            matchedKode2 = {
+              value: String(d2.id),
+              label: `${d2.kodeDosen || ''} — ${d2.name || ''}`,
+              nama: d2.name || '',
+              researchGroupId: d2.researchGroupId || null,
+            };
+          } else {
+            matchedKode2 = lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing2Id));
+          }
+
+          const matchedKK = latest.researchGroup 
+            ? latest.researchGroup.name.toUpperCase() 
+            : (matchedKode1?.researchGroupId != null
+              ? kelompokKeilmuan.find(kk => String(kk.researchGroupId) === String(matchedKode1.researchGroupId))?.label
+              : '');
+
           setFormData(prev => ({
             ...prev,
-            judulIndo:    latest.judulProposalIndonesia ?? latest.proposalTitleId ?? '',
+            judulIndo: latest.judulProposalIndonesia ?? latest.proposalTitleId ?? '',
             judulInggris: latest.judulProposalInggris ?? latest.proposalTitleEn ?? '',
-            kode1:    matchedKode1 ?? null,
-            dosen1:   matchedKode1?.nama ?? '',
-            kode2:    matchedKode2 ?? null,
-            dosen2:   matchedKode2?.nama ?? '',
-            kelompok: matchedKK?.label ?? '',
+            kode1: matchedKode1 ?? null,
+            dosen1: matchedKode1?.nama ?? '',
+            kode2: matchedKode2 ?? null,
+            dosen2: matchedKode2?.nama ?? '',
+            kelompok: matchedKK || '',
           }));
+          
           setPageStatus('form');
         } else {
           setPageStatus('status_only');
@@ -405,23 +429,24 @@ const PengajuanSK = () => {
     };
 
     if (!loadingDosen && !isStudentLoading) checkSKTAStatus();
-  }, [loadingDosen, isStudentLoading, student, navigate, lecturerOptions]);
+  }, [loadingDosen, isStudentLoading, student, navigate, lecturerOptions, updateSktaRequestId]);
 
   const namaDisplay  = student?.namaLengkap      || user?.username || '';
   const nimDisplay   = student?.nim              || '';
   const noHpDisplay  = user?.phone               || '';
   const prodiDisplay = student?.studyProgramNama || '';
 
-  // STATE KONDISIONAL BERDASARKAN DEADLINE
   const isExpired      = submissionMode === 'create-perpanjangan';
   const isBelumTerbit  = submissionMode === 'patch-revisi';
   const isEditableForm = isSkEditable(skStatus, permohonan);
   const isReadOnlyForm = isBelumTerbit && !isEditableForm;
+  
+  const isLockedFields = isExpired || isReadOnlyForm;
 
   const dynamicTitle = `${isExpired ? 'Perpanjangan SK' : isBelumTerbit ? 'Perbaikan Revisi SK' : 'Permohonan'} Penerbitan SK Pembimbing Tugas Akhir`;
 
   const handleDosenChange = useCallback((field, val) => {
-    if (isReadOnlyForm) return;
+    if (isLockedFields) return; 
     const namaField = field === 'kode1' ? 'dosen1' : 'dosen2';
     setFormData(prev => {
       const updated = { ...prev, [field]: val, [namaField]: val?.nama || '' };
@@ -438,7 +463,7 @@ const PengajuanSK = () => {
       return updated;
     });
     setSubmitError(null);
-  }, [isReadOnlyForm]);
+  }, [isLockedFields]);
 
   const processFile = (file) => {
     if (!file) return;
@@ -551,6 +576,7 @@ const PengajuanSK = () => {
           dosenPembimbing1Id: formData.kode1?.value,
           dosenPembimbing2Id: formData.kode2?.value,
           category:           categoryString,
+          evidence:           actualFile // <- Akan bernilai null/undefined jika mahasiswa tidak pilih file
         });
         
         const newSktaRequestId = draftResult?.data?.id || draftResult?.id;
@@ -564,6 +590,8 @@ const PengajuanSK = () => {
         finalPayload.append('judulProposalInggris', formData.judulInggris.trim());
         if (formData.kode1?.value) finalPayload.append('dosenPembimbing1Id', formData.kode1.value);
         if (formData.kode2?.value) finalPayload.append('dosenPembimbing2Id', formData.kode2.value);
+        
+        // Hanya dikirim jika mahasiswa memilih file baru
         if (actualFile) finalPayload.append('evidence', actualFile);
 
         await submitFinalSKTARequest(finalPayload);
@@ -838,8 +866,8 @@ const PengajuanSK = () => {
                 placeholder="Masukkan judul tugas akhir dalam Bahasa Indonesia"
                 value={formData.judulIndo}
                 onChange={(e) => { setFormData(prev => ({ ...prev, judulIndo: e.target.value })); setSubmitError(null); }}
-                readOnly={isReadOnlyForm}
-                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px', backgroundColor: isReadOnlyForm ? '#F3F4F6' : '#fff', cursor: isReadOnlyForm ? 'not-allowed' : 'text' }}
+                readOnly={isLockedFields}
+                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px', backgroundColor: isLockedFields ? '#F3F4F6' : '#fff', cursor: isLockedFields ? 'not-allowed' : 'text' }}
               />
             </div>
           </div>
@@ -851,8 +879,8 @@ const PengajuanSK = () => {
                 placeholder="Enter your thesis/final project title in English"
                 value={formData.judulInggris}
                 onChange={(e) => { setFormData(prev => ({ ...prev, judulInggris: e.target.value })); setSubmitError(null); }}
-                readOnly={isReadOnlyForm}
-                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px', backgroundColor: isReadOnlyForm ? '#F3F4F6' : '#fff', cursor: isReadOnlyForm ? 'not-allowed' : 'text' }}
+                readOnly={isLockedFields}
+                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px', backgroundColor: isLockedFields ? '#F3F4F6' : '#fff', cursor: isLockedFields ? 'not-allowed' : 'text' }}
               />
             </div>
           </div>
@@ -873,7 +901,7 @@ const PengajuanSK = () => {
                   placeholder={loadingDosen ? "Memuat data dosen..." : "Pilih Kode Dosen 1"}
                   options={lecturerOptions} styles={customSelectStyles}
                   value={formData.kode1} onChange={(val) => handleDosenChange('kode1', val)}
-                  isLoading={loadingDosen} isDisabled={loadingDosen || isReadOnlyForm}
+                  isLoading={loadingDosen} isDisabled={loadingDosen || isLockedFields}
                   isClearable noOptionsMessage={() => "Dosen tidak ditemukan"} className="w-full"
                 />
               </div>
@@ -893,7 +921,7 @@ const PengajuanSK = () => {
                   placeholder={loadingDosen ? "Memuat data dosen..." : "Pilih Kode Dosen 2"}
                   options={lecturerOptions} styles={customSelectStyles}
                   value={formData.kode2} onChange={(val) => handleDosenChange('kode2', val)}
-                  isLoading={loadingDosen} isDisabled={loadingDosen || isReadOnlyForm}
+                  isLoading={loadingDosen} isDisabled={loadingDosen || isLockedFields}
                   isClearable noOptionsMessage={() => "Dosen tidak ditemukan"} className="w-full"
                 />
               </div>
@@ -913,7 +941,7 @@ const PengajuanSK = () => {
                   <div key={item.id} style={{
                     display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6,
                     border: `1px solid ${isSelected ? '#C0182A' : '#E5E7EB'}`, background: isSelected ? '#FEF2F2' : '#F9FAFB',
-                    cursor: 'default', opacity: isReadOnlyForm && !isSelected ? 0.6 : 1
+                    cursor: 'default', opacity: isLockedFields && !isSelected ? 0.6 : 1
                   }}>
                     <div style={{
                       width: 14, height: 14, borderRadius: '50%', flexShrink: 0, border: `1.5px solid ${isSelected ? '#C0182A' : '#D1D5DB'}`,
@@ -948,7 +976,7 @@ const PengajuanSK = () => {
 
           <div className="form-grid" style={{ gap: '16px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Unggah Dokumen Prasyarat {(!isBelumTerbit) ? '*' : ''}</label>
+              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Unggah Dokumen Prasyarat {(!isBelumTerbit && !isExpired) ? '*' : ''}</label>
               <div 
                 className={`upload-area ${isDragging ? 'dragging' : ''} ${isReadOnlyForm ? 'disabled' : ''}`} 
                 onClick={() => !isReadOnlyForm && fileInputRef.current.click()}
@@ -994,7 +1022,7 @@ const PengajuanSK = () => {
                 )}
                 {!selectedFile && !fileError && (
                   <div className="empty-file-state" style={{ padding: '16px', border: '1px dashed #E5E7EB', borderRadius: '8px', textAlign: 'center', color: '#9CA3AF', fontSize: '11px' }}>
-                    {isExpired ? 'Wajib upload dokumen untuk perpanjangan' : isBelumTerbit ? 'Opsional kosongkan jika evidence lama masih berlaku' : 'Belum ada file yang dipilih'}
+                    {isExpired ? 'Opsional: kosongkan jika evidence lama masih berlaku' : isBelumTerbit ? 'Opsional kosongkan jika evidence lama masih berlaku' : 'Belum ada file yang dipilih'}
                   </div>
                 )}
               </div>
