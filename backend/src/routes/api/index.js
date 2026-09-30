@@ -23,6 +23,7 @@ import cloRouter from './clo.js';
 import subcloRouter from './subclo.js';
 import jenisAsesmenRouter from './jenisAsesmen.js';
 import skemaPenilaiRouter from './skemaPenilai.js';
+import penilaianTugasAkhirRouter from './penilaianTugasAkhir.js';
 
 const router = express.Router();
 
@@ -50,5 +51,6 @@ router.use("/clo", cloRouter);
 router.use("/subclo", subcloRouter);
 router.use("/jenis-asesmen", jenisAsesmenRouter);
 router.use("/skema-penilai", skemaPenilaiRouter);
+router.use("/penilaian-tugas-akhir", penilaianTugasAkhirRouter);
 
 export default router;
