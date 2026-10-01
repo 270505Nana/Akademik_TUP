@@ -1,7 +1,7 @@
 import express from 'express';
 const router = express.Router();
 import { verifyToken } from '../../middlewares/auth.js';
-import { isKetuaKK, isAdmin } from '../../middlewares/authorize.js';
+import { isKetuaKK, isAdmin, isAdminOrKetuaKK } from '../../middlewares/authorize.js';
 import {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -23,7 +23,7 @@ import {
  * @swagger
  * /api/penjadwalan-sidang:
  *   get:
- *     summary: Get all penjadwalan sidang (paginated)
+ *     summary: Get all penjadwalan sidang (paginated) (Admin and Ketua KK only)
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -76,9 +76,9 @@ import {
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token
+ *         description: Access denied (Hanya admin dan dosen dengan status Ketua KK yang dapat mengakses)
  */
-router.get("/", verifyToken, listPenjadwalanSidang);
+router.get("/", verifyToken, isAdminOrKetuaKK, listPenjadwalanSidang);
 
 /**
  * @swagger
@@ -120,7 +120,7 @@ router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistrat
  * @swagger
  * /api/penjadwalan-sidang/export:
  *   get:
- *     summary: Export data jadwal sidang
+ *     summary: Export data jadwal sidang (Admin & Ketua KK only)
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -136,9 +136,9 @@ router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistrat
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Hanya admin yang dapat mengakses)
+ *         description: Access denied (Hanya admin dan dosen dengan status Ketua KK yang dapat mengakses)
  */
-router.get("/export", verifyToken, isAdmin, exportJadwalSidang);
+router.get("/export", verifyToken, isAdminOrKetuaKK, exportJadwalSidang);
 
 /**
  * @swagger

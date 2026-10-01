@@ -47,6 +47,7 @@ const listPenjadwalanSidang = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
 
   const where = {
+    isDraft: false,
     deletedAt: null,
   };
 
@@ -844,11 +845,30 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
     }
   }
   const whereClause = {
+    isDraft: false,
     deletedAt: null,
     tglSidang: { not: null },
   };
   if (targetPeriodId) {
     whereClause.sidangPeriodId = targetPeriodId;
+  }
+
+  if (req.user?.role === "DOSEN") {
+    const dosen =
+      req.dosen ||
+      (await prisma.dosen.findUnique({
+        where: { userId: req.user.id, deletedAt: null },
+      }));
+
+    if (!dosen) {
+      res.status(404);
+      throw new Error("Data Dosen tidak ditemukan");
+    }
+
+    whereClause.dosenPembimbing1 = {
+      researchGroupId: dosen.researchGroupId,
+      deletedAt: null,
+    };
   }
 
   const jadwalList = await prisma.sidangRegistration.findMany({

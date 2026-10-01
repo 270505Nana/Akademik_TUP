@@ -111,12 +111,48 @@ const isKepalaUrusanAkademik = async (req, res, next) => {
   }
 };
 
+const isAdminOrKetuaKK = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Token not found" });
+  }
+
+  if (req.user.role === "ADMIN") {
+    return next();
+  }
+
+  if (req.user.role === "DOSEN") {
+    try {
+      const dosen = await prisma.dosen.findUnique({
+        where: { userId: req.user.id },
+      });
+
+      if (!dosen || !dosen.isKetuaKK || dosen.deletedAt) {
+        return res.status(403).json({
+          message:
+            "Access denied. Hanya admin dan dosen dengan status Ketua KK yang dapat mengakses.",
+        });
+      }
+
+      req.dosen = dosen;
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  return res.status(403).json({
+    message:
+      "Access denied. Hanya admin dan dosen dengan status Ketua KK yang dapat mengakses.",
+  });
+};
+
 export {
   authorize,
   isMahasiswa,
   isDosen,
   isAdmin,
   isKetuaKK,
+  isAdminOrKetuaKK,
   isKetuaProdi,
   isKepalaUrusanAkademik,
 };
