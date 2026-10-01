@@ -34,7 +34,6 @@ const VerifikasiModal = ({
   const [skPreviewUrl, setSkPreviewUrl] = useState(null);
   const [isLoadingSkPreview, setIsLoadingSkPreview] = useState(false);
 
-  // --- STATE DARI EVIDENCE MODAL ---
   const [selectedPreview,  setSelectedPreview]  = useState(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState(null);
   const [errorMsg,         setErrorMsg]         = useState({});
@@ -48,14 +47,16 @@ const VerifikasiModal = ({
   const studentPhone = student?.phone || '-';
   const prodiName = student?.studyProgram?.name || selectedPermohonan?.prodiName || '-';
 
+  const isPerpanjangan = sktaRequest?.category === 'Perpanjangan SK' || selectedPermohonan?.category === 'Perpanjangan SK';
+
   const evidenceUploads = selectedPermohonan?.evidenceUploads?.length
     ? selectedPermohonan.evidenceUploads
     : sktaRequest?.evidenceDownloadUrl
       ? [{ id: sktaRequest.id, name: 'Dokumen_Evidence.pdf', downloadUrl: sktaRequest.evidenceDownloadUrl }]
       : (sktaRequest.sktaRequestUploads || []);
 
-  const existingSkFile = existingResponse?.sktaUploadPath;
-  const isExpired = !!(existingResponse?.expDate && new Date(existingResponse.expDate) < new Date());
+  const existingSkFile = existingResponse?.sktaUploadPath || sktaRequest?.sktaUploadPath;
+  const isExpired = !!((sktaRequest?.expDate || existingResponse?.expDate) && new Date(sktaRequest?.expDate || existingResponse?.expDate) < new Date());
 
   useEffect(() => {
     if (!existingResponse) return;
@@ -134,7 +135,7 @@ const VerifikasiModal = ({
       return;
     }
 
-    const uploadId = existingSkFile?.id || existingResponse?.sktaUploadPath;
+    const uploadId = existingSkFile?.id || existingResponse?.sktaUploadPath || sktaRequest?.sktaUploadPath;
     if (!uploadId) {
       setDownloadError('ID file SK tidak ditemukan.');
       return;
@@ -386,6 +387,20 @@ const VerifikasiModal = ({
             {step === 2 && (
               <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }} className="dm-body" style={{ padding: 0 }}>
                 
+                {isPerpanjangan && (
+                  <div style={{ marginBottom: 16, padding: '12px 16px', background: '#F5F3FF', borderLeft: '4px solid #7C3AED', borderRadius: '8px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '18px' }}>ℹ️</span>
+                    <div>
+                      <p style={{ margin: 0, fontSize: 13, color: '#5B21B6', fontWeight: 700 }}>
+                        Pengajuan Perpanjangan SKTA
+                      </p>
+                      <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#6D28D9', lineHeight: 1.4 }}>
+                        Mahasiswa ini meminta perpanjangan masa berlaku SK yang sebelumnya telah terbit/kedaluwarsa.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {!isReadOnly && (
                   <div style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', marginBottom: 16 }}>
                     <button
@@ -405,7 +420,6 @@ const VerifikasiModal = ({
                   </div>
                 )}
 
-                {/* Custom Alert Message dipindah ke atas */}
                 {validationError && (
                   <div style={{ marginBottom: 16, padding: '12px 16px', background: '#FEF2F2', borderLeft: '4px solid #DC2626', borderRadius: '8px' }}>
                     <p style={{ margin: 0, fontSize: 13, color: '#B91C1C', fontWeight: 500 }}>
@@ -461,9 +475,9 @@ const VerifikasiModal = ({
                           </ol>
                         </div>
 
-                        <div className="dm-section">
-                          <div className="dm-section-label">Upload File SK Final *</div>
-                          {existingResponse?.sktaUploadPath && !uploadedFile && (
+                        <div className="dm-section" style={{ marginBottom: 24 }}>
+                          <div className="dm-section-label">Upload File SK Final {isPerpanjangan ? '(Baru) *' : '*'}</div>
+                          {existingResponse?.sktaUploadPath && !uploadedFile && !isPerpanjangan && (
                             <div className="dm-file-exists-info" style={{ marginBottom: 8 }}>
                               <CheckCircle2 size={14} /> File SK sudah diupload sebelumnya. Upload file baru untuk mengganti.
                             </div>
@@ -485,13 +499,53 @@ const VerifikasiModal = ({
                             ) : (
                               <>
                                 <div className="dm-upload-icon"><Upload size={22} /></div>
-                                <p className="dm-upload-main">Drag & Drop atau klik untuk pilih file</p>
+                                <p className="dm-upload-main">
+                                  {isPerpanjangan ? 'Upload SK yang telah diperpanjang masa berlakunya' : 'Drag & Drop atau klik untuk pilih file'}
+                                </p>
                                 <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>Format: PDF</p>
                               </>
                             )}
                           </div>
                         </div>
                       </>
+                    )}
+
+                    {/* Preview SK Lama dipindah ke posisi paling bawah sesuai permintaan */}
+                    {existingSkFile && (
+                      <div className="dm-section" style={{ marginBottom: 24, padding: '16px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                        <div className="dm-section-label" style={{ marginBottom: 12, textTransform: 'uppercase', fontSize: 11, color: isPerpanjangan ? '#7C3AED' : '#C0182A' }}>
+                          {isPerpanjangan ? 'File SK Final Sebelumnya (Expired)' : 'File SK Final Saat Ini'}
+                        </div>
+                        
+                        {isLoadingSkPreview ? (
+                          <div style={{ padding: '20px', textAlign: 'center', background: '#fff', borderRadius: '8px', border: '1px dashed #CBD5E1', marginBottom: 12 }}>
+                            <Loader size={20} color="#C0182A" style={{ animation: 'spin 1s linear infinite', margin: '0 auto' }} />
+                            <p style={{ fontSize: 12, color: '#6B7280', marginTop: 8 }}>Memuat preview SK...</p>
+                          </div>
+                        ) : skPreviewUrl ? (
+                          <div style={{ height: '220px', borderRadius: '8px', border: '1px solid #E2E8F0', overflow: 'hidden', marginBottom: 12 }}>
+                            <iframe src={skPreviewUrl} width="100%" height="100%" style={{ border: 'none' }} title="Preview SK Final" />
+                          </div>
+                        ) : (
+                          <div style={{ padding: '12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', marginBottom: 12 }}>
+                            <p style={{ fontSize: 12, color: '#DC2626', margin: 0, textAlign: 'center' }}>Preview dokumen tidak tersedia.</p>
+                          </div>
+                        )}
+
+                        {downloadError && <p style={{ fontSize: 12, color: '#EF4444', marginBottom: 8, marginTop: 0 }}>⚠ {downloadError}</p>}
+                        
+                        <button
+                          onClick={handleDownloadSK}
+                          disabled={downloadingSK}
+                          style={{
+                            width: '100%', padding: '10px', backgroundColor: '#F1F5F9', color: '#475569', borderRadius: '6px', fontWeight: '700', fontSize: '12px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1px solid #CBD5E1', cursor: downloadingSK ? 'not-allowed' : 'pointer',
+                            opacity: downloadingSK ? 0.7 : 1, transition: 'all 0.2s'
+                          }}
+                        >
+                          {downloadingSK ? <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Mengunduh...</> : <><Download size={16} /> Unduh SK Lama</>}
+                        </button>
+                      </div>
                     )}
                   </>
                 )}
@@ -516,55 +570,6 @@ const VerifikasiModal = ({
                   </>
                 )}
 
-                {existingSkFile && (
-                  <div className="dm-section" style={{ marginTop: 24 }}>
-                    <div className="dm-section-label" style={{ marginBottom: 12, textTransform: 'uppercase', fontSize: 11, color: '#C0182A' }}>File SK Final Saat Ini</div>
-                    
-                    
-                    {isLoadingSkPreview ? (
-                      <div style={{ padding: '20px', textAlign: 'center', background: '#F8FAFC', borderRadius: '8px', border: '1px dashed #CBD5E1', marginBottom: 12 }}>
-                        <Loader size={20} color="#C0182A" style={{ animation: 'spin 1s linear infinite', margin: '0 auto' }} />
-                        <p style={{ fontSize: 12, color: '#6B7280', marginTop: 8 }}>Memuat preview SK...</p>
-                      </div>
-                    ) : skPreviewUrl ? (
-                      <div style={{ height: '300px', borderRadius: '8px', border: '1px solid #E2E8F0', overflow: 'hidden', marginBottom: 12 }}>
-                        <iframe src={skPreviewUrl} width="100%" height="100%" style={{ border: 'none' }} title="Preview SK Final" />
-                      </div>
-                    ) : (
-                      <div style={{ padding: '12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', marginBottom: 12 }}>
-                        <p style={{ fontSize: 12, color: '#DC2626', margin: 0, textAlign: 'center' }}>Preview dokumen tidak tersedia.</p>
-                      </div>
-                    )}
-
-                    {downloadError && <p style={{ fontSize: 12, color: '#EF4444', marginBottom: 8, marginTop: 0 }}>⚠ {downloadError}</p>}
-                    
-                    <button
-                      onClick={handleDownloadSK}
-                      disabled={downloadingSK}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        backgroundColor: '#16A34A',
-                        color: 'white',
-                        borderRadius: '8px',
-                        fontWeight: '700',
-                        fontSize: '13px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        border: 'none',
-                        cursor: downloadingSK ? 'not-allowed' : 'pointer',
-                        opacity: downloadingSK ? 0.7 : 1,
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseOver={(e) => e.target.style.backgroundColor = '#15803D'}
-                      onMouseOut={(e) => e.target.style.backgroundColor = '#16A34A'}
-                    >
-                      {downloadingSK ? <><Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> Mengunduh...</> : <><Download size={18} /> Unduh SK Final</>}
-                    </button>
-                  </div>
-                )}
               </motion.div>
             )}
 
@@ -620,4 +625,4 @@ const VerifikasiModal = ({
   );
 };
 
-export default VerifikasiModal;
+export default VerifikasiModal; 

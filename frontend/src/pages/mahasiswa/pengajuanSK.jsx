@@ -172,11 +172,16 @@ const SkStatusBanner = ({ status, permohonan }) => {
     }
   };
 
+  // Cek apakah kategori pengajuan ini adalah Perpanjangan SK
+  const isPerpanjangan = permohonan?.category === SKTA_CATEGORY.PERPANJANGAN_SK || permohonan?.category === 'Perpanjangan SK';
+
   const configs = {
     [STATUS_SK.DALAM_PROSES]: {
       bg: '#EFF6FF', border: '#BFDBFE', icon: <Clock size={16} color="#2563EB" />,
-      title: 'Pengajuan SK Sedang Diproses',
-      desc: 'Permohonan Penerbitan SK Tugas Akhir kamu sedang dalam antrian verifikasi oleh tim akademik. Proses maksimal 3×24 jam kerja. Mohon ditunggu dan pantau status di dashboard.',
+      title: isPerpanjangan ? 'Perpanjangan SK Sedang Diproses' : 'Pengajuan SK Sedang Diproses',
+      desc: isPerpanjangan 
+        ? 'Permohonan perpanjangan SK Tugas Akhir kamu sudah terkirim dan sedang dalam antrian verifikasi admin. Proses maksimal 3×24 jam kerja.'
+        : 'Permohonan Penerbitan SK Tugas Akhir kamu sedang dalam antrian verifikasi oleh tim akademik. Proses maksimal 3×24 jam kerja. Mohon ditunggu dan pantau status di dashboard.',
       badgeBg: '#DBEAFE', badgeColor: '#1D4ED8', badgeText: 'Dalam Proses',
     },
     [STATUS_SK.BELUM_TERBIT]: {
@@ -443,7 +448,15 @@ const PengajuanSK = () => {
   
   const isLockedFields = isExpired || isReadOnlyForm;
 
-  const dynamicTitle = `${isExpired ? 'Perpanjangan SK' : isBelumTerbit ? 'Perbaikan Revisi SK' : 'Permohonan'} Penerbitan SK Pembimbing Tugas Akhir`;
+  // LOGIKA DINAMIS UNTUK NAVBAR TITLE
+  let dynamicTitle = 'Permohonan Penerbitan SK Pembimbing Tugas Akhir';
+  if (isExpired) {
+    dynamicTitle = 'Perpanjangan SK Pembimbing Tugas Akhir';
+  } else if (isBelumTerbit) {
+    dynamicTitle = 'Perbaikan Revisi SK Pembimbing Tugas Akhir';
+  } else if (permohonan?.category === SKTA_CATEGORY.PERPANJANGAN_SK || permohonan?.category === 'Perpanjangan SK') {
+    dynamicTitle = 'Perpanjangan SK Pembimbing Tugas Akhir'; // <--- Berubah saat status_only / sukses!
+  }
 
   const handleDosenChange = useCallback((field, val) => {
     if (isLockedFields) return; 
@@ -576,7 +589,7 @@ const PengajuanSK = () => {
           dosenPembimbing1Id: formData.kode1?.value,
           dosenPembimbing2Id: formData.kode2?.value,
           category:           categoryString,
-          evidence:           actualFile // <- Akan bernilai null/undefined jika mahasiswa tidak pilih file
+          evidence:           actualFile 
         });
         
         const newSktaRequestId = draftResult?.data?.id || draftResult?.id;
@@ -591,12 +604,17 @@ const PengajuanSK = () => {
         if (formData.kode1?.value) finalPayload.append('dosenPembimbing1Id', formData.kode1.value);
         if (formData.kode2?.value) finalPayload.append('dosenPembimbing2Id', formData.kode2.value);
         
-        // Hanya dikirim jika mahasiswa memilih file baru
         if (actualFile) finalPayload.append('evidence', actualFile);
 
         await submitFinalSKTARequest(finalPayload);
         
         updateSktaRequestId(newSktaRequestId);
+        
+        // Memperbarui category secara lokal agar UI merespons tanpa harus refresh
+        if (permohonan) {
+          setPermohonan({ ...permohonan, category: categoryString });
+        }
+        
         setPageStatus('success');
       }
     } catch (err) {

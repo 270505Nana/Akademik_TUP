@@ -77,41 +77,35 @@ const PermohonanSK = () => {
       const res = await getAllSktaRequests();
       const dataList = res?.data ?? res ?? [];
       
-      const groupByStudent = new Map();
+      const uniqueLatestRequests = new Map();
       dataList.forEach(item => {
         const sid = item.studentId ?? item.mahasiswaId ?? item.student?.id ?? item.mahasiswa?.id;
-        if (!groupByStudent.has(sid)) groupByStudent.set(sid, []);
-        groupByStudent.get(sid).push(item);
+        if (!uniqueLatestRequests.has(sid)) {
+          uniqueLatestRequests.set(sid, item);
+        }
       });
 
       const enriched = await Promise.all(
-        Array.from(groupByStudent.entries()).map(async ([sid, requests]) => {
-          const uploadsRaw = await getSktaResponseUploadByStudentId(sid).catch(() => null);
-          const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
-
-          const withResponses = await Promise.all(
-            requests.map(async (req) => {
-              const raw = await getSktaResponseByRequestId(req.id).catch(() => null);
-              return { ...req, sktaResponse: unwrapResponse(raw) };
-            })
-          );
-
-          const processed = withResponses.filter(r => r.sktaResponse !== null);
-          const chosen    = processed.length > 0
-            ? processed.sort((a, b) => b.id - a.id)[0]   
-            : withResponses.sort((a, b) => b.id - a.id)[0]; 
-
-          const prodiName = chosen.mahasiswa?.studyProgram?.name ?? chosen.student?.studyProgram?.name ?? '-';
+        Array.from(uniqueLatestRequests.values()).map(async (req) => {
+          const sid = req.studentId ?? req.mahasiswaId ?? req.student?.id ?? req.mahasiswa?.id;
           
-          const tanggal =
-            chosen.sktaRequestUploads?.[0]?.createdAt ??
-            skUploads?.[0]?.createdAt ??
-            chosen.sktaResponse?.createdAt ??
-            chosen.createdAt ??
-            chosen.updatedAt ??
-            null;
+          const [rawResp, uploadsRaw] = await Promise.all([
+            getSktaResponseByRequestId(req.id).catch(() => null),
+            getSktaResponseUploadByStudentId(sid).catch(() => null)
+          ]);
 
-          return { ...chosen, studentId: sid, skUploads, prodiName, tanggal };
+          const sktaResponse = unwrapResponse(rawResp);
+          const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
+          const prodiName = req.mahasiswa?.studyProgram?.name ?? req.student?.studyProgram?.name ?? '-';
+          
+          const tanggal = req.sktaRequestUploads?.[0]?.createdAt ??
+                          skUploads?.[0]?.createdAt ??
+                          sktaResponse?.createdAt ??
+                          req.createdAt ??
+                          req.updatedAt ??
+                          null;
+
+          return { ...req, studentId: sid, sktaResponse, skUploads, prodiName, tanggal };
         })
       );
 
@@ -255,13 +249,10 @@ const PermohonanSK = () => {
       handleCloseVerifikasi();
       await fetchRequests();
     } catch (err) {
-      // PERBAIKAN: Tangkap error Draft dari BE dan jadikan lebih mudah dipahami
       let errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat memproses data.';
-      
       if (errorMsg.toLowerCase().includes('draft')) {
-        errorMsg = 'Gagal memperpanjang masa revisi. Mahasiswa belum men-submit ulang perbaikan berkas (Status masih Draft).';
+        errorMsg = 'Gagal memproses. Mahasiswa belum men-submit ulang perbaikan berkas (Status masih Draft).';
       }
-      
       showAlert('error', 'Gagal', errorMsg);
     }
   };
@@ -371,7 +362,6 @@ const PermohonanSK = () => {
                       <th
                         style={{ cursor: 'pointer', userSelect: 'none' }}
                         onClick={() => handleSort('name')}
-                        title="Urutkan: A-Z → Z-A → default"
                       >
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                           MAHASISWA
@@ -383,7 +373,6 @@ const PermohonanSK = () => {
                       <th
                         style={{ cursor: 'pointer', userSelect: 'none' }}
                         onClick={() => handleSort('prodi')}
-                        title="Urutkan: A-Z → Z-A → default"
                       >
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                           PRODI
@@ -393,10 +382,10 @@ const PermohonanSK = () => {
                         </span>
                       </th>
                       <th style={{ textAlign: 'center' }}>EVIDENCE & VERIFIKASI DATA</th>
+                      <th style={{ textAlign: 'center' }}>KATEGORI</th>
                       <th
                         style={{ textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
                         onClick={() => handleSort('status')}
-                        title="Urutkan status: Dalam Proses → Belum Terbit → Mengirim Revisi → Sudah Terbit"
                       >
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                           STATUS BERKAS
@@ -410,13 +399,14 @@ const PermohonanSK = () => {
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={6} className="text-center py-12">Memuat data...</td></tr>
+                      <tr><td colSpan={7} className="text-center py-12">Memuat data...</td></tr>
                     ) : paginated.length === 0 ? (
-                      <tr><td colSpan={6} className="text-center py-12">Tidak ada data sesuai filter</td></tr>
+                      <tr><td colSpan={7} className="text-center py-12">Tidak ada data sesuai filter</td></tr>
                     ) : (
                       paginated.map((item, idx) => {
                         const student = item.mahasiswa || item.student || {};
                         const status = getStatus(item);
+                        const isPerpanjangan = item.category === 'Perpanjangan SK';
 
                         return (
                           <tr key={item.id}>
@@ -427,10 +417,22 @@ const PermohonanSK = () => {
                             </td>
                             <td><span className="sk-prodi-text">{item.prodiName}</span></td>
                             <td className="text-center">
-                              {/* Open Unified Modal on Step 1 */}
                               <button className="btn-evidence" onClick={() => handleOpenUnifiedModal(item, 1)}>
                                 <Eye size={13} /> Evidence
                               </button>
+                            </td>
+                            {/* Layout Kategori diperbaiki dengan inline-block & nowrap agar tidak turun baris */}
+                            <td className="text-center">
+                              <span style={{ 
+                                display: 'inline-block',
+                                whiteSpace: 'nowrap',
+                                fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 999, 
+                                backgroundColor: isPerpanjangan ? '#F5F3FF' : '#F0FDF4', 
+                                color: isPerpanjangan ? '#7C3AED' : '#16A34A', 
+                                border: `1px solid ${isPerpanjangan ? '#DDD6FE' : '#BBF7D0'}` 
+                              }}>
+                                {item.category || 'Permohonan Baru'}
+                              </span>
                             </td>
                             <td style={{ textAlign: 'center' }}>
                               <StatusBadge status={status} />
@@ -454,7 +456,6 @@ const PermohonanSK = () => {
                 </table>
               </div>
 
-              {/* Pagination */}
               {filteredSorted.length > 0 && (
                 <div className="sk-table-footer">
                   <span className="sk-page-info">
@@ -472,7 +473,6 @@ const PermohonanSK = () => {
                     <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
                       <ChevronRight size={14} />
                     </button>
-
                   </div>
                 </div>
               )}
@@ -481,7 +481,6 @@ const PermohonanSK = () => {
         </div>
       </div>
 
-      {/* Modals */}
       <AnimatePresence>
         {selectedVerifikasi && (
           <VerifikasiModal
@@ -503,155 +502,29 @@ const PermohonanSK = () => {
       </AnimatePresence>
 
       <style>{`
-        .sk-page-root {
-          display: flex;
-          min-height: 100vh;
-          background: #F8FAFC;
-        }
-        .sk-main-content {
-          flex: 1;
-          min-width: 0;          
-          overflow-x: hidden;
-          display: flex;
-          flex-direction: column;
-        }
-       
-        #sidebar ~ .sk-main-content,
-        .sk-main-content {
-          margin-left: 240px;
-          padding: 0;
-          transition: margin-left 0.3s ease;
-        }
-        @media (max-width: 991.98px) {
-          .sk-main-content { margin-left: 0 !important; }
-        }
-        .sk-main-content .page-wrapper {
-          flex: 1;
-          min-width: 0;
-          width: 100%;
-          margin-left: 0 !important; 
-        }
-
-        
-        .sk-main-content .page-wrapper,
-        .sk-main-content .top-bar-red {
-          margin-top: 0 !important;
-          padding-top: 0 !important;
-        }
+        .sk-page-root { display: flex; min-height: 100vh; background: #F8FAFC; }
+        .sk-main-content { flex: 1; min-width: 0; overflow-x: hidden; display: flex; flex-direction: column; }
+        #sidebar ~ .sk-main-content, .sk-main-content { margin-left: 240px; padding: 0; transition: margin-left 0.3s ease; }
+        @media (max-width: 991.98px) { .sk-main-content { margin-left: 0 !important; } }
+        .sk-main-content .page-wrapper { flex: 1; min-width: 0; width: 100%; margin-left: 0 !important; }
+        .sk-main-content .page-wrapper, .sk-main-content .top-bar-red { margin-top: 0 !important; padding-top: 0 !important; }
         .action-buttons { vertical-align: middle; }
-
-        html, body, #root {
-          width: 100% !important;
-          max-width: none !important;
-          margin: 0 !important;
-          padding: 0 !important;
-        }
+        html, body, #root { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
         .sk-page-root { width: 100%; }
-        .sk-main-content,
-        .sk-main-content .page-wrapper,
-        .sk-main-content .content-container,
-        .sk-main-content .top-bar-red,
-        .sk-main-content .card-main {
-          width: 100% !important;
-          max-width: none !important;
-          box-sizing: border-box;
-          overflow: visible !important;
-        }
-        .sk-main-content .card-body,
-        .sk-toolbar-row,
-        .sk-status-tabs {
-          overflow: visible !important;
-        }
-
+        .sk-main-content, .sk-main-content .page-wrapper, .sk-main-content .content-container, .sk-main-content .top-bar-red, .sk-main-content .card-main { width: 100% !important; max-width: none !important; box-sizing: border-box; overflow: visible !important; }
+        .sk-main-content .card-body, .sk-toolbar-row, .sk-status-tabs { overflow: visible !important; }
         .sk-status-tabs { align-items: center; overflow: visible; }
         .sk-prodi-dropdown-panel { max-width: min(240px, calc(100vw - 32px)); }
-
-        .sk-prodi-dropdown {
-          position: relative;
-          flex-shrink: 0;
-        }
-        .sk-prodi-dropdown-trigger {
-          display: inline-flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          min-width: 140px;
-          padding: 6px 10px;
-          border-radius: 999px;
-          border: 1.5px solid #E2E8F0;
-          background: #fff;
-          font-size: 12px;
-          font-weight: 600;
-          color: #475569;
-          cursor: pointer;
-          transition: all 0.15s;
-          white-space: nowrap;
-        }
-        .sk-prodi-dropdown-trigger:hover {
-          border-color: #CBD5E1;
-          background: #F8FAFC;
-        }
-        .sk-prodi-dropdown-trigger.active {
-          border-color: #C0182A;
-          color: #C0182A;
-          background: #FFF1F2;
-        }
-        .sk-prodi-dropdown-trigger span {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .sk-prodi-dropdown-panel {
-          position: absolute;
-          top: calc(100% + 6px);
-          left: 0;
-          right: auto;
-          z-index: 40;
-          width: max-content;
-          min-width: 180px;
-          max-width: 240px;
-          max-height: 260px;
-          overflow-y: auto;
-          background: #fff;
-          border: 1px solid #E2E8F0;
-          border-radius: 10px;
-          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-          padding: 5px;
-        }
-        .sk-prodi-dropdown-option {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          padding: 7px 10px;
-          border-radius: 7px;
-          font-size: 12px;
-          font-weight: 500;
-          color: #334155;
-          cursor: pointer;
-          transition: background 0.12s;
-          line-height: 1.35;
-        }
-        .sk-prodi-dropdown-option:hover {
-          background: #F8FAFC;
-        }
-        .sk-prodi-dropdown-option.selected {
-          background: #FFF1F2;
-          color: #C0182A;
-          font-weight: 700;
-        }
-        .sk-prodi-dropdown-option svg {
-          flex-shrink: 0;
-          color: #C0182A;
-        }
-      
-        @-moz-document url-prefix() {
-          .sk-main-content .page-wrapper {
-             transform: scale(0.9);
-             transform-origin: top left;
-             width: 111.11% !important;
-          }
-        }
+        .sk-prodi-dropdown { position: relative; flex-shrink: 0; }
+        .sk-prodi-dropdown-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 140px; padding: 6px 10px; border-radius: 999px; border: 1.5px solid #E2E8F0; background: #fff; font-size: 12px; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .sk-prodi-dropdown-trigger:hover { border-color: #CBD5E1; background: #F8FAFC; }
+        .sk-prodi-dropdown-trigger.active { border-color: #C0182A; color: #C0182A; background: #FFF1F2; }
+        .sk-prodi-dropdown-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sk-prodi-dropdown-panel { position: absolute; top: calc(100% + 6px); left: 0; right: auto; z-index: 40; width: max-content; min-width: 180px; max-width: 240px; max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid #E2E8F0; border-radius: 10px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12); padding: 5px; }
+        .sk-prodi-dropdown-option { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 7px; font-size: 12px; font-weight: 500; color: #334155; cursor: pointer; transition: background 0.12s; line-height: 1.35; }
+        .sk-prodi-dropdown-option:hover { background: #F8FAFC; }
+        .sk-prodi-dropdown-option.selected { background: #FFF1F2; color: #C0182A; font-weight: 700; }
+        .sk-prodi-dropdown-option svg { flex-shrink: 0; color: #C0182A; }
       `}</style>
 
       <AnimatePresence>
