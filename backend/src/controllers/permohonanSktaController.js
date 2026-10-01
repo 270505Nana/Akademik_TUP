@@ -1,8 +1,5 @@
 import asyncHandler from "express-async-handler";
-import prisma from "../config/prisma.js";
-import path from "path";
 import { ZipArchive } from "archiver";
-import { v4 as uuidv4 } from "uuid";
 import {
   getPaginationParams,
   formatPaginationResponse,
@@ -12,27 +9,20 @@ import {
   isNil,
   isValidISO8601,
 } from "../utils/validationHelper.js";
-import {
-  uploadFile,
-  deleteFile,
-  serveDownload,
-  getFileStream,
-} from "../services/storageService.js";
+import { serveDownload, getFileStream } from "../services/storageService.js";
 import { mapPermohonanToFrontend } from "../mappers/index.js";
 import * as sktaService from "../services/sktaService.js";
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
-const sanitizeFilenamePart = (str) => {
-  if (!str) return "";
-  return String(str)
-    .trim()
-    .replace(/[^a-zA-Z0-9_-]/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
+const buildDownloadUrl = (req, berkasId) => {
+  if (!berkasId) return null;
+  return `${req.protocol}://${req.get("host")}/api/permohonan-skta/download/validasi/${berkasId}`;
 };
 
-// [Route] Mendapatkan Semua Permohonan SKTA
+/**
+ * [Route] Mendapatkan Semua Permohonan SKTA
+ */
 const listPermohonanSkta = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
   const { total, data } =
@@ -41,9 +31,12 @@ const listPermohonanSkta = asyncHandler(async (req, res) => {
   res.json(formatPaginationResponse(enriched, total, paginationParams));
 });
 
-// [Route] Menyimpan Draft Permohonan SKTA (Save Draft)
+/**
+ * [Route] Menyimpan Draft Permohonan SKTA (Save Draft)
+ */
 const createPermohonanSkta = asyncHandler(async (req, res) => {
-  const category = req.query.category || req.body.category || "Permohonan Baru";
+  const category =
+    req.query.category || req.body.category || "Permohonan Baru";
   const {
     id,
     mahasiswaId,
@@ -53,290 +46,18 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
     dosenPembimbing2Id,
   } = req.body;
 
-  const mhsId = mahasiswaId;
   const evidenceFile = getUploadedFile(req.files, "evidence");
 
-  let permohonan;
-
-  if (id) {
-    // Update existing draft by id
-    const existing = await prisma.permohonanSkta.findUnique({
-      where: { id },
-    });
-    if (!existing) {
-      res.status(404);
-      throw new Error("Permohonan SKTA tidak ditemukan");
-    }
-
-    const editCheck = await sktaService.checkSktaEditable(id);
-    if (!editCheck.editable) {
-      res.status(403);
-      throw new Error(editCheck.reason);
-    }
-
-    let researchGroupId;
-    if (dosenPembimbing1Id) {
-      const dosenPembimbing1 = await prisma.dosen.findUnique({
-        where: { id: dosenPembimbing1Id },
-      });
-      if (dosenPembimbing1) {
-        researchGroupId = dosenPembimbing1.researchGroupId;
-      }
-    }
-
-    const updateData = {
-      isDraft: true,
-      category: category !== undefined ? category : undefined,
-      judulProposalIndonesia:
-        judulProposalIndonesia !== undefined
-          ? (judulProposalIndonesia || "").trim()
-          : undefined,
-      judulProposalInggris:
-        judulProposalInggris !== undefined
-          ? (judulProposalInggris || "").trim()
-          : undefined,
-      dosenPembimbing1Id:
-        dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
-      dosenPembimbing2Id:
-        dosenPembimbing2Id !== undefined ? dosenPembimbing2Id : undefined,
-      researchGroupId:
-        researchGroupId !== undefined ? researchGroupId : undefined,
-    };
-
-    if (evidenceFile) {
-      const uploadedEvidence = await uploadFile({
-        buffer: evidenceFile.buffer,
-        originalname: evidenceFile.originalname,
-        folder: "berkas-evidence",
-        mimetype: evidenceFile.mimetype,
-      });
-
-      if (existing.evidenceUploadPath) {
-        await deleteFile(existing.evidenceUploadPath);
-      }
-      updateData.evidenceUploadPath = uploadedEvidence.filepath;
-    }
-
-    permohonan = await prisma.permohonanSkta.update({
-      where: { id },
-      data: updateData,
-      include: {
-        mahasiswa: {
-          include: {
-            studyProgram: true,
-            user: true,
-          },
-        },
-        dosenPembimbing1: {
-          include: {
-            user: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-        dosenPembimbing2: {
-          include: {
-            user: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-        researchGroup: true,
-        admin: true,
-      },
-    });
-  } else if (mhsId) {
-    // Cek apakah data mahasiswa ada
-    const student = await prisma.mahasiswa.findFirst({
-      where: { id: mhsId },
-    });
-    if (!student) {
-      res.status(404);
-      throw new Error("Mahasiswa tidak ditemukan");
-    }
-
-    // Cari draft permohonan yang sudah ada
-    const existing = await prisma.permohonanSkta.findFirst({
-      where: {
-        mahasiswaId: mhsId,
-        isDraft: true,
-        deletedAt: null,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (existing) {
-      const editCheck = await sktaService.checkSktaEditable(existing.id);
-      if (!editCheck.editable) {
-        res.status(403);
-        throw new Error(editCheck.reason);
-      }
-
-      let researchGroupId;
-      if (dosenPembimbing1Id) {
-        const dosenPembimbing1 = await prisma.dosen.findUnique({
-          where: { id: dosenPembimbing1Id },
-        });
-        if (dosenPembimbing1) {
-          researchGroupId = dosenPembimbing1.researchGroupId;
-        }
-      }
-
-      const updateData = {
-        isDraft: true,
-        category: category !== undefined ? category : undefined,
-        judulProposalIndonesia:
-          judulProposalIndonesia !== undefined
-            ? (judulProposalIndonesia || "").trim()
-            : undefined,
-        judulProposalInggris:
-          judulProposalInggris !== undefined
-            ? (judulProposalInggris || "").trim()
-            : undefined,
-        dosenPembimbing1Id:
-          dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
-        dosenPembimbing2Id:
-          dosenPembimbing2Id !== undefined ? dosenPembimbing2Id : undefined,
-        researchGroupId:
-          researchGroupId !== undefined ? researchGroupId : undefined,
-      };
-
-      if (evidenceFile) {
-        const uploadedEvidence = await uploadFile({
-          buffer: evidenceFile.buffer,
-          originalname: evidenceFile.originalname,
-          folder: "berkas-evidence",
-          mimetype: evidenceFile.mimetype,
-        });
-
-        if (existing.evidenceUploadPath) {
-          await deleteFile(existing.evidenceUploadPath);
-        }
-        updateData.evidenceUploadPath = uploadedEvidence.filepath;
-      }
-
-      permohonan = await prisma.permohonanSkta.update({
-        where: { id: existing.id },
-        data: updateData,
-        include: {
-          mahasiswa: {
-            include: {
-              studyProgram: true,
-              user: true,
-            },
-          },
-          dosenPembimbing1: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-          dosenPembimbing2: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-          researchGroup: true,
-          admin: true,
-        },
-      });
-    } else {
-      // Cek apakah mahasiswa sudah punya pengajuan baru/aktif non-draft (jika permohonan baru)
-      if (category === "Permohonan Baru") {
-        const existingSubmitted = await prisma.permohonanSkta.findFirst({
-          where: {
-            mahasiswaId: mhsId,
-            category: "Permohonan Baru",
-            deletedAt: null,
-            isDraft: false,
-          },
-        });
-        if (existingSubmitted) {
-          res.status(409);
-          throw new Error(
-            "Mahasiswa sudah memiliki pengajuan SK. Untuk pembaruan SK, gunakan kategori Perpanjangan atau Perubahan.",
-          );
-        }
-      }
-
-      let researchGroupId;
-      if (dosenPembimbing1Id) {
-        const dosenPembimbing1 = await prisma.dosen.findUnique({
-          where: { id: dosenPembimbing1Id },
-        });
-        if (dosenPembimbing1) {
-          researchGroupId = dosenPembimbing1.researchGroupId;
-        }
-      }
-
-      let evidenceUploadPath;
-      if (evidenceFile) {
-        const uploadedEvidence = await uploadFile({
-          buffer: evidenceFile.buffer,
-          originalname: evidenceFile.originalname,
-          folder: "berkas-evidence",
-          mimetype: evidenceFile.mimetype,
-        });
-        evidenceUploadPath = uploadedEvidence.filepath;
-      }
-
-      permohonan = await prisma.permohonanSkta.create({
-        data: {
-          category,
-          mahasiswaId: mhsId,
-          judulProposalIndonesia: (judulProposalIndonesia || "").trim(),
-          judulProposalInggris: (judulProposalInggris || "").trim(),
-          dosenPembimbing1Id: dosenPembimbing1Id || undefined,
-          dosenPembimbing2Id: dosenPembimbing2Id || undefined,
-          researchGroupId: researchGroupId || undefined,
-          evidenceUploadPath: evidenceUploadPath || undefined,
-          isDraft: true,
-        },
-        include: {
-          mahasiswa: {
-            include: {
-              studyProgram: true,
-              user: true,
-            },
-          },
-          dosenPembimbing1: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-          dosenPembimbing2: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-          researchGroup: true,
-          admin: true,
-        },
-      });
-    }
-  } else {
-    res.status(400);
-    throw new Error("mahasiswaId wajib diisi untuk membuat draft permohonan");
-  }
+  const permohonan = await sktaService.saveDraftPermohonanSkta({
+    id,
+    mahasiswaId,
+    category,
+    judulProposalIndonesia,
+    judulProposalInggris,
+    dosenPembimbing1Id,
+    dosenPembimbing2Id,
+    evidenceFile,
+  });
 
   res.status(200).json({
     message: "Permohonan SKTA berhasil disimpan sebagai draft",
@@ -344,9 +65,12 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Submit Permohonan SKTA
+/**
+ * [Route] Submit Permohonan SKTA
+ */
 const submitPermohonanSkta = asyncHandler(async (req, res) => {
-  const category = req.query.category || req.body.category || "Permohonan Baru";
+  const category =
+    req.query.category || req.body.category || "Permohonan Baru";
   const {
     id,
     mahasiswaId,
@@ -356,18 +80,16 @@ const submitPermohonanSkta = asyncHandler(async (req, res) => {
     dosenPembimbing2Id,
   } = req.body;
 
-  const mhsId = mahasiswaId;
   const evidenceFile = getUploadedFile(req.files, "evidence");
 
   const errors = [];
-
   if (isNil(id)) {
     errors.push({ field: "id", message: "ID wajib diisi untuk submit" });
   } else if (typeof id !== "string") {
     errors.push({ field: "id", message: "ID harus berupa string" });
   }
 
-  if (isNil(mhsId)) {
+  if (isNil(mahasiswaId)) {
     errors.push({ field: "mahasiswaId", message: "Mahasiswa ID wajib diisi" });
   }
   if (isNil(judulProposalIndonesia)) {
@@ -399,159 +121,35 @@ const submitPermohonanSkta = asyncHandler(async (req, res) => {
     return sendValidationError(res, errors, req);
   }
 
-  const existingRecord = await prisma.permohonanSkta.findUnique({
-    where: { id },
-  });
-
-  if (!existingRecord) {
-    res.status(404);
-    throw new Error("Permohonan SKTA tidak ditemukan");
-  }
-
-  const editCheck = await sktaService.checkSktaEditable(id);
-  if (!editCheck.editable) {
-    res.status(403);
-    throw new Error(editCheck.reason);
-  }
-
-  // Cek apakah data mahasiswa ada
-  const student = await prisma.mahasiswa.findFirst({
-    where: { id: mhsId },
-  });
-  if (!student) {
-    res.status(404);
-    throw new Error("Mahasiswa tidak ditemukan");
-  }
-
-  // Cek dosen 1
-  const dosenPembimbing1 = await prisma.dosen.findUnique({
-    where: { id: dosenPembimbing1Id },
-  });
-  if (!dosenPembimbing1) {
-    res.status(404);
-    throw new Error("Dosen pembimbing 1 tidak ditemukan");
-  }
-
-  // Cek dosen 2
-  const dosenPembimbing2 = await prisma.dosen.findUnique({
-    where: { id: dosenPembimbing2Id },
-  });
-  if (!dosenPembimbing2) {
-    res.status(404);
-    throw new Error("Dosen pembimbing 2 tidak ditemukan");
-  }
-
-  const researchGroupId = dosenPembimbing1.researchGroupId;
-
-  // Cek apakah mahasiswa sudah punya pengajuan baru/aktif non-draft (jika permohonan baru)
-  if (category === "Permohonan Baru") {
-    const existingSubmitted = await prisma.permohonanSkta.findFirst({
-      where: {
-        mahasiswaId: mhsId,
-        category: "Permohonan Baru",
-        deletedAt: null,
-        isDraft: false,
-        id: { not: id },
-      },
-    });
-    if (existingSubmitted) {
-      res.status(409);
-      throw new Error(
-        "Mahasiswa sudah memiliki pengajuan SK. Untuk pembaruan SK, gunakan kategori Perpanjangan atau Perubahan.",
-      );
-    }
-  }
-
-  // Cek file evidence
-  let evidenceUploadPath = existingRecord.evidenceUploadPath;
-  if (evidenceFile) {
-    const uploadedEvidence = await uploadFile({
-      buffer: evidenceFile.buffer,
-      originalname: evidenceFile.originalname,
-      folder: "berkas-evidence",
-      mimetype: evidenceFile.mimetype,
-    });
-
-    if (existingRecord.evidenceUploadPath) {
-      await deleteFile(existingRecord.evidenceUploadPath);
-    }
-    evidenceUploadPath = uploadedEvidence.filepath;
-  }
-
-  if (!evidenceUploadPath) {
-    return sendValidationError(
-      res,
-      [{ field: "evidence", message: "Berkas evidence wajib diunggah" }],
-      req,
-    );
-  }
-
-  const result = await prisma.permohonanSkta.update({
-    where: { id },
-    data: {
+  try {
+    const result = await sktaService.submitPermohonanSkta({
+      id,
+      mahasiswaId,
       category,
-      mahasiswaId: mhsId,
-      judulProposalIndonesia: judulProposalIndonesia.trim(),
-      judulProposalInggris: judulProposalInggris.trim(),
+      judulProposalIndonesia,
+      judulProposalInggris,
       dosenPembimbing1Id,
       dosenPembimbing2Id,
-      researchGroupId,
-      evidenceUploadPath,
-      isDraft: false,
-      message: null,
-      isEdit: null,
-    },
-    include: {
-      mahasiswa: {
-        include: {
-          studyProgram: true,
-          user: true,
-        },
-      },
-      dosenPembimbing1: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      dosenPembimbing2: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      researchGroup: true,
-      admin: true,
-    },
-  });
+      evidenceFile,
+    });
 
-  res.status(200).json({
-    message: "Permohonan SKTA berhasil diajukan",
-    data: mapPermohonanToFrontend(result, req),
-  });
+    res.status(200).json({
+      message: "Permohonan SKTA berhasil diajukan",
+      data: mapPermohonanToFrontend(result, req),
+    });
+  } catch (err) {
+    if (err.errors) {
+      return sendValidationError(res, err.errors, req);
+    }
+    throw err;
+  }
 });
 
-// [Route] Mengedit Permohonan SKTA
+/**
+ * [Route] Mengedit Permohonan SKTA
+ */
 const updatePermohonanSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const permohonan = await prisma.permohonanSkta.findUnique({ where: { id } });
-  if (!permohonan) {
-    res.status(404);
-    throw new Error("Permohonan SKTA tidak ditemukan");
-  }
-
-  const editCheck = await sktaService.checkSktaEditable(id);
-  if (!editCheck.editable) {
-    res.status(403);
-    throw new Error(editCheck.reason);
-  }
-
   const {
     judulProposalIndonesia,
     judulProposalInggris,
@@ -561,70 +159,12 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
 
   const evidenceFile = getUploadedFile(req.files, "evidence");
 
-  const updateData = {
-    judulProposalIndonesia: (judulProposalIndonesia || "").trim(),
-    judulProposalInggris: (judulProposalInggris || "").trim(),
-    message: null, // Clear rejection message upon student resubmission
-    isEdit: null, // Clear revision deadline upon student resubmission
-  };
-
-  if (dosenPembimbing1Id) {
-    updateData.dosenPembimbing1Id = dosenPembimbing1Id;
-    // Update researchGroupId otomatis jika dospem 1 berubah
-    const dosenPembimbing1 = await prisma.dosen.findUnique({
-      where: { id: dosenPembimbing1Id },
-    });
-    if (dosenPembimbing1) {
-      updateData.researchGroupId = dosenPembimbing1.researchGroupId;
-    }
-  }
-  if (dosenPembimbing2Id) updateData.dosenPembimbing2Id = dosenPembimbing2Id;
-
-  if (evidenceFile) {
-    const uploadedEvidence = await uploadFile({
-      buffer: evidenceFile.buffer,
-      originalname: evidenceFile.originalname,
-      folder: "berkas-evidence",
-      mimetype: evidenceFile.mimetype,
-    });
-
-    if (permohonan.evidenceUploadPath) {
-      await deleteFile(permohonan.evidenceUploadPath);
-    }
-    updateData.evidenceUploadPath = uploadedEvidence.filepath;
-  }
-
-  const data = await prisma.permohonanSkta.update({
-    where: { id },
-    data: updateData,
-    include: {
-      mahasiswa: {
-        include: {
-          studyProgram: true,
-          user: true,
-        },
-      },
-      dosenPembimbing1: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      dosenPembimbing2: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      researchGroup: true,
-      admin: true,
-    },
+  const data = await sktaService.updatePermohonanSktaData(id, {
+    judulProposalIndonesia,
+    judulProposalInggris,
+    dosenPembimbing1Id,
+    dosenPembimbing2Id,
+    evidenceFile,
   });
 
   res.json({
@@ -633,7 +173,9 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Mendapatkan Permohonan SKTA berdasarkan ID Permohonan
+/**
+ * [Route] Mendapatkan Permohonan SKTA berdasarkan ID Permohonan
+ */
 const getPermohonanSktaById = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const data = await sktaService.getPermohonanSktaById(id);
@@ -646,7 +188,9 @@ const getPermohonanSktaById = asyncHandler(async (req, res) => {
   res.json({ data: mapPermohonanToFrontend(data, req) });
 });
 
-// [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa (atau User Login)
+/**
+ * [Route] Mendapatkan Permohonan SKTA Terbaru Berdasarkan ID Mahasiswa (atau User Login)
+ */
 const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
   const targetId = req.params.mahasiswaId || req.user?.id;
 
@@ -665,198 +209,44 @@ const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
   res.json({ data: mapPermohonanToFrontend(data, req) });
 });
 
-// [Route] Unduh Berkas SKTA
+/**
+ * [Route] Unduh Berkas SKTA
+ */
 const downloadSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
-    include: {
-      mahasiswa: {
-        include: {
-          user: true,
-          studyProgram: true,
-        },
-      },
-    },
-  });
+  const downloadInfo = await sktaService.getSktaDownloadInfo(id);
 
-  if (!permohonan || !permohonan.sktaUploadPath) {
-    res.status(404);
-    throw new Error("Berkas SKTA belum diterbitkan atau tidak ditemukan");
-  }
-
-  const ext = path.extname(permohonan.sktaUploadPath || "") || ".pdf";
-  const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || "nim");
-  const nama = sanitizeFilenamePart(permohonan.mahasiswa?.user?.name || "nama");
-  const prodi = sanitizeFilenamePart(
-    permohonan.mahasiswa?.studyProgram?.name || "study_program",
-  );
-  const downloadName = `SKTA_${nim}_${nama}_${prodi}${ext}`;
-
-  await serveDownload(res, {
-    filepath: permohonan.sktaUploadPath,
-    downloadName,
-    mimeType: "application/pdf",
-  });
+  await serveDownload(res, downloadInfo);
 });
 
-// [Route] Unduh Berkas Evidence
+/**
+ * [Route] Unduh Berkas Evidence
+ */
 const downloadEvidence = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
-  });
+  const downloadInfo = await sktaService.getEvidenceDownloadInfo(id);
 
-  if (!permohonan || !permohonan.evidenceUploadPath) {
-    res.status(404);
-    throw new Error("Berkas evidence tidak ditemukan");
-  }
-
-  const ext = path.extname(permohonan.evidenceUploadPath || "") || ".pdf";
-  const downloadName = `Evidence_${id}${ext}`;
-
-  await serveDownload(res, {
-    filepath: permohonan.evidenceUploadPath,
-    downloadName,
-  });
+  await serveDownload(res, downloadInfo);
 });
 
-// Helper untuk resolve admin record dari adminId (id / userId) atau user token
-const resolveAdmin = async (adminId, currentUser) => {
-  const targetId = adminId || currentUser?.id;
-  if (!targetId) return null;
-
-  let admin = await prisma.admin.findUnique({
-    where: { id: targetId },
-  });
-
-  if (!admin) {
-    admin = await prisma.admin.findUnique({
-      where: { userId: targetId },
-    });
-  }
-
-  if (!admin && currentUser?.id) {
-    admin = await prisma.admin.findUnique({
-      where: { userId: currentUser.id },
-    });
-  }
-
-  // Jika user ber-role ADMIN tetapi belum ada record di tabel admin, buatkan secara otomatis
-  if (!admin && currentUser?.role === "ADMIN") {
-    admin = await prisma.admin.create({
-      data: {
-        userId: currentUser.id,
-      },
-    });
-  }
-
-  return admin;
-};
-
-// [Route] Menyetujui Permohonan SKTA (Approve)
+/**
+ * [Route] Menyetujui Permohonan SKTA (Approve)
+ */
 const approvePermohonanSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
-    include: {
-      mahasiswa: {
-        include: {
-          user: true,
-          studyProgram: true,
-        },
-      },
-    },
-  });
-  if (!permohonan) {
-    res.status(404);
-    throw new Error("Permohonan SKTA tidak ditemukan");
-  }
-
-  if (permohonan.isDraft) {
-    res.status(400);
-    throw new Error("Permohonan SKTA masih berupa draft dan belum disubmit");
-  }
-
   const { hasUploadedFinalProposal, hasTakenLanguageTest, expDate, adminId } =
     req.body;
 
   const sktaFile = getUploadedFile(req.files, "skta");
 
-  // Cek admin (mencakup admin.id, user.id, atau fallback ke user token)
-  const adminExist = await resolveAdmin(adminId, req.user);
-  if (!adminExist) {
-    res.status(404);
-    throw new Error("Admin/Staf Akademik tidak ditemukan");
-  }
-
-  const updateData = {
-    hasUploadedFinalProposal:
-      hasUploadedFinalProposal === "true" || hasUploadedFinalProposal === true,
-    hasTakenLanguageTest:
-      hasTakenLanguageTest === "true" || hasTakenLanguageTest === true,
-    expDate: expDate ? new Date(expDate) : null,
-    adminId: adminExist.id,
-    message: null, // Hapus pesan penolakan sebelumnya jika ada
-  };
-
-  if (sktaFile) {
-    const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || "nim");
-    const nama = sanitizeFilenamePart(
-      permohonan.mahasiswa?.user?.name || "nama",
-    );
-    const prodi = sanitizeFilenamePart(
-      permohonan.mahasiswa?.studyProgram?.name || "study_program",
-    );
-    const ext = path.extname(sktaFile.originalname || ".pdf") || ".pdf";
-    const timestamp = Date.now();
-    const customFilename = `SKTA_${nim}_${nama}_${prodi}_${timestamp}${ext}`;
-
-    const uploadedSkta = await uploadFile({
-      buffer: sktaFile.buffer,
-      originalname: sktaFile.originalname,
-      customFilename,
-      folder: "berkas-skta",
-      mimetype: sktaFile.mimetype,
-    });
-
-    if (permohonan.sktaUploadPath) {
-      await deleteFile(permohonan.sktaUploadPath);
-    }
-    updateData.sktaUploadPath = uploadedSkta.filepath;
-  }
-
-  const data = await prisma.permohonanSkta.update({
-    where: { id },
-    data: updateData,
-    include: {
-      mahasiswa: {
-        include: {
-          studyProgram: true,
-          user: true,
-        },
-      },
-      dosenPembimbing1: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      dosenPembimbing2: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      researchGroup: true,
-      admin: true,
-    },
+  const data = await sktaService.approvePermohonanSkta({
+    id,
+    hasUploadedFinalProposal,
+    hasTakenLanguageTest,
+    expDate,
+    adminId,
+    sktaFile,
+    currentUser: req.user,
   });
 
   res.json({
@@ -865,7 +255,9 @@ const approvePermohonanSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Menolak / Meminta Revisi Permohonan SKTA (Reject / Revision Request)
+/**
+ * [Route] Menolak / Meminta Revisi Permohonan SKTA (Reject / Revision Request)
+ */
 const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { message, adminId, isEdit } = req.body;
@@ -888,67 +280,12 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
     return sendValidationError(res, errors);
   }
 
-  const permohonan = await prisma.permohonanSkta.findUnique({ where: { id } });
-  if (!permohonan) {
-    res.status(404);
-    throw new Error("Permohonan SKTA tidak ditemukan");
-  }
-
-  if (
-    permohonan.isDraft &&
-    !permohonan.wasRejectedBefore &&
-    !permohonan.isEdit
-  ) {
-    res.status(400);
-    throw new Error(
-      "Permohonan SKTA masih berupa draft awal dan belum pernah diajukan",
-    );
-  }
-
-  // Cek admin (mencakup admin.id, user.id, atau fallback ke user token)
-  const adminExist = await resolveAdmin(adminId, req.user);
-  if (!adminExist) {
-    res.status(404);
-    throw new Error("Admin/Staf Akademik tidak ditemukan");
-  }
-
-  const data = await prisma.permohonanSkta.update({
-    where: { id },
-    data: {
-      isDraft: isEdit ? true : false,
-      wasRejectedBefore: true,
-      message,
-      adminId: adminExist.id,
-      isEdit: isEdit ? new Date(isEdit) : null,
-    },
-    include: {
-      mahasiswa: {
-        include: {
-          studyProgram: true,
-          user: true,
-        },
-      },
-      dosenPembimbing1: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      dosenPembimbing2: {
-        include: {
-          user: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      researchGroup: true,
-      admin: true,
-    },
+  const data = await sktaService.rejectPermohonanSkta({
+    id,
+    message,
+    adminId,
+    isEdit,
+    currentUser: req.user,
   });
 
   res.json({
@@ -957,51 +294,18 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Get Existing Dokumen Validasi SKTA
+/**
+ * [Route] Get Existing Dokumen Validasi SKTA
+ */
 const generateDokumenValidasiSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
-    include: {
-      mahasiswa: true,
-    },
-  });
-
-  if (!permohonan) {
-    res.status(404);
-    throw new Error("Permohonan SKTA tidak ditemukan");
-  }
-
-  if (permohonan.isDraft) {
-    res.status(400);
-    throw new Error(
-      "Dokumen validasi SKTA hanya dapat diakses untuk permohonan yang sudah disubmit (bukan draft)",
-    );
-  }
-
-  const mahasiswaId = permohonan.mahasiswaId;
-  const category = "Dokumen Validasi Skta";
-
-  // Pengecekan apakah ada berkas dengan mahasiswaId dan category yang sama
-  const existingBerkas = await prisma.berkasMahasiswa.findFirst({
-    where: {
-      mahasiswaId,
-      category,
-      deletedAt: null,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const buildDownloadUrl = (req, berkasId) => {
-    if (!berkasId) return null;
-    return `${req.protocol}://${req.get("host")}/api/permohonan-skta/download/validasi/${berkasId}`;
-  };
-
-  if (!existingBerkas) {
-    res.status(404);
-    throw new Error("Berkas validasi SKTA belum ditemukan di database");
-  }
+  const existingBerkas =
+    await sktaService.getBerkasByPermohonanIdAndCategory({
+      permohonanId: id,
+      category: "Dokumen Validasi Skta",
+      notFoundMessage: "Berkas validasi SKTA belum ditemukan di database",
+    });
 
   res.json({
     message: "Berkas validasi SKTA berhasil ditemukan",
@@ -1012,28 +316,11 @@ const generateDokumenValidasiSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Upload Dokumen Validasi SKTA (dibuat dari Frontend)
+/**
+ * [Route] Upload Dokumen Validasi SKTA (dibuat dari Frontend)
+ */
 const uploadDokumenValidasiSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
-    include: {
-      mahasiswa: true,
-    },
-  });
-
-  if (!permohonan) {
-    res.status(404);
-    throw new Error("Permohonan SKTA tidak ditemukan");
-  }
-
-  if (permohonan.isDraft) {
-    res.status(400);
-    throw new Error(
-      "Dokumen validasi SKTA hanya dapat diunggah untuk permohonan yang sudah disubmit (bukan draft)",
-    );
-  }
 
   const file =
     getUploadedFile(req.files, "dokumenFile") ||
@@ -1050,59 +337,12 @@ const uploadDokumenValidasiSkta = asyncHandler(async (req, res) => {
     throw new Error("Tipe file tidak valid (hanya diperbolehkan PDF)");
   }
 
-  const mahasiswaId = permohonan.mahasiswaId;
-  const category = "Dokumen Validasi Skta";
-
-  const existingBerkas = await prisma.berkasMahasiswa.findFirst({
-    where: {
-      mahasiswaId,
-      category,
-      deletedAt: null,
-    },
-    orderBy: { createdAt: "desc" },
+  const berkasRecord = await sktaService.uploadBerkasMahasiswaForSkta({
+    permohonanId: id,
+    category: "Dokumen Validasi Skta",
+    file,
+    filePrefix: "Dokumen_Validasi_SKTA_",
   });
-
-  if (existingBerkas && existingBerkas.filepath) {
-    await deleteFile(existingBerkas.filepath);
-  }
-
-  const filename = `${uuidv4()}.pdf`;
-  const uploaded = await uploadFile({
-    buffer: file.buffer,
-    customFilename: filename,
-    folder: "berkas-mahasiswa",
-    mimetype: "application/pdf",
-  });
-
-  const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || mahasiswaId);
-  const name = `Dokumen_Validasi_SKTA_${nim}.pdf`;
-
-  let berkasRecord;
-  if (existingBerkas) {
-    berkasRecord = await prisma.berkasMahasiswa.update({
-      where: { id: existingBerkas.id },
-      data: {
-        name,
-        filepath: uploaded.filepath,
-        updatedAt: new Date(),
-      },
-    });
-  } else {
-    berkasRecord = await prisma.berkasMahasiswa.create({
-      data: {
-        id: uuidv4(),
-        name,
-        category,
-        filepath: uploaded.filepath,
-        mahasiswaId,
-      },
-    });
-  }
-
-  const buildDownloadUrl = (req, berkasId) => {
-    if (!berkasId) return null;
-    return `${req.protocol}://${req.get("host")}/api/permohonan-skta/download/validasi/${berkasId}`;
-  };
 
   res.status(201).json({
     message: "Berkas validasi SKTA berhasil diunggah",
@@ -1113,51 +353,18 @@ const uploadDokumenValidasiSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Get Existing Formulir SKTA
+/**
+ * [Route] Get Existing Formulir SKTA
+ */
 const generateFormulirSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
-    include: {
-      mahasiswa: true,
-    },
-  });
-
-  if (!permohonan) {
-    res.status(404);
-    throw new Error("Permohonan SKTA tidak ditemukan");
-  }
-
-  if (permohonan.isDraft) {
-    res.status(400);
-    throw new Error(
-      "Formulir SKTA hanya dapat diakses untuk permohonan yang sudah disubmit (bukan draft)",
-    );
-  }
-
-  const mahasiswaId = permohonan.mahasiswaId;
-  const category = "Formulir Penerbitan Skta";
-
-  // Pengecekan apakah ada berkas dengan mahasiswaId dan category yang sama
-  const existingBerkas = await prisma.berkasMahasiswa.findFirst({
-    where: {
-      mahasiswaId,
-      category,
-      deletedAt: null,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const buildDownloadUrl = (req, berkasId) => {
-    if (!berkasId) return null;
-    return `${req.protocol}://${req.get("host")}/api/permohonan-skta/download/validasi/${berkasId}`;
-  };
-
-  if (!existingBerkas) {
-    res.status(404);
-    throw new Error("Berkas formulir SKTA belum ditemukan di database");
-  }
+  const existingBerkas =
+    await sktaService.getBerkasByPermohonanIdAndCategory({
+      permohonanId: id,
+      category: "Formulir Penerbitan Skta",
+      notFoundMessage: "Berkas formulir SKTA belum ditemukan di database",
+    });
 
   res.json({
     message: "Berkas formulir SKTA berhasil ditemukan",
@@ -1168,28 +375,11 @@ const generateFormulirSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Upload Formulir SKTA (dibuat dari Frontend)
+/**
+ * [Route] Upload Formulir SKTA (dibuat dari Frontend)
+ */
 const uploadFormulirSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
-    include: {
-      mahasiswa: true,
-    },
-  });
-
-  if (!permohonan) {
-    res.status(404);
-    throw new Error("Permohonan SKTA tidak ditemukan");
-  }
-
-  if (permohonan.isDraft) {
-    res.status(400);
-    throw new Error(
-      "Formulir SKTA hanya dapat diunggah untuk permohonan yang sudah disubmit (bukan draft)",
-    );
-  }
 
   const file =
     getUploadedFile(req.files, "dokumenFile") ||
@@ -1206,59 +396,12 @@ const uploadFormulirSkta = asyncHandler(async (req, res) => {
     throw new Error("Tipe file tidak valid (hanya diperbolehkan PDF)");
   }
 
-  const mahasiswaId = permohonan.mahasiswaId;
-  const category = "Formulir Penerbitan Skta";
-
-  const existingBerkas = await prisma.berkasMahasiswa.findFirst({
-    where: {
-      mahasiswaId,
-      category,
-      deletedAt: null,
-    },
-    orderBy: { createdAt: "desc" },
+  const berkasRecord = await sktaService.uploadBerkasMahasiswaForSkta({
+    permohonanId: id,
+    category: "Formulir Penerbitan Skta",
+    file,
+    filePrefix: "Formulir_SK_TA_",
   });
-
-  if (existingBerkas && existingBerkas.filepath) {
-    await deleteFile(existingBerkas.filepath);
-  }
-
-  const filename = `${uuidv4()}.pdf`;
-  const uploaded = await uploadFile({
-    buffer: file.buffer,
-    customFilename: filename,
-    folder: "berkas-mahasiswa",
-    mimetype: "application/pdf",
-  });
-
-  const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || mahasiswaId);
-  const name = `Formulir_SK_TA_${nim}.pdf`;
-
-  let berkasRecord;
-  if (existingBerkas) {
-    berkasRecord = await prisma.berkasMahasiswa.update({
-      where: { id: existingBerkas.id },
-      data: {
-        name,
-        filepath: uploaded.filepath,
-        updatedAt: new Date(),
-      },
-    });
-  } else {
-    berkasRecord = await prisma.berkasMahasiswa.create({
-      data: {
-        id: uuidv4(),
-        name,
-        category,
-        filepath: uploaded.filepath,
-        mahasiswaId,
-      },
-    });
-  }
-
-  const buildDownloadUrl = (req, berkasId) => {
-    if (!berkasId) return null;
-    return `${req.protocol}://${req.get("host")}/api/permohonan-skta/download/validasi/${berkasId}`;
-  };
 
   res.status(201).json({
     message: "Berkas formulir SKTA berhasil diunggah",
@@ -1269,18 +412,12 @@ const uploadFormulirSkta = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Download Dokumen Validasi SKTA
+/**
+ * [Route] Download Dokumen Validasi SKTA
+ */
 const downloadValidasi = asyncHandler(async (req, res) => {
   const { berkasId } = req.params;
-
-  const upload = await prisma.berkasMahasiswa.findFirst({
-    where: { id: berkasId, deletedAt: null },
-  });
-
-  if (!upload) {
-    res.status(404);
-    throw new Error("File dokumen tidak ditemukan");
-  }
+  const upload = await sktaService.getBerkasMahasiswaById(berkasId);
 
   await serveDownload(res, {
     filepath: upload.filepath,
@@ -1289,7 +426,9 @@ const downloadValidasi = asyncHandler(async (req, res) => {
   });
 });
 
-// [Route] Export Berkas SKTA sebagai ZIP dengan Filter
+/**
+ * [Route] Export Berkas SKTA sebagai ZIP dengan Filter
+ */
 const exportSktaZip = asyncHandler(async (req, res) => {
   const {
     startDate,
@@ -1302,133 +441,16 @@ const exportSktaZip = asyncHandler(async (req, res) => {
     category,
   } = req.query;
 
-  const where = {
-    sktaUploadPath: {
-      not: null,
-    },
-    deletedAt: null,
-  };
-
-  // Filter Kategori
-  if (category) {
-    where.category = category;
-  }
-
-  // Filter Tanggal
-  if (startDate || endDate) {
-    const validDateField = ["createdAt", "updatedAt", "expDate"].includes(
-      dateField,
-    )
-      ? dateField
-      : "createdAt";
-
-    where[validDateField] = {};
-    if (startDate) {
-      where[validDateField].gte = new Date(startDate);
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      if (!endDate.includes("T")) {
-        end.setHours(23, 59, 59, 999);
-      }
-      where[validDateField].lte = end;
-    }
-  }
-
-  // Filter Mahasiswa (StudyProgram, Tahun Angkatan, Kelas Asal)
-  const mahasiswaWhere = {};
-
-  if (tahunAngkatan) {
-    const parsedAngkatan = parseInt(tahunAngkatan, 10);
-    if (!isNaN(parsedAngkatan)) {
-      mahasiswaWhere.tahunAngkatan = parsedAngkatan;
-    }
-  }
-
-  if (kelasAsal) {
-    mahasiswaWhere.kelasAsal = {
-      contains: String(kelasAsal).trim(),
-      mode: "insensitive",
-    };
-  }
-
-  const spFilter = studyProgramId || studyProgram;
-  if (spFilter) {
-    mahasiswaWhere.OR = [
-      { studyProgramId: spFilter },
-      {
-        studyProgram: {
-          name: {
-            contains: String(spFilter).trim(),
-            mode: "insensitive",
-          },
-        },
-      },
-    ];
-  }
-
-  if (Object.keys(mahasiswaWhere).length > 0) {
-    where.mahasiswa = mahasiswaWhere;
-  }
-
-  const list = await prisma.permohonanSkta.findMany({
-    where,
-    include: {
-      mahasiswa: {
-        include: {
-          user: true,
-          studyProgram: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
+  const validFiles = await sktaService.getSktaFilesForExport({
+    startDate,
+    endDate,
+    dateField,
+    studyProgram,
+    studyProgramId,
+    tahunAngkatan,
+    kelasAsal,
+    category,
   });
-
-  if (!list || list.length === 0) {
-    res.status(404);
-    throw new Error(
-      "Tidak ada berkas SKTA yang sesuai dengan filter yang dipilih",
-    );
-  }
-
-  const validFiles = [];
-  const usedEntryNames = new Set();
-
-  for (const item of list) {
-    if (!item.sktaUploadPath) continue;
-    const ext = path.extname(item.sktaUploadPath || "") || ".pdf";
-    const nim = sanitizeFilenamePart(item.mahasiswa?.nim || "nim");
-    const nama = sanitizeFilenamePart(item.mahasiswa?.user?.name || "nama");
-    const prodi = sanitizeFilenamePart(
-      item.mahasiswa?.studyProgram?.name || "study_program",
-    );
-
-    let entryName = `SKTA_${nim}_${nama}_${prodi}${ext}`;
-
-    // Mencegah duplikasi nama di dalam zip yang sama
-    if (usedEntryNames.has(entryName)) {
-      const timePart = item.createdAt
-        ? new Date(item.createdAt).getTime()
-        : Date.now();
-      entryName = `SKTA_${nim}_${nama}_${prodi}_${timePart}${ext}`;
-      if (usedEntryNames.has(entryName)) {
-        entryName = `SKTA_${nim}_${nama}_${prodi}_${item.id.slice(0, 8)}${ext}`;
-      }
-    }
-    usedEntryNames.add(entryName);
-
-    validFiles.push({
-      filepath: item.sktaUploadPath,
-      entryName,
-    });
-  }
-
-  if (validFiles.length === 0) {
-    res.status(404);
-    throw new Error("Berkas SKTA tidak ditemukan");
-  }
 
   const timestamp = new Date().toISOString().slice(0, 10);
   const zipFileName = `Export_SKTA_${timestamp}.zip`;
