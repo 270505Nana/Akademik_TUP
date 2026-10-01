@@ -46,10 +46,38 @@ const penjadwalanSidangInclude = {
 const listPenjadwalanSidang = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
 
+  let targetPeriodId = req.query.sidangPeriodId;
+
+  if (
+    targetPeriodId &&
+    typeof targetPeriodId === "string" &&
+    targetPeriodId.trim() !== ""
+  ) {
+    targetPeriodId = targetPeriodId.trim();
+  } else {
+    const activePeriod =
+      (await prisma.sidangPeriod.findFirst({
+        where: { isOpen: true, deletedAt: null },
+        orderBy: { updatedAt: "desc" },
+      })) ||
+      (await prisma.sidangPeriod.findFirst({
+        where: { deletedAt: null },
+        orderBy: { endDate: "desc" },
+      }));
+
+    if (activePeriod) {
+      targetPeriodId = activePeriod.id;
+    }
+  }
+
   const where = {
     isDraft: false,
     deletedAt: null,
   };
+
+  if (targetPeriodId) {
+    where.sidangPeriodId = targetPeriodId;
+  }
 
   if (req.user?.role === "DOSEN") {
     const dosen =
@@ -830,15 +858,25 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
   let targetPeriodId = req.query.sidangPeriodId;
   let selectedPeriod = null;
 
-  if (targetPeriodId) {
-    selectedPeriod = await prisma.sidangPeriod.findUnique({
-      where: { id: targetPeriodId },
+  if (
+    targetPeriodId &&
+    typeof targetPeriodId === "string" &&
+    targetPeriodId.trim() !== ""
+  ) {
+    targetPeriodId = targetPeriodId.trim();
+    selectedPeriod = await prisma.sidangPeriod.findFirst({
+      where: { id: targetPeriodId, deletedAt: null },
     });
   } else {
-    selectedPeriod = await prisma.sidangPeriod.findFirst({
-      where: { deletedAt: null },
-      orderBy: { endDate: "desc" },
-    });
+    selectedPeriod =
+      (await prisma.sidangPeriod.findFirst({
+        where: { isOpen: true, deletedAt: null },
+        orderBy: { updatedAt: "desc" },
+      })) ||
+      (await prisma.sidangPeriod.findFirst({
+        where: { deletedAt: null },
+        orderBy: { endDate: "desc" },
+      }));
 
     if (selectedPeriod) {
       targetPeriodId = selectedPeriod.id;

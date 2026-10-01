@@ -28,6 +28,11 @@ import {
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: sidangPeriodId
+ *         schema:
+ *           type: string
+ *         description: ID Periode Sidang. Jika dikosongkan, otomatis memfilter data pada periode sidang yang saat ini aktif.
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -129,7 +134,7 @@ router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistrat
  *         name: sidangPeriodId
  *         schema:
  *           type: string
- *         description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor jadwal pada periode sidang terakhir.
+ *         description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor jadwal pada periode sidang yang saat ini aktif.
  *     responses:
  *       200:
  *         description: Berhasil mengunduh file Excel format iGracias
