@@ -28,7 +28,8 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         name: category
  *         schema:
  *           type: string
- *         description: Filter periods by category (pendaftaran sidang / sidang)
+ *           enum: [Penjadwalan, Pelaksanaan]
+ *         description: Filter periods by category (Penjadwalan / Pelaksanaan)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -102,15 +103,16 @@ router.get("/:id", verifyToken, getSidangPeriodById);
  *             properties:
  *               name:
  *                 type: string
- *                 example: Sidang Periode Ganjil 2026/2027
+ *                 example: Ganjil 2026/2027
  *                 description: Period name
  *               category:
  *                 type: string
- *                 example: pendaftaran sidang
- *                 description: Type of activity (pendaftaran sidang / sidang)
+ *                 enum: [Penjadwalan, Pelaksanaan]
+ *                 example: Penjadwalan
+ *                 description: Type of activity (Penjadwalan / Pelaksanaan)
  *               period:
  *                 type: string
- *                 example: 2026/2027
+ *                 example: "1"
  *                 description: Academic period
  *               startDate:
  *                 type: string
@@ -164,13 +166,15 @@ router.post(
  *             properties:
  *               name:
  *                 type: string
- *                 example: Sidang Periode Genap 2026/2027
+ *                 example: Ganjil 2026/2027
  *               category:
  *                 type: string
- *                 example: sidang
+ *                 enum: [Penjadwalan, Pelaksanaan]
+ *                 example: Pelaksanaan
+ *                 description: Type of activity (Penjadwalan / Pelaksanaan)
  *               period:
  *                 type: string
- *                 example: 2026/2027
+ *                 example: "1"
  *               startDate:
  *                 type: string
  *                 format: date-time

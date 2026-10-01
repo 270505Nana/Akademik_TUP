@@ -1,14 +1,25 @@
-import asyncHandler from 'express-async-handler';
+import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../utils/validationHelper.js';
-import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
+import {
+  sendValidationError,
+  isNil,
+  isValidISO8601,
+  parseBoolean,
+} from "../utils/validationHelper.js";
+import {
+  getPaginationParams,
+  formatPaginationResponse,
+} from "../utils/paginationHelper.js";
 
 // Daftar Semua Periode Sidang (Dipasangkan Pendaftaran & Pelaksanaan)
 const listSidangPeriods = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search } = req.query;
+  const { search, category } = req.query;
 
   const whereClause = { deletedAt: null };
+  if (category) {
+    whereClause.category = { contains: category, mode: "insensitive" };
+  }
   if (search) {
     whereClause.OR = [
       { name: { contains: search, mode: "insensitive" } },
@@ -32,7 +43,7 @@ const listSidangPeriods = asyncHandler(async (req, res) => {
     }
     const pair = pairMap.get(key);
     const catLower = (p.category || "").toLowerCase();
-    if (catLower.includes("pendaftaran") || catLower === "pendaftaran sidang") {
+    if (catLower.includes("pendaftaran")) {
       pair.pendaftaran = p;
     } else {
       pair.pelaksanaan = p;
@@ -80,43 +91,45 @@ const createSidangPeriod = asyncHandler(async (req, res) => {
 
   if (isNil(name)) {
     errors.name = "Nama wajib diisi";
-  } else if (typeof name !== 'string') {
+  } else if (typeof name !== "string") {
     errors.name = "Nama harus berupa string";
   }
 
   if (isNil(category)) {
     errors.category = "Category wajib diisi";
-  } else if (typeof category !== 'string') {
+  } else if (typeof category !== "string") {
     errors.category = "Category harus berupa string";
   }
 
   if (isNil(period)) {
     errors.period = "Period wajib diisi";
-  } else if (typeof period !== 'string') {
+  } else if (typeof period !== "string") {
     errors.period = "Period harus berupa string";
   }
-  
+
   if (isNil(startDate)) {
     errors.startDate = "Tanggal mulai wajib diisi";
   } else if (!isValidISO8601(startDate)) {
-    errors.startDate = "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
+    errors.startDate =
+      "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
   }
-  
+
   if (isNil(endDate)) {
     errors.endDate = "Tanggal selesai wajib diisi";
   } else if (!isValidISO8601(endDate)) {
-    errors.endDate = "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)";
+    errors.endDate =
+      "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)";
   } else if (startDate && new Date(endDate) < new Date(startDate)) {
     errors.endDate = "Tanggal selesai tidak boleh sebelum tanggal mulai";
   }
-  
+
   if (!isNil(isOpen)) {
     const p = parseBoolean(isOpen);
     if (p === null) {
       errors.isOpen = "isOpen harus berupa boolean";
     }
   }
-  
+
   if (Object.keys(errors).length > 0) {
     return sendValidationError(res, errors, req);
   }
@@ -144,37 +157,39 @@ const updateSidangPeriod = asyncHandler(async (req, res) => {
   const { name, category, period, startDate, endDate, isOpen } = req.body;
   const errors = {};
 
-  if (!isNil(name) && typeof name !== 'string') {
+  if (!isNil(name) && typeof name !== "string") {
     errors.name = "Nama harus berupa string";
   }
 
-  if (!isNil(category) && typeof category !== 'string') {
+  if (!isNil(category) && typeof category !== "string") {
     errors.category = "Category harus berupa string";
   }
 
-  if (!isNil(period) && typeof period !== 'string') {
+  if (!isNil(period) && typeof period !== "string") {
     errors.period = "Period harus berupa string";
   }
-  
+
   if (!isNil(startDate)) {
     if (!isValidISO8601(startDate)) {
-      errors.startDate = "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
+      errors.startDate =
+        "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)";
     }
   }
-  
+
   if (!isNil(endDate)) {
     if (!isValidISO8601(endDate)) {
-      errors.endDate = "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)";
+      errors.endDate =
+        "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)";
     }
   }
-  
+
   if (!isNil(isOpen)) {
     const p = parseBoolean(isOpen);
     if (p === null) {
       errors.isOpen = "isOpen harus berupa boolean";
     }
   }
-  
+
   if (Object.keys(errors).length > 0) {
     return sendValidationError(res, errors, req);
   }
@@ -199,7 +214,7 @@ const updateSidangPeriod = asyncHandler(async (req, res) => {
       return sendValidationError(res, errors, req);
     }
   }
-  
+
   const updatedSidangPeriod = await prisma.sidangPeriod.update({
     where: {
       id,
