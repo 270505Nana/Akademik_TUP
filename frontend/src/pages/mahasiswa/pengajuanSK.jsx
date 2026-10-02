@@ -172,7 +172,6 @@ const SkStatusBanner = ({ status, permohonan }) => {
     }
   };
 
-  // Cek apakah kategori pengajuan ini adalah Perpanjangan SK
   const isPerpanjangan = permohonan?.category === SKTA_CATEGORY.PERPANJANGAN_SK || permohonan?.category === 'Perpanjangan SK';
 
   const configs = {
@@ -278,7 +277,6 @@ const validate = ({ judulIndo, judulInggris, kode1, kode2, actualFile, submissio
   if (!kode2 || !kode2.value)               return 'Dosen Pembimbing 2 wajib dipilih.';
   if (String(kode1.value) === String(kode2.value)) return 'Dosen Pembimbing 1 dan 2 tidak boleh sama.';
   
-  // Validasi Frontend BENAR-BENAR MENGIZINKAN KOSONG untuk perpanjangan dan revisi
   if (submissionMode === 'create-baru' && !actualFile) {
     return 'Dokumen evidence wajib diunggah.';
   }
@@ -446,16 +444,17 @@ const PengajuanSK = () => {
   const isEditableForm = isSkEditable(skStatus, permohonan);
   const isReadOnlyForm = isBelumTerbit && !isEditableForm;
   
-  const isLockedFields = isExpired || isReadOnlyForm;
+  // Mengunci input judul & dosen jika revisi perpanjangan SKTA
+  const isPerpanjanganRequest = permohonan?.category === SKTA_CATEGORY.PERPANJANGAN_SK || permohonan?.category === 'Perpanjangan SK';
+  const isLockedFields = isExpired || isReadOnlyForm || (isBelumTerbit && isPerpanjanganRequest);
 
-  // LOGIKA DINAMIS UNTUK NAVBAR TITLE
   let dynamicTitle = 'Permohonan Penerbitan SK Pembimbing Tugas Akhir';
   if (isExpired) {
     dynamicTitle = 'Perpanjangan SK Pembimbing Tugas Akhir';
   } else if (isBelumTerbit) {
     dynamicTitle = 'Perbaikan Revisi SK Pembimbing Tugas Akhir';
   } else if (permohonan?.category === SKTA_CATEGORY.PERPANJANGAN_SK || permohonan?.category === 'Perpanjangan SK') {
-    dynamicTitle = 'Perpanjangan SK Pembimbing Tugas Akhir'; // <--- Berubah saat status_only / sukses!
+    dynamicTitle = 'Perpanjangan SK Pembimbing Tugas Akhir';
   }
 
   const handleDosenChange = useCallback((field, val) => {
@@ -610,7 +609,6 @@ const PengajuanSK = () => {
         
         updateSktaRequestId(newSktaRequestId);
         
-        // Memperbarui category secara lokal agar UI merespons tanpa harus refresh
         if (permohonan) {
           setPermohonan({ ...permohonan, category: categoryString });
         }
