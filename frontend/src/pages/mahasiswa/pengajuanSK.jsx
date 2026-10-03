@@ -4,7 +4,7 @@ import Select from 'react-select';
 import { Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, RefreshCw, AlertCircle, Menu, Eye } from 'lucide-react';
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import api, { getLecturers, getSKTARequest, submitSKTARequest, submitFinalSKTARequest, downloadTemplate, downloadSK } from '../../service/api';
+import api, { getLecturers, getSKTARequest, getAllSktaRequests, submitSKTARequest, submitFinalSKTARequest, downloadTemplate, downloadSK } from '../../service/api';
 import {
   determineSkStatus,
   getSubmissionMode,
@@ -16,6 +16,51 @@ import {
 import CustomAlert from '../../components/common/CustomAlert';
 import SidebarMahasiswa from '../../components/sidebar/SidebarMahasiswa';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
+
+// KOMPONEN BARU: Banner Notifikasi Pembaruan SK
+const OngoingPembaruanBanner = ({ pembaruan, navigate }) => {
+  if (!pembaruan) return null;
+  return (
+    <div style={{
+      background: '#F0F9FF', border: '1px solid #BAE6FD',
+      borderRadius: 12, padding: '16px 20px', marginBottom: 24,
+      display: 'flex', alignItems: 'flex-start', gap: 12,
+      boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+    }}>
+      <Info size={20} color="#0284C7" style={{ marginTop: 2, flexShrink: 0 }} />
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <h4 style={{ fontSize: 13, fontWeight: 800, color: '#0369A1', margin: 0 }}>
+            Pengajuan Pembaruan SK Sedang Berjalan
+          </h4>
+          <span style={{
+            fontSize: 9, fontWeight: 700, padding: '2px 8px',
+            borderRadius: 9999, background: '#E0F2FE', color: '#0369A1',
+            textTransform: 'uppercase', letterSpacing: 0.5,
+          }}>
+            {determineSkStatus(pembaruan).replace('-', ' ')}
+          </span>
+        </div>
+        <p style={{ fontSize: 11.5, color: '#075985', margin: 0, lineHeight: 1.5 }}>
+          Kamu memiliki pengajuan <strong>{pembaruan.category}</strong> yang sedang aktif. 
+          Silakan pantau atau lanjutkan permohonan tersebut melalui menu <strong>Pembaruan SK Tugas Akhir</strong>.
+        </p>
+        <button
+          onClick={() => navigate('/mahasiswa/pembaruan-sk')}
+          style={{
+            marginTop: 12, padding: '6px 16px', borderRadius: 9999,
+            fontSize: 11, fontWeight: 700, background: '#0284C7',
+            color: '#fff', border: 'none', cursor: 'pointer', transition: 'background 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#0369A1'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#0284C7'}
+        >
+          Cek Pembaruan SK
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const PreviewModal = ({ code, onClose }) => {
   const [blobUrl, setBlobUrl] = useState(null);
@@ -305,6 +350,7 @@ const PengajuanSK = () => {
   
   const [pageStatus,      setPageStatus]      = useState('loading');
   const [permohonan,      setPermohonan]      = useState(null);
+  const [ongoingPembaruan, setOngoingPembaruan] = useState(null); 
   const [skStatus,        setSkStatus]        = useState(null);
   const [submissionMode,  setSubmissionMode]  = useState('create-baru'); 
   const [lecturerOptions, setLecturerOptions] = useState([]);
@@ -355,9 +401,9 @@ const PengajuanSK = () => {
       if (!mahasiswaId) { navigate('/lengkapi-data', { replace: true }); return; }
 
       try {
-        const latest = await getSKTARequest(mahasiswaId);
-
-        if (!latest) {
+        const allReq = await getAllSktaRequests({ mahasiswaId, limit: 100 });
+        
+        if (!allReq || allReq.length === 0) {
           setPermohonan(null);
           setSubmissionMode('create-baru');
           setSkStatus(null);
@@ -365,18 +411,31 @@ const PengajuanSK = () => {
           return;
         }
 
-        setPermohonan(latest);
-        updateSktaRequestId(latest.id);
+        // Urutkan dari yang terbaru berdasarkan createdAt
+        const sortedReq = allReq.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        const status = determineSkStatus(latest);
-        const mode   = getSubmissionMode(latest);
+        // 1. SCAN seluruh array: Cari Pembaruan SK (Perubahan) yang SEDANG BERJALAN
+        const activePembaruan = sortedReq.find(req => 
+          !isMainPageCategory(req) && determineSkStatus(req) !== STATUS_SK.SUDAH_TERBIT
+        );
+
+        // 2. SCAN seluruh array: Cari SK Utama (Main category) untuk ditampilkan
+        // Ambil data pertama yang BUKAN merupakan activePembaruan
+        let displaySk = sortedReq.find(req => req.id !== activePembaruan?.id) || sortedReq[0];
+
+        setOngoingPembaruan(activePembaruan);
+        setPermohonan(displaySk);
+        updateSktaRequestId(displaySk.id);
+
+        const status = determineSkStatus(displaySk);
+        const mode   = getSubmissionMode(displaySk);
 
         setSkStatus(status);
         setSubmissionMode(mode);
 
         if (mode === 'create-perpanjangan' || mode === 'patch-revisi') {
-          const d1 = latest.dosenPembimbing1;
-          const d2 = latest.dosenPembimbing2;
+          const d1 = displaySk.dosenPembimbing1;
+          const d2 = displaySk.dosenPembimbing2;
 
           let matchedKode1 = null;
           if (d1) {
@@ -387,7 +446,7 @@ const PengajuanSK = () => {
               researchGroupId: d1.researchGroupId || null,
             };
           } else {
-            matchedKode1 = lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing1Id));
+            matchedKode1 = lecturerOptions.find(opt => String(opt.value) === String(displaySk.dosenPembimbing1Id));
           }
 
           let matchedKode2 = null;
@@ -399,19 +458,19 @@ const PengajuanSK = () => {
               researchGroupId: d2.researchGroupId || null,
             };
           } else {
-            matchedKode2 = lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing2Id));
+            matchedKode2 = lecturerOptions.find(opt => String(opt.value) === String(displaySk.dosenPembimbing2Id));
           }
 
-          const matchedKK = latest.researchGroup 
-            ? latest.researchGroup.name.toUpperCase() 
+          const matchedKK = displaySk.researchGroup 
+            ? displaySk.researchGroup.name.toUpperCase() 
             : (matchedKode1?.researchGroupId != null
               ? kelompokKeilmuan.find(kk => String(kk.researchGroupId) === String(matchedKode1.researchGroupId))?.label
               : '');
 
           setFormData(prev => ({
             ...prev,
-            judulIndo: latest.judulProposalIndonesia ?? latest.proposalTitleId ?? '',
-            judulInggris: latest.judulProposalInggris ?? latest.proposalTitleEn ?? '',
+            judulIndo: displaySk.judulProposalIndonesia ?? displaySk.proposalTitleId ?? '',
+            judulInggris: displaySk.judulProposalInggris ?? displaySk.proposalTitleEn ?? '',
             kode1: matchedKode1 ?? null,
             dosen1: matchedKode1?.nama ?? '',
             kode2: matchedKode2 ?? null,
@@ -444,7 +503,6 @@ const PengajuanSK = () => {
   const isEditableForm = isSkEditable(skStatus, permohonan);
   const isReadOnlyForm = isBelumTerbit && !isEditableForm;
   
-  // Mengunci input judul & dosen jika revisi perpanjangan SKTA
   const isPerpanjanganRequest = permohonan?.category === SKTA_CATEGORY.PERPANJANGAN_SK || permohonan?.category === 'Perpanjangan SK';
   const isLockedFields = isExpired || isReadOnlyForm || (isBelumTerbit && isPerpanjanganRequest);
 
@@ -724,23 +782,17 @@ const PengajuanSK = () => {
       );
     }
 
+    // Tampilan ketika form tertutup (Sudah Terbit / Sedang Proses)
     if (pageStatus === 'status_only') {
-      const categoryMismatch = !isMainPageCategory(permohonan);
       return (
         <div style={{ padding: '24px 16px', maxWidth: 600, margin: '0 auto' }}>
-          {categoryMismatch ? (
-            <div style={{
-              background: '#F9FAFB', border: '1px solid #E5E7EB',
-              borderRadius: 10, padding: '16px 20px', marginBottom: 24,
-            }}>
-              <p style={{ fontSize: 11.5, color: '#4B5563', lineHeight: 1.6, margin: 0 }}>
-                Kamu memiliki pengajuan perubahan data SK (<strong>{permohonan?.category}</strong>) yang sedang berjalan.
-                Silakan pantau status pengajuan tersebut melalui halaman Perubahan SK, bukan di halaman ini.
-              </p>
-            </div>
-          ) : (
-            <SkStatusBanner status={skStatus} permohonan={permohonan} />
-          )}
+          
+          {/* BANNER BIRU: Akan selalu diprioritaskan muncul jika ada draft/proses pembaruan SKTA */}
+          <OngoingPembaruanBanner pembaruan={ongoingPembaruan} navigate={navigate} />
+
+          {/* BANNER HIJAU: SK Utama (TETAP TAMPIL) */}
+          <SkStatusBanner status={skStatus} permohonan={permohonan} />
+          
           <div style={{ textAlign: 'center' }}>
             <button
               onClick={() => navigate('/mahasiswa/dashboard')}
@@ -757,8 +809,12 @@ const PengajuanSK = () => {
       );
     }
 
+    // Tampilan ketika form terbuka (Permohonan Baru, Perpanjangan, Revisi)
     return (
       <div className="sk-content-wrapper" style={{ padding: '0 8px' }}>
+        
+        {/* Banner Biru ditambahkan juga di halaman form untuk antisipasi (jaga-jaga) */}
+        <OngoingPembaruanBanner pembaruan={ongoingPembaruan} navigate={navigate} />
 
         {isExpired && <SkStatusBanner status={STATUS_SK.EXPIRED} permohonan={permohonan} />}
         {isBelumTerbit && <SkStatusBanner status={STATUS_SK.BELUM_TERBIT} permohonan={permohonan} />}

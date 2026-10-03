@@ -4,15 +4,12 @@ import Select from 'react-select';
 import { Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, AlertCircle, Menu, Download } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 
-// 1. TAMBAHKAN IMPORT getAllSktaRequests
+// Pastikan isSkEditable ikut diimport dari helper
 import { getLecturers, getSKTARequest, getAllSktaRequests, submitSKTARequest, submitFinalSKTARequest } from '../../service/api';
-
-// 2. IMPORT LOGO DARI ASSETS AGAR BISA DIBACA OLEH HTML2PDF
 import LogoTelkom from '../../assets/logo-telkom.png';
-
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import { determineSkStatus, STATUS_SK } from '../../components/common/Skstatushelper';
+import { determineSkStatus, STATUS_SK, isSkEditable } from '../../components/common/Skstatushelper';
 import CustomAlert from '../../components/common/CustomAlert';
 import SidebarMahasiswa from '../../components/sidebar/SidebarMahasiswa';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
@@ -29,22 +26,25 @@ const SkStatusBanner = ({ status, permohonan }) => {
   const configs = {
     [STATUS_SK.DALAM_PROSES]: {
       bg: '#EFF6FF', border: '#BFDBFE', icon: <Clock size={16} color="#2563EB" />,
-      title: 'Pengajuan Perubahan SK Sedang Diproses',
-      desc: 'Permohonan perubahan SK Tugas Akhir kamu sedang dalam antrian verifikasi oleh tim akademik. Proses maksimal 3×24 jam kerja.',
+      title: 'Pengajuan Pembaruan SK Sedang Diproses',
+      desc: 'Permohonan pembaruan SK Tugas Akhir kamu sedang dalam antrian verifikasi oleh tim akademik. Proses maksimal 3×24 jam kerja.',
       badgeBg: '#DBEAFE', badgeColor: '#1D4ED8', badgeText: 'Dalam Proses',
     },
     [STATUS_SK.BELUM_TERBIT]: {
       bg: '#FFFBEB', border: '#FDE68A', icon: <AlertCircle size={16} color="#D97706" />,
-      title: 'Perubahan SK Memerlukan Perbaikan Dokumen',
+      title: 'Pembaruan SK Memerlukan Perbaikan Dokumen',
       desc: permohonan?.message
         ? `Tim akademik memberikan catatan: "${permohonan.message}". Silakan perbaiki pengajuan kamu di bawah ini.`
-        : 'Pengajuan perubahan SK kamu perlu diperbaiki. Silakan perbarui data melalui formulir di bawah ini.',
+        : 'Pengajuan pembaruan SK kamu perlu diperbaiki. Silakan perbarui data melalui formulir di bawah ini.',
       badgeBg: '#FEF3C7', badgeColor: '#92400E', badgeText: 'Perlu Perbaikan',
     },
   };
 
   const cfg = configs[status];
   if (!cfg) return null;
+
+  const isBelumTerbit = status === STATUS_SK.BELUM_TERBIT;
+  const isEditable = isBelumTerbit ? isSkEditable(status, permohonan) : true;
 
   return (
     <div style={{
@@ -67,6 +67,24 @@ const SkStatusBanner = ({ status, permohonan }) => {
           <p style={{ fontSize: 11.5, color: '#4B5563', lineHeight: 1.6, margin: 0 }}>
             {cfg.desc}
           </p>
+          
+          {/* INFORMASI BATAS WAKTU (HANYA TANGGAL TANPA JAM) */}
+          {isBelumTerbit && permohonan?.isEdit && (
+            <div style={{ 
+              marginTop: 12, padding: '8px 12px', 
+              background: isEditable ? 'rgba(217, 119, 6, 0.1)' : '#FEF2F2', 
+              border: `1px solid ${isEditable ? 'rgba(217, 119, 6, 0.2)' : '#FECACA'}`, 
+              borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 8 
+            }}>
+              <Clock size={14} color={isEditable ? "#B45309" : "#DC2626"} />
+              <span style={{ fontSize: 11, color: isEditable ? '#92400E' : '#B91C1C', fontWeight: 600 }}>
+                {isEditable ? 'Batas Waktu Perbaikan: ' : 'Masa Perbaikan Berakhir: '} 
+                {new Date(permohonan.isEdit).toLocaleDateString('id-ID', {
+                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                })}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -173,7 +191,6 @@ const PembaruanSK = () => {
       if (!mahasiswaId) { navigate('/lengkapi-data', { replace: true }); return; }
 
       try {
-        // Fetch pengajuan terakhir (Bisa jadi ini adalah draft perubahan yang sedang aktif)
         const latest = await getSKTARequest(mahasiswaId);
 
         if (!latest) {
@@ -182,20 +199,17 @@ const PembaruanSK = () => {
           return;
         }
 
-        // 3. LOGIKA BARU: Cari SK Asli/Utama untuk mengisi "Data Lama"
         let activeSk = latest; 
         try {
           const allReq = await getAllSktaRequests({ mahasiswaId, limit: 100 });
           if (Array.isArray(allReq) && allReq.length > 0) {
-            // Sort berdasarkan waktu dibuat (terbaru di atas)
             const sortedReq = allReq.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            // Cari SK yang BUKAN draft ini, DAN berstatus SUDAH_TERBIT atau Permohonan Baru
             const foundActive = sortedReq.find(req => 
               req.id !== latest.id && 
               (determineSkStatus(req) === STATUS_SK.SUDAH_TERBIT || req.category === 'Permohonan Baru' || req.category === 'Perpanjangan SK')
             );
             if (foundActive) {
-              activeSk = foundActive; // Ini adalah Data Lama yang sebenarnya!
+              activeSk = foundActive; 
             }
           }
         } catch(e) {
@@ -243,7 +257,6 @@ const PembaruanSK = () => {
           }
         }
 
-        // 4. MENGISI DATA LAMA BERDASARKAN activeSk (SK Utama)
         const d1Obj = activeSk.dosenPembimbing1;
         const d2Obj = activeSk.dosenPembimbing2;
 
@@ -270,7 +283,6 @@ const PembaruanSK = () => {
           researchGroupId: activeSk.researchGroupId,
         });
 
-        // 5. MENGISI FORM DATA BARU BERDASARKAN latest (Draft/Revisi)
         if (status === STATUS_SK.DRAFT || (isPerubahan && status === STATUS_SK.BELUM_TERBIT)) {
           const draftD1 = latest.dosenPembimbing1;
           const draftD2 = latest.dosenPembimbing2;
@@ -311,7 +323,13 @@ const PembaruanSK = () => {
   const isGantiJudul = kategori?.value === 'Perubahan Judul' || kategori?.value === 'Perubahan Judul dan Dosen Pembimbing';
   const isGantiDosen = kategori?.value === 'Perubahan Dosen Pembimbing' || kategori?.value === 'Perubahan Judul dan Dosen Pembimbing';
 
+  // VARIABEL LOCK FORM
+  const isBelumTerbit = submissionMode === 'patch-revisi';
+  const isEditableForm = isSkEditable(skStatus, permohonan);
+  const isReadOnlyForm = isBelumTerbit && !isEditableForm;
+
   const handleDosenChange = useCallback((field, val) => {
+    if (isReadOnlyForm) return;
     const namaField = field === 'kode1' ? 'dosen1' : 'dosen2';
     setFormData(prev => {
       const updated = { ...prev, [field]: val, [namaField]: val?.nama || '' };
@@ -326,7 +344,7 @@ const PembaruanSK = () => {
       return updated;
     });
     setSubmitError(null);
-  }, []);
+  }, [isReadOnlyForm]);
 
   const processFile = (file) => {
     if (!file) return;
@@ -364,6 +382,7 @@ const PembaruanSK = () => {
 
   const handleDragOver = (e) => {
     e.preventDefault();
+    if (isReadOnlyForm) return;
     setIsDragging(true);
   };
 
@@ -374,6 +393,7 @@ const PembaruanSK = () => {
 
   const handleDrop = (e) => {
     e.preventDefault();
+    if (isReadOnlyForm) return;
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFile(e.dataTransfer.files[0]);
@@ -383,6 +403,7 @@ const PembaruanSK = () => {
 
   const handleGenerateTemplateAndSaveDraft = async () => {
     setSubmitError(null);
+    if (isReadOnlyForm) return;
     
     if (!kategori) {
       setSubmitError({ title: 'Kategori Belum Dipilih', message: 'Silakan pilih kategori perubahan terlebih dahulu.' });
@@ -406,7 +427,6 @@ const PembaruanSK = () => {
     const d2Baru = isGantiDosen ? (formData.dosen2 || '-') : d2Lama;
     const jBaru = isGantiJudul ? formData.judulIndo : oldData.judulIndo;
 
-    // 6. LAYOUT HTML BORDER LENGKAP & IMPORT LOGO
     const isPerubahanJudulSaja = kategori.value === 'Perubahan Judul';
     const docNo = isPerubahanJudulSaja ? 'TUP-SPM-FM-TA-006' : 'TUP-SPM-FM-TA-007';
     const headerFormTitle = isPerubahanJudulSaja ? 'FORMULIR PERMOHONAN<br>PERUBAHAN JUDUL TUGAS AKHIR' : 'FORMULIR PERMOHONAN<br>PERUBAHAN SK TUGAS AKHIR';
@@ -612,6 +632,7 @@ const PembaruanSK = () => {
 
   const handleSubmit = async () => {
     setSubmitError(null);
+    if (isReadOnlyForm) return;
 
     if (submissionMode === 'create-baru' && !draftId) {
       setSubmitError({ title: 'Aksi Ditolak', message: 'Silakan Export Evidence Formulir terlebih dahulu untuk menyimpan data.' });
@@ -746,7 +767,7 @@ const PembaruanSK = () => {
             {pageStatus === 'success' ? <CheckCircle size={32} color="#10B981" /> : <Clock size={32} color="#2563EB" />}
           </div>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', marginBottom: 10 }}>
-            {pageStatus === 'success' ? 'Pengajuan Perubahan SK Berhasil Dikirim!' : 'Revisi Perubahan SK Berhasil Dikirim!'}
+            {pageStatus === 'success' ? 'Pengajuan Pembaruan SK Berhasil Dikirim!' : 'Revisi Pembaruan SK Berhasil Dikirim!'}
           </h2>
           <p style={{ fontSize: 11.5, color: '#6B7280', lineHeight: 1.6, marginBottom: 28 }}>
             Permohonan kamu sudah kami terima dan masuk ke dalam antrian verifikasi tim akademik. Proses membutuhkan waktu maksimal 3×24 jam kerja. Pantau status pengajuan di dashboard.
@@ -801,7 +822,7 @@ const PembaruanSK = () => {
                 <li style={{ marginBottom: '6px' }}>Lengkapi form perubahan. Setelah selesai, klik tombol <strong>Export Evidence Formulir</strong> untuk menyimpan draft secara otomatis.</li>
                 <li style={{ marginBottom: '6px' }}>Mintalah persetujuan (Tanda Tangan) pihak terkait pada formulir yang telah diunduh, lalu scan dan unggah kembali pada kolom di bawah untuk memproses pengajuan.</li>
               </ul>
-              <p style={{ fontSize: '11px' }}>Pengajuan perubahan SK diproses dalam waktu maksimal 3×24 jam sesuai antrian.</p>
+              <p style={{ fontSize: '11px' }}>Pengajuan pembaruan SK diproses dalam waktu maksimal 3×24 jam sesuai antrian.</p>
             </div>
           </div>
         </div>
@@ -899,7 +920,8 @@ const PembaruanSK = () => {
                   <textarea
                     value={formData.judulIndo}
                     onChange={(e) => { setFormData(prev => ({ ...prev, judulIndo: e.target.value })); setSubmitError(null); }}
-                    style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '60px', borderColor: '#E5E7EB' }}
+                    style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '60px', borderColor: '#E5E7EB', backgroundColor: isReadOnlyForm ? '#F3F4F6' : '#fff', cursor: isReadOnlyForm ? 'not-allowed' : 'text' }}
+                    readOnly={isReadOnlyForm}
                     placeholder="Masukkan judul tugas akhir baru dalam Bahasa Indonesia"
                   />
                 </div>
@@ -911,7 +933,8 @@ const PembaruanSK = () => {
                   <textarea
                     value={formData.judulInggris}
                     onChange={(e) => { setFormData(prev => ({ ...prev, judulInggris: e.target.value })); setSubmitError(null); }}
-                    style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '60px', borderColor: '#E5E7EB' }}
+                    style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '60px', borderColor: '#E5E7EB', backgroundColor: isReadOnlyForm ? '#F3F4F6' : '#fff', cursor: isReadOnlyForm ? 'not-allowed' : 'text' }}
+                    readOnly={isReadOnlyForm}
                     placeholder="Enter your new thesis title in English"
                   />
                 </div>
@@ -925,7 +948,7 @@ const PembaruanSK = () => {
                 <label style={{ fontSize: '11.5px', marginBottom: '6px', color: '#374151', fontWeight: 600 }}>Nama Pembimbing 1 Baru *</label>
                 <div className="input-with-icon">
                   <User className="field-icon" size={16} color="#9CA3AF" />
-                  <input type="text" value={formData.dosen1} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px', color: '#6B7280' }} placeholder="Auto-terisi" />
+                  <input type="text" value={formData.dosen1} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px', color: '#6B7280', cursor: 'not-allowed' }} placeholder="Auto-terisi" />
                 </div>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -935,7 +958,7 @@ const PembaruanSK = () => {
                   <Select
                     options={lecturerOptions} styles={{...customSelectStyles, control: (b, s) => ({ ...customSelectStyles.control(b, s), paddingLeft: '32px'})}}
                     value={formData.kode1} onChange={(val) => handleDosenChange('kode1', val)}
-                    isLoading={loadingDosen} isDisabled={loadingDosen}
+                    isLoading={loadingDosen} isDisabled={loadingDosen || isReadOnlyForm}
                     isClearable className="w-full" placeholder="Pilih Kode Dosen"
                   />
                 </div>
@@ -944,7 +967,7 @@ const PembaruanSK = () => {
                 <label style={{ fontSize: '11.5px', marginBottom: '6px', color: '#374151', fontWeight: 600 }}>Nama Pembimbing 2 Baru (Opsional)</label>
                 <div className="input-with-icon">
                   <User className="field-icon" size={16} color="#9CA3AF" />
-                  <input type="text" value={formData.dosen2} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px', color: '#6B7280' }} placeholder="Auto-terisi" />
+                  <input type="text" value={formData.dosen2} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px', color: '#6B7280', cursor: 'not-allowed' }} placeholder="Auto-terisi" />
                 </div>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -954,7 +977,7 @@ const PembaruanSK = () => {
                   <Select
                     options={lecturerOptions} styles={{...customSelectStyles, control: (b, s) => ({ ...customSelectStyles.control(b, s), paddingLeft: '32px'})}}
                     value={formData.kode2} onChange={(val) => handleDosenChange('kode2', val)}
-                    isLoading={loadingDosen} isDisabled={loadingDosen}
+                    isLoading={loadingDosen} isDisabled={loadingDosen || isReadOnlyForm}
                     isClearable className="w-full" placeholder="Pilih Kode Dosen"
                   />
                 </div>
@@ -965,15 +988,15 @@ const PembaruanSK = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px', borderTop: '1px solid #E5E7EB', paddingTop: '16px' }}>
             <button
               onClick={handleGenerateTemplateAndSaveDraft}
-              disabled={isGenerating}
+              disabled={isGenerating || isReadOnlyForm}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '10px 20px', fontSize: '12px', fontWeight: 700,
-                background: isGenerating ? '#9CA3AF' : '#10B981', color: '#fff', border: 'none', borderRadius: '8px',
-                cursor: isGenerating ? 'not-allowed' : 'pointer', transition: 'background 0.2s', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                background: (isGenerating || isReadOnlyForm) ? '#9CA3AF' : '#10B981', color: '#fff', border: 'none', borderRadius: '8px',
+                cursor: (isGenerating || isReadOnlyForm) ? 'not-allowed' : 'pointer', transition: 'background 0.2s', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#10B981'}
+              onMouseEnter={(e) => !isReadOnlyForm && (e.currentTarget.style.background = '#059669')}
+              onMouseLeave={(e) => !isReadOnlyForm && (e.currentTarget.style.background = '#10B981')}
             >
               {isGenerating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={16} />} 
               {isGenerating ? 'Menyiapkan Dokumen...' : 'Export Evidence Formulir'}
@@ -1008,11 +1031,11 @@ const PembaruanSK = () => {
               <label style={{ fontSize: '11.5px', marginBottom: '6px', color: '#374151', fontWeight: 600 }}>Unggah Dokumen Evidence {submissionMode !== 'patch-revisi' ? '*' : ''}</label>
               <div 
                 className={`upload-area ${isDragging ? 'dragging' : ''}`} 
-                onClick={() => fileInputRef.current.click()}
+                onClick={() => !isReadOnlyForm && fileInputRef.current.click()}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                style={{ padding: '24px 16px', minHeight: '120px', border: '1.5px dashed #CBD5E1', borderRadius: '8px', background: '#F8FAFC', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}
+                style={{ padding: '24px 16px', minHeight: '120px', border: '1.5px dashed #CBD5E1', borderRadius: '8px', background: '#F8FAFC', cursor: isReadOnlyForm ? 'not-allowed' : 'pointer', textAlign: 'center', transition: 'all 0.2s', opacity: isReadOnlyForm ? 0.6 : 1 }}
               >
                 <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf, .png, .jpg, .jpeg" />
                 <div className="upload-icon-circle" style={{ width: '40px', height: '40px', marginBottom: '10px', background: '#E2E8F0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
@@ -1066,14 +1089,16 @@ const PembaruanSK = () => {
           <button
             className="btn-submit"
             onClick={handleSubmit}
-            disabled={pageStatus === 'submitting' || !kategori}
+            disabled={pageStatus === 'submitting' || !kategori || isReadOnlyForm}
             style={{
-              ...(pageStatus === 'submitting' || !kategori ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
-              padding: '12px 32px', fontSize: '13px', borderRadius: '8px', background: '#C0182A', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'background 0.2s'
+              ...(pageStatus === 'submitting' || !kategori || isReadOnlyForm ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
+              padding: '12px 32px', fontSize: '13px', borderRadius: '8px', background: isReadOnlyForm ? '#9CA3AF' : '#C0182A', color: '#fff', fontWeight: 700, border: 'none', cursor: isReadOnlyForm ? 'not-allowed' : 'pointer', transition: 'background 0.2s'
             }}
           >
             {pageStatus === 'submitting' ? (
               <><Loader size={14} style={{ animation: 'spin 1s linear infinite', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} /> Mengirim Pengajuan...</>
+            ) : isReadOnlyForm ? (
+              'Batas Waktu Perbaikan Habis'
             ) : submissionMode === 'patch-revisi' ? (
               'Kirim Revisi Dokumen'
             ) : (
