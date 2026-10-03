@@ -1,7 +1,11 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
-import { verifyToken } from '../../middlewares/auth.js';
-import { isKetuaKK, isAdmin, isAdminOrKetuaKK } from '../../middlewares/authorize.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import {
+  isKetuaKK,
+  isAdmin,
+  isAdminOrDosen,
+} from "../../middlewares/authorize.js";
 import {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -10,7 +14,7 @@ import {
   batchSetJadwalSidang,
   exportJadwalSidang,
   toggleLockSidangRegistration,
-} from '../../controllers/penjadwalanSidangController.js';
+} from "../../controllers/penjadwalanSidangController.js";
 
 /**
  * @swagger
@@ -23,7 +27,7 @@ import {
  * @swagger
  * /api/penjadwalan-sidang:
  *   get:
- *     summary: Get all penjadwalan sidang (paginated) (Admin and Ketua KK only)
+ *     summary: Get all penjadwalan sidang (paginated)
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -81,9 +85,9 @@ import {
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Hanya admin dan dosen dengan status Ketua KK yang dapat mengakses)
+ *         description: Access denied (Hanya admin dan dosen yang dapat mengakses)
  */
-router.get("/", verifyToken, isAdminOrKetuaKK, listPenjadwalanSidang);
+router.get("/", verifyToken, isAdminOrDosen, listPenjadwalanSidang);
 
 /**
  * @swagger
@@ -119,13 +123,18 @@ router.get("/", verifyToken, isAdminOrKetuaKK, listPenjadwalanSidang);
  *       404:
  *         description: Sidang registration not found
  */
-router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistration);
+router.patch(
+  "/:id/toggle-lock",
+  verifyToken,
+  isAdmin,
+  toggleLockSidangRegistration,
+);
 
 /**
  * @swagger
  * /api/penjadwalan-sidang/export:
  *   get:
- *     summary: Export data jadwal sidang (Admin & Ketua KK only)
+ *     summary: Export data jadwal sidang
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -141,9 +150,9 @@ router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistrat
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Hanya admin dan dosen dengan status Ketua KK yang dapat mengakses)
+ *         description: Access denied (Hanya admin dan dosen yang dapat mengakses)
  */
-router.get("/export", verifyToken, isAdminOrKetuaKK, exportJadwalSidang);
+router.get("/export", verifyToken, isAdminOrDosen, exportJadwalSidang);
 
 /**
  * @swagger
