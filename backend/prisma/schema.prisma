@@ -201,7 +201,7 @@ model PermohonanSkta {
   deletedAt                DateTime?      @map("deleted_at")
   // Buat Permohonan
   isDraft                  Boolean        @default(true) @map("is_draft")
-  category                 String // Buat baru, Pembaruan Ganti Judul, Pembaruan Ganti Dospem, Pembaruan Ganti Judul dan Dospem, Perpanjangan
+  category                 String // Permohonan Baru, Perubahan Judul, Perubahan Dosen Pembimbing, Perubahan Judul dan Dosen Pembimbing, Perpanjangan SK
   mahasiswa                Mahasiswa?     @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade) // NIM, Prodi, No HP
   mahasiswaId              String?        @map("mahasiswa_id")
   judulProposalIndonesia   String?        @map("judul_proposal_indonesia")
