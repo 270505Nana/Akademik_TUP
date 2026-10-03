@@ -365,7 +365,7 @@ const AturPeriodeYudisium = () => {
       const diffDays = (yStart - pEnd) / (1000 * 3600 * 24);
       
       if (diffDays < 14) {
-        showAlert('error', 'Pelanggaran Aturan', 'Masa Pelaksanaan Yudisium wajib berjarak MINIMAL 14 HARI setelah masa pendaftaran ditutup.');
+        showAlert('error', 'Pelanggaran Aturan', 'Masa Pelaksanaan Sidang Yudisium wajib berjarak MINIMAL 14 HARI setelah masa pendaftaran ditutup.');
         return;
       }
     }
@@ -519,7 +519,7 @@ const AturPeriodeYudisium = () => {
 
                 <div className="summary-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1 }}>MASA PELAKSANAAN YUDISIUM</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1 }}>MASA PELAKSANAAN SIDANG YUDISIUM</span>
                     <span className={`badge-pill ${yStatMain === 'Aktif' ? 'bg-blue' : (yStatMain === 'Mendatang' ? 'bg-gray' : 'bg-red')}`}>
                       {yStatMain === 'Aktif' ? 'Berjalan' : (yStatMain === 'Mendatang' ? 'Mendatang' : 'Selesai')}
                     </span>
@@ -570,7 +570,7 @@ const AturPeriodeYudisium = () => {
                     <tr>
                       <th>Nama Periode</th>
                       <th>Masa Pendaftaran</th>
-                      <th>Masa Pelaksanaan Yudisium</th>
+                      <th>Masa Pelaksanaan Sidang Yudisium</th>
                       <th>Status Alur</th>
                       <th>Aktif</th>
                       <th>Aksi</th>
@@ -741,7 +741,7 @@ const AturPeriodeYudisium = () => {
                   )}
                   {editForm.yudisium && (
                     <div style={{ padding: 16, border: '1px solid #E9D5FF', borderRadius: 12, backgroundColor: '#FAF5FF' }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#6B21A8', display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={16}/> Masa Pelaksanaan Yudisium</h4>
+                      <h4 style={{ margin: '0 0 12px 0', color: '#6B21A8', display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={16}/> Masa Pelaksanaan Sidang Yudisium</h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           <label style={{ fontSize: 11, fontWeight: 700, color: '#581C87' }}>TANGGAL MULAI</label>
