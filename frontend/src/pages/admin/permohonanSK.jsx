@@ -397,7 +397,7 @@ const PermohonanSK = () => {
                       <th style={{ textAlign: 'center' }}>AKSI</th>
                     </tr>
                   </thead>
-                  <tbody>
+                 <tbody>
                     {loading ? (
                       <tr><td colSpan={7} className="text-center py-12">Memuat data...</td></tr>
                     ) : paginated.length === 0 ? (
@@ -421,7 +421,6 @@ const PermohonanSK = () => {
                                 <Eye size={13} /> Evidence
                               </button>
                             </td>
-                            {/* Layout Kategori diperbaiki dengan inline-block & nowrap agar tidak turun baris */}
                             <td className="text-center">
                               <span style={{ 
                                 display: 'inline-block',
@@ -438,14 +437,17 @@ const PermohonanSK = () => {
                               <StatusBadge status={status} />
                             </td>
                             <td className="text-center action-buttons">
-                              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'center', gap: 6 }}>
-                                <button
-                                  className="btn-export-sk sm"
-                                  style={{ opacity: status === 'sudah-terbit' ? 1 : 0, pointerEvents: status === 'sudah-terbit' ? 'auto' : 'none' }}
-                                  onClick={() => setFormulirItem(item)}
-                                >
-                                  Export FormulirSKTA
-                                </button>
+                              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                                {status === 'sudah-terbit' ? (
+                                  <button
+                                    className="btn-export-sk sm"
+                                    onClick={() => setFormulirItem(item)}
+                                  >
+                                    Export FormulirSKTA
+                                  </button>
+                                ) : (
+                                  <span style={{ color: '#9CA3AF', fontSize: '11.5px', fontStyle: 'italic' }}>—</span>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -525,6 +527,13 @@ const PermohonanSK = () => {
         .sk-prodi-dropdown-option:hover { background: #F8FAFC; }
         .sk-prodi-dropdown-option.selected { background: #FFF1F2; color: #C0182A; font-weight: 700; }
         .sk-prodi-dropdown-option svg { flex-shrink: 0; color: #C0182A; }
+        
+        /* STYLING BARU UNTUK BADGE MENGIRIM REVISI */
+        .sk-badge.mengirim-revisi {
+          background-color: #EEF2FF;
+          color: #4F46E5;
+          border: 1px solid #C7D2FE;
+        }
       `}</style>
 
       <AnimatePresence>
