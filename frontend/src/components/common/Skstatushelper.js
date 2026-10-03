@@ -43,8 +43,12 @@ export const determineStatus = (permohonan) => {
     SKTA_CATEGORY.PERUBAHAN_DOSEN_PEMBIMBING,
     SKTA_CATEGORY.PERUBAHAN_JUDUL_DAN_DOSEN
   ];
-  if (permohonan.isDraft === true && draftCategories.includes(permohonan.category)) {
-    return STATUS_SK.DRAFT;
+  
+  if (draftCategories.includes(permohonan.category)) {
+    // Dianggap draft jika isDraft true ATAU evidenceUploadPath masih kosong (belum di-submit final dengan evidence)
+    if (permohonan.isDraft === true || (!permohonan.evidenceUploadPath && !permohonan.wasRejectedBefore)) {
+      return STATUS_SK.DRAFT;
+    }
   }
 
   // 3. CEK SUDAH TERBIT

@@ -3,7 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import { Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, AlertCircle, Menu, Download } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
-import { getLecturers, getSKTARequest, submitSKTARequest, submitFinalSKTARequest } from '../../service/api';
+
+// 1. TAMBAHKAN IMPORT getAllSktaRequests
+import { getLecturers, getSKTARequest, getAllSktaRequests, submitSKTARequest, submitFinalSKTARequest } from '../../service/api';
+
+// 2. IMPORT LOGO DARI ASSETS AGAR BISA DIBACA OLEH HTML2PDF
+import LogoTelkom from '../../assets/logo-telkom.png';
+
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 import { determineSkStatus, STATUS_SK } from '../../components/common/Skstatushelper';
@@ -167,12 +173,33 @@ const PembaruanSK = () => {
       if (!mahasiswaId) { navigate('/lengkapi-data', { replace: true }); return; }
 
       try {
+        // Fetch pengajuan terakhir (Bisa jadi ini adalah draft perubahan yang sedang aktif)
         const latest = await getSKTARequest(mahasiswaId);
 
         if (!latest) {
           setSubmitError({ title: 'Akses Ditolak', message: 'Kamu belum memiliki SK Tugas Akhir yang aktif atau diterbitkan. Silakan ajukan Permohonan SK baru terlebih dahulu.' });
           setPageStatus('blocked');
           return;
+        }
+
+        // 3. LOGIKA BARU: Cari SK Asli/Utama untuk mengisi "Data Lama"
+        let activeSk = latest; 
+        try {
+          const allReq = await getAllSktaRequests({ mahasiswaId, limit: 100 });
+          if (Array.isArray(allReq) && allReq.length > 0) {
+            // Sort berdasarkan waktu dibuat (terbaru di atas)
+            const sortedReq = allReq.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            // Cari SK yang BUKAN draft ini, DAN berstatus SUDAH_TERBIT atau Permohonan Baru
+            const foundActive = sortedReq.find(req => 
+              req.id !== latest.id && 
+              (determineSkStatus(req) === STATUS_SK.SUDAH_TERBIT || req.category === 'Permohonan Baru' || req.category === 'Perpanjangan SK')
+            );
+            if (foundActive) {
+              activeSk = foundActive; // Ini adalah Data Lama yang sebenarnya!
+            }
+          }
+        } catch(e) {
+          console.warn("Gagal fetch history SK, menggunakan latest sbg fallback");
         }
 
         setPermohonan(latest);
@@ -184,7 +211,6 @@ const PembaruanSK = () => {
         setSkStatus(status);
 
         if (!isPerubahan) {
-          // Jika status SK Utama masih berjalan atau perlu revisi
           if (status === STATUS_SK.DALAM_PROSES || status === STATUS_SK.BELUM_TERBIT) {
             setSubmitError({ 
               title: 'Pengajuan Utama Sedang Berjalan', 
@@ -217,32 +243,53 @@ const PembaruanSK = () => {
           }
         }
 
-        // Isi prefill Old Data
-        const matchedKode1 = lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing1Id));
-        const matchedKode2 = lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing2Id));
+        // 4. MENGISI DATA LAMA BERDASARKAN activeSk (SK Utama)
+        const d1Obj = activeSk.dosenPembimbing1;
+        const d2Obj = activeSk.dosenPembimbing2;
+
+        const matchedKode1 = d1Obj 
+          ? { value: String(d1Obj.id), label: `${d1Obj.kodeDosen || ''} — ${d1Obj.name || d1Obj.nama || ''}`, nama: d1Obj.name || d1Obj.nama || '', researchGroupId: d1Obj.researchGroupId }
+          : lecturerOptions.find(opt => String(opt.value) === String(activeSk.dosenPembimbing1Id));
+
+        const matchedKode2 = d2Obj 
+          ? { value: String(d2Obj.id), label: `${d2Obj.kodeDosen || ''} — ${d2Obj.name || d2Obj.nama || ''}`, nama: d2Obj.name || d2Obj.nama || '', researchGroupId: d2Obj.researchGroupId }
+          : lecturerOptions.find(opt => String(opt.value) === String(activeSk.dosenPembimbing2Id));
+
         const matchedKK = matchedKode1?.researchGroupId != null
           ? kelompokKeilmuan.find(kk => String(kk.researchGroupId) === String(matchedKode1.researchGroupId))
           : null;
         
         setOldData({
-          judulIndo: latest.judulProposalIndonesia ?? latest.proposalTitleId ?? '-',
-          judulInggris: latest.judulProposalInggris ?? latest.proposalTitleEn ?? '-',
+          judulIndo: activeSk.judulProposalIndonesia ?? activeSk.proposalTitleId ?? '-',
+          judulInggris: activeSk.judulProposalInggris ?? activeSk.proposalTitleEn ?? '-',
           dosen1: matchedKode1?.nama ?? '-',
           dosen2: matchedKode2?.nama ?? '-',
-          kode1: matchedKode1 ?? (latest.dosenPembimbing1Id ? { value: latest.dosenPembimbing1Id } : null),
-          kode2: matchedKode2 ?? (latest.dosenPembimbing2Id ? { value: latest.dosenPembimbing2Id } : null),
+          kode1: matchedKode1 ?? (activeSk.dosenPembimbing1Id ? { value: activeSk.dosenPembimbing1Id } : null),
+          kode2: matchedKode2 ?? (activeSk.dosenPembimbing2Id ? { value: activeSk.dosenPembimbing2Id } : null),
           kelompok: matchedKK?.label ?? '',
-          researchGroupId: latest.researchGroupId,
+          researchGroupId: activeSk.researchGroupId,
         });
 
+        // 5. MENGISI FORM DATA BARU BERDASARKAN latest (Draft/Revisi)
         if (status === STATUS_SK.DRAFT || (isPerubahan && status === STATUS_SK.BELUM_TERBIT)) {
+          const draftD1 = latest.dosenPembimbing1;
+          const draftD2 = latest.dosenPembimbing2;
+          
+          const draftMatched1 = draftD1 
+            ? { value: String(draftD1.id), label: `${draftD1.kodeDosen || ''} — ${draftD1.name || draftD1.nama || ''}`, nama: draftD1.name || draftD1.nama || '', researchGroupId: draftD1.researchGroupId }
+            : lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing1Id)) ?? matchedKode1;
+
+          const draftMatched2 = draftD2 
+            ? { value: String(draftD2.id), label: `${draftD2.kodeDosen || ''} — ${draftD2.name || draftD2.nama || ''}`, nama: draftD2.name || draftD2.nama || '', researchGroupId: draftD2.researchGroupId }
+            : lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing2Id)) ?? matchedKode2;
+
           setFormData({
             judulIndo: latest.judulProposalIndonesia ?? latest.proposalTitleId ?? '',
             judulInggris: latest.judulProposalInggris ?? latest.proposalTitleEn ?? '',
-            kode1: matchedKode1 ?? null,
-            dosen1: matchedKode1?.nama ?? '',
-            kode2: matchedKode2 ?? null,
-            dosen2: matchedKode2?.nama ?? '',
+            kode1: draftMatched1 ?? null,
+            dosen1: draftMatched1?.nama ?? '',
+            kode2: draftMatched2 ?? null,
+            dosen2: draftMatched2?.nama ?? '',
             kelompok: matchedKK?.label ?? '',
           });
         }
@@ -359,96 +406,167 @@ const PembaruanSK = () => {
     const d2Baru = isGantiDosen ? (formData.dosen2 || '-') : d2Lama;
     const jBaru = isGantiJudul ? formData.judulIndo : oldData.judulIndo;
 
-    const signatureHeaders = isGantiDosen ? `
+    // 6. LAYOUT HTML BORDER LENGKAP & IMPORT LOGO
+    const isPerubahanJudulSaja = kategori.value === 'Perubahan Judul';
+    const docNo = isPerubahanJudulSaja ? 'TUP-SPM-FM-TA-006' : 'TUP-SPM-FM-TA-007';
+    const headerFormTitle = isPerubahanJudulSaja ? 'FORMULIR PERMOHONAN<br>PERUBAHAN JUDUL TUGAS AKHIR' : 'FORMULIR PERMOHONAN<br>PERUBAHAN SK TUGAS AKHIR';
+    const bodyFormTitle = isPerubahanJudulSaja ? 'PERMOHONAN PERUBAHAN JUDUL TUGAS AKHIR' : 'PERMOHONAN PERUBAHAN SK TUGAS AKHIR';
+
+    const signatureRowHTML = isGantiDosen ? `
       <tr>
-        <td style="width: 25%; padding-bottom: 70px;">PEMBIMBING I<br/>(SEBELUMNYA)</td>
-        <td style="width: 25%; padding-bottom: 70px;">PEMBIMBING I<br/>(BARU)</td>
-        <td style="width: 25%; padding-bottom: 70px;">PEMBIMBING II<br/>(SEBELUMNYA)</td>
-        <td style="width: 25%; padding-bottom: 70px;">PEMBIMBING II<br/>(BARU)</td>
+        <td style="width: 25%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 11px;">PEMBIMBING I<br/>(SEBELUMNYA)</td>
+        <td style="width: 25%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 11px;">PEMBIMBING I<br/>(BARU)</td>
+        <td style="width: 25%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 11px;">PEMBIMBING II<br/>(SEBELUMNYA)</td>
+        <td style="width: 25%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 11px;">PEMBIMBING II<br/>(BARU)</td>
       </tr>
       <tr>
-        <td>( ${d1Lama} )</td>
-        <td>( ${d1Baru} )</td>
-        <td>( ${d2Lama !== '-' ? d2Lama : '...........................'} )</td>
-        <td>( ${d2Baru !== '-' ? d2Baru : '...........................'} )</td>
+        <td style="height: 65px; border: 1px solid black;"></td>
+        <td style="height: 65px; border: 1px solid black;"></td>
+        <td style="height: 65px; border: 1px solid black;"></td>
+        <td style="height: 65px; border: 1px solid black;"></td>
+      </tr>
+      <tr>
+        <td style="text-align: center; padding: 5px; border: 1px solid black; font-size: 11px;">( ${d1Lama} )</td>
+        <td style="text-align: center; padding: 5px; border: 1px solid black; font-size: 11px;">( ${d1Baru} )</td>
+        <td style="text-align: center; padding: 5px; border: 1px solid black; font-size: 11px;">( ${d2Lama !== '-' ? d2Lama : '...........................'} )</td>
+        <td style="text-align: center; padding: 5px; border: 1px solid black; font-size: 11px;">( ${d2Baru !== '-' ? d2Baru : '...........................'} )</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; vertical-align: top;">
+           Mengetahui<br/>Kaprodi ${prodiDisplay},<br/><br/><br/><br/><br/>
+           <b>(......................................................)</b>
+        </td>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; vertical-align: top;">
+           Purwokerto, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br/>Pemohon,<br/><br/><br/><br/><br/>
+           <b>( ${namaDisplay} )</b>
+        </td>
       </tr>
     ` : `
       <tr>
-        <td style="width: 50%; padding-bottom: 80px;">PEMBIMBING I</td>
-        <td style="width: 50%; padding-bottom: 80px;">PEMBIMBING II</td>
+        <td colspan="2" style="width: 50%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">PEMBIMBING I</td>
+        <td colspan="2" style="width: 50%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">PEMBIMBING II</td>
       </tr>
       <tr>
-        <td>( ${d1Baru} )</td>
-        <td>( ${d2Baru !== '-' ? d2Baru : '...................................................'} )</td>
+        <td colspan="2" style="height: 65px; border: 1px solid black;"></td>
+        <td colspan="2" style="height: 65px; border: 1px solid black;"></td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; font-size: 12px;">( ${d1Baru} )</td>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; font-size: 12px;">( ${d2Baru !== '-' ? d2Baru : '...................................................'} )</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; vertical-align: top;">
+           Mengetahui<br/>Kaprodi ${prodiDisplay},<br/><br/><br/><br/><br/>
+           <b>(......................................................)</b>
+        </td>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; vertical-align: top;">
+           Purwokerto, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br/>Pemohon,<br/><br/><br/><br/><br/>
+           <b>( ${namaDisplay} )</b>
+        </td>
       </tr>
     `;
 
-    const titleType = kategori.value === 'Perubahan Judul' ? 'PERUBAHAN JUDUL TUGAS AKHIR' : 'PERUBAHAN SK TUGAS AKHIR';
-
     const element = document.createElement('div');
     element.innerHTML = `
-      <div style="font-family: 'Times New Roman', Times, serif; padding: 40px; color: #000; width: 800px; box-sizing: border-box;">
-        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 30px;">
-           <h2 style="margin: 0; font-size: 20px; font-weight: bold;">UNIVERSITAS TELKOM</h2>
-           <p style="margin: 5px 0 0; font-size: 13px;">Jl. Telekomunikasi No. 1, Dayeuh Kolot, Kab. Bandung 40257</p>
-        </div>
-        <h3 style="text-align: center; text-transform: uppercase; font-size: 16px; font-weight: bold; text-decoration: underline; margin-bottom: 30px;">
-          FORMULIR PERMOHONAN ${titleType}
-        </h3>
-        <table style="width: 100%; font-size: 14px; margin-bottom: 25px; border-collapse: collapse;">
-          <tr><td style="width: 140px; padding: 5px 0; font-weight: bold;">NIM</td><td style="width: 15px;">:</td><td>${nimDisplay}</td></tr>
-          <tr><td style="padding: 5px 0; font-weight: bold;">Nama</td><td>:</td><td>${namaDisplay}</td></tr>
-          <tr><td style="padding: 5px 0; font-weight: bold;">Program Studi</td><td>:</td><td>${prodiDisplay}</td></tr>
+      <div style="font-family: 'Times New Roman', Times, serif; font-size: 12px; padding: 20px; color: #000; width: 100%; box-sizing: border-box;">
+        
+        <!-- HEADER KOP SURAT -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid black;">
+          <tr>
+            <td rowspan="4" style="width: 20%; text-align: center; border: 1px solid black; padding: 10px; vertical-align: middle;">
+              <img src="${LogoTelkom}" alt="Logo Telkom" style="max-height: 50px; display: block; margin: 0 auto; object-fit: contain;" />
+            </td>
+            <td rowspan="2" style="width: 50%; text-align: center; border: 1px solid black; padding: 5px; vertical-align: middle;">
+              <div style="font-weight: bold; font-size: 14px;">UNIVERSITAS TELKOM</div>
+              <div style="font-size: 10px; margin-top: 3px;">Jl. Telekomunikasi No. 1, Dayeuh Kolot, Kab. Bandung 40257</div>
+            </td>
+            <td style="width: 15%; border: 1px solid black; padding: 5px; font-size: 11px;">No. Dokumen</td>
+            <td style="width: 15%; border: 1px solid black; padding: 5px; font-size: 11px;">${docNo}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">No. Revisi</td>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">00</td>
+          </tr>
+          <tr>
+            <td rowspan="2" style="text-align: center; border: 1px solid black; padding: 5px; font-weight: bold; font-size: 13px; vertical-align: middle;">
+              ${headerFormTitle}
+            </td>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">Berlaku Efektif</td>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">02 Januari 2025</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">Halaman</td>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">1 dari 1</td>
+          </tr>
         </table>
 
-        <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; text-decoration: underline;">NAMA PEMBIMBING</div>
-        <table style="width: 100%; font-size: 14px; margin-bottom: 25px; border-collapse: collapse;">
-          <tr><td style="width: 140px; padding: 5px 0;">Pembimbing I</td><td style="width: 15px;">:</td><td>${d1Baru}</td></tr>
-          <tr><td style="padding: 5px 0;">Pembimbing II</td><td>:</td><td>${d2Baru}</td></tr>
-        </table>
+        <!-- ISI FORMULIR -->
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 12px; border: 1px solid black;">
+              <div style="font-weight: bold; font-size: 15px; text-transform: uppercase;">${bodyFormTitle}</div>
+              <div style="font-weight: bold; font-size: 13px; margin-top: 4px;">PROGRAM STUDI SARJANA</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="width: 15%; padding: 6px 10px; border-left: 1px solid black; font-size: 12px;">NIM</td>
+            <td colspan="3" style="padding: 6px 10px; border-right: 1px solid black; font-size: 12px;">: ${nimDisplay}</td>
+          </tr>
+          <tr>
+            <td style="width: 15%; padding: 6px 10px; border-left: 1px solid black; border-bottom: 1px solid black; font-size: 12px;">Nama</td>
+            <td colspan="3" style="padding: 6px 10px; border-right: 1px solid black; border-bottom: 1px solid black; font-size: 12px;">: ${namaDisplay}</td>
+          </tr>
 
-        <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; text-decoration: underline;">JUDUL YANG DITETAPKAN SEBELUMNYA *)</div>
-        <div style="font-size: 14px; margin-bottom: 25px; text-transform: uppercase; line-height: 1.5; text-align: justify;">
-          ${oldData.judulIndo}
-        </div>
+          <tr>
+            <td colspan="4" style="text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">NAMA PEMBIMBING</td>
+          </tr>
+          <tr>
+            <td style="width: 15%; padding: 6px 10px; border-left: 1px solid black; font-size: 12px;">Pembimbing I</td>
+            <td colspan="3" style="padding: 6px 10px; border-right: 1px solid black; font-size: 12px;">: ${d1Baru}</td>
+          </tr>
+          <tr>
+            <td style="width: 15%; padding: 6px 10px; border-left: 1px solid black; border-bottom: 1px solid black; font-size: 12px;">Pembimbing II</td>
+            <td colspan="3" style="padding: 6px 10px; border-right: 1px solid black; border-bottom: 1px solid black; font-size: 12px;">: ${d2Baru !== '-' ? d2Baru : ''}</td>
+          </tr>
 
-        <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; text-decoration: underline;">JUDUL BARU **)</div>
-        <div style="font-size: 14px; margin-bottom: 50px; text-transform: uppercase; line-height: 1.5; text-align: justify;">
-          ${jBaru}
-        </div>
+          <tr>
+            <td colspan="4" style="text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">JUDUL YANG DITETAPKAN SEBELUMNYA *)</td>
+          </tr>
+          <tr>
+            <td colspan="4" style="padding: 15px 15px; border: 1px solid black; text-transform: uppercase; text-align: center; height: 60px; vertical-align: middle; font-size: 12px;">
+              ${oldData.judulIndo}
+            </td>
+          </tr>
 
-        <div style="font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 40px; text-decoration: underline;">
-          MENYETUJUI PERUBAHAN JUDUL DAN PEMBIMBING TUGAS AKHIR
-        </div>
+          <tr>
+            <td colspan="4" style="text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">JUDUL BARU **)</td>
+          </tr>
+          <tr>
+            <td colspan="4" style="padding: 15px 15px; border: 1px solid black; text-transform: uppercase; text-align: center; height: 60px; vertical-align: middle; font-size: 12px;">
+              ${jBaru}
+            </td>
+          </tr>
 
-        <table style="width: 100%; font-size: 13px; text-align: center; margin-bottom: 40px; border-collapse: collapse;">
-          ${signatureHeaders}
-        </table>
-
-        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
-           <tr>
-             <td style="width: 50%; text-align: center; vertical-align: bottom;">
-                Mengetahui<br/>Kaprodi ${prodiDisplay},<br/><br/><br/><br/><br/>
-                (......................................................)
-             </td>
-             <td style="width: 50%; text-align: center; vertical-align: bottom;">
-                Purwokerto, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br/>Pemohon,<br/><br/><br/><br/><br/>
-                ( ${namaDisplay} )
-             </td>
-           </tr>
+          <tr>
+            <td colspan="4" style="text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">MENYETUJUI PERUBAHAN JUDUL DAN PEMBIMBING TUGAS AKHIR</td>
+          </tr>
+          
+          ${signatureRowHTML}
+          
         </table>
         
-        <div style="margin-top: 50px; font-size: 11px; color: #333; line-height: 1.5; border-top: 1px dashed #ccc; padding-top: 15px;">
-          <strong>Catatan:</strong><br/>
-          *): Harus melampirkan fotokopi SK TA yang lama<br/>
-          **): Harus diisi<br/>
-          Formulir ini di-generate melalui sistem SIMTA. Form ini wajib ditandatangani secara lengkap sebelum diunggah kembali ke sistem untuk diverifikasi.
+        <!-- FOOTER CATATAN -->
+        <div style="margin-top: 15px; font-size: 11px; line-height: 1.5;">
+          <u>Catatan:</u><br/>
+          *) : Harus melampirkan SK TA yang lama<br/>
+          **) : Harus diisi<br/>
+          Formulir ini disediakan oleh admin Akademik. Form ini diisi lengkap dan dikumpulkan ke admin Akademik. Mahasiswa juga melakukan perubahan judul dan pembimbing pada aplikasi iGracias.
         </div>
       </div>
     `;
 
     const opt = {
-      margin:       10,
+      margin:       [10, 10, 10, 10], 
       filename:     `${nimDisplay}_Evidence_${kategori.value}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true },
@@ -715,7 +833,7 @@ const PembaruanSK = () => {
               styles={customSelectStyles}
             />
             {(submissionMode === 'patch-revisi' || draftId) && (
-              <p className="input-hint" style={{ fontSize: '10px', marginTop: '6px', color: '#D97706' }}>Kategori terkunci karena sudah masuk ke mode draft/perbaikan. Refresh halaman jika ingin mengulang dari awal.</p>
+              <p className="input-hint" style={{ fontSize: '10px', marginTop: '6px', color: '#D97706' }}>Kategori terkunci karena sudah masuk ke mode draft/perbaikan.</p>
             )}
           </div>
 
