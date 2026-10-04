@@ -20,9 +20,9 @@ const SidebarDosen = ({ isOpen, onClose }) => {
   const { user, profile, logout } = useAuth();
   const namaDisplay  = profile?.name || user?.name || user?.username || 'Dosen';
   const avatarChar   = (namaDisplay.trim().charAt(0) || 'D').toUpperCase();
-  const isKetuaKK    = profile?.isKetuaKK ?? false;
-  const roleDisplay  = isKetuaKK ? 'Dosen dan KK' : 'Dosen';
+  const roleDisplay  = user?.role === 'DOSEN' ? 'Dosen' : (user?.role || 'Dosen');
   const fotoProfil   = profile?.avatarUrl || profile?.avatar || profile?.foto || null;
+  const isKetuaKK    = profile?.isKetuaKK ?? false;
 
   const [expandedMenus, setExpandedMenus]         = useState({});
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
