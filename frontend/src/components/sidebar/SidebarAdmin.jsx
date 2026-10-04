@@ -9,18 +9,17 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
   const { logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // Icon diperkecil menjadi size 13
   const menuSidebar = [
     {
       label: 'Utama',
-      icon: <Home size={13} />,
+      icon: <Home size={16} />,
       items: [
         { label: 'Beranda', path: '/akademik/dashboard' }
       ]
     },
     {
       label: 'Kelola Periode',
-      icon: <Calendar size={13} />,
+      icon: <Calendar size={16} />,
       items: [
         { label: 'Kelola Periode Sidang',   path: '/akademik/atur-periode/sidang'   },
         { label: 'Kelola Periode Yudisium', path: '/akademik/atur-periode/yudisium' },
@@ -28,7 +27,7 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
     },
     {
       label: 'Manajemen Akademik',
-      icon: <Database size={13} />,
+      icon: <Database size={16} />,
       items: [
         { label: 'Manajemen Data Akademik',      path: '/akademik/data-dosen'  },
         { label: 'Manajemen Persyaratan Berkas', path: '/akademik/atur-berkas' }
@@ -36,7 +35,7 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
     },
     {
       label: 'Layanan Akhir Studi',
-      icon: <FileCheck size={13} />,
+      icon: <FileCheck size={16} />,
       items: [
         { label: 'Administrasi Sidang',   path: '/akademik/registrasi-sidang-all' },
         { label: 'Penjadwalan Sidang',    path: '/akademik/penjadwalan-sidang'    }, 
@@ -45,7 +44,7 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
     },
     {
       label: 'Layanan SK & SKL',
-      icon: <FileText size={13} />,
+      icon: <FileText size={16} />,
       items: [
         { label: 'Permohonan SK TA', path: '/akademik/permohonan-sk'    },
         { label: 'Upload SKL',       path: '/akademik/upload-skl'       },
@@ -54,12 +53,17 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
     }
   ];
 
-  const handleLogout    = ()  => setShowLogoutConfirm(true);
-  const confirmLogout   = ()  => { setShowLogoutConfirm(false); logout(); navigate('/login', { replace: true }); };
-  const cancelLogout    = ()  => setShowLogoutConfirm(false);
+  const handleLogout = () => setShowLogoutConfirm(true);
+  const confirmLogout = () => { 
+    setShowLogoutConfirm(false); 
+    logout(); 
+    navigate('/login', { replace: true }); 
+  };
+  const cancelLogout = () => setShowLogoutConfirm(false);
 
   return (
     <>
+      {/* Modal Logout (Tetap menggunakan inline style aslinya agar aman) */}
       {showLogoutConfirm && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
@@ -81,109 +85,55 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
         </div>
       )}
 
-      {/* Lebar sidebar diperkecil menjadi 220px */}
-      <aside id="sidebar" className={isOpen ? 'open' : ''} style={{ display: 'flex', flexDirection: 'column', width: '220px' }}>
+      {/* Sidebar memanggil class bawaan dari sidebar.css */}
+      <aside id="sidebar" className={isOpen ? 'open' : ''}>
         
-        <div className="sidebar-logo" style={{ padding: '12px 16px', borderBottom: '1px solid #F1F5F9', marginBottom: '8px' }}>
-          <div className="logo-icon" style={{ background: '#C0182A', color: 'white', width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>S</div>
-          <span className="logo-text" style={{ color: '#C0182A', fontWeight: 800, fontSize: '15px', marginLeft: '8px', letterSpacing: '1px' }}>SIMTA</span>
+        <div className="sidebar-logo">
+          <div className="logo-icon">S</div>
+          <span className="logo-text">SIMTA</span>
         </div>
 
-        <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto', paddingBottom: '12px' }}>
+        <nav className="sidebar-nav">
           {menuSidebar.map((section, sIdx) => (
-            <div key={sIdx} style={{ marginBottom: '12px' }}>
+            <div key={sIdx} className="nav-item-group">
               
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                fontSize: '10px', fontWeight: 700, color: '#C0182A', textTransform: 'uppercase',
-                letterSpacing: '0.03em', marginBottom: '4px', padding: '0 16px'
-              }}>
-                {section.icon}
+              <div className="nav-section-header">
+                <span className="nav-icon">{section.icon}</span>
                 <span>{section.label}</span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {/* Struktur ini akan langsung membaca .sub-nav li a di CSS kamu */}
+              <ul className="sub-nav" style={{ margin: 0, padding: 0 }}>
                 {section.items.map((item, iIdx) => (
-                  <NavLink
-                    key={iIdx}
-                    to={item.path}
-                    onClick={onClose}
-                    className={({ isActive }) => isActive ? 'sidebar-sub-link active' : 'sidebar-sub-link'}
-                  >
-                    {item.label}
-                  </NavLink>
+                  <li key={iIdx}>
+                    <NavLink
+                      to={item.path}
+                      onClick={onClose}
+                      className={({ isActive }) => isActive ? 'active' : ''}
+                    >
+                      {item.label}
+                    </NavLink>
+                  </li>
                 ))}
-              </div>
+              </ul>
 
             </div>
           ))}
         </nav>
 
-        <div className="sidebar-user" style={{ borderTop: '1px solid #F1F5F9', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#C0182A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '11px' }}>A</div>
-            <div>
-              <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Administrator</div>
-              <div style={{ fontSize: '9px', color: '#64748B' }}>Akademik Staff</div>
-            </div>
+        <div className="sidebar-user">
+          <div className="avatar">A</div>
+          <div className="user-info">
+            <span className="user-name">Administrator</span>
+            <span className="user-role">Akademik Staff</span>
           </div>
-          <button onClick={handleLogout} className="logout-btn-hover" style={{ background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.2s' }} title="Keluar">
-            <LogOut size={14} />
+          <button onClick={handleLogout} className="logout-btn" title="Keluar">
+            <LogOut size={16} />
           </button>
         </div>
       </aside>
 
       <div id="sidebar-overlay" className={isOpen ? 'show' : ''} onClick={onClose} />
-
-      <style>{`
-        /* Menyembunyikan scrollbar di area navigasi menu */
-        .sidebar-nav {
-          -ms-overflow-style: none;  /* IE dan Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-        .sidebar-nav::-webkit-scrollbar {
-          display: none; /* Chrome, Safari, dan Opera */
-        }
-
-        .sidebar-sub-link {
-          display: block;
-          padding: 6px 16px 6px 36px; /* Padding direduksi agar lebih padat */
-          text-decoration: none;
-          font-size: 11.5px; /* Font diperkecil lagi */
-          font-weight: 500;
-          color: #475569;
-          background-color: transparent;
-          border-right: 2px solid transparent; 
-          transition: all 0.2s ease-in-out;
-        }
-        
-        .sidebar-sub-link:hover:not(.active) {
-          color: #C0182A;
-          background-color: #F8FAFC;
-        }
-
-        .sidebar-sub-link.active {
-          font-weight: 600;
-          color: #C0182A;
-          background-color: #FEF2F2;
-          border-right: 2px solid #C0182A;
-        }
-
-        .logout-btn-hover {
-          color: #94A3B8;
-        }
-        
-        .logout-btn-hover:hover {
-          color: #C0182A;
-        }
-        
-        /* Menyesuaikan lebar di desktop */
-        @media (min-width: 992px) {
-          #sidebar {
-            width: 220px !important; 
-          }
-        }
-      `}</style>
     </>
   );
 };

@@ -244,5 +244,199 @@
     box-shadow: 6px 0 40px rgba(0,0,0,0.15);
   }
 
+  /* --- UPDATE VARIABEL SIDEBAR --- */
+:root {
+  --sidebar-bg:     #FFFFFF;
+  --sidebar-text:   #C0182A;
+  --sidebar-hover:  #FFF0F1;
+  --sidebar-active: #FFF0F1;
+  --sidebar-width:  220px; /* Diubah menjadi 220px sesuai desain admin */
+  --transition:     0.22s cubic-bezier(.4,0,.2,1);
+  --primary:        #C0182A;
+  --radius-sm:      8px;
+  --text-dark:      #1E293B;
+  --text-muted-sidebar: #94A3B8;
+  --border:         #E9EDF5;
+}
+
+/* --- STYLING KHUSUS SIDEBAR ADMIN (Tanpa Inline CSS) --- */
+.sidebar-logo-compact {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-logo-compact .logo-icon {
+  background: var(--primary);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.sidebar-logo-compact .logo-text {
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 15px;
+  margin-left: 8px;
+  letter-spacing: 1px;
+}
+
+/* Hilangkan scrollbar di area navigasi */
+.sidebar-nav-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 12px;
+  -ms-overflow-style: none;  /* IE dan Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.sidebar-nav-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, dan Opera */
+}
+
+.sidebar-section {
+  margin-bottom: 12px;
+}
+
+.sidebar-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+  padding: 0 16px;
+}
+
+.sidebar-sub-links-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-sub-link {
+  display: block;
+  padding: 6px 16px 6px 36px;
+  text-decoration: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #475569;
+  background-color: transparent;
+  border-right: 2px solid transparent; 
+  transition: all 0.2s ease-in-out;
+}
+
+.sidebar-sub-link:hover:not(.active) {
+  color: var(--primary);
+  background-color: #F8FAFC;
+}
+
+.sidebar-sub-link.active {
+  font-weight: 600;
+  color: var(--primary);
+  background-color: #FEF2F2;
+  border-right: 2px solid var(--primary);
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+}
+
+.sidebar-footer-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-footer-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.sidebar-footer-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.sidebar-footer-role {
+  font-size: 9px;
+  color: #64748B;
+}
+
+.logout-btn-hover {
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+  color: #94A3B8;
+}
+.logout-btn-hover:hover {
+  color: var(--primary);
+}
+
+/* --- STYLING MODAL LOGOUT --- */
+.logout-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.logout-modal {
+  background: #fff; border-radius: 12px; padding: 20px;
+  max-width: 300px; width: 90%; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.logout-icon-wrapper {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: #FEF2F2; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.logout-title {
+  font-size: 14px; font-weight: 700; color: #111827; margin: 0 0 6px 0;
+}
+
+.logout-desc {
+  font-size: 11.5px; color: #6B7280; margin: 0 0 16px 0; line-height: 1.4;
+}
+
+.logout-actions {
+  display: flex; gap: 8px; justify-content: center;
+}
+
+.btn-logout-cancel {
+  padding: 6px 16px; border-radius: 9999px; font-size: 11.5px; font-weight: 600;
+  background: #F3F4F6; color: #374151; border: none; cursor: pointer;
+}
+
+.btn-logout-confirm {
+  padding: 6px 16px; border-radius: 9999px; font-size: 11.5px; font-weight: 700;
+  background: var(--primary); color: #fff; border: none; cursor: pointer;
+}
+
   .topbar-toggle { display: flex; align-items: center; }
 }
