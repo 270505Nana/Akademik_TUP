@@ -85,8 +85,8 @@ export const determineStatusYudisium = (reg) => {
   const yudisium = reg.mahasiswa?.yudisiumRegistrations?.[0];
   
   if (!yudisium) return "Belum Daftar";
-  if (yudisium.status === "APPROVED" || yudisium.status === "Disetujui") return "Lulus Yudisium";
-  if (yudisium.status === "REVISION" || yudisium.status === "Revisi") return "Revisi Berkas";
+  if (yudisium.statusKelulusan === "APPROVED" || yudisium.statusKelulusan === "Disetujui") return "Lulus Yudisium";
+  if (yudisium.statusKelulusan === "REVISION" || yudisium.statusKelulusan === "Revisi") return "Revisi Berkas";
   
   return "Dalam Proses Yudisium";
 };

@@ -29,7 +29,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/sidang-registrations:
  *   get:
- *     summary: Get all sidang registrations (with search, studyProgramId filter, sort, and pagination)
+ *     summary: Get all sidang registrations (with search, studyProgramId, skemaSidang, status filter, sort, and pagination)
  *     tags: [Sidang Registration]
  *     security:
  *       - bearerAuth: []
@@ -44,6 +44,29 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *         description: Filter by Study Program ID
+ *       - in: query
+ *         name: skemaSidang
+ *         schema:
+ *           type: string
+ *           example: Capstone
+ *         description: Filter pendaftaran sidang berdasarkan skema sidang (mengutamakan skemaSidangFinal jika sudah diisi/disetujui)
+ *       - in: query
+ *         name: jalurNonSidang
+ *         schema:
+ *           type: string
+ *           example: "Publikasi Jurnal"
+ *         description: Filter pendaftaran sidang berdasarkan jalur non sidang (mengutamakan jalurNonSidangFinal jika sudah diisi/disetujui)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - "Dalam Proses"
+ *             - "Perlu Revisi"
+ *             - "Revisi Diajukan"
+ *             - "Pendaftaran Diterima"
+ *             - "Siap Sidang"
+ *         description: Filter pendaftaran sidang berdasarkan status
  *       - in: query
  *         name: sortBy
  *         schema:
@@ -433,6 +456,17 @@ router.get(
  *                 type: string
  *               sidangPeriodId:
  *                 type: string
+ *               skemaSidangFinal:
+ *                 type: string
+ *                 description: Skema sidang final yang disetujui (opsional)
+ *               jalurNonSidangFinal:
+ *                 type: string
+ *                 description: Jalur non sidang final yang disetujui (opsional)
+ *               sidangRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Daftar ID berkas yang valid
  *     responses:
  *       200:
  *         description: Sidang registration approved successfully
@@ -477,6 +511,11 @@ router.put("/:id/approve", verifyToken, isAdmin, approveSidangRegistration);
  *               isEdit:
  *                 type: string
  *                 format: date-time
+ *               sidangRegistrationUploadIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Daftar ID berkas yang valid (berkas di luar list ini akan ditandai isValid = false / perlu revisi)
  *     responses:
  *       200:
  *         description: Sidang registration rejected / revision requested successfully

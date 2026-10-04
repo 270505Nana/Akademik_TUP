@@ -70,39 +70,39 @@ model ResearchGroup {
 }
 
 model Dosen {
-  id                               String                           @id @default(uuid())
-  createdAt                        DateTime                         @default(now()) @map("created_at")
-  updatedAt                        DateTime                         @updatedAt @map("updated_at")
-  deletedAt                        DateTime?                        @map("deleted_at")
-  nip                              String                           @unique
-  nidn                             String?                          @unique
-  kodeDosen                        String                           @map("kode_dosen")
-  isKetuaKK                        Boolean                          @default(false) @map("is_ketua_kk")
-  isKetuaProdi                     Boolean                          @default(false) @map("is_ketua_prodi")
-  isKepalaUrusanAkademik           String?                          @map("is_kepala_urusan_akademik")
-  signature                        String?
-  researchGroup                    ResearchGroup                    @relation(fields: [researchGroupId], references: [id])
-  researchGroupId                  String                           @map("research_group_id")
-  studyProgram                     StudyProgram?                    @relation(fields: [studyProgramId], references: [id])
-  studyProgramId                   String?                          @map("study_program_id")
-  user                             User                             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId                           String                           @unique @map("user_id")
-  mahasiswa                        Mahasiswa[]
-  waliSidangRegistrations          SidangRegistration[]             @relation("WaliSidangRegistrations")
-  pembimbing1SidangRegistrations   SidangRegistration[]             @relation("Pembimbing1SidangRegistrations")
-  pembimbing2SidangRegistrations   SidangRegistration[]             @relation("Pembimbing2SidangRegistrations")
-  waliYudisiumRegistrations        YudisiumRegistration[]           @relation("WaliYudisiumRegistrations")
-  pembimbing1YudisiumRegistrations YudisiumRegistration[]           @relation("Pembimbing1YudisiumRegistrations")
-  pembimbing2YudisiumRegistrations YudisiumRegistration[]           @relation("Pembimbing2YudisiumRegistrations")
-  pembimbing1Skta                  PermohonanSkta[]                 @relation("Pembimbing1Skta")
-  pembimbing2Skta                  PermohonanSkta[]                 @relation("Pembimbing2Skta")
-  penguji1                         SidangRegistration[]             @relation("Penguji1")
-  penguji2                         SidangRegistration[]             @relation("Penguji2")
-  dosenPenilai                     FormulirPenilaianTugasAkhir[]    @relation("DosenPenilai")
-  dosenKaprodi                     FormulirPenilaianTugasAkhir[]    @relation("DosenKaprodi")
-  setujuiUntukRevisi               FormulirRevisiTugasAkhir[]       @relation("SetujuiUntukRevisi")
-  setujuiHasilRevisi               FormulirRevisiTugasAkhir[]       @relation("SetujuiHasilRevisi")
-  dosenPenilaiRevisi               FormulirRevisiTugasAkhirDetail[] @relation("DosenPenilaiRevisi")
+  id                                   String                 @id @default(uuid())
+  createdAt                            DateTime               @default(now()) @map("created_at")
+  updatedAt                            DateTime               @updatedAt @map("updated_at")
+  deletedAt                            DateTime?              @map("deleted_at")
+  nip                                  String                 @unique
+  nidn                                 String?                @unique
+  kodeDosen                            String                 @map("kode_dosen")
+  isKetuaKK                            Boolean                @default(false) @map("is_ketua_kk")
+  isKetuaProdi                         Boolean                @default(false) @map("is_ketua_prodi")
+  isKepalaUrusanAkademik               String?                @map("is_kepala_urusan_akademik")
+  signature                            String?
+  researchGroup                        ResearchGroup          @relation(fields: [researchGroupId], references: [id])
+  researchGroupId                      String                 @map("research_group_id")
+  studyProgram                         StudyProgram?          @relation(fields: [studyProgramId], references: [id])
+  studyProgramId                       String?                @map("study_program_id")
+  user                                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                               String                 @unique @map("user_id")
+  mahasiswa                            Mahasiswa[]
+  waliSidangRegistrations              SidangRegistration[]   @relation("WaliSidangRegistrations")
+  pembimbing1SidangRegistrations       SidangRegistration[]   @relation("Pembimbing1SidangRegistrations")
+  pembimbing2SidangRegistrations       SidangRegistration[]   @relation("Pembimbing2SidangRegistrations")
+  waliYudisiumRegistrations            YudisiumRegistration[] @relation("WaliYudisiumRegistrations")
+  pembimbing1YudisiumRegistrations     YudisiumRegistration[] @relation("Pembimbing1YudisiumRegistrations")
+  pembimbing2YudisiumRegistrations     YudisiumRegistration[] @relation("Pembimbing2YudisiumRegistrations")
+  pembimbing1Skta                      PermohonanSkta[]       @relation("Pembimbing1Skta")
+  pembimbing2Skta                      PermohonanSkta[]       @relation("Pembimbing2Skta")
+  penguji1                             SidangRegistration[]   @relation("Penguji1")
+  penguji2                             SidangRegistration[]   @relation("Penguji2")
+  dosenPenilai                         PenilaianTugasAkhir[]  @relation("DosenPenilai")
+  dosenKaprodiPenyetujuPenilaianSidang PenilaianTugasAkhir[]  @relation("DosenKaprodi")
+  setujuiUntukRevisi                   RevisiTugasAkhir[]     @relation("SetujuiUntukRevisi")
+  setujuiHasilRevisi                   RevisiTugasAkhir[]     @relation("SetujuiHasilRevisi")
+  // dosenPenilaiRevisi               FormulirRevisiTugasAkhirDetail[] @relation("DosenPenilaiRevisi")
 
   @@index([researchGroupId])
   @@index([studyProgramId])
@@ -201,7 +201,7 @@ model PermohonanSkta {
   deletedAt                DateTime?      @map("deleted_at")
   // Buat Permohonan
   isDraft                  Boolean        @default(true) @map("is_draft")
-  category                 String // Buat baru, Pembaruan Ganti Judul, Pembaruan Ganti Dospem, Pembaruan Ganti Judul dan Dospem, Perpanjangan
+  category                 String // Permohonan Baru, Perubahan Judul, Perubahan Dosen Pembimbing, Perubahan Judul dan Dosen Pembimbing, Perpanjangan SK
   mahasiswa                Mahasiswa?     @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade) // NIM, Prodi, No HP
   mahasiswaId              String?        @map("mahasiswa_id")
   judulProposalIndonesia   String?        @map("judul_proposal_indonesia")
@@ -257,57 +257,62 @@ model SidangPeriod {
 }
 
 model SidangRegistration {
-  id                           String                        @id @default(uuid())
-  createdAt                    DateTime                      @default(now()) @map("created_at")
-  updatedAt                    DateTime                      @updatedAt @map("updated_at")
-  deletedAt                    DateTime?                     @map("deleted_at")
+  id                         String                     @id @default(uuid())
+  createdAt                  DateTime                   @default(now()) @map("created_at")
+  updatedAt                  DateTime                   @updatedAt @map("updated_at")
+  deletedAt                  DateTime?                  @map("deleted_at")
   // draft
-  isDraft                      Boolean                       @default(true) @map("is_draft")
-  mahasiswa                    Mahasiswa?                    @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
-  mahasiswaId                  String?                       @map("mahasiswa_id")
-  program                      String? // Reguler / Alih Jenjang
-  dosenWali                    Dosen?                        @relation("WaliSidangRegistrations", fields: [dosenWaliId], references: [id]) // Dosen Wali 1
-  dosenWaliId                  String?                       @map("dosen_wali_id")
-  sks                          Int?
-  ipk                          Float?
-  tak                          Int?
-  sktaExpDate                  DateTime?                     @map("skta_exp_date")
-  judulTugasAkhirIndonesia     String?                       @map("judul_tugas_akhir_indonesia")
-  judulTugasAkhirInggris       String?                       @map("judul_tugas_akhir_inggris")
-  dosenPembimbing1             Dosen?                        @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
-  dosenPembimbing1Id           String?                       @map("dosen_pembimbing_1_id")
-  dosenPembimbing2             Dosen?                        @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
-  dosenPembimbing2Id           String?                       @map("dosen_pembimbing_2_id")
-  researchGroup                ResearchGroup?                @relation(fields: [researchGroupId], references: [id])
-  researchGroupId              String?                       @map("research_group_id")
-  skemaSidang                  String?                       @map("skema_sidang") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
-  jalurNonSidang               String[]                      @map("jalur_non_sidang") // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
-  lulusTesBahasa               Boolean?                      @map("lulus_tes_bahasa")
+  isDraft                    Boolean                    @default(true) @map("is_draft")
+  mahasiswa                  Mahasiswa?                 @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId                String?                    @map("mahasiswa_id")
+  program                    String? // Reguler / Alih Jenjang
+  dosenWali                  Dosen?                     @relation("WaliSidangRegistrations", fields: [dosenWaliId], references: [id]) // Dosen Wali 1
+  dosenWaliId                String?                    @map("dosen_wali_id")
+  sks                        Int?
+  ipk                        Float?
+  tak                        Int?
+  sktaExpDate                DateTime?                  @map("skta_exp_date")
+  judulTugasAkhirIndonesia   String?                    @map("judul_tugas_akhir_indonesia")
+  judulTugasAkhirInggris     String?                    @map("judul_tugas_akhir_inggris")
+  dosenPembimbing1           Dosen?                     @relation("Pembimbing1SidangRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
+  dosenPembimbing1Id         String?                    @map("dosen_pembimbing_1_id")
+  dosenPembimbing2           Dosen?                     @relation("Pembimbing2SidangRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
+  dosenPembimbing2Id         String?                    @map("dosen_pembimbing_2_id")
+  researchGroup              ResearchGroup?             @relation(fields: [researchGroupId], references: [id])
+  researchGroupId            String?                    @map("research_group_id")
+  skemaSidang                String?                    @map("skema_sidang") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
+  jalurNonSidang             String[]                   @map("jalur_non_sidang") // Contoh isi JSON: ["Publikasi Jurnal", "Proceeding International", "HKI"]
+  lulusTesBahasa             Boolean?                   @map("lulus_tes_bahasa")
   // submited
-  submittedAt                  DateTime?                     @map("submitted_at")
-  sidangRegistrationPeriod     SidangPeriod?                 @relation("SidangRegistrationPeriod", fields: [sidangRegistrationPeriodId], references: [id])
-  sidangRegistrationPeriodId   String?                       @map("sidang_registration_period_id")
+  status                     String?
+  submittedAt                DateTime?                  @map("submitted_at")
+  sidangRegistrationPeriod   SidangPeriod?              @relation("SidangRegistrationPeriod", fields: [sidangRegistrationPeriodId], references: [id])
+  sidangRegistrationPeriodId String?                    @map("sidang_registration_period_id")
   // Setuju
-  sidangPeriod                 SidangPeriod?                 @relation("SidangPeriod", fields: [sidangPeriodId], references: [id])
-  sidangPeriodId               String?                       @map("sidang_period_id")
+  skemaSidangFinal           String?                    @map("skema_sidang_final") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
+  jalurNonSidangFinal        String?                    @map("jalur_non_sidang_final") // Contoh isi: "Publikasi Jurnal", "Proceeding International", "HKI"
+  sidangPeriod               SidangPeriod?              @relation("SidangPeriod", fields: [sidangPeriodId], references: [id])
+  sidangPeriodId             String?                    @map("sidang_period_id")
   // Penjadwalan
-  tglSidang                    DateTime?                     @map("tgl_sidang")
-  ruanganSidang                Ruangan?                      @relation(fields: [ruanganSidangId], references: [id])
-  ruanganSidangId              String?                       @map("ruangan_sidang_id")
-  dosenPenguji1                Dosen?                        @relation("Penguji1", fields: [dosenPenguji1Id], references: [id]) // Dosen Penguji 1
-  dosenPenguji1Id              String?                       @map("dosen_penguji_1_id")
-  dosenPenguji2                Dosen?                        @relation("Penguji2", fields: [dosenPenguji2Id], references: [id]) // Dosen Penguji 2
-  dosenPenguji2Id              String?                       @map("dosen_penguji_2_id")
-  isLocked                     Boolean                       @default(false) @map("is_locked")
+  tglSidang                  DateTime?                  @map("tgl_sidang")
+  ruanganSidang              Ruangan?                   @relation(fields: [ruanganSidangId], references: [id])
+  ruanganSidangId            String?                    @map("ruangan_sidang_id")
+  dosenPenguji1              Dosen?                     @relation("Penguji1", fields: [dosenPenguji1Id], references: [id]) // Dosen Penguji 1
+  dosenPenguji1Id            String?                    @map("dosen_penguji_1_id")
+  dosenPenguji2              Dosen?                     @relation("Penguji2", fields: [dosenPenguji2Id], references: [id]) // Dosen Penguji 2
+  dosenPenguji2Id            String?                    @map("dosen_penguji_2_id")
+  isLocked                   Boolean                    @default(false) @map("is_locked")
   // Tolak Permohonan
-  message                      String?
-  isEdit                       DateTime?                     @map("is_edit")
-  admin                        Admin?                        @relation(fields: [adminId], references: [id])
-  adminId                      String?                       @map("admin_id")
-  sidangRegistrationUploads    SidangRegistrationUpload[]
-  formulirPenilaianTugasAkhir  FormulirPenilaianTugasAkhir[]
-  formulirRevisiTugasAkhirs    FormulirRevisiTugasAkhir[]
-  beritaAcaraSidangTugasAkhirs BeritaAcaraSidangTugasAkhir[]
+  message                    String?
+  isEdit                     DateTime?                  @map("is_edit")
+  admin                      Admin?                     @relation(fields: [adminId], references: [id])
+  adminId                    String?                    @map("admin_id")
+  sidangRegistrationUploads  SidangRegistrationUpload[]
+  penilaianTugasAkhir        PenilaianTugasAkhir[]
+  revisiTugasAkhir           RevisiTugasAkhir[]
+  // formulirPenilaianTugasAkhir  FormulirPenilaianTugasAkhir[]
+  // formulirRevisiTugasAkhirs    FormulirRevisiTugasAkhir[]
+  // beritaAcaraSidangTugasAkhir BeritaAcaraSidangTugasAkhir[]
 
   @@index([mahasiswaId])
   @@index([dosenWaliId])
@@ -386,21 +391,24 @@ model YudisiumRegistration {
   tak                          Int?
   tglSidang                    DateTime?                    @map("tgl_sidang")
   skemaSidang                  String?                      @map("skema_sidang") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi
-  pengajuanCumlaude            String?                      @map("pengajuan_cumlaude")
-  skemaCumlaude                String?                      @map("skema_cumlaude")
+  pengajuanCumlaude            String?                      @map("pengajuan_cumlaude") // Non Cumlaude, Cumlaude, Summa Cumlaude
+  skemaCumlaude                String?                      @map("skema_cumlaude") // Publikasi Jurnal, Pameran, Lomba, HKI
   evidenCumlaude               String?                      @map("eviden_cumlaude") @db.Text
   predikat                     String?
-  status                       String?
+  statusKelulusan              String?                      @map("status_kelulusan")
   berminatWirausaha            Boolean?                     @map("berminat_wirausaha")
   dosenPembimbing1             Dosen?                       @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
   dosenPembimbing1Id           String?                      @map("dosen_pembimbing_1_id") // di form yang baru tidak menyertakan Dospem 1
   dosenPembimbing2             Dosen?                       @relation("Pembimbing2YudisiumRegistrations", fields: [dosenPembimbing2Id], references: [id]) // Dosen Pembimbing 2
   dosenPembimbing2Id           String?                      @map("dosen_pembimbing_2_id") // di form yang baru tidak menyertakan Dospem 2
   // submitted
+  status                       String?
   submittedAt                  DateTime?                    @map("submitted_at")
   yudisiumRegistrationPeriod   YudisiumPeriod?              @relation("YudisiumRegistrationPeriod", fields: [yudisiumRegistrationPeriodId], references: [id])
   yudisiumRegistrationPeriodId String?                      @map("yudisium_registration_period_id")
   // Setuju
+  pengajuanCumlaudeFinal       String?                      @map("pengajuan_cumlaude_final") // Non Cumlaude, Cumlaude, Summa Cumlaude
+  skemaCumlaudeFinal           String?                      @map("skema_cumlaude_final") // Publikasi Jurnal, Pameran, Lomba, HKI
   yudisiumPeriod               YudisiumPeriod?              @relation("YudisiumPeriod", fields: [yudisiumPeriodId], references: [id])
   yudisiumPeriodId             String?                      @map("yudisium_period_id")
   // Tolak Permohonan
@@ -553,16 +561,15 @@ model SkemaPenilaiProdi {
   @@map("skema_penilai_prodi")
 }
 
-model FormulirPenilaianTugasAkhir {
+model PenilaianTugasAkhir {
   id                   String             @id @default(uuid())
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
   deletedAt            DateTime?          @map("deleted_at")
-  // berdasarkan SkemaPenilaiProdi ada berapa penilai pada prodi tersebut
-  skemaPenilai         Json               @default("{}") @map("skema_penilai") // { pembimbing_1: 0.5, pembimbing_2: 0.5, penguji_1: 0.5, penguji_2: 0.5 }
-  // berdasarkan JenisAsesmenClo ada berapa jenis asesmen pada prodi tersebut
-  bobotNilai           Json               @default("{}") @map("bobot_nilai") // { nilai_1: 0.1, nilai_1: 0.1, nilai_1: 0.1, nilai_1: 0.1, nilai_1: 0.1, }
-  komponenNilai        Json               @default("{}") @map("komponen_nilai") // NOTE: jumlah komponen nilai harus sama dengan jumlah bobot nilai
+  bobotPenilai         Decimal            @map("bobot_penilai") @db.Decimal(5, 2)
+  bobotNilai           Json               @default("{}") @map("bobot_nilai") // { nilai1: 0.2, nilai2: 0.3, nilai3: 0.3, nilai4: 0.2 }
+  nilai                Json               @default("{}") // NOTE: jumlah nilai harus sama dengan jumlah bobot nilai
+  catatanRevisi        String             @map("catatan_revisi") @db.Text
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
   sidangRegistrationId String             @map("sidang_registration_id")
   dosenPenilai         Dosen              @relation("DosenPenilai", fields: [dosenPenilaiId], references: [id]) // Dosen Penilai (Pembimbing 1/2/Penguji 1/2)
@@ -570,10 +577,10 @@ model FormulirPenilaianTugasAkhir {
   dosenKaprodi         Dosen?             @relation("DosenKaprodi", fields: [dosenKaprodiId], references: [id]) // Kaprodi
   dosenKaprodiId       String?            @map("dosen_kaprodi_id")
 
-  @@map("formulir_penilaian_tugas_akhir")
+  @@map("penilaian_tugas_akhir")
 }
 
-model FormulirRevisiTugasAkhir {
+model RevisiTugasAkhir {
   id                    String             @id @default(uuid())
   createdAt             DateTime           @default(now()) @map("created_at")
   updatedAt             DateTime           @updatedAt @map("updated_at")
@@ -590,30 +597,50 @@ model FormulirRevisiTugasAkhir {
   setujuiHasilRevisi    Dosen?             @relation("SetujuiHasilRevisi", fields: [setujuiHasilRevisiId], references: [id], onDelete: Cascade)
   setujuiHasilRevisiId  String?            @map("setujui_hasil_revisi_id")
 
-  @@map("formulir_revisi_tugas_akhir")
+  @@map("revisi_tugas_akhir")
 }
 
-model FormulirRevisiTugasAkhirDetail {
-  id             String    @id @default(uuid())
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
-  catatanRevisi  String    @map("catatan_revisi") @db.Text
-  dosenPenilai   Dosen     @relation("DosenPenilaiRevisi", fields: [dosenPenilaiId], references: [id]) // Dosen Penilai (Pembimbing 1/2/Penguji 1/2)
-  dosenPenilaiId String    @map("dosen_penilai_id")
+// model FormulirPenilaianTugasAkhir {
+//   id                   String             @id @default(uuid())
+//   createdAt            DateTime           @default(now()) @map("created_at")
+//   updatedAt            DateTime           @updatedAt @map("updated_at")
+//   deletedAt            DateTime?          @map("deleted_at")
+//   // berdasarkan SkemaPenilaiProdi ada berapa penilai pada prodi tersebut
+//   skemaPenilai         Json               @default("{}") @map("skema_penilai") // { pembimbing_1: 0.5, pembimbing_2: 0.5, penguji_1: 0.5, penguji_2: 0.5 }
+//   // berdasarkan JenisAsesmenClo ada berapa jenis asesmen pada prodi tersebut
+//   bobotNilai           Json               @default("{}") @map("bobot_nilai") // { nilai_1: 0.1, nilai_1: 0.1, nilai_1: 0.1, nilai_1: 0.1, nilai_1: 0.1, }
+//   komponenNilai        Json               @default("{}") @map("komponen_nilai") // NOTE: jumlah komponen nilai harus sama dengan jumlah bobot nilai
+//   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
+//   sidangRegistrationId String             @map("sidang_registration_id")
+//   dosenPenilai         Dosen              @relation("DosenPenilai", fields: [dosenPenilaiId], references: [id]) // Dosen Penilai (Pembimbing 1/2/Penguji 1/2)
+//   dosenPenilaiId       String             @map("dosen_penilai_id")
+//   dosenKaprodi         Dosen?             @relation("DosenKaprodi", fields: [dosenKaprodiId], references: [id]) // Kaprodi
+//   dosenKaprodiId       String?            @map("dosen_kaprodi_id")
 
-  @@map("formulir_revisi_tugas_akhir_detail")
-}
+//   @@map("formulir_penilaian_tugas_akhir")
+// }
 
-model BeritaAcaraSidangTugasAkhir {
-  id                   String             @id @default(uuid())
-  createdAt            DateTime           @default(now()) @map("created_at")
-  updatedAt            DateTime           @updatedAt @map("updated_at")
-  deletedAt            DateTime?          @map("deleted_at")
-  sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
-  sidangRegistrationId String             @map("sidang_registration_id")
-  nilaiAkhir           String             @map("nilai_akhir") // Contoh: A / AB / B / BC / C / D / E
-  keterangan           String // Lulus / Lulus Bersyarat / Tidak Lulus
+// model FormulirRevisiTugasAkhirDetail {
+//   id             String    @id @default(uuid())
+//   createdAt      DateTime  @default(now()) @map("created_at")
+//   updatedAt      DateTime  @updatedAt @map("updated_at")
+//   deletedAt      DateTime? @map("deleted_at")
+//   catatanRevisi  String    @map("catatan_revisi") @db.Text
+//   dosenPenilai   Dosen     @relation("DosenPenilaiRevisi", fields: [dosenPenilaiId], references: [id]) // Dosen Penilai (Pembimbing 1/2/Penguji 1/2)
+//   dosenPenilaiId String    @map("dosen_penilai_id")
 
-  @@map("berita_acara_sidang_tugas_akhir")
-}
+//   @@map("formulir_revisi_tugas_akhir_detail")
+// }
+
+// model BeritaAcaraSidangTugasAkhir {
+//   id                   String             @id @default(uuid())
+//   createdAt            DateTime           @default(now()) @map("created_at")
+//   updatedAt            DateTime           @updatedAt @map("updated_at")
+//   deletedAt            DateTime?          @map("deleted_at")
+//   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
+//   sidangRegistrationId String             @map("sidang_registration_id")
+//   nilaiAkhir           String             @map("nilai_akhir") // Contoh: A / AB / B / BC / C / D / E
+//   keterangan           String // Lulus / Lulus Bersyarat / Tidak Lulus
+
+//   @@map("berita_acara_sidang_tugas_akhir")
+// }

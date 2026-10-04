@@ -29,7 +29,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/yudisium-registrations:
  *   get:
- *     summary: Get all yudisium registrations (with search, filter, sort, and pagination)
+ *     summary: Get all yudisium registrations (with search, studyProgramId, skemaSidang, pengajuanCumlaude, skemaCumlaude, status filter, sort, and pagination)
  *     tags: [Yudisium Registration]
  *     security:
  *       - bearerAuth: []
@@ -40,71 +40,39 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *           type: string
  *         description: Search keyword across mahasiswa name, NIM, or judul tugas akhir
  *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [draft, submitted, approved, rejected, revision]
- *         description: Filter by status (draft, submitted, approved, rejected, revision)
- *       - in: query
- *         name: isDraft
- *         schema:
- *           type: boolean
- *         description: Filter explicitly by draft status (true/false)
- *       - in: query
- *         name: yudisiumRegistrationPeriodId
- *         schema:
- *           type: string
- *         description: Filter by Yudisium Registration Period ID
- *       - in: query
- *         name: yudisiumPeriodId
- *         schema:
- *           type: string
- *         description: Filter by Yudisium Period ID
- *       - in: query
  *         name: studyProgramId
  *         schema:
  *           type: string
  *         description: Filter by Study Program ID
  *       - in: query
- *         name: facultyId
- *         schema:
- *           type: string
- *         description: Filter by Faculty ID
- *       - in: query
- *         name: tahunAngkatan
- *         schema:
- *           type: integer
- *         description: Filter by student cohort year (tahun angkatan)
- *       - in: query
- *         name: program
- *         schema:
- *           type: string
- *         description: Filter by program type (e.g. Reguler, Alih Jenjang)
- *       - in: query
  *         name: skemaSidang
  *         schema:
  *           type: string
- *         description: Filter by skema sidang (e.g. Reguler, Non Sidang, Capstone, Sidang Khusus Prodi)
+ *           example: Capstone
+ *         description: Filter pendaftaran yudisium berdasarkan skema sidang
  *       - in: query
  *         name: pengajuanCumlaude
  *         schema:
  *           type: string
- *         description: Filter by cumlaude application
+ *           example: Cumlaude
+ *         description: Filter pendaftaran yudisium berdasarkan pengajuan cumlaude (mengutamakan pengajuanCumlaudeFinal jika sudah diisi/disetujui)
  *       - in: query
  *         name: skemaCumlaude
  *         schema:
  *           type: string
- *         description: Filter by cumlaude scheme (e.g. Publikasi Jurnal, Pameran, Lomba, HKI)
+ *           example: Publikasi Jurnal
+ *         description: Filter pendaftaran yudisium berdasarkan skema cumlaude (mengutamakan skemaCumlaudeFinal jika sudah diisi/disetujui)
  *       - in: query
- *         name: berminatWirausaha
- *         schema:
- *           type: boolean
- *         description: Filter by entrepreneurship interest (true/false)
- *       - in: query
- *         name: dosenWaliId
+ *         name: status
  *         schema:
  *           type: string
- *         description: Filter by Dosen Wali ID
+ *           enum:
+ *             - "Dalam Proses"
+ *             - "Perlu Revisi"
+ *             - "Revisi Diajukan"
+ *             - "Menunggu Sidang Yudisium"
+ *             - "Hasil Sidang Ditetapkan"
+ *         description: Filter pendaftaran yudisium berdasarkan status
  *       - in: query
  *         name: sortBy
  *         schema:
@@ -581,10 +549,17 @@ router.get(
  *                 type: string
  *               yudisiumPeriodId:
  *                 type: string
+ *               pengajuanCumlaudeFinal:
+ *                 type: string
+ *                 description: Status pengajuan cumlaude final yang disetujui (opsional)
+ *               skemaCumlaudeFinal:
+ *                 type: string
+ *                 description: Skema cumlaude final yang disetujui (opsional)
  *               yudisiumRegistrationUploadIds:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 description: Daftar ID berkas yang valid
  *     responses:
  *       200:
  *         description: Yudisium registration approved successfully

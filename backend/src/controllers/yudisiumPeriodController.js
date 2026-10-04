@@ -1,14 +1,25 @@
-import asyncHandler from 'express-async-handler';
+import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
-import { sendValidationError, isNil, isValidISO8601, parseBoolean } from '../utils/validationHelper.js';
-import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
+import {
+  sendValidationError,
+  isNil,
+  isValidISO8601,
+  parseBoolean,
+} from "../utils/validationHelper.js";
+import {
+  getPaginationParams,
+  formatPaginationResponse,
+} from "../utils/paginationHelper.js";
 
 // Daftar Semua Periode Yudisium (Dipasangkan Pendaftaran & Pelaksanaan)
 const listYudisiumPeriods = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search } = req.query;
+  const { search, category } = req.query;
 
   const whereClause = { deletedAt: null };
+  if (category) {
+    whereClause.category = { contains: category, mode: "insensitive" };
+  }
   if (search) {
     whereClause.OR = [
       { name: { contains: search, mode: "insensitive" } },
@@ -32,7 +43,7 @@ const listYudisiumPeriods = asyncHandler(async (req, res) => {
     }
     const pair = pairMap.get(key);
     const catLower = (p.category || "").toLowerCase();
-    if (catLower.includes("pendaftaran") || catLower === "pendaftaran yudisium") {
+    if (catLower.includes("pendaftaran")) {
       pair.pendaftaran = p;
     } else {
       pair.pelaksanaan = p;
@@ -80,41 +91,52 @@ const createYudisiumPeriod = asyncHandler(async (req, res) => {
 
   if (isNil(name)) {
     errors.push({ field: "name", message: "Nama wajib diisi" });
-  } else if (typeof name !== 'string') {
+  } else if (typeof name !== "string") {
     errors.push({ field: "name", message: "Nama harus berupa string" });
   }
 
   if (isNil(category)) {
     errors.push({ field: "category", message: "Category wajib diisi" });
-  } else if (typeof category !== 'string') {
+  } else if (typeof category !== "string") {
     errors.push({ field: "category", message: "Category harus berupa string" });
   }
 
   if (isNil(period)) {
     errors.push({ field: "period", message: "Period wajib diisi" });
-  } else if (typeof period !== 'string') {
+  } else if (typeof period !== "string") {
     errors.push({ field: "period", message: "Period harus berupa string" });
   }
-  
+
   if (isNil(startDate)) {
     errors.push({ field: "startDate", message: "Tanggal mulai wajib diisi" });
   } else if (!isValidISO8601(startDate)) {
-    errors.push({ field: "startDate", message: "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)" });
+    errors.push({
+      field: "startDate",
+      message:
+        "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)",
+    });
   }
-  
+
   if (isNil(endDate)) {
     errors.push({ field: "endDate", message: "Tanggal selesai wajib diisi" });
   } else if (!isValidISO8601(endDate)) {
-    errors.push({ field: "endDate", message: "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)" });
+    errors.push({
+      field: "endDate",
+      message:
+        "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)",
+    });
   } else if (startDate && new Date(endDate) < new Date(startDate)) {
-    errors.push({ field: "endDate", message: "Tanggal selesai tidak boleh sebelum tanggal mulai" });
+    errors.push({
+      field: "endDate",
+      message: "Tanggal selesai tidak boleh sebelum tanggal mulai",
+    });
   }
-  
+
   const parsedIsOpen = parseBoolean(isOpen);
   if (!isNil(isOpen) && parsedIsOpen === undefined) {
     errors.push({ field: "isOpen", message: "isOpen harus berupa boolean" });
   }
-  
+
   if (errors.length > 0) {
     return sendValidationError(res, errors);
   }
@@ -142,35 +164,43 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
   const { name, category, period, startDate, endDate, isOpen } = req.body;
   const errors = [];
 
-  if (!isNil(name) && typeof name !== 'string') {
+  if (!isNil(name) && typeof name !== "string") {
     errors.push({ field: "name", message: "Nama harus berupa string" });
   }
 
-  if (!isNil(category) && typeof category !== 'string') {
+  if (!isNil(category) && typeof category !== "string") {
     errors.push({ field: "category", message: "Category harus berupa string" });
   }
 
-  if (!isNil(period) && typeof period !== 'string') {
+  if (!isNil(period) && typeof period !== "string") {
     errors.push({ field: "period", message: "Period harus berupa string" });
   }
-  
+
   if (!isNil(startDate)) {
     if (!isValidISO8601(startDate)) {
-      errors.push({ field: "startDate", message: "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)" });
+      errors.push({
+        field: "startDate",
+        message:
+          "Tanggal mulai harus berupa tanggal yang valid (format ISO 8601)",
+      });
     }
   }
-  
+
   if (!isNil(endDate)) {
     if (!isValidISO8601(endDate)) {
-      errors.push({ field: "endDate", message: "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)" });
+      errors.push({
+        field: "endDate",
+        message:
+          "Tanggal selesai harus berupa tanggal yang valid (format ISO 8601)",
+      });
     }
   }
-  
+
   const parsedIsOpen = parseBoolean(isOpen);
   if (!isNil(isOpen) && parsedIsOpen === undefined) {
     errors.push({ field: "isOpen", message: "isOpen harus berupa boolean" });
   }
-  
+
   if (errors.length > 0) {
     return sendValidationError(res, errors);
   }
@@ -191,11 +221,14 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
   if (!isNil(endDate)) {
     const startToCompare = startDate || yudisiumPeriodExists.startDate;
     if (new Date(endDate) < new Date(startToCompare)) {
-      errors.push({ field: "endDate", message: "Tanggal selesai tidak boleh sebelum tanggal mulai" });
+      errors.push({
+        field: "endDate",
+        message: "Tanggal selesai tidak boleh sebelum tanggal mulai",
+      });
       return sendValidationError(res, errors);
     }
   }
-  
+
   const updatedYudisiumPeriod = await prisma.yudisiumPeriod.update({
     where: {
       id,

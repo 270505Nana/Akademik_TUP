@@ -1,4 +1,4 @@
-import prisma from '../config/prisma.js';
+import prisma from "../config/prisma.js";
 
 const authorize = (...allowedRoles) => {
   return (req, res, next) => {
@@ -27,7 +27,8 @@ const isKetuaKK = async (req, res, next) => {
 
   if (req.user.role !== "DOSEN") {
     return res.status(403).json({
-      message: "Access denied. Hanya dosen dengan status Ketua KK yang dapat mengakses.",
+      message:
+        "Access denied. Hanya dosen dengan status Ketua KK yang dapat mengakses.",
     });
   }
 
@@ -38,7 +39,8 @@ const isKetuaKK = async (req, res, next) => {
 
     if (!dosen || !dosen.isKetuaKK || dosen.deletedAt) {
       return res.status(403).json({
-        message: "Access denied. Hanya dosen dengan status Ketua KK yang dapat mengakses.",
+        message:
+          "Access denied. Hanya dosen dengan status Ketua KK yang dapat mengakses.",
       });
     }
 
@@ -111,12 +113,31 @@ const isKepalaUrusanAkademik = async (req, res, next) => {
   }
 };
 
+const isAdminOrDosen = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Token not found" });
+  }
+
+  if (req.user.role === "ADMIN") {
+    return next();
+  }
+
+  if (req.user.role === "DOSEN") {
+    return next();
+  }
+
+  return res.status(403).json({
+    message: "Access denied. Hanya admin dan dosen yang dapat mengakses.",
+  });
+};
+
 export {
   authorize,
   isMahasiswa,
   isDosen,
   isAdmin,
   isKetuaKK,
+  isAdminOrDosen,
   isKetuaProdi,
   isKepalaUrusanAkademik,
 };

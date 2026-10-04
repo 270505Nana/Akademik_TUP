@@ -46,9 +46,38 @@ const penjadwalanSidangInclude = {
 const listPenjadwalanSidang = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
 
+  let targetPeriodId = req.query.sidangPeriodId;
+
+  if (
+    targetPeriodId &&
+    typeof targetPeriodId === "string" &&
+    targetPeriodId.trim() !== ""
+  ) {
+    targetPeriodId = targetPeriodId.trim();
+  } else {
+    const activePeriod =
+      (await prisma.sidangPeriod.findFirst({
+        where: { isOpen: true, deletedAt: null },
+        orderBy: { updatedAt: "desc" },
+      })) ||
+      (await prisma.sidangPeriod.findFirst({
+        where: { deletedAt: null },
+        orderBy: { endDate: "desc" },
+      }));
+
+    if (activePeriod) {
+      targetPeriodId = activePeriod.id;
+    }
+  }
+
   const where = {
+    isDraft: false,
     deletedAt: null,
   };
+
+  if (targetPeriodId) {
+    where.sidangPeriodId = targetPeriodId;
+  }
 
   if (req.user?.role === "DOSEN") {
     const dosen =
@@ -90,6 +119,12 @@ const listPenjadwalanSidang = asyncHandler(async (req, res) => {
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
+// Helper untuk memeriksa apakah skema pendaftaran adalah Capstone
+const isCapstoneScheme = (reg) => {
+  const skema = (reg?.skemaSidangFinal || reg?.skemaSidang || "").trim().toLowerCase();
+  return skema.includes("capstone");
+};
+
 // Helper untuk memeriksa bentrok jadwal (jarak 2 jam) antara ruangan dan dosen
 const checkJadwalConflict = async ({
   registrationId,
@@ -97,6 +132,7 @@ const checkJadwalConflict = async ({
   tglSidang,
   ruanganSidangId,
   dosenIds = [],
+  isCapstone = false,
 }) => {
   if (!tglSidang) return null;
 
@@ -134,7 +170,7 @@ const checkJadwalConflict = async ({
         ? { id: { notIn: notIds } }
         : {};
 
-  const conflict = await prisma.sidangRegistration.findFirst({
+  const potentialConflicts = await prisma.sidangRegistration.findMany({
     where: {
       ...idCondition,
       deletedAt: null,
@@ -154,7 +190,20 @@ const checkJadwalConflict = async ({
     },
   });
 
-  if (!conflict) return null;
+  if (!potentialConflicts || potentialConflicts.length === 0) return null;
+
+  // Filter out pendaftaran sesama skema Capstone (kelonggaran Capstone diperbolehkan bersamaan)
+  const conflicts = potentialConflicts.filter((otherReg) => {
+    const otherIsCapstone = isCapstoneScheme(otherReg);
+    if (isCapstone && otherIsCapstone) {
+      return false;
+    }
+    return true;
+  });
+
+  if (conflicts.length === 0) return null;
+
+  const conflict = conflicts[0];
 
   if (ruanganSidangId && conflict.ruanganSidangId === ruanganSidangId) {
     const namaRuangan = conflict.ruanganSidang
@@ -265,6 +314,7 @@ const setPengujiSidang = asyncHandler(async (req, res) => {
       registrationId: id,
       tglSidang: registration.tglSidang,
       dosenIds: [dosenPenguji1Id, dosenPenguji2Id],
+      isCapstone: isCapstoneScheme(registration),
     });
 
     if (conflictMessage) {
@@ -422,6 +472,7 @@ const batchSetPengujiSidang = asyncHandler(async (req, res) => {
       const reg = registrationMap.get(item.id);
       return {
         ...item,
+        isCapstone: isCapstoneScheme(reg),
         tglSidang: reg.tglSidang,
         mahasiswaName: reg.mahasiswa?.user?.name || "Mahasiswa",
         allDosenIds: [
@@ -438,6 +489,12 @@ const batchSetPengujiSidang = asyncHandler(async (req, res) => {
     for (let j = i + 1; j < scheduledItems.length; j++) {
       const itemA = scheduledItems[i];
       const itemB = scheduledItems[j];
+
+      // Pengecualian kelonggaran skema Capstone: sesama Capstone tidak dianggap bentrok
+      if (itemA.isCapstone && itemB.isCapstone) {
+        continue;
+      }
+
       const diff = Math.abs(
         new Date(itemA.tglSidang).getTime() -
           new Date(itemB.tglSidang).getTime(),
@@ -466,6 +523,7 @@ const batchSetPengujiSidang = asyncHandler(async (req, res) => {
       excludeRegistrationIds: registrationIds,
       tglSidang: item.tglSidang,
       dosenIds: [item.dosenPenguji1Id, item.dosenPenguji2Id],
+      isCapstone: item.isCapstone,
     });
 
     if (conflictMessage) {
@@ -565,6 +623,7 @@ const setJadwalSidang = asyncHandler(async (req, res) => {
     tglSidang,
     ruanganSidangId,
     dosenIds: involvedDosenIds,
+    isCapstone: isCapstoneScheme(registration),
   });
 
   if (conflictMessage) {
@@ -695,6 +754,7 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
     const reg = registrationMap.get(item.id);
     return {
       ...item,
+      isCapstone: isCapstoneScheme(reg),
       mahasiswaName: reg.mahasiswa?.user?.name || "Mahasiswa",
       involvedDosenIds: [
         reg.dosenPembimbing1Id,
@@ -715,6 +775,12 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
     for (let j = i + 1; j < itemsWithMeta.length; j++) {
       const itemA = itemsWithMeta[i];
       const itemB = itemsWithMeta[j];
+
+      // Pengecualian kelonggaran skema Capstone: sesama Capstone tidak dianggap bentrok
+      if (itemA.isCapstone && itemB.isCapstone) {
+        continue;
+      }
+
       const diff = Math.abs(
         new Date(itemA.tglSidang).getTime() -
           new Date(itemB.tglSidang).getTime(),
@@ -754,6 +820,7 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
       tglSidang: item.tglSidang,
       ruanganSidangId: item.ruanganSidangId,
       dosenIds: item.involvedDosenIds,
+      isCapstone: item.isCapstone,
     });
 
     if (conflictMessage) {
@@ -791,26 +858,55 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
   let targetPeriodId = req.query.sidangPeriodId;
   let selectedPeriod = null;
 
-  if (targetPeriodId) {
-    selectedPeriod = await prisma.sidangPeriod.findUnique({
-      where: { id: targetPeriodId },
+  if (
+    targetPeriodId &&
+    typeof targetPeriodId === "string" &&
+    targetPeriodId.trim() !== ""
+  ) {
+    targetPeriodId = targetPeriodId.trim();
+    selectedPeriod = await prisma.sidangPeriod.findFirst({
+      where: { id: targetPeriodId, deletedAt: null },
     });
   } else {
-    selectedPeriod = await prisma.sidangPeriod.findFirst({
-      where: { deletedAt: null },
-      orderBy: { endDate: "desc" },
-    });
+    selectedPeriod =
+      (await prisma.sidangPeriod.findFirst({
+        where: { isOpen: true, deletedAt: null },
+        orderBy: { updatedAt: "desc" },
+      })) ||
+      (await prisma.sidangPeriod.findFirst({
+        where: { deletedAt: null },
+        orderBy: { endDate: "desc" },
+      }));
 
     if (selectedPeriod) {
       targetPeriodId = selectedPeriod.id;
     }
   }
   const whereClause = {
+    isDraft: false,
     deletedAt: null,
     tglSidang: { not: null },
   };
   if (targetPeriodId) {
     whereClause.sidangPeriodId = targetPeriodId;
+  }
+
+  if (req.user?.role === "DOSEN") {
+    const dosen =
+      req.dosen ||
+      (await prisma.dosen.findUnique({
+        where: { userId: req.user.id, deletedAt: null },
+      }));
+
+    if (!dosen) {
+      res.status(404);
+      throw new Error("Data Dosen tidak ditemukan");
+    }
+
+    whereClause.dosenPembimbing1 = {
+      researchGroupId: dosen.researchGroupId,
+      deletedAt: null,
+    };
   }
 
   const jadwalList = await prisma.sidangRegistration.findMany({

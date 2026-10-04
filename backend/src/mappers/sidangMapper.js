@@ -5,6 +5,11 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
 
   const uploads = item.sidangRegistrationUploads || [];
 
+  let status = item.status;
+  if (status === "Pendaftaran Diterima" && item.sidangPeriod?.isOpen) {
+    status = "Siap Sidang";
+  }
+
   return {
     id: item.id,
     periodId: item.periodId,
@@ -27,10 +32,12 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
     adminId: item.adminId,
     researchGroupId: item.researchGroupId,
     skemaSidang: item.skemaSidang,
+    skemaSidangFinal: item.skemaSidangFinal,
     jalurNonSidang: item.jalurNonSidang,
+    jalurNonSidangFinal: item.jalurNonSidangFinal,
     lulusTesBahasa: item.lulusTesBahasa,
     skorTesBahasa: item.skorTesBahasa,
-    status: item.status,
+    status: status,
     isDraft: item.isDraft,
     isLocked: item.isLocked ?? false,
     submittedAt: item.submittedAt,
