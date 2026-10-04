@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Users, Calendar, ClipboardEdit, CalendarDays, Clock, MapPin, AlertCircle, Menu, HelpCircle, Bell, Loader } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Users, Calendar, ClipboardEdit, CalendarDays, Clock, MapPin, AlertCircle, Menu, Loader } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
 import SidebarDosen from '../../components/sidebar/SidebarDosen';
 import FooterDosen from '../../components/common/FooterDosen';
 import { useAuth } from '../../context/AuthContext';
 import { getDosenDashboard } from '../../service/api';
 import '../dashboard.css';
 import '../../components/dosen/dashboard/dashboard.css';
+
+const HARI_KEDEPAN = 3;
+const MAKS_JADWAL = 5;
 
 const PERAN_CLASS = {
   'Penguji 1': 'badge-penguji',
@@ -26,6 +28,22 @@ const isToday = (dateStr) => {
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate()
   );
+};
+
+// Ambil jadwal dari hari ini sampai N hari ke depan, urut terdekat, maksimal `max`
+const filterJadwalTerdekat = (list = [], days = HARI_KEDEPAN, max = MAKS_JADWAL) => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + days);
+  end.setHours(23, 59, 59, 999);
+
+  return list
+    .map((item) => ({ item, date: new Date(item.tglSidang) }))
+    .filter(({ date }) => !isNaN(date.getTime()) && date >= start && date <= end)
+    .sort((a, b) => a.date - b.date)
+    .slice(0, max)
+    .map(({ item }) => item);
 };
 
 const formatJam = (jam) => {
@@ -55,7 +73,7 @@ const StatCards = ({ data, loading, error, onRetry }) => {
       icon: 'calendar',
     },
     {
-      label: 'Nilai yang Belum Diinput',
+      label: 'Mahasiswa Lulus', //masih bingung mau di ganti apa
       nilai: data?.totalNilaiBelumDiinput ?? 0,
       icon: 'edit',
     },
@@ -95,7 +113,7 @@ const StatCards = ({ data, loading, error, onRetry }) => {
 };
 
 // Menampilkan jadwal sidang terdekat yang melibatkan dosen
-const JadwalSidangSection = ({ jadwalSidang = [], loading, error, onRetry, onNavigateAll }) => (
+const JadwalSidangSection = ({ jadwalSidang = [], loading, error, onNavigateAll }) => (
   <div className="section-card section-flex">
     <div className="card-header-custom" style={{ alignItems: 'center' }}>
       <div className="card-header-title">
@@ -121,7 +139,7 @@ const JadwalSidangSection = ({ jadwalSidang = [], loading, error, onRetry, onNav
         </div>
       ) : jadwalSidang.length === 0 ? (
         <div className="empty-state">
-          Belum ada jadwal sidang terdekat.
+          Tidak ada jadwal sidang dalam {HARI_KEDEPAN} hari ke depan.
         </div>
       ) : (
         jadwalSidang.map((item, idx) => {
@@ -177,70 +195,9 @@ const JadwalSidangSection = ({ jadwalSidang = [], loading, error, onRetry, onNav
   </div>
 );
 
-// Menampilkan status input nilai sidang beserta reminder batas waktu
-const StatusInputNilaiSection = ({ onShowToast, onInputNilai, inputNilaiList = [] }) => (
-  <div className="section-card section-flex">
-    <div className="card-header-custom">
-      <div className="card-header-title">
-        <ClipboardEdit size={18} color="#C0182A" />
-        <span className="card-header-text">Status Input Nilai Sidang</span>
-      </div>
-    </div>
-
-    <div className="nilai-body">
-      <div className="warning-banner">
-        <AlertCircle size={16} color="#D97706" className="warning-icon" />
-        <div>
-          <div className="warning-title">Batas Waktu Penginputan</div>
-          <div className="warning-desc">
-            Nilai sidang wajib diinputkan maksimal 24 jam setelah pelaksanaan sidang.
-          </div>
-        </div>
-      </div>
-
-      {/* TODO: BE belum menyediakan field untuk status input nilai sidang */}
-      {inputNilaiList.length === 0 ? (
-        <div className="empty-state">
-          Belum ada data nilai yang perlu diinput
-        </div>
-      ) : (
-        /* Daftar mahasiswa yang perlu dinilai */
-        inputNilaiList.map((item, idx) => {
-          const isLast = idx === inputNilaiList.length - 1;
-          const nilaiItemClassName = [
-            'nilai-item',
-            isLast ? 'is-last' : '',
-            item.isUrgent ? 'nilai-item--urgent' : '',
-          ].filter(Boolean).join(' ');
-
-          return (
-            <div key={item.id || idx} className={nilaiItemClassName}>
-              <div>
-                <div className="nilai-item-name">{item.nama || item.name}</div>
-                <div className="nilai-item-sub">{item.nim} &bull; {item.prodi || item.studyProgram}</div>
-                <div className={`nilai-item-due ${item.isUrgent ? 'nilai-item-due--urgent' : ''}`}>
-                  <AlertCircle size={12} />
-                  {item.jatuhTempo}
-                </div>
-              </div>
-              <button
-                onClick={() => onInputNilai(item)}
-                className={`btn-input-nilai ${item.isUrgent ? 'btn-input-nilai--urgent' : ''}`}
-              >
-                Input Nilai
-              </button>
-            </div>
-          );
-        })
-      )}
-    </div>
-  </div>
-);
-
 // Halaman Dashboard utama untuk role Dosen
 const DashboardDosen = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [toasts, setToasts] = useState([]);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -248,12 +205,6 @@ const DashboardDosen = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const namaDisplay = profile?.name || user?.name || user?.username || 'Dosen';
-
-  const showToast = (message, icon, type = 'info') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, icon, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
-  };
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -272,6 +223,11 @@ const DashboardDosen = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  const jadwalTerdekat = useMemo(
+    () => filterJadwalTerdekat(dashboardData?.jadwalSidang),
+    [dashboardData]
+  );
 
   return (
     <>
@@ -312,40 +268,18 @@ const DashboardDosen = () => {
 
           {/* 3 Kartu Statistik */}
           <StatCards data={dashboardData} loading={loading} error={error} onRetry={fetchDashboardData} />
-          <div className="dosen-bottom-grid">
+
+          <div className="dosen-bottom-grid" style={{ gridTemplateColumns: '1fr' }}>
             <JadwalSidangSection
-              jadwalSidang={dashboardData?.jadwalSidang || []}
+              jadwalSidang={jadwalTerdekat}
               loading={loading}
               error={error}
-              onRetry={fetchDashboardData}
               onNavigateAll={() => navigate('/dosen/jadwal-nilai-sidang')}
-            />
-            <StatusInputNilaiSection
-              onShowToast={showToast}
-              onInputNilai={(item) => navigate(`/dosen/input-nilai/${item.id || item.nim}`, { state: { mahasiswa: item } })}
-              inputNilaiList={[]}
             />
           </div>
         </main>
 
         <FooterDosen />
-
-        <div className="toast-container-custom">
-          <AnimatePresence>
-            {toasts.map(toast => (
-              <motion.div
-                key={toast.id}
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 40 }}
-                className={`simta-toast ${toast.type}`}
-              >
-                <span className="toast-icon">{toast.icon}</span>
-                <span className="toast-msg" dangerouslySetInnerHTML={{ __html: toast.message }} />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
       </div>
     </>
   );

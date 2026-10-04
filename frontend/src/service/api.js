@@ -498,9 +498,16 @@ export const downloadYudisiumRegistrationUpload = async (uploadId) => {
 };
 
 // ------------------------------------------- SIDANG ADMIN -------------------------------------------
-export const getAllSidangRegistrations = async () => {
-  const response = await api.get('/api/sidang-registrations');
-  return response.data?.data ?? response.data;
+/**
+ * Mengambil daftar pendaftaran sidang dari backend.
+ * @param {Object} params - Query params opsional (page, limit, search, studyProgramId, status, dll.)
+ *   Gunakan { limit: 'all', pagination: 'false' } untuk mengambil semua data sekaligus
+ *   (untuk halaman dosen yang melakukan filter di sisi klien).
+ * @returns {Promise<{ data: Array, pagination: Object } | Array>}
+ */
+export const getAllSidangRegistrations = async (params = {}) => {
+  const response = await api.get('/api/sidang-registrations', { params });
+  return response.data;
 };
 
 export const getSidangRegistrationById = async (id) => {
@@ -581,9 +588,13 @@ export const rejectSidangRegistration = async (registrationId, payload) => {
 // ------------------------------------------- ETC & PERIODS -------------------------------------------
 export const getLecturers = async (params = { limit: "all", sortBy: "a-z" }) =>
   api.get("/api/dosen", { params }).then((r) => r.data?.data ?? r.data);
-export const getFaculties = async () => api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
-export const getStudyPrograms = async () => api.get("/api/study-programs").then((r) => r.data?.data ?? r.data);
-export const getStudyProgramById = async (id) => api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
+// Gunakan limit=all agar seluruh data dikembalikan (tanpa batas paginasi default 10)
+export const getFaculties = async () =>
+  api.get("/api/faculties", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
+export const getStudyPrograms = async () =>
+  api.get("/api/study-programs", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
+export const getStudyProgramById = async (id) =>
+  api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
 
 // --- SIDANG PERIODS ---
 export const getSidangPeriods = async (params = {}) => {
