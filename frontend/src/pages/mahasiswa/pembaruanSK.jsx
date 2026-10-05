@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import { Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, AlertCircle, Menu, Download } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
-import { getLecturers, getSKTARequest, submitSKTARequest, submitFinalSKTARequest } from '../../service/api';
+
+// Pastikan isSkEditable ikut diimport dari helper
+import { getLecturers, getSKTARequest, getAllSktaRequests, submitSKTARequest, submitFinalSKTARequest } from '../../service/api';
+import LogoTelkom from '../../assets/logo-telkom.png';
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import { determineSkStatus, STATUS_SK } from '../../components/common/Skstatushelper';
+import { determineSkStatus, STATUS_SK, isSkEditable } from '../../components/common/Skstatushelper';
 import CustomAlert from '../../components/common/CustomAlert';
 import SidebarMahasiswa from '../../components/sidebar/SidebarMahasiswa';
 import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
@@ -23,22 +26,25 @@ const SkStatusBanner = ({ status, permohonan }) => {
   const configs = {
     [STATUS_SK.DALAM_PROSES]: {
       bg: '#EFF6FF', border: '#BFDBFE', icon: <Clock size={16} color="#2563EB" />,
-      title: 'Pengajuan Perubahan SK Sedang Diproses',
-      desc: 'Permohonan perubahan SK Tugas Akhir kamu sedang dalam antrian verifikasi oleh tim akademik. Proses maksimal 3×24 jam kerja.',
+      title: 'Pengajuan Pembaruan SK Sedang Diproses',
+      desc: 'Permohonan pembaruan SK Tugas Akhir kamu sedang dalam antrian verifikasi oleh tim akademik. Proses maksimal 3×24 jam kerja.',
       badgeBg: '#DBEAFE', badgeColor: '#1D4ED8', badgeText: 'Dalam Proses',
     },
     [STATUS_SK.BELUM_TERBIT]: {
       bg: '#FFFBEB', border: '#FDE68A', icon: <AlertCircle size={16} color="#D97706" />,
-      title: 'Perubahan SK Memerlukan Perbaikan Dokumen',
+      title: 'Pembaruan SK Memerlukan Perbaikan Dokumen',
       desc: permohonan?.message
         ? `Tim akademik memberikan catatan: "${permohonan.message}". Silakan perbaiki pengajuan kamu di bawah ini.`
-        : 'Pengajuan perubahan SK kamu perlu diperbaiki. Silakan perbarui data melalui formulir di bawah ini.',
+        : 'Pengajuan pembaruan SK kamu perlu diperbaiki. Silakan perbarui data melalui formulir di bawah ini.',
       badgeBg: '#FEF3C7', badgeColor: '#92400E', badgeText: 'Perlu Perbaikan',
     },
   };
 
   const cfg = configs[status];
   if (!cfg) return null;
+
+  const isBelumTerbit = status === STATUS_SK.BELUM_TERBIT;
+  const isEditable = isBelumTerbit ? isSkEditable(status, permohonan) : true;
 
   return (
     <div style={{
@@ -61,6 +67,24 @@ const SkStatusBanner = ({ status, permohonan }) => {
           <p style={{ fontSize: 11.5, color: '#4B5563', lineHeight: 1.6, margin: 0 }}>
             {cfg.desc}
           </p>
+          
+          {/* INFORMASI BATAS WAKTU (HANYA TANGGAL TANPA JAM) */}
+          {isBelumTerbit && permohonan?.isEdit && (
+            <div style={{ 
+              marginTop: 12, padding: '8px 12px', 
+              background: isEditable ? 'rgba(217, 119, 6, 0.1)' : '#FEF2F2', 
+              border: `1px solid ${isEditable ? 'rgba(217, 119, 6, 0.2)' : '#FECACA'}`, 
+              borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 8 
+            }}>
+              <Clock size={14} color={isEditable ? "#B45309" : "#DC2626"} />
+              <span style={{ fontSize: 11, color: isEditable ? '#92400E' : '#B91C1C', fontWeight: 600 }}>
+                {isEditable ? 'Batas Waktu Perbaikan: ' : 'Masa Perbaikan Berakhir: '} 
+                {new Date(permohonan.isEdit).toLocaleDateString('id-ID', {
+                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                })}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -175,6 +199,23 @@ const PembaruanSK = () => {
           return;
         }
 
+        let activeSk = latest; 
+        try {
+          const allReq = await getAllSktaRequests({ mahasiswaId, limit: 100 });
+          if (Array.isArray(allReq) && allReq.length > 0) {
+            const sortedReq = allReq.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const foundActive = sortedReq.find(req => 
+              req.id !== latest.id && 
+              (determineSkStatus(req) === STATUS_SK.SUDAH_TERBIT || req.category === 'Permohonan Baru' || req.category === 'Perpanjangan SK')
+            );
+            if (foundActive) {
+              activeSk = foundActive; 
+            }
+          }
+        } catch(e) {
+          console.warn("Gagal fetch history SK, menggunakan latest sbg fallback");
+        }
+
         setPermohonan(latest);
         updateSktaRequestId(latest.id);
 
@@ -184,7 +225,6 @@ const PembaruanSK = () => {
         setSkStatus(status);
 
         if (!isPerubahan) {
-          // Jika status SK Utama masih berjalan atau perlu revisi
           if (status === STATUS_SK.DALAM_PROSES || status === STATUS_SK.BELUM_TERBIT) {
             setSubmitError({ 
               title: 'Pengajuan Utama Sedang Berjalan', 
@@ -217,32 +257,51 @@ const PembaruanSK = () => {
           }
         }
 
-        // Isi prefill Old Data
-        const matchedKode1 = lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing1Id));
-        const matchedKode2 = lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing2Id));
+        const d1Obj = activeSk.dosenPembimbing1;
+        const d2Obj = activeSk.dosenPembimbing2;
+
+        const matchedKode1 = d1Obj 
+          ? { value: String(d1Obj.id), label: `${d1Obj.kodeDosen || ''} — ${d1Obj.name || d1Obj.nama || ''}`, nama: d1Obj.name || d1Obj.nama || '', researchGroupId: d1Obj.researchGroupId }
+          : lecturerOptions.find(opt => String(opt.value) === String(activeSk.dosenPembimbing1Id));
+
+        const matchedKode2 = d2Obj 
+          ? { value: String(d2Obj.id), label: `${d2Obj.kodeDosen || ''} — ${d2Obj.name || d2Obj.nama || ''}`, nama: d2Obj.name || d2Obj.nama || '', researchGroupId: d2Obj.researchGroupId }
+          : lecturerOptions.find(opt => String(opt.value) === String(activeSk.dosenPembimbing2Id));
+
         const matchedKK = matchedKode1?.researchGroupId != null
           ? kelompokKeilmuan.find(kk => String(kk.researchGroupId) === String(matchedKode1.researchGroupId))
           : null;
         
         setOldData({
-          judulIndo: latest.judulProposalIndonesia ?? latest.proposalTitleId ?? '-',
-          judulInggris: latest.judulProposalInggris ?? latest.proposalTitleEn ?? '-',
+          judulIndo: activeSk.judulProposalIndonesia ?? activeSk.proposalTitleId ?? '-',
+          judulInggris: activeSk.judulProposalInggris ?? activeSk.proposalTitleEn ?? '-',
           dosen1: matchedKode1?.nama ?? '-',
           dosen2: matchedKode2?.nama ?? '-',
-          kode1: matchedKode1 ?? (latest.dosenPembimbing1Id ? { value: latest.dosenPembimbing1Id } : null),
-          kode2: matchedKode2 ?? (latest.dosenPembimbing2Id ? { value: latest.dosenPembimbing2Id } : null),
+          kode1: matchedKode1 ?? (activeSk.dosenPembimbing1Id ? { value: activeSk.dosenPembimbing1Id } : null),
+          kode2: matchedKode2 ?? (activeSk.dosenPembimbing2Id ? { value: activeSk.dosenPembimbing2Id } : null),
           kelompok: matchedKK?.label ?? '',
-          researchGroupId: latest.researchGroupId,
+          researchGroupId: activeSk.researchGroupId,
         });
 
         if (status === STATUS_SK.DRAFT || (isPerubahan && status === STATUS_SK.BELUM_TERBIT)) {
+          const draftD1 = latest.dosenPembimbing1;
+          const draftD2 = latest.dosenPembimbing2;
+          
+          const draftMatched1 = draftD1 
+            ? { value: String(draftD1.id), label: `${draftD1.kodeDosen || ''} — ${draftD1.name || draftD1.nama || ''}`, nama: draftD1.name || draftD1.nama || '', researchGroupId: draftD1.researchGroupId }
+            : lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing1Id)) ?? matchedKode1;
+
+          const draftMatched2 = draftD2 
+            ? { value: String(draftD2.id), label: `${draftD2.kodeDosen || ''} — ${draftD2.name || draftD2.nama || ''}`, nama: draftD2.name || draftD2.nama || '', researchGroupId: draftD2.researchGroupId }
+            : lecturerOptions.find(opt => String(opt.value) === String(latest.dosenPembimbing2Id)) ?? matchedKode2;
+
           setFormData({
             judulIndo: latest.judulProposalIndonesia ?? latest.proposalTitleId ?? '',
             judulInggris: latest.judulProposalInggris ?? latest.proposalTitleEn ?? '',
-            kode1: matchedKode1 ?? null,
-            dosen1: matchedKode1?.nama ?? '',
-            kode2: matchedKode2 ?? null,
-            dosen2: matchedKode2?.nama ?? '',
+            kode1: draftMatched1 ?? null,
+            dosen1: draftMatched1?.nama ?? '',
+            kode2: draftMatched2 ?? null,
+            dosen2: draftMatched2?.nama ?? '',
             kelompok: matchedKK?.label ?? '',
           });
         }
@@ -264,7 +323,13 @@ const PembaruanSK = () => {
   const isGantiJudul = kategori?.value === 'Perubahan Judul' || kategori?.value === 'Perubahan Judul dan Dosen Pembimbing';
   const isGantiDosen = kategori?.value === 'Perubahan Dosen Pembimbing' || kategori?.value === 'Perubahan Judul dan Dosen Pembimbing';
 
+  // VARIABEL LOCK FORM
+  const isBelumTerbit = submissionMode === 'patch-revisi';
+  const isEditableForm = isSkEditable(skStatus, permohonan);
+  const isReadOnlyForm = isBelumTerbit && !isEditableForm;
+
   const handleDosenChange = useCallback((field, val) => {
+    if (isReadOnlyForm) return;
     const namaField = field === 'kode1' ? 'dosen1' : 'dosen2';
     setFormData(prev => {
       const updated = { ...prev, [field]: val, [namaField]: val?.nama || '' };
@@ -279,7 +344,7 @@ const PembaruanSK = () => {
       return updated;
     });
     setSubmitError(null);
-  }, []);
+  }, [isReadOnlyForm]);
 
   const processFile = (file) => {
     if (!file) return;
@@ -317,6 +382,7 @@ const PembaruanSK = () => {
 
   const handleDragOver = (e) => {
     e.preventDefault();
+    if (isReadOnlyForm) return;
     setIsDragging(true);
   };
 
@@ -327,6 +393,7 @@ const PembaruanSK = () => {
 
   const handleDrop = (e) => {
     e.preventDefault();
+    if (isReadOnlyForm) return;
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFile(e.dataTransfer.files[0]);
@@ -336,6 +403,7 @@ const PembaruanSK = () => {
 
   const handleGenerateTemplateAndSaveDraft = async () => {
     setSubmitError(null);
+    if (isReadOnlyForm) return;
     
     if (!kategori) {
       setSubmitError({ title: 'Kategori Belum Dipilih', message: 'Silakan pilih kategori perubahan terlebih dahulu.' });
@@ -359,96 +427,166 @@ const PembaruanSK = () => {
     const d2Baru = isGantiDosen ? (formData.dosen2 || '-') : d2Lama;
     const jBaru = isGantiJudul ? formData.judulIndo : oldData.judulIndo;
 
-    const signatureHeaders = isGantiDosen ? `
+    const isPerubahanJudulSaja = kategori.value === 'Perubahan Judul';
+    const docNo = isPerubahanJudulSaja ? 'TUP-SPM-FM-TA-006' : 'TUP-SPM-FM-TA-007';
+    const headerFormTitle = isPerubahanJudulSaja ? 'FORMULIR PERMOHONAN<br>PERUBAHAN JUDUL TUGAS AKHIR' : 'FORMULIR PERMOHONAN<br>PERUBAHAN SK TUGAS AKHIR';
+    const bodyFormTitle = isPerubahanJudulSaja ? 'PERMOHONAN PERUBAHAN JUDUL TUGAS AKHIR' : 'PERMOHONAN PERUBAHAN SK TUGAS AKHIR';
+
+    const signatureRowHTML = isGantiDosen ? `
       <tr>
-        <td style="width: 25%; padding-bottom: 70px;">PEMBIMBING I<br/>(SEBELUMNYA)</td>
-        <td style="width: 25%; padding-bottom: 70px;">PEMBIMBING I<br/>(BARU)</td>
-        <td style="width: 25%; padding-bottom: 70px;">PEMBIMBING II<br/>(SEBELUMNYA)</td>
-        <td style="width: 25%; padding-bottom: 70px;">PEMBIMBING II<br/>(BARU)</td>
+        <td style="width: 25%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 11px;">PEMBIMBING I<br/>(SEBELUMNYA)</td>
+        <td style="width: 25%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 11px;">PEMBIMBING I<br/>(BARU)</td>
+        <td style="width: 25%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 11px;">PEMBIMBING II<br/>(SEBELUMNYA)</td>
+        <td style="width: 25%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 11px;">PEMBIMBING II<br/>(BARU)</td>
       </tr>
       <tr>
-        <td>( ${d1Lama} )</td>
-        <td>( ${d1Baru} )</td>
-        <td>( ${d2Lama !== '-' ? d2Lama : '...........................'} )</td>
-        <td>( ${d2Baru !== '-' ? d2Baru : '...........................'} )</td>
+        <td style="height: 65px; border: 1px solid black;"></td>
+        <td style="height: 65px; border: 1px solid black;"></td>
+        <td style="height: 65px; border: 1px solid black;"></td>
+        <td style="height: 65px; border: 1px solid black;"></td>
+      </tr>
+      <tr>
+        <td style="text-align: center; padding: 5px; border: 1px solid black; font-size: 11px;">( ${d1Lama} )</td>
+        <td style="text-align: center; padding: 5px; border: 1px solid black; font-size: 11px;">( ${d1Baru} )</td>
+        <td style="text-align: center; padding: 5px; border: 1px solid black; font-size: 11px;">( ${d2Lama !== '-' ? d2Lama : '...........................'} )</td>
+        <td style="text-align: center; padding: 5px; border: 1px solid black; font-size: 11px;">( ${d2Baru !== '-' ? d2Baru : '...........................'} )</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; vertical-align: top;">
+           Mengetahui<br/>Kaprodi ${prodiDisplay},<br/><br/><br/><br/><br/>
+           <b>(......................................................)</b>
+        </td>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; vertical-align: top;">
+           Purwokerto, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br/>Pemohon,<br/><br/><br/><br/><br/>
+           <b>( ${namaDisplay} )</b>
+        </td>
       </tr>
     ` : `
       <tr>
-        <td style="width: 50%; padding-bottom: 80px;">PEMBIMBING I</td>
-        <td style="width: 50%; padding-bottom: 80px;">PEMBIMBING II</td>
+        <td colspan="2" style="width: 50%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">PEMBIMBING I</td>
+        <td colspan="2" style="width: 50%; text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">PEMBIMBING II</td>
       </tr>
       <tr>
-        <td>( ${d1Baru} )</td>
-        <td>( ${d2Baru !== '-' ? d2Baru : '...................................................'} )</td>
+        <td colspan="2" style="height: 65px; border: 1px solid black;"></td>
+        <td colspan="2" style="height: 65px; border: 1px solid black;"></td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; font-size: 12px;">( ${d1Baru} )</td>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; font-size: 12px;">( ${d2Baru !== '-' ? d2Baru : '...................................................'} )</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; vertical-align: top;">
+           Mengetahui<br/>Kaprodi ${prodiDisplay},<br/><br/><br/><br/><br/>
+           <b>(......................................................)</b>
+        </td>
+        <td colspan="2" style="text-align: center; padding: 5px; border: 1px solid black; vertical-align: top;">
+           Purwokerto, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br/>Pemohon,<br/><br/><br/><br/><br/>
+           <b>( ${namaDisplay} )</b>
+        </td>
       </tr>
     `;
 
-    const titleType = kategori.value === 'Perubahan Judul' ? 'PERUBAHAN JUDUL TUGAS AKHIR' : 'PERUBAHAN SK TUGAS AKHIR';
-
     const element = document.createElement('div');
     element.innerHTML = `
-      <div style="font-family: 'Times New Roman', Times, serif; padding: 40px; color: #000; width: 800px; box-sizing: border-box;">
-        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 30px;">
-           <h2 style="margin: 0; font-size: 20px; font-weight: bold;">UNIVERSITAS TELKOM</h2>
-           <p style="margin: 5px 0 0; font-size: 13px;">Jl. Telekomunikasi No. 1, Dayeuh Kolot, Kab. Bandung 40257</p>
-        </div>
-        <h3 style="text-align: center; text-transform: uppercase; font-size: 16px; font-weight: bold; text-decoration: underline; margin-bottom: 30px;">
-          FORMULIR PERMOHONAN ${titleType}
-        </h3>
-        <table style="width: 100%; font-size: 14px; margin-bottom: 25px; border-collapse: collapse;">
-          <tr><td style="width: 140px; padding: 5px 0; font-weight: bold;">NIM</td><td style="width: 15px;">:</td><td>${nimDisplay}</td></tr>
-          <tr><td style="padding: 5px 0; font-weight: bold;">Nama</td><td>:</td><td>${namaDisplay}</td></tr>
-          <tr><td style="padding: 5px 0; font-weight: bold;">Program Studi</td><td>:</td><td>${prodiDisplay}</td></tr>
+      <div style="font-family: 'Times New Roman', Times, serif; font-size: 12px; padding: 20px; color: #000; width: 100%; box-sizing: border-box;">
+        
+        <!-- HEADER KOP SURAT -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid black;">
+          <tr>
+            <td rowspan="4" style="width: 20%; text-align: center; border: 1px solid black; padding: 10px; vertical-align: middle;">
+              <img src="${LogoTelkom}" alt="Logo Telkom" style="max-height: 50px; display: block; margin: 0 auto; object-fit: contain;" />
+            </td>
+            <td rowspan="2" style="width: 50%; text-align: center; border: 1px solid black; padding: 5px; vertical-align: middle;">
+              <div style="font-weight: bold; font-size: 14px;">UNIVERSITAS TELKOM</div>
+              <div style="font-size: 10px; margin-top: 3px;">Jl. Telekomunikasi No. 1, Dayeuh Kolot, Kab. Bandung 40257</div>
+            </td>
+            <td style="width: 15%; border: 1px solid black; padding: 5px; font-size: 11px;">No. Dokumen</td>
+            <td style="width: 15%; border: 1px solid black; padding: 5px; font-size: 11px;">${docNo}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">No. Revisi</td>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">00</td>
+          </tr>
+          <tr>
+            <td rowspan="2" style="text-align: center; border: 1px solid black; padding: 5px; font-weight: bold; font-size: 13px; vertical-align: middle;">
+              ${headerFormTitle}
+            </td>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">Berlaku Efektif</td>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">02 Januari 2025</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">Halaman</td>
+            <td style="border: 1px solid black; padding: 5px; font-size: 11px;">1 dari 1</td>
+          </tr>
         </table>
 
-        <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; text-decoration: underline;">NAMA PEMBIMBING</div>
-        <table style="width: 100%; font-size: 14px; margin-bottom: 25px; border-collapse: collapse;">
-          <tr><td style="width: 140px; padding: 5px 0;">Pembimbing I</td><td style="width: 15px;">:</td><td>${d1Baru}</td></tr>
-          <tr><td style="padding: 5px 0;">Pembimbing II</td><td>:</td><td>${d2Baru}</td></tr>
-        </table>
+        <!-- ISI FORMULIR -->
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 12px; border: 1px solid black;">
+              <div style="font-weight: bold; font-size: 15px; text-transform: uppercase;">${bodyFormTitle}</div>
+              <div style="font-weight: bold; font-size: 13px; margin-top: 4px;">PROGRAM STUDI SARJANA</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="width: 15%; padding: 6px 10px; border-left: 1px solid black; font-size: 12px;">NIM</td>
+            <td colspan="3" style="padding: 6px 10px; border-right: 1px solid black; font-size: 12px;">: ${nimDisplay}</td>
+          </tr>
+          <tr>
+            <td style="width: 15%; padding: 6px 10px; border-left: 1px solid black; border-bottom: 1px solid black; font-size: 12px;">Nama</td>
+            <td colspan="3" style="padding: 6px 10px; border-right: 1px solid black; border-bottom: 1px solid black; font-size: 12px;">: ${namaDisplay}</td>
+          </tr>
 
-        <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; text-decoration: underline;">JUDUL YANG DITETAPKAN SEBELUMNYA *)</div>
-        <div style="font-size: 14px; margin-bottom: 25px; text-transform: uppercase; line-height: 1.5; text-align: justify;">
-          ${oldData.judulIndo}
-        </div>
+          <tr>
+            <td colspan="4" style="text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">NAMA PEMBIMBING</td>
+          </tr>
+          <tr>
+            <td style="width: 15%; padding: 6px 10px; border-left: 1px solid black; font-size: 12px;">Pembimbing I</td>
+            <td colspan="3" style="padding: 6px 10px; border-right: 1px solid black; font-size: 12px;">: ${d1Baru}</td>
+          </tr>
+          <tr>
+            <td style="width: 15%; padding: 6px 10px; border-left: 1px solid black; border-bottom: 1px solid black; font-size: 12px;">Pembimbing II</td>
+            <td colspan="3" style="padding: 6px 10px; border-right: 1px solid black; border-bottom: 1px solid black; font-size: 12px;">: ${d2Baru !== '-' ? d2Baru : ''}</td>
+          </tr>
 
-        <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; text-decoration: underline;">JUDUL BARU **)</div>
-        <div style="font-size: 14px; margin-bottom: 50px; text-transform: uppercase; line-height: 1.5; text-align: justify;">
-          ${jBaru}
-        </div>
+          <tr>
+            <td colspan="4" style="text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">JUDUL YANG DITETAPKAN SEBELUMNYA *)</td>
+          </tr>
+          <tr>
+            <td colspan="4" style="padding: 15px 15px; border: 1px solid black; text-transform: uppercase; text-align: center; height: 60px; vertical-align: middle; font-size: 12px;">
+              ${oldData.judulIndo}
+            </td>
+          </tr>
 
-        <div style="font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 40px; text-decoration: underline;">
-          MENYETUJUI PERUBAHAN JUDUL DAN PEMBIMBING TUGAS AKHIR
-        </div>
+          <tr>
+            <td colspan="4" style="text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">JUDUL BARU **)</td>
+          </tr>
+          <tr>
+            <td colspan="4" style="padding: 15px 15px; border: 1px solid black; text-transform: uppercase; text-align: center; height: 60px; vertical-align: middle; font-size: 12px;">
+              ${jBaru}
+            </td>
+          </tr>
 
-        <table style="width: 100%; font-size: 13px; text-align: center; margin-bottom: 40px; border-collapse: collapse;">
-          ${signatureHeaders}
-        </table>
-
-        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
-           <tr>
-             <td style="width: 50%; text-align: center; vertical-align: bottom;">
-                Mengetahui<br/>Kaprodi ${prodiDisplay},<br/><br/><br/><br/><br/>
-                (......................................................)
-             </td>
-             <td style="width: 50%; text-align: center; vertical-align: bottom;">
-                Purwokerto, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br/>Pemohon,<br/><br/><br/><br/><br/>
-                ( ${namaDisplay} )
-             </td>
-           </tr>
+          <tr>
+            <td colspan="4" style="text-align: center; font-weight: bold; padding: 5px; border: 1px solid black; font-size: 12px;">MENYETUJUI PERUBAHAN JUDUL DAN PEMBIMBING TUGAS AKHIR</td>
+          </tr>
+          
+          ${signatureRowHTML}
+          
         </table>
         
-        <div style="margin-top: 50px; font-size: 11px; color: #333; line-height: 1.5; border-top: 1px dashed #ccc; padding-top: 15px;">
-          <strong>Catatan:</strong><br/>
-          *): Harus melampirkan fotokopi SK TA yang lama<br/>
-          **): Harus diisi<br/>
-          Formulir ini di-generate melalui sistem SIMTA. Form ini wajib ditandatangani secara lengkap sebelum diunggah kembali ke sistem untuk diverifikasi.
+        <!-- FOOTER CATATAN -->
+        <div style="margin-top: 15px; font-size: 11px; line-height: 1.5;">
+          <u>Catatan:</u><br/>
+          *) : Harus melampirkan SK TA yang lama<br/>
+          **) : Harus diisi<br/>
+          Formulir ini disediakan oleh admin Akademik. Form ini diisi lengkap dan dikumpulkan ke admin Akademik. Mahasiswa juga melakukan perubahan judul dan pembimbing pada aplikasi iGracias.
         </div>
       </div>
     `;
 
     const opt = {
-      margin:       10,
+      margin:       [10, 10, 10, 10], 
       filename:     `${nimDisplay}_Evidence_${kategori.value}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true },
@@ -494,6 +632,7 @@ const PembaruanSK = () => {
 
   const handleSubmit = async () => {
     setSubmitError(null);
+    if (isReadOnlyForm) return;
 
     if (submissionMode === 'create-baru' && !draftId) {
       setSubmitError({ title: 'Aksi Ditolak', message: 'Silakan Export Evidence Formulir terlebih dahulu untuk menyimpan data.' });
@@ -628,7 +767,7 @@ const PembaruanSK = () => {
             {pageStatus === 'success' ? <CheckCircle size={32} color="#10B981" /> : <Clock size={32} color="#2563EB" />}
           </div>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', marginBottom: 10 }}>
-            {pageStatus === 'success' ? 'Pengajuan Perubahan SK Berhasil Dikirim!' : 'Revisi Perubahan SK Berhasil Dikirim!'}
+            {pageStatus === 'success' ? 'Pengajuan Pembaruan SK Berhasil Dikirim!' : 'Revisi Pembaruan SK Berhasil Dikirim!'}
           </h2>
           <p style={{ fontSize: 11.5, color: '#6B7280', lineHeight: 1.6, marginBottom: 28 }}>
             Permohonan kamu sudah kami terima dan masuk ke dalam antrian verifikasi tim akademik. Proses membutuhkan waktu maksimal 3×24 jam kerja. Pantau status pengajuan di dashboard.
@@ -683,7 +822,7 @@ const PembaruanSK = () => {
                 <li style={{ marginBottom: '6px' }}>Lengkapi form perubahan. Setelah selesai, klik tombol <strong>Export Evidence Formulir</strong> untuk menyimpan draft secara otomatis.</li>
                 <li style={{ marginBottom: '6px' }}>Mintalah persetujuan (Tanda Tangan) pihak terkait pada formulir yang telah diunduh, lalu scan dan unggah kembali pada kolom di bawah untuk memproses pengajuan.</li>
               </ul>
-              <p style={{ fontSize: '11px' }}>Pengajuan perubahan SK diproses dalam waktu maksimal 3×24 jam sesuai antrian.</p>
+              <p style={{ fontSize: '11px' }}>Pengajuan pembaruan SK diproses dalam waktu maksimal 3×24 jam sesuai antrian.</p>
             </div>
           </div>
         </div>
@@ -715,7 +854,7 @@ const PembaruanSK = () => {
               styles={customSelectStyles}
             />
             {(submissionMode === 'patch-revisi' || draftId) && (
-              <p className="input-hint" style={{ fontSize: '10px', marginTop: '6px', color: '#D97706' }}>Kategori terkunci karena sudah masuk ke mode draft/perbaikan. Refresh halaman jika ingin mengulang dari awal.</p>
+              <p className="input-hint" style={{ fontSize: '10px', marginTop: '6px', color: '#D97706' }}>Kategori terkunci karena sudah masuk ke mode draft/perbaikan.</p>
             )}
           </div>
 
@@ -781,7 +920,8 @@ const PembaruanSK = () => {
                   <textarea
                     value={formData.judulIndo}
                     onChange={(e) => { setFormData(prev => ({ ...prev, judulIndo: e.target.value })); setSubmitError(null); }}
-                    style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '60px', borderColor: '#E5E7EB' }}
+                    style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '60px', borderColor: '#E5E7EB', backgroundColor: isReadOnlyForm ? '#F3F4F6' : '#fff', cursor: isReadOnlyForm ? 'not-allowed' : 'text' }}
+                    readOnly={isReadOnlyForm}
                     placeholder="Masukkan judul tugas akhir baru dalam Bahasa Indonesia"
                   />
                 </div>
@@ -793,7 +933,8 @@ const PembaruanSK = () => {
                   <textarea
                     value={formData.judulInggris}
                     onChange={(e) => { setFormData(prev => ({ ...prev, judulInggris: e.target.value })); setSubmitError(null); }}
-                    style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '60px', borderColor: '#E5E7EB' }}
+                    style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '60px', borderColor: '#E5E7EB', backgroundColor: isReadOnlyForm ? '#F3F4F6' : '#fff', cursor: isReadOnlyForm ? 'not-allowed' : 'text' }}
+                    readOnly={isReadOnlyForm}
                     placeholder="Enter your new thesis title in English"
                   />
                 </div>
@@ -807,7 +948,7 @@ const PembaruanSK = () => {
                 <label style={{ fontSize: '11.5px', marginBottom: '6px', color: '#374151', fontWeight: 600 }}>Nama Pembimbing 1 Baru *</label>
                 <div className="input-with-icon">
                   <User className="field-icon" size={16} color="#9CA3AF" />
-                  <input type="text" value={formData.dosen1} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px', color: '#6B7280' }} placeholder="Auto-terisi" />
+                  <input type="text" value={formData.dosen1} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px', color: '#6B7280', cursor: 'not-allowed' }} placeholder="Auto-terisi" />
                 </div>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -817,7 +958,7 @@ const PembaruanSK = () => {
                   <Select
                     options={lecturerOptions} styles={{...customSelectStyles, control: (b, s) => ({ ...customSelectStyles.control(b, s), paddingLeft: '32px'})}}
                     value={formData.kode1} onChange={(val) => handleDosenChange('kode1', val)}
-                    isLoading={loadingDosen} isDisabled={loadingDosen}
+                    isLoading={loadingDosen} isDisabled={loadingDosen || isReadOnlyForm}
                     isClearable className="w-full" placeholder="Pilih Kode Dosen"
                   />
                 </div>
@@ -826,7 +967,7 @@ const PembaruanSK = () => {
                 <label style={{ fontSize: '11.5px', marginBottom: '6px', color: '#374151', fontWeight: 600 }}>Nama Pembimbing 2 Baru (Opsional)</label>
                 <div className="input-with-icon">
                   <User className="field-icon" size={16} color="#9CA3AF" />
-                  <input type="text" value={formData.dosen2} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px', color: '#6B7280' }} placeholder="Auto-terisi" />
+                  <input type="text" value={formData.dosen2} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px', color: '#6B7280', cursor: 'not-allowed' }} placeholder="Auto-terisi" />
                 </div>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -836,7 +977,7 @@ const PembaruanSK = () => {
                   <Select
                     options={lecturerOptions} styles={{...customSelectStyles, control: (b, s) => ({ ...customSelectStyles.control(b, s), paddingLeft: '32px'})}}
                     value={formData.kode2} onChange={(val) => handleDosenChange('kode2', val)}
-                    isLoading={loadingDosen} isDisabled={loadingDosen}
+                    isLoading={loadingDosen} isDisabled={loadingDosen || isReadOnlyForm}
                     isClearable className="w-full" placeholder="Pilih Kode Dosen"
                   />
                 </div>
@@ -847,15 +988,15 @@ const PembaruanSK = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px', borderTop: '1px solid #E5E7EB', paddingTop: '16px' }}>
             <button
               onClick={handleGenerateTemplateAndSaveDraft}
-              disabled={isGenerating}
+              disabled={isGenerating || isReadOnlyForm}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '10px 20px', fontSize: '12px', fontWeight: 700,
-                background: isGenerating ? '#9CA3AF' : '#10B981', color: '#fff', border: 'none', borderRadius: '8px',
-                cursor: isGenerating ? 'not-allowed' : 'pointer', transition: 'background 0.2s', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                background: (isGenerating || isReadOnlyForm) ? '#9CA3AF' : '#10B981', color: '#fff', border: 'none', borderRadius: '8px',
+                cursor: (isGenerating || isReadOnlyForm) ? 'not-allowed' : 'pointer', transition: 'background 0.2s', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#10B981'}
+              onMouseEnter={(e) => !isReadOnlyForm && (e.currentTarget.style.background = '#059669')}
+              onMouseLeave={(e) => !isReadOnlyForm && (e.currentTarget.style.background = '#10B981')}
             >
               {isGenerating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={16} />} 
               {isGenerating ? 'Menyiapkan Dokumen...' : 'Export Evidence Formulir'}
@@ -890,11 +1031,11 @@ const PembaruanSK = () => {
               <label style={{ fontSize: '11.5px', marginBottom: '6px', color: '#374151', fontWeight: 600 }}>Unggah Dokumen Evidence {submissionMode !== 'patch-revisi' ? '*' : ''}</label>
               <div 
                 className={`upload-area ${isDragging ? 'dragging' : ''}`} 
-                onClick={() => fileInputRef.current.click()}
+                onClick={() => !isReadOnlyForm && fileInputRef.current.click()}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                style={{ padding: '24px 16px', minHeight: '120px', border: '1.5px dashed #CBD5E1', borderRadius: '8px', background: '#F8FAFC', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}
+                style={{ padding: '24px 16px', minHeight: '120px', border: '1.5px dashed #CBD5E1', borderRadius: '8px', background: '#F8FAFC', cursor: isReadOnlyForm ? 'not-allowed' : 'pointer', textAlign: 'center', transition: 'all 0.2s', opacity: isReadOnlyForm ? 0.6 : 1 }}
               >
                 <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf, .png, .jpg, .jpeg" />
                 <div className="upload-icon-circle" style={{ width: '40px', height: '40px', marginBottom: '10px', background: '#E2E8F0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
@@ -948,14 +1089,16 @@ const PembaruanSK = () => {
           <button
             className="btn-submit"
             onClick={handleSubmit}
-            disabled={pageStatus === 'submitting' || !kategori}
+            disabled={pageStatus === 'submitting' || !kategori || isReadOnlyForm}
             style={{
-              ...(pageStatus === 'submitting' || !kategori ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
-              padding: '12px 32px', fontSize: '13px', borderRadius: '8px', background: '#C0182A', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'background 0.2s'
+              ...(pageStatus === 'submitting' || !kategori || isReadOnlyForm ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
+              padding: '12px 32px', fontSize: '13px', borderRadius: '8px', background: isReadOnlyForm ? '#9CA3AF' : '#C0182A', color: '#fff', fontWeight: 700, border: 'none', cursor: isReadOnlyForm ? 'not-allowed' : 'pointer', transition: 'background 0.2s'
             }}
           >
             {pageStatus === 'submitting' ? (
               <><Loader size={14} style={{ animation: 'spin 1s linear infinite', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} /> Mengirim Pengajuan...</>
+            ) : isReadOnlyForm ? (
+              'Batas Waktu Perbaikan Habis'
             ) : submissionMode === 'patch-revisi' ? (
               'Kirim Revisi Dokumen'
             ) : (

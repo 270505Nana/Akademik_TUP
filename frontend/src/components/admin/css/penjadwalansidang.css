@@ -1,0 +1,558 @@
+/* ==========================================================================
+   RESET & LAYOUT GLOBAL (Mengatasi jarak kosong/gap di atas dan samping)
+   ========================================================================== */
+html, body, #root {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+.ps-page-root {
+  display: flex;
+  min-height: 100vh;
+  background-color: #F8FAFC; /* Warna abu-abu terang standar admin */
+  width: 100%;
+}
+
+.ps-main-content {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-left: 240px; /* Sesuai dengan --sidebar-width: 240px di sidebar.css */
+  padding: 0;
+  transition: margin-left 0.3s ease;
+}
+
+/* Penyesuaian saat mode mobile/tablet */
+@media (max-width: 991.98px) {
+  .ps-main-content {
+    margin-left: 0 !important;
+  }
+}
+
+.page-wrapper {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+   TOP BAR & MOBILE MENU
+   ========================================================================== */
+.mobile-menu-bar {
+  display: none;
+  background-color: #C0182A; /* Telkom Red */
+  color: white;
+  padding: 12px 20px;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-menu-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.mobile-menu-title {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 991.98px) {
+  .mobile-menu-bar { display: flex; }
+}
+
+.top-bar-red {
+  background-color: #C0182A;
+  color: white;
+  padding: 16px 24px;
+  margin-top: 0 !important; /* Memaksa nempel ke ujung atas */
+}
+
+.top-bar-red h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.content-container {
+  padding: 24px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* Jarak antar section */
+}
+
+/* ==========================================================================
+   HEADER HALAMAN & ALERT
+   ========================================================================== */
+.ps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0 0 4px 0;
+}
+
+.ps-subtitle {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0;
+}
+
+.ps-alert-box {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   STATS CARDS (Card 3 Kolom)
+   ========================================================================== */
+.ps-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.ps-card {
+  background-color: #FFFFFF;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ps-card-label {
+  font-size: 13px;
+  color: #64748B;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.ps-card-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+
+.ps-icon-wrapper {
+  padding: 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ps-blue { background-color: #EFF6FF; color: #2563EB; }
+.ps-emerald { background-color: #ECFDF5; color: #059669; }
+.ps-amber { background-color: #FFFBEB; color: #D97706; }
+
+.ps-text-emerald { color: #059669; }
+.ps-text-amber { color: #D97706; }
+.ps-text-red { color: #C0182A; }
+.ps-text-muted { color: #64748B; margin: 0; }
+.ps-text-dark { color: #1E293B; }
+
+/* ==========================================================================
+   GRAFIK BATANG (CHART)
+   ========================================================================== */
+.ps-chart-section {
+  background-color: #FFFFFF;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #E2E8F0;
+}
+
+.ps-chart-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.ps-chart-title-wrapper h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+
+.ps-bar-chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ps-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ps-bar-label {
+  width: 220px;
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ps-bar-track {
+  flex: 1;
+  height: 14px;
+  background-color: #F1F5F9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ps-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease-in-out;
+}
+
+.ps-bar-value {
+  width: 50px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  text-align: left;
+}
+
+/* ==========================================================================
+   TABEL & FILTER (Dibungkus Card Main)
+   ========================================================================== */
+.card-main {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #E2E8F0;
+  overflow: hidden;
+}
+
+.ps-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+  background-color: #FFFFFF;
+}
+
+.ps-search-wrapper {
+  position: relative;
+  width: 300px;
+  max-width: 100%;
+}
+
+.ps-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94A3B8;
+}
+
+.ps-search-input {
+  width: 100%;
+  padding: 8px 16px 8px 36px;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ps-search-input:focus {
+  border-color: #C0182A;
+}
+
+.ps-filter-dropdown-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ps-filter-icon {
+  color: #64748B;
+}
+
+.ps-dropdown {
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  outline: none;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  color: #334155;
+}
+
+.ps-dropdown:focus {
+  border-color: #C0182A;
+}
+
+.ps-table-divider {
+  height: 1px;
+  background-color: #E2E8F0;
+  margin: 0;
+}
+
+.ps-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ps-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.ps-table th {
+  background-color: #F8FAFC;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.ps-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 13px;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.ps-table-row:hover {
+  background-color: #F8FAFC;
+}
+
+.ps-font-medium { font-weight: 600; color: #1E293B; margin: 0 0 2px 0; }
+.ps-font-semibold { font-weight: 600; }
+.ps-text-xs { font-size: 11.5px; }
+.ps-text-center { text-align: center; }
+.ps-py-6 { padding-top: 32px; padding-bottom: 32px; }
+
+.ps-flex-center-gap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ==========================================================================
+   TOMBOL AKSI (Buttons)
+   ========================================================================== */
+.ps-action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ps-btn-primary {
+  background-color: #C0182A;
+  color: #FFFFFF;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ps-btn-primary:hover:not(:disabled) {
+  background-color: #A01423;
+}
+
+.ps-btn-primary:disabled {
+  background-color: #F1F5F9;
+  color: #94A3B8;
+  cursor: not-allowed;
+}
+
+.ps-btn-secondary {
+  background-color: #F1F5F9;
+  color: #475569;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ps-btn-secondary:hover:not(:disabled) {
+  background-color: #E2E8F0;
+}
+
+.ps-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ps-btn-lock {
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ps-btn-lock.locked {
+  background-color: #FEF2F2;
+  border-color: #FECACA;
+  color: #DC2626;
+}
+
+.ps-btn-lock.locked:hover {
+  background-color: #FEE2E2;
+}
+
+.ps-btn-lock.unlocked {
+  background-color: #F8FAFC;
+  border-color: #E2E8F0;
+  color: #64748B;
+}
+
+.ps-btn-lock.unlocked:hover {
+  background-color: #F1F5F9;
+}
+
+/* ==========================================================================
+   MODAL POPUP SET JADWAL
+   ========================================================================== */
+.ps-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.5); /* Overlay gelap sedikit kebiruan */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.ps-modal-card {
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 420px;
+  width: 100%;
+  padding: 24px;
+}
+
+.ps-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0 0 6px 0;
+}
+
+.ps-modal-subtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0 0 20px 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.ps-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ps-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.ps-input {
+  width: 100%;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: #1E293B;
+  outline: none;
+  background-color: #F8FAFC;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.ps-input:focus {
+  background-color: #FFFFFF;
+  border-color: #C0182A;
+  box-shadow: 0 0 0 3px rgba(192, 24, 42, 0.1);
+}
+
+.ps-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* ==========================================================================
+   ALERT OVERLAY (Notifikasi Pojok Kanan Bawah)
+   ========================================================================== */
+.alert-overlay {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+}

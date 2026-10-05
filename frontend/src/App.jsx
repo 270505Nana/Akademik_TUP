@@ -31,6 +31,7 @@ import PendaftaranSidang   from "./pages/mahasiswa/pendaftaransidang";
 import PendaftaranYudisium from "./pages/mahasiswa/pendaftaranyudisium";
 import UnduhBerkasKelulusan from "./pages/mahasiswa/UnduhBerkasKelulusan";
 import KelolaDataDosen      from "./pages/admin/keloladatadosen";
+import PenjadwalanSidangAdmin from "./pages/admin/penjadwalansidang";
 import KelolaPusatInformasi from "./pages/admin/PusatInformasi";
 
 const Placeholder = ({ title }) => (
@@ -232,6 +233,14 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["ADMIN"]}>
                 <RegistrasiSidang />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/akademik/penjadwalan-sidang"
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <PenjadwalanSidangAdmin />
               </ProtectedRoute>
             }
           />
