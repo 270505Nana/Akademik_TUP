@@ -1,0 +1,43 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: simta-backend-compose
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+    # NOTES: sementara pakai polling
+    command: npm run dev -- --legacy-watch
+    # healthcheck:
+    #   test:
+    #     ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+    #   interval: 5s
+    #   timeout: 3s
+    #   retries: 5
+    #   start_period: 5s
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: simta-frontend-compose
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    # NOTES: sementara pakai polling
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+
+volumes:
+  backend_node_modules:
+    name: simta-backend-node-modules
+  frontend_node_modules:
+    name: simta-frontend-node-modules

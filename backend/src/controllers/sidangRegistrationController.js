@@ -29,10 +29,10 @@ import {
   getSidangRegistrationByMahasiswaId as fetchSidangByMahasiswaId,
 } from "../services/sidangRegistrationService.js";
 
-// Sidang Registration List (with search, studyProgramId filter, sort, and pagination)
+// Sidang Registration List (with search, studyProgramId, skemaSidang, jalurNonSidang, status filter, sort, and pagination)
 const listSidangRegistrations = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search, studyProgramId, sortBy } = req.query;
+  const { search, studyProgramId, skemaSidang, jalurNonSidang, status, sortBy } = req.query;
 
   const where = {
     deletedAt: null,
@@ -41,38 +41,41 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
   // 1. Global Search across mahasiswa name, nim, and thesis title (Indonesia & English)
   const searchTerm = (search || "").trim();
   if (searchTerm) {
-    where.OR = [
-      {
-        mahasiswa: {
-          user: {
-            name: {
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        {
+          mahasiswa: {
+            user: {
+              name: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+        },
+        {
+          mahasiswa: {
+            nim: {
               contains: searchTerm,
               mode: "insensitive",
             },
           },
         },
-      },
-      {
-        mahasiswa: {
-          nim: {
+        {
+          judulTugasAkhirIndonesia: {
             contains: searchTerm,
             mode: "insensitive",
           },
         },
-      },
-      {
-        judulTugasAkhirIndonesia: {
-          contains: searchTerm,
-          mode: "insensitive",
+        {
+          judulTugasAkhirInggris: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
         },
-      },
-      {
-        judulTugasAkhirInggris: {
-          contains: searchTerm,
-          mode: "insensitive",
-        },
-      },
-    ];
+      ],
+    });
   }
 
   // 2. Filter by Study Program ID
@@ -85,7 +88,83 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
     where.mahasiswa.studyProgramId = studyProgramId.trim();
   }
 
-  // 3. Sorting (Single unified sortBy param matching other endpoints)
+  // 3. Filter by Skema Sidang (utamakan skemaSidangFinal jika ada isinya)
+  if (
+    skemaSidang &&
+    typeof skemaSidang === "string" &&
+    skemaSidang.trim() !== ""
+  ) {
+    const skema = skemaSidang.trim();
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        {
+          skemaSidangFinal: {
+            equals: skema,
+            mode: "insensitive",
+          },
+        },
+        {
+          OR: [
+            { skemaSidangFinal: null },
+            { skemaSidangFinal: "" },
+          ],
+          skemaSidang: {
+            equals: skema,
+            mode: "insensitive",
+          },
+        },
+      ],
+    });
+  }
+
+  // 4. Filter by Jalur Non Sidang (utamakan jalurNonSidangFinal jika ada isinya)
+  if (
+    jalurNonSidang &&
+    typeof jalurNonSidang === "string" &&
+    jalurNonSidang.trim() !== ""
+  ) {
+    const jalur = jalurNonSidang.trim();
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        {
+          jalurNonSidangFinal: {
+            equals: jalur,
+            mode: "insensitive",
+          },
+        },
+        {
+          OR: [
+            { jalurNonSidangFinal: null },
+            { jalurNonSidangFinal: "" },
+          ],
+          jalurNonSidang: {
+            has: jalur,
+          },
+        },
+      ],
+    });
+  }
+
+  // 5. Filter by Status
+  if (status && typeof status === "string" && status.trim() !== "") {
+    const s = status.trim();
+    if (s.toLowerCase() === "siap sidang") {
+      where.status = "Pendaftaran Diterima";
+      where.sidangPeriod = {
+        isOpen: true,
+        deletedAt: null,
+      };
+    } else {
+      where.status = {
+        equals: s,
+        mode: "insensitive",
+      };
+    }
+  }
+
+  // 6. Sorting (Single unified sortBy param matching other endpoints)
   const sortParam = (sortBy || "").toLowerCase().trim();
   let orderBy = { createdAt: "desc" };
 
@@ -819,6 +898,12 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
     await deleteUploadsByCategory(id, sudahSlugs);
   }
 
+  const isRevision =
+    existingRegistration.status === "Perlu Revisi" ||
+    existingRegistration.isEdit !== null ||
+    existingRegistration.message !== null;
+
+  updateData.status = isRevision ? "Revisi Diajukan" : "Dalam Proses";
   updateData.isDraft = false; // Finalize submit
   updateData.submittedAt = new Date(); // Record student submission time
 
@@ -1001,7 +1086,13 @@ const downloadSidangRegistrationFile = asyncHandler(async (req, res) => {
 // Approve Sidang Registration (Admin Response)
 const approveSidangRegistration = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { adminId, sidangPeriodId, sidangRegistrationUploadIds } = req.body;
+  const {
+    adminId,
+    sidangPeriodId,
+    sidangRegistrationUploadIds,
+    skemaSidangFinal,
+    jalurNonSidangFinal,
+  } = req.body;
 
   const errors = [];
   if (isNil(adminId)) {
@@ -1063,11 +1154,24 @@ const approveSidangRegistration = asyncHandler(async (req, res) => {
     });
   }
 
+  const finalSkemaSidang =
+    typeof skemaSidangFinal === "string" && skemaSidangFinal.trim() !== ""
+      ? skemaSidangFinal.trim()
+      : null;
+
+  const finalJalurNonSidang =
+    typeof jalurNonSidangFinal === "string" && jalurNonSidangFinal.trim() !== ""
+      ? jalurNonSidangFinal.trim()
+      : null;
+
   const updatedRegistration = await prisma.sidangRegistration.update({
     where: { id },
     data: {
       adminId,
       sidangPeriodId,
+      skemaSidangFinal: finalSkemaSidang,
+      jalurNonSidangFinal: finalJalurNonSidang,
+      status: "Pendaftaran Diterima",
       message: null,
       isEdit: null,
     },
@@ -1146,6 +1250,7 @@ const rejectSidangRegistration = asyncHandler(async (req, res) => {
       message,
       isEdit: isEdit ? new Date(isEdit) : null,
       sidangPeriodId: null,
+      status: "Perlu Revisi",
       isDraft: isEdit ? true : false,
       submittedAt: isEdit ? null : undefined,
     },

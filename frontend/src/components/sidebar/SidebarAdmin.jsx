@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Calendar, Database, FileCheck, FileText, LogOut } from 'lucide-react'; 
+import { Home, Calendar, Database, FileCheck, FileText, LogOut } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../components/sidebar/sidebar.css';
@@ -10,60 +10,56 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const menuSidebar = [
-    {
-      label: 'Utama',
-      icon: <Home size={16} />,
-      items: [
-        { label: 'Beranda', path: '/akademik/dashboard' }
-      ]
-    },
-    {
-      label: 'Kelola Periode',
-      icon: <Calendar size={16} />,
-      items: [
-        { label: 'Kelola Periode Sidang',   path: '/akademik/atur-periode/sidang'   },
-        { label: 'Kelola Periode Yudisium', path: '/akademik/atur-periode/yudisium' },
-      ]
-    },
-    {
-      label: 'Manajemen Akademik',
-      icon: <Database size={16} />,
-      items: [
-        { label: 'Manajemen Data Akademik',      path: '/akademik/data-dosen'  },
-        { label: 'Manajemen Persyaratan Berkas', path: '/akademik/atur-berkas' }
-      ]
-    },
-    {
-      label: 'Layanan Akhir Studi',
-      icon: <FileCheck size={16} />,
-      items: [
-        { label: 'Administrasi Sidang',   path: '/akademik/registrasi-sidang-all' },
-        { label: 'Penjadwalan Sidang',    path: '/akademik/penjadwalan-sidang'    }, 
-        { label: 'Administrasi Yudisium', path: '/akademik/verifikasi-yudisium'   }
-      ]
-    },
-    {
-      label: 'Layanan SK & SKL',
-      icon: <FileText size={16} />,
-      items: [
-        { label: 'Permohonan SK TA', path: '/akademik/permohonan-sk'    },
-        { label: 'Upload SKL',       path: '/akademik/upload-skl'       },
-        { label: 'Upload Transkrip', path: '/akademik/upload-transkrip' },
-      ]
-    }
-  ];
+  {
+    label: 'Utama',
+    icon: <Home size={13} />,
+    items: [
+      { label: 'Beranda', path: '/akademik/dashboard' }
+    ]
+  },
+  {
+    label: 'Kelola Periode',
+    icon: <Calendar size={13} />,
+    items: [
+      { label: 'Kelola Periode Sidang', path: '/akademik/atur-periode/sidang' },
+      { label: 'Kelola Periode Yudisium', path: '/akademik/atur-periode/yudisium' },
+    ]
+  },
+  {
+    label: 'Manajemen Akademik',
+    icon: <Database size={13} />,
+    items: [
+      { label: 'Manajemen Data Dosen', path: '/akademik/data-dosen' },
+      { label: 'Manajemen Data Pusat Informasi', path: '/akademik/pusat-informasi' },
+      { label: 'Manajemen Persyaratan Berkas', path: '/akademik/atur-berkas' }
+    ]
+  },
+  {
+    label: 'Layanan Akhir Studi',
+    icon: <FileCheck size={13} />,
+    items: [
+      { label: 'Administrasi Sidang', path: '/akademik/registrasi-sidang-all' },
+      { label: 'Penjadwalan Sidang', path: '/akademik/penjadwalan-sidang' },
+      { label: 'Administrasi Yudisium', path: '/akademik/verifikasi-yudisium' }
+    ]
+  },
+  {
+    label: 'Layanan SK & SKL',
+    icon: <FileText size={13} />,
+    items: [
+      { label: 'Permohonan SK TA', path: '/akademik/permohonan-sk' },
+      { label: 'Upload SKL', path: '/akademik/upload-skl' },
+      { label: 'Upload Transkrip', path: '/akademik/upload-transkrip' },
+    ]
+  }
+];
 
   const handleLogout = () => setShowLogoutConfirm(true);
-  const confirmLogout = () => { 
-    setShowLogoutConfirm(false); 
-    logout(); 
-    navigate('/login', { replace: true }); 
-  };
+  const confirmLogout = () => { setShowLogoutConfirm(false); logout(); navigate('/login', { replace: true }); };
   const cancelLogout = () => setShowLogoutConfirm(false);
 
   return (
     <>
-      {/* Modal Logout (Tetap menggunakan inline style aslinya agar aman) */}
       {showLogoutConfirm && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
@@ -85,7 +81,6 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
         </div>
       )}
 
-      {/* Sidebar memanggil class bawaan dari sidebar.css */}
       <aside id="sidebar" className={isOpen ? 'open' : ''}>
         
         <div className="sidebar-logo">
@@ -102,7 +97,6 @@ const SidebarAdmin = ({ isOpen, onClose }) => {
                 <span>{section.label}</span>
               </div>
 
-              {/* Struktur ini akan langsung membaca .sub-nav li a di CSS kamu */}
               <ul className="sub-nav" style={{ margin: 0, padding: 0 }}>
                 {section.items.map((item, iIdx) => (
                   <li key={iIdx}>

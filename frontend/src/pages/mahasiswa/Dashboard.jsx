@@ -248,11 +248,23 @@ const DashboardMahasiswa = () => {
       const sidangPeriodsRaw = payload.sidangPeriods || [];
       const yudisiumPeriodsRaw = payload.yudisiumPeriods || [];
 
-      const sDaftar = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran sidang'));
-      const sPelaksanaan = pickRelevantPeriod(sidangPeriodsRaw.filter(p => p.category?.toLowerCase() === 'sidang'));
+      const sDaftar = pickRelevantPeriod(sidangPeriodsRaw.filter(p => {
+        const c = p.category?.toLowerCase();
+        return c === 'pendaftaran';
+      }));
+      const sPelaksanaan = pickRelevantPeriod(sidangPeriodsRaw.filter(p => {
+        const c = p.category?.toLowerCase();
+        return c === 'pelaksanaan';
+      }));
 
-      const yDaftar = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'pendaftaran yudisium'));
-      const yPelaksanaan = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => p.category?.toLowerCase() === 'yudisium'));
+      const yDaftar = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => {
+        const c = p.category?.toLowerCase();
+        return c === 'pendaftaran';
+      }));
+      const yPelaksanaan = pickRelevantPeriod(yudisiumPeriodsRaw.filter(p => {
+        const c = p.category?.toLowerCase();
+        return c === 'pelaksanaan';
+      }));
 
       setSidangPeriode(sDaftar);
       setSidangPelaksanaan(sPelaksanaan);

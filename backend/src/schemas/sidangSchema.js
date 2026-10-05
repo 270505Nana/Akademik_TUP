@@ -9,7 +9,9 @@ export const saveSidangDraftSchema = z.object({
   mahasiswaId: z.string().uuid("ID Mahasiswa tidak valid").optional().nullable(),
   program: z.string().trim().optional().nullable(),
   skemaSidang: z.string().trim().optional().nullable(),
+  skemaSidangFinal: z.string().trim().optional().nullable(),
   jalurNonSidang: z.array(z.string()).optional().nullable(),
+  jalurNonSidangFinal: z.string().trim().optional().nullable(),
   lulusTesBahasa: z.boolean().optional().nullable(),
   sks: z.coerce.number().int().min(0).max(200).optional().nullable(),
   ipk: z.coerce.number().min(0).max(4).optional().nullable(),
@@ -31,6 +33,12 @@ export const approveSidangSchema = z.object({
   sidangPeriodId: z
     .string({ required_error: "Sidang Period ID wajib diisi" })
     .uuid("Sidang Period ID tidak valid"),
+  skemaSidangFinal: z.string().trim().optional().nullable(),
+  jalurNonSidangFinal: z.string().trim().optional().nullable(),
+  sidangRegistrationUploadIds: z
+    .array(z.string().uuid("ID berkas tidak valid"))
+    .optional()
+    .nullable(),
 });
 
 /**
@@ -45,4 +53,8 @@ export const rejectSidangSchema = z.object({
     .trim()
     .min(1, "Pesan penolakan/revisi wajib diisi"),
   isEdit: z.string().optional().nullable(),
+  sidangRegistrationUploadIds: z
+    .array(z.string().uuid("ID berkas tidak valid"))
+    .optional()
+    .nullable(),
 });

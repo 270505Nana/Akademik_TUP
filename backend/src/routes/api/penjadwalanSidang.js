@@ -1,7 +1,11 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
-import { verifyToken } from '../../middlewares/auth.js';
-import { isKetuaKK, isAdmin } from '../../middlewares/authorize.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import {
+  isKetuaKK,
+  isAdmin,
+  isAdminOrDosen,
+} from "../../middlewares/authorize.js";
 import {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -10,7 +14,7 @@ import {
   batchSetJadwalSidang,
   exportJadwalSidang,
   toggleLockSidangRegistration,
-} from '../../controllers/penjadwalanSidangController.js';
+} from "../../controllers/penjadwalanSidangController.js";
 
 /**
  * @swagger
@@ -28,6 +32,11 @@ import {
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: sidangPeriodId
+ *         schema:
+ *           type: string
+ *         description: ID Periode Sidang. Jika dikosongkan, otomatis memfilter data pada periode sidang yang saat ini aktif.
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -76,9 +85,9 @@ import {
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token
+ *         description: Access denied (Hanya admin dan dosen yang dapat mengakses)
  */
-router.get("/", verifyToken, listPenjadwalanSidang);
+router.get("/", verifyToken, isAdminOrDosen, listPenjadwalanSidang);
 
 /**
  * @swagger
@@ -114,7 +123,12 @@ router.get("/", verifyToken, listPenjadwalanSidang);
  *       404:
  *         description: Sidang registration not found
  */
-router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistration);
+router.patch(
+  "/:id/toggle-lock",
+  verifyToken,
+  isAdmin,
+  toggleLockSidangRegistration,
+);
 
 /**
  * @swagger
@@ -129,16 +143,16 @@ router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistrat
  *         name: sidangPeriodId
  *         schema:
  *           type: string
- *         description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor jadwal pada periode sidang terakhir.
+ *         description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor jadwal pada periode sidang yang saat ini aktif.
  *     responses:
  *       200:
  *         description: Berhasil mengunduh file Excel format iGracias
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Hanya admin yang dapat mengakses)
+ *         description: Access denied (Hanya admin dan dosen yang dapat mengakses)
  */
-router.get("/export", verifyToken, isAdmin, exportJadwalSidang);
+router.get("/export", verifyToken, isAdminOrDosen, exportJadwalSidang);
 
 /**
  * @swagger

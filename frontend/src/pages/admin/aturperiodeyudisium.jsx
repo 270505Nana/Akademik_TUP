@@ -109,7 +109,7 @@ const AturPeriodeYudisium = () => {
   const [activeFilter, setActiveFilter] = useState('Semua Periode');
   
   const [form, setForm] = useState({ 
-    name: '', category: 'pendaftaran yudisium', period: '', startDate: '', endDate: '' 
+    name: '', category: 'pendaftaran', period: '', startDate: '', endDate: '' 
   });
 
   const [editingGroup, setEditingGroup] = useState(null);
@@ -240,8 +240,8 @@ const AturPeriodeYudisium = () => {
     const dateError = validateDates(form.startDate, form.endDate);
     if (dateError) { showAlert('error', 'Validasi Tanggal', dateError); return; }
 
-    if (form.category === 'yudisium') {
-      const pend = periods.find(p => p?.category === 'pendaftaran yudisium' && p?.period === form.period && p?.name === form.name);
+    if (form.category === 'pelaksanaan') {
+      const pend = periods.find(p => (p?.category === 'pendaftaran') && p?.period === form.period && p?.name === form.name);
 
       if (!pend) { 
         showAlert('error', 'Validasi Gagal', `Data Pendaftaran Yudisium rujukan tidak valid atau tidak ditemukan.`); 
@@ -291,7 +291,7 @@ const AturPeriodeYudisium = () => {
         showAlert('success', 'Berhasil', 'Data periode yudisium telah berhasil disimpan.');
       }
       
-      setForm({ name: '', category: 'pendaftaran yudisium', period: '', startDate: '', endDate: '' });
+      setForm({ name: '', category: 'pendaftaran', period: '', startDate: '', endDate: '' });
       setIsCreateModalOpen(false);
       fetchPeriods();
     } catch (err) {
@@ -649,12 +649,12 @@ const AturPeriodeYudisium = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>KATEGORI *</label>
                       <select className="form-control" value={form.category} onChange={e => setForm({...form, category: e.target.value, name: '', period: ''})} style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }}>
-                        <option value="pendaftaran yudisium">Pendaftaran Yudisium</option>
-                        <option value="yudisium">Pelaksanaan Yudisium</option>
+                        <option value="pendaftaran">Pendaftaran Yudisium</option>
+                        <option value="pelaksanaan">Pelaksanaan Yudisium</option>
                       </select>
                     </div>
 
-                    {form.category === 'pendaftaran yudisium' ? (
+                    {form.category === 'pendaftaran' ? (
                       <>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>TAHUN AJARAN *</label>
@@ -706,7 +706,7 @@ const AturPeriodeYudisium = () => {
               </div>
               <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                 <button onClick={() => setIsCreateModalOpen(false)} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #CBD5E1', backgroundColor: '#fff', fontWeight: 600, cursor: 'pointer' }}>Batal</button>
-                <button type="submit" form="createForm" disabled={submitting || (form.category === 'yudisium' && availableGroupsForYudisium.length === 0)} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: (form.category === 'yudisium' && availableGroupsForYudisium.length === 0) ? '#94A3B8' : '#C0182A', color: '#fff', fontWeight: 700, cursor: (form.category === 'yudisium' && availableGroupsForYudisium.length === 0) ? 'not-allowed' : 'pointer' }}>{submitting ? 'Menyimpan...' : 'Simpan'}</button>
+                <button type="submit" form="createForm" disabled={submitting || ((form.category === 'pelaksanaan') && availableGroupsForYudisium.length === 0)} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: ((form.category === 'pelaksanaan') && availableGroupsForYudisium.length === 0) ? '#94A3B8' : '#C0182A', color: '#fff', fontWeight: 700, cursor: ((form.category === 'pelaksanaan') && availableGroupsForYudisium.length === 0) ? 'not-allowed' : 'pointer' }}>{submitting ? 'Menyimpan...' : 'Simpan'}</button>
               </div>
             </motion.div>
           </div>

@@ -29,24 +29,16 @@ import {
   getYudisiumRegistrationByMahasiswaId as fetchYudisiumByMahasiswaId,
 } from "../services/yudisiumRegistrationService.js";
 
-// Yudisium Registration List (with search, filter, sort, and pagination)
+// Yudisium Registration List (with search, studyProgramId, skemaSidang, pengajuanCumlaude, skemaCumlaude, status filter, sort, and pagination)
 const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
   const {
     search,
-    status,
-    isDraft,
-    yudisiumRegistrationPeriodId,
-    yudisiumPeriodId,
     studyProgramId,
-    facultyId,
-    tahunAngkatan,
-    program,
     skemaSidang,
     pengajuanCumlaude,
     skemaCumlaude,
-    berminatWirausaha,
-    dosenWaliId,
+    status,
     sortBy,
   } = req.query;
 
@@ -57,86 +49,44 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
   // 1. Global Search across mahasiswa name, nim, and thesis title
   const searchTerm = (search || "").trim();
   if (searchTerm) {
-    where.OR = [
-      {
-        mahasiswa: {
-          user: {
-            name: {
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        {
+          mahasiswa: {
+            user: {
+              name: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+        },
+        {
+          mahasiswa: {
+            nim: {
               contains: searchTerm,
               mode: "insensitive",
             },
           },
         },
-      },
-      {
-        mahasiswa: {
-          nim: {
+        {
+          judulTugasAkhirIndonesia: {
             contains: searchTerm,
             mode: "insensitive",
           },
         },
-      },
-      {
-        judulTugasAkhirIndonesia: {
-          contains: searchTerm,
-          mode: "insensitive",
+        {
+          judulTugasAkhirInggris: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
         },
-      },
-      {
-        judulTugasAkhirInggris: {
-          contains: searchTerm,
-          mode: "insensitive",
-        },
-      },
-    ];
+      ],
+    });
   }
 
-  // 2. Status Filter
-  if (status && typeof status === "string" && status.trim() !== "") {
-    const s = status.trim().toLowerCase();
-    if (s === "draft") {
-      where.isDraft = true;
-      where.isEdit = null;
-    } else if (s === "submitted") {
-      where.isDraft = false;
-      where.yudisiumPeriodId = null;
-      where.message = null;
-      where.isEdit = null;
-    } else if (s === "approved") {
-      where.yudisiumPeriodId = { not: null };
-    } else if (s === "rejected") {
-      where.message = { not: null };
-      where.isEdit = null;
-      where.yudisiumPeriodId = null;
-    } else if (s === "revision") {
-      where.isEdit = { not: null };
-    }
-  }
-
-  // Explicit isDraft filter if provided
-  const parsedIsDraft = parseBoolean(isDraft);
-  if (parsedIsDraft !== undefined) {
-    where.isDraft = parsedIsDraft;
-  }
-
-  // 3. Periode Yudisium (Pendaftaran dan Pelaksanaan)
-  if (
-    yudisiumRegistrationPeriodId &&
-    typeof yudisiumRegistrationPeriodId === "string" &&
-    yudisiumRegistrationPeriodId.trim() !== ""
-  ) {
-    where.yudisiumRegistrationPeriodId = yudisiumRegistrationPeriodId.trim();
-  }
-
-  if (
-    yudisiumPeriodId &&
-    typeof yudisiumPeriodId === "string" &&
-    yudisiumPeriodId.trim() !== ""
-  ) {
-    where.yudisiumPeriodId = yudisiumPeriodId.trim();
-  }
-
-  // 4. Akademik & Program Studi Mahasiswa
+  // 2. Filter by Study Program ID
   if (
     studyProgramId &&
     typeof studyProgramId === "string" &&
@@ -146,84 +96,87 @@ const listYudisiumRegistrations = asyncHandler(async (req, res) => {
     where.mahasiswa.studyProgramId = studyProgramId.trim();
   }
 
-  if (facultyId && typeof facultyId === "string" && facultyId.trim() !== "") {
-    where.mahasiswa = where.mahasiswa || {};
-    where.mahasiswa.studyProgram = {
-      ...where.mahasiswa.studyProgram,
-      facultyId: facultyId.trim(),
-    };
-  }
-
-  if (
-    tahunAngkatan !== undefined &&
-    tahunAngkatan !== null &&
-    String(tahunAngkatan).trim() !== ""
-  ) {
-    const parsedAngkatan = parseInt(tahunAngkatan, 10);
-    if (!isNaN(parsedAngkatan)) {
-      where.mahasiswa = where.mahasiswa || {};
-      where.mahasiswa.tahunAngkatan = parsedAngkatan;
-    }
-  }
-
-  // Program (Reguler / Alih Jenjang)
-  if (program && typeof program === "string" && program.trim() !== "") {
-    where.program = {
-      contains: program.trim(),
-      mode: "insensitive",
-    };
-  }
-
-  // Skema Sidang
+  // 3. Filter by Skema Sidang
   if (
     skemaSidang &&
     typeof skemaSidang === "string" &&
     skemaSidang.trim() !== ""
   ) {
     where.skemaSidang = {
-      contains: skemaSidang.trim(),
+      equals: skemaSidang.trim(),
       mode: "insensitive",
     };
   }
 
-  // Dosen Wali
-  if (
-    dosenWaliId &&
-    typeof dosenWaliId === "string" &&
-    dosenWaliId.trim() !== ""
-  ) {
-    where.dosenWaliId = dosenWaliId.trim();
-  }
-
-  // 5. Cumlaude & Wirausaha
+  // 4. Filter by Pengajuan Cumlaude (utamakan pengajuanCumlaudeFinal jika ada isinya)
   if (
     pengajuanCumlaude &&
     typeof pengajuanCumlaude === "string" &&
     pengajuanCumlaude.trim() !== ""
   ) {
-    where.pengajuanCumlaude = {
-      contains: pengajuanCumlaude.trim(),
-      mode: "insensitive",
-    };
+    const pengajuan = pengajuanCumlaude.trim();
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        {
+          pengajuanCumlaudeFinal: {
+            equals: pengajuan,
+            mode: "insensitive",
+          },
+        },
+        {
+          OR: [
+            { pengajuanCumlaudeFinal: null },
+            { pengajuanCumlaudeFinal: "" },
+          ],
+          pengajuanCumlaude: {
+            equals: pengajuan,
+            mode: "insensitive",
+          },
+        },
+      ],
+    });
   }
 
+  // 5. Filter by Skema Cumlaude (utamakan skemaCumlaudeFinal jika ada isinya)
   if (
     skemaCumlaude &&
     typeof skemaCumlaude === "string" &&
     skemaCumlaude.trim() !== ""
   ) {
-    where.skemaCumlaude = {
-      contains: skemaCumlaude.trim(),
+    const skema = skemaCumlaude.trim();
+    where.AND = where.AND || [];
+    where.AND.push({
+      OR: [
+        {
+          skemaCumlaudeFinal: {
+            equals: skema,
+            mode: "insensitive",
+          },
+        },
+        {
+          OR: [
+            { skemaCumlaudeFinal: null },
+            { skemaCumlaudeFinal: "" },
+          ],
+          skemaCumlaude: {
+            equals: skema,
+            mode: "insensitive",
+          },
+        },
+      ],
+    });
+  }
+
+  // 6. Filter by Status
+  if (status && typeof status === "string" && status.trim() !== "") {
+    where.status = {
+      equals: status.trim(),
       mode: "insensitive",
     };
   }
 
-  const parsedWirausaha = parseBoolean(berminatWirausaha);
-  if (parsedWirausaha !== undefined) {
-    where.berminatWirausaha = parsedWirausaha;
-  }
-
-  // 6. Sorting (Single unified sortBy param matching other endpoints)
+  // 3. Sorting (Single unified sortBy param matching other endpoints)
   const sortParam = (sortBy || "").toLowerCase().trim();
   let orderBy = { createdAt: "desc" };
 
@@ -1047,6 +1000,12 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
     }
   }
 
+  const isRevision =
+    existingRegistration.status === "Perlu Revisi" ||
+    existingRegistration.isEdit !== null ||
+    existingRegistration.message !== null;
+
+  updateData.status = isRevision ? "Revisi Diajukan" : "Dalam Proses";
   updateData.isDraft = false;
   updateData.submittedAt = new Date();
 
@@ -1230,7 +1189,13 @@ const downloadYudisiumRegistrationFile = asyncHandler(async (req, res) => {
 // Approve Yudisium Registration (Admin Response)
 const approveYudisiumRegistration = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { adminId, yudisiumPeriodId, yudisiumRegistrationUploadIds } = req.body;
+  const {
+    adminId,
+    yudisiumPeriodId,
+    yudisiumRegistrationUploadIds,
+    pengajuanCumlaudeFinal,
+    skemaCumlaudeFinal,
+  } = req.body;
 
   const errors = [];
   if (isNil(adminId)) {
@@ -1292,11 +1257,31 @@ const approveYudisiumRegistration = asyncHandler(async (req, res) => {
     });
   }
 
+  const finalPengajuanCumlaude =
+    typeof pengajuanCumlaudeFinal === "string" &&
+    pengajuanCumlaudeFinal.trim() !== ""
+      ? pengajuanCumlaudeFinal.trim()
+      : null;
+
+  const finalSkemaCumlaude =
+    typeof skemaCumlaudeFinal === "string" &&
+    skemaCumlaudeFinal.trim() !== ""
+      ? skemaCumlaudeFinal.trim()
+      : null;
+
+  const hasCumlaudeFinal = Boolean(finalPengajuanCumlaude && finalSkemaCumlaude);
+  const status = hasCumlaudeFinal
+    ? "Hasil Sidang Ditetapkan"
+    : "Menunggu Sidang Yudisium";
+
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: {
       adminId,
       yudisiumPeriodId,
+      pengajuanCumlaudeFinal: finalPengajuanCumlaude,
+      skemaCumlaudeFinal: finalSkemaCumlaude,
+      status,
       message: null,
       isEdit: null,
     },
@@ -1375,6 +1360,7 @@ const rejectYudisiumRegistration = asyncHandler(async (req, res) => {
       message,
       isEdit: isEdit ? new Date(isEdit) : null,
       yudisiumPeriodId: null,
+      status: "Perlu Revisi",
       isDraft: isEdit ? true : false,
       submittedAt: isEdit ? null : undefined,
     },
@@ -1489,7 +1475,7 @@ const exportYudisium = asyncHandler(async (req, res) => {
       noSurat: "",
       kodeDoswal: kodeDosenWali,
       predikat: yudisium.predikat || "",
-      status: yudisium.status || "",
+      status: yudisium.statusKelulusan || "",
       mediaJurnal: "",
       tglJurnal: "",
       blnJurnal: "",
