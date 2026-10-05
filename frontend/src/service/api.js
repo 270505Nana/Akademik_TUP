@@ -558,6 +558,24 @@ export const rejectSidangRegistration = async (registrationId, payload) => {
   return response.data?.data ?? response.data;
 };
 
+// PENJADWALAN SIDANG
+
+export const getAllPenjadwalanSidang = async (params) => {
+  return await api.get('/api/penjadwalan-sidang', { params });
+};
+
+export const getAllRuangan = async () => {
+  return await api.get('/api/ruangan');
+};
+
+export const setJadwalSidang = async (id, payload) => {
+  return await api.put(`/api/penjadwalan-sidang/${id}/set-jadwal`, payload);
+};
+
+export const toggleLockJadwal = async (id) => {
+  return await api.patch(`/api/penjadwalan-sidang/${id}/toggle-lock`);
+};
+
 // ------------------------------------------- ETC & PERIODS -------------------------------------------
 export const getLecturers = async (params = { limit: "all", sortBy: "a-z" }) =>
   api.get("/api/dosen", { params }).then((r) => r.data?.data ?? r.data);

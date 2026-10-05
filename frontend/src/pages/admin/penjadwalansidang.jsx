@@ -8,7 +8,15 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
-import { getStudyPrograms } from '../../service/api';
+
+import { 
+  getStudyPrograms, 
+  getAllPenjadwalanSidang, 
+  getAllSidangRegistrations, 
+  getAllRuangan, 
+  setJadwalSidang, 
+  toggleLockJadwal 
+} from '../../service/api';
 
 import '../../components/admin/css/penjadwalansidang.css';
 
@@ -29,6 +37,7 @@ export default function PenjadwalanSidang() {
     belumLengkapPenguji: 0,
     periodeAktif: '-'
   });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [selectedProgramStudi, setSelectedProgramStudi] = useState('');
@@ -48,26 +57,28 @@ export default function PenjadwalanSidang() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // 1. Fetch Master Data Ruangan & Prodi
   useEffect(() => {
     getStudyPrograms()
       .then(res => setProdiList(Array.isArray(res) ? res : []))
       .catch(err => console.error("Gagal load prodi:", err));
 
-    fetch('/api/ruangan')
-      .then(res => res.json())
-      .then(json => {
-        if (json.data) setRuanganList(json.data);
+    getAllRuangan()
+      .then(res => {
+        const roomData = res?.data?.data ?? res?.data ?? [];
+        setRuanganList(Array.isArray(roomData) ? roomData : []);
       })
       .catch(err => console.error("Gagal load ruangan:", err));
   }, []);
 
+  // 2. Fetch Data Statistik
   const fetchDashboardStats = async () => {
     try {
-      const response = await fetch('/api/sidang-registrations?limit=1000');
-      if (response.ok) {
-        const json = await response.json();
-        const allData = json.data || [];
-        
+      const res = await getAllSidangRegistrations({ limit: 1000 });
+      // Ekstraksi data yang aman dari berbagai kemungkinan struktur Axios
+      const allData = res?.data?.data ?? res?.data ?? res ?? [];
+      
+      if (Array.isArray(allData)) {
         let totalMendaftar = 0;
         let siapSidang = 0;
         let belumLengkap = 0;
@@ -76,21 +87,24 @@ export default function PenjadwalanSidang() {
         const now = new Date();
 
         allData.forEach(item => {
+          // Hanya hitung yang sudah submit (bukan draft)
           if (item.isDraft === false) {
             totalMendaftar++;
 
+            // Hitung yang belum punya penguji lengkap
             if (!item.dosenPenguji1 || !item.dosenPenguji2) {
               belumLengkap++;
             }
-          }
 
-          if (item.sidangPeriod) {
-            const startDate = new Date(item.sidangPeriod.startDate);
-            const endDate = new Date(item.sidangPeriod.endDate);
-            
-            if (now >= startDate && now <= endDate) {
-              siapSidang++;
-              activePeriodName = item.sidangPeriod.name;
+            // Hitung mahasiswa siap sidang (periode aktif)
+            if (item.sidangPeriod && item.sidangPeriod.isOpen) {
+              const startDate = new Date(item.sidangPeriod.startDate);
+              const endDate = new Date(item.sidangPeriod.endDate);
+              
+              if (now >= startDate && now <= endDate) {
+                siapSidang++;
+                activePeriodName = item.sidangPeriod.name;
+              }
             }
           }
         });
@@ -107,22 +121,23 @@ export default function PenjadwalanSidang() {
     }
   };
 
+  // 3. Fetch Data Penjadwalan Utama untuk Tabel
   const fetchData = async (page = 1) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: page, limit: 10 });
-      if (searchDebounced) params.append('search', searchDebounced);
-      if (selectedProgramStudi) params.append('studyProgramId', selectedProgramStudi);
+      const params = { page, limit: 10 };
+      if (searchDebounced) params.search = searchDebounced;
+      if (selectedProgramStudi) params.studyProgramId = selectedProgramStudi;
 
-      const response = await fetch(`/api/penjadwalan-sidang?${params.toString()}`);
+      const res = await getAllPenjadwalanSidang(params);
       
-      if (response.ok) {
-        const json = await response.json();
-        setData(json.data || []);
-        setPagination(json.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 });
-      }
+      const resultData = res?.data?.data ?? res?.data ?? [];
+      const resultPagination = res?.data?.pagination ?? res?.pagination ?? { page: 1, limit: 10, total: 0, totalPages: 1 };
+      
+      setData(Array.isArray(resultData) ? resultData : []);
+      setPagination(resultPagination);
     } catch (error) {
-      console.error("Gagal mengambil data dari server:", error);
+      console.error("Gagal mengambil data penjadwalan:", error);
     } finally {
       setLoading(false);
     }
@@ -139,6 +154,7 @@ export default function PenjadwalanSidang() {
     }
   }, [searchDebounced, selectedProgramStudi]);
 
+  // Kalkulasi Grafik Prodi (Hanya untuk mahasiswa yang pengujinya lengkap)
   const chartProdiData = useMemo(() => {
     const prodiMap = {};
     data.forEach(item => {
@@ -163,40 +179,24 @@ export default function PenjadwalanSidang() {
     if (!selectedMahasiswa) return;
 
     try {
-      const response = await fetch(`/api/penjadwalan-sidang/${selectedMahasiswa.id}/set-jadwal`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tglSidang, ruanganSidangId })
-      });
-
-      if (response.ok) {
-        showAlert('success', 'Berhasil', 'Jadwal sidang dan ruangan berhasil ditetapkan!');
-        setIsModalOpen(false);
-        fetchData(pagination.page);
-      } else {
-        showAlert('error', 'Gagal', 'Terjadi kesalahan saat menetapkan jadwal.');
-      }
+      await setJadwalSidang(selectedMahasiswa.id, { tglSidang, ruanganSidangId });
+      showAlert('success', 'Berhasil', 'Jadwal sidang dan ruangan berhasil ditetapkan!');
+      setIsModalOpen(false);
+      fetchData(pagination.page);
     } catch (error) {
       console.error(error);
-      showAlert('error', 'Error Jaringan', 'Server tidak merespon saat menyimpan jadwal.');
+      showAlert('error', 'Gagal', 'Terjadi kesalahan saat menetapkan jadwal.');
     }
   };
 
   const handleToggleLock = async (id) => {
     try {
-      const response = await fetch(`/api/penjadwalan-sidang/${id}/toggle-lock`, {
-        method: 'PATCH'
-      });
-
-      if (response.ok) {
-        showAlert('success', 'Berhasil', 'Status kunci penjadwalan diperbarui.');
-        fetchData(pagination.page);
-      } else {
-        showAlert('error', 'Gagal', 'Gagal mengubah status kunci.');
-      }
+      await toggleLockJadwal(id);
+      showAlert('success', 'Berhasil', 'Status kunci penjadwalan diperbarui.');
+      fetchData(pagination.page);
     } catch (error) {
       console.error(error);
-      showAlert('error', 'Error Jaringan', 'Gagal menghubungi server.');
+      showAlert('error', 'Gagal', 'Gagal mengubah status kunci.');
     }
   };
 
@@ -273,12 +273,11 @@ export default function PenjadwalanSidang() {
                     </div>
                   );
                 }) : (
-                  <p className="ps-text-muted ps-text-xs">Belum ada data mahasiswa siap sidang untuk ditampilkan pada grafik.</p>
+                  <p className="ps-text-muted ps-text-xs">Belum ada data mahasiswa untuk ditampilkan pada grafik.</p>
                 )}
               </div>
             </div>
 
-            {/* Area Tabel Data */}
             <section className="card-main">
               <div className="card-body">
                 <div className="ps-filter-bar">
