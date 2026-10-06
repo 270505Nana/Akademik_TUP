@@ -42,10 +42,14 @@ export default function PenjadwalanSidang() {
   const [searchDebounced, setSearchDebounced] = useState('');
   const [selectedProgramStudi, setSelectedProgramStudi] = useState('');
   
-  const [selectedMahasiswa, setSelectedMahasiswa] = useState(null);
-  const [tglSidang, setTglSidang] = useState('');
-  const [ruanganSidangId, setRuanganSidangId] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // ==========================================
+  // STATE INLINE EDIT (Menggantikan Modal)
+  // ==========================================
+  const [editingRowId, setEditingRowId] = useState(null); // Menyimpan ID baris yang sedang diedit
+  const [editFormData, setEditFormData] = useState({
+    tglSidang: '',
+    ruanganSidangId: ''
+  });
 
   const showAlert = (type, title, message) => {
     setAlert({ show: true, type, title, message });
@@ -57,7 +61,6 @@ export default function PenjadwalanSidang() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // 1. Fetch Master Data Ruangan & Prodi
   useEffect(() => {
     getStudyPrograms()
       .then(res => setProdiList(Array.isArray(res) ? res : []))
@@ -71,11 +74,9 @@ export default function PenjadwalanSidang() {
       .catch(err => console.error("Gagal load ruangan:", err));
   }, []);
 
-  // 2. Fetch Data Statistik
   const fetchDashboardStats = async () => {
     try {
       const res = await getAllSidangRegistrations({ limit: 1000 });
-      // Ekstraksi data yang aman dari berbagai kemungkinan struktur Axios
       const allData = res?.data?.data ?? res?.data ?? res ?? [];
       
       if (Array.isArray(allData)) {
@@ -87,16 +88,11 @@ export default function PenjadwalanSidang() {
         const now = new Date();
 
         allData.forEach(item => {
-          // Hanya hitung yang sudah submit (bukan draft)
           if (item.isDraft === false) {
             totalMendaftar++;
-
-            // Hitung yang belum punya penguji lengkap
             if (!item.dosenPenguji1 || !item.dosenPenguji2) {
               belumLengkap++;
             }
-
-            // Hitung mahasiswa siap sidang (periode aktif)
             if (item.sidangPeriod && item.sidangPeriod.isOpen) {
               const startDate = new Date(item.sidangPeriod.startDate);
               const endDate = new Date(item.sidangPeriod.endDate);
@@ -121,9 +117,11 @@ export default function PenjadwalanSidang() {
     }
   };
 
-  // 3. Fetch Data Penjadwalan Utama untuk Tabel
   const fetchData = async (page = 1) => {
     setLoading(true);
+    // Tutup mode edit jika berpindah halaman atau me-refresh filter
+    setEditingRowId(null); 
+    
     try {
       const params = { page, limit: 10 };
       if (searchDebounced) params.search = searchDebounced;
@@ -154,7 +152,6 @@ export default function PenjadwalanSidang() {
     }
   }, [searchDebounced, selectedProgramStudi]);
 
-  // Kalkulasi Grafik Prodi (Hanya untuk mahasiswa yang pengujinya lengkap)
   const chartProdiData = useMemo(() => {
     const prodiMap = {};
     data.forEach(item => {
@@ -174,25 +171,60 @@ export default function PenjadwalanSidang() {
 
   const maxChartValue = chartProdiData.length > 0 ? Math.max(...chartProdiData.map(d => d.jumlah)) : 1;
 
-  const handleSetJadwalSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedMahasiswa) return;
+  // ==========================================
+  // HANDLER UNTUK INLINE EDIT
+  // ==========================================
+  
+  // 1. Tombol Set Jadwal diklik -> masuk mode Edit
+  const handleEditClick = (item) => {
+    setEditingRowId(item.id);
+    
+    // Konversi format waktu ISO ke format yang bisa dibaca input datetime-local
+    let localISOTime = '';
+    if (item.tglSidang) {
+      const isoDate = new Date(item.tglSidang);
+      const tzOffset = isoDate.getTimezoneOffset() * 60000;
+      localISOTime = (new Date(isoDate - tzOffset)).toISOString().slice(0, 16);
+    }
+
+    setEditFormData({
+      tglSidang: localISOTime,
+      ruanganSidangId: item.ruanganSidang?.id || ''
+    });
+  };
+
+  // 2. Tombol Batal diklik
+  const handleCancelEdit = () => {
+    setEditingRowId(null);
+  };
+
+  // 3. Tombol Simpan (Ceklis) diklik
+  const handleSaveInline = async (id) => {
+    if (!editFormData.tglSidang || !editFormData.ruanganSidangId) {
+      showAlert('error', 'Validasi Gagal', 'Harap isi Tanggal Sidang dan Ruangan terlebih dahulu!');
+      return;
+    }
 
     try {
-      await setJadwalSidang(selectedMahasiswa.id, { tglSidang, ruanganSidangId });
-      showAlert('success', 'Berhasil', 'Jadwal sidang dan ruangan berhasil ditetapkan!');
-      setIsModalOpen(false);
+      await setJadwalSidang(id, { 
+        tglSidang: editFormData.tglSidang, 
+        ruanganSidangId: editFormData.ruanganSidangId 
+      });
+      showAlert('success', 'Berhasil', 'Jadwal sidang dan ruangan berhasil disimpan!');
+      
+      // Keluar dari mode edit & refresh tabel
+      setEditingRowId(null);
       fetchData(pagination.page);
     } catch (error) {
       console.error(error);
-      showAlert('error', 'Gagal', 'Terjadi kesalahan saat menetapkan jadwal.');
+      showAlert('error', 'Gagal', 'Terjadi kesalahan saat menyimpan jadwal.');
     }
   };
 
   const handleToggleLock = async (id) => {
     try {
       await toggleLockJadwal(id);
-      showAlert('success', 'Berhasil', 'Status kunci penjadwalan diperbarui.');
+      showAlert('success', 'Berhasil', 'Status kunci penjadwalan berhasil diubah.');
       fetchData(pagination.page);
     } catch (error) {
       console.error(error);
@@ -327,72 +359,142 @@ export default function PenjadwalanSidang() {
                       ) : data.length === 0 ? (
                         <tr><td colSpan="7" className="ps-text-center ps-py-6">Tidak ada data ditemukan.</td></tr>
                       ) : (
-                        data.map((item) => (
-                          <tr key={item.id} className="ps-table-row">
-                            <td>
-                              <p className="ps-font-medium">{item.mahasiswa?.name}</p>
-                              <p className="ps-text-xs ps-text-muted">{item.mahasiswa?.nim} • {item.mahasiswa?.studyProgram?.name}</p>
-                            </td>
-                            <td className="ps-text-xs ps-text-muted">
-                              <p>1. {item.dosenPembimbing1?.name || '-'}</p>
-                              <p>2. {item.dosenPembimbing2?.name || '-'}</p>
-                            </td>
-                            <td>
-                              <span className="ps-text-xs ps-font-medium">
-                                {item.dosenPenguji1?.name || <span className="ps-text-amber italic">Belum dipilih</span>}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="ps-text-xs ps-font-medium">
-                                {item.dosenPenguji2?.name || <span className="ps-text-amber italic">Belum dipilih</span>}
-                              </span>
-                            </td>
-                            <td className="ps-text-xs">
-                              {item.tglSidang ? (
-                                <span className="ps-flex-center-gap ps-text-dark">
-                                  <Calendar size={14} className="ps-text-red" />
-                                  {new Date(item.tglSidang).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        data.map((item) => {
+                          const isPengujiLengkap = item.dosenPenguji1 && item.dosenPenguji2;
+                          // Cek apakah baris ini yang sedang ditekan tombol 'Set Jadwal'-nya
+                          const isEditing = editingRowId === item.id; 
+
+                          return (
+                            <tr key={item.id} className={`ps-table-row ${isEditing ? 'is-editing' : ''}`}>
+                              <td>
+                                <p className="ps-font-medium">{item.mahasiswa?.name}</p>
+                                <p className="ps-text-xs ps-text-muted">{item.mahasiswa?.nim} • {item.mahasiswa?.studyProgram?.name}</p>
+                              </td>
+                              <td className="ps-text-xs ps-text-muted">
+                                <p>1. {item.dosenPembimbing1?.name || '-'}</p>
+                                <p>2. {item.dosenPembimbing2?.name || '-'}</p>
+                              </td>
+                              <td>
+                                <span className="ps-text-xs ps-font-medium">
+                                  {item.dosenPenguji1?.name || <span className="ps-text-amber italic">Belum dipilih</span>}
                                 </span>
-                              ) : (
-                                <span className="ps-text-muted italic">- Belum ditentukan</span>
-                              )}
-                            </td>
-                            <td className="ps-text-xs">
-                              {item.ruanganSidang?.name ? (
-                                <span className="ps-flex-center-gap ps-text-dark">
-                                  <MapPin size={14} className="ps-text-red" />
-                                  {item.ruanganSidang.name}
+                              </td>
+                              <td>
+                                <span className="ps-text-xs ps-font-medium">
+                                  {item.dosenPenguji2?.name || <span className="ps-text-amber italic">Belum dipilih</span>}
                                 </span>
-                              ) : (
-                                <span className="ps-text-muted italic">- Belum ditentukan</span>
-                              )}
-                            </td>
-                            <td className="ps-text-center">
-                              <div className="ps-action-buttons">
-                                <button 
-                                  onClick={() => {
-                                    setSelectedMahasiswa(item);
-                                    setTglSidang(item.tglSidang ? item.tglSidang.split('T')[0] : '');
-                                    setRuanganSidangId(item.ruanganSidang?.id || '');
-                                    setIsModalOpen(true);
-                                  }}
-                                  className="ps-btn-primary"
-                                  disabled={!item.dosenPenguji1 || !item.dosenPenguji2}
-                                  title={(!item.dosenPenguji1 || !item.dosenPenguji2) ? "Ketua KK belum menentukan penguji" : "Set Jadwal & Ruangan"}
-                                >
-                                  Set Jadwal
-                                </button>
-                                <button 
-                                  onClick={() => handleToggleLock(item.id)}
-                                  className={`ps-btn-lock ${item.isLocked ? 'locked' : 'unlocked'}`}
-                                  title={item.isLocked ? "Terkunci (Klik untuk Unlock)" : "Terbuka (Klik untuk Lock)"}
-                                >
-                                  {item.isLocked ? <Lock size={14} /> : <Unlock size={14} />}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                              </td>
+
+                              {/* ========================================================
+                                  KOLOM TANGGAL SIDANG (Render Input jika sedang Edit)
+                                  ======================================================== */}
+                              <td className="ps-text-xs">
+                                {isEditing ? (
+                                  <input 
+                                    type="datetime-local" 
+                                    value={editFormData.tglSidang}
+                                    onChange={(e) => setEditFormData({...editFormData, tglSidang: e.target.value})}
+                                    className="ps-inline-input"
+                                    autoFocus // Langsung fokus saat diklik
+                                  />
+                                ) : (
+                                  item.tglSidang ? (
+                                    <span className="ps-flex-center-gap ps-text-dark">
+                                      <Calendar size={14} className="ps-text-red" />
+                                      {new Date(item.tglSidang).toLocaleDateString('id-ID', { 
+                                        day: 'numeric', month: 'short', year: 'numeric',
+                                        hour: '2-digit', minute: '2-digit'
+                                      })}
+                                    </span>
+                                  ) : (
+                                    <span className="ps-text-muted italic">- Belum ditentukan</span>
+                                  )
+                                )}
+                              </td>
+
+                              {/* ========================================================
+                                  KOLOM RUANGAN (Render Dropdown jika sedang Edit)
+                                  ======================================================== */}
+                              <td className="ps-text-xs">
+                                {isEditing ? (
+                                  <select 
+                                    value={editFormData.ruanganSidangId}
+                                    onChange={(e) => setEditFormData({...editFormData, ruanganSidangId: e.target.value})}
+                                    className="ps-inline-input"
+                                  >
+                                    <option value="" disabled>-- Pilih Ruangan --</option>
+                                    {ruanganList.map(ruang => (
+                                      <option key={ruang.id} value={ruang.id}>
+                                        {ruang.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  item.ruanganSidang?.name ? (
+                                    <span className="ps-flex-center-gap ps-text-dark">
+                                      <MapPin size={14} className="ps-text-red" />
+                                      {item.ruanganSidang.name}
+                                    </span>
+                                  ) : (
+                                    <span className="ps-text-muted italic">- Belum ditentukan</span>
+                                  )
+                                )}
+                              </td>
+
+                              {/* ========================================================
+                                  KOLOM AKSI (Tombol berubah menjadi Simpan & Batal jika Edit)
+                                  ======================================================== */}
+                              <td className="ps-text-center">
+                                <div className="ps-action-buttons">
+                                  {isEditing ? (
+                                    <>
+                                      <button 
+                                        type="button"
+                                        onClick={handleCancelEdit}
+                                        className="ps-btn-secondary"
+                                        title="Batal"
+                                      >
+                                        <X size={14} />
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleSaveInline(item.id)}
+                                        className="ps-btn-primary"
+                                        title="Simpan Jadwal"
+                                      >
+                                        <CheckIcon size={14} /> Simpan
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleEditClick(item)}
+                                        className="ps-btn-primary"
+                                        disabled={!isPengujiLengkap || item.isLocked}
+                                        title={
+                                          !isPengujiLengkap ? "Ketua KK belum menentukan penguji" : 
+                                          item.isLocked ? "Jadwal terkunci" : "Set Jadwal"
+                                        }
+                                        style={{ opacity: (!isPengujiLengkap || item.isLocked) ? 0.5 : 1, cursor: (!isPengujiLengkap || item.isLocked) ? 'not-allowed' : 'pointer' }}
+                                      >
+                                        Set Jadwal
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleToggleLock(item.id)}
+                                        className={`ps-btn-lock ${item.isLocked ? 'locked' : 'unlocked'}`}
+                                        title={item.isLocked ? "Terkunci (Klik untuk Buka)" : "Terbuka (Klik untuk Kunci)"}
+                                      >
+                                        {item.isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -428,59 +530,6 @@ export default function PenjadwalanSidang() {
           </div>
         </div>
       </div>
-
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="ps-modal-backdrop">
-            <motion.div 
-              className="ps-modal-card"
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            >
-              <h3 className="ps-modal-title">Tentukan Jadwal Sidang</h3>
-              <p className="ps-modal-subtitle">Mahasiswa: <span className="ps-font-semibold">{selectedMahasiswa?.mahasiswa?.name}</span></p>
-              
-              <form onSubmit={handleSetJadwalSubmit} className="ps-form">
-                <div>
-                  <label className="ps-label">Tanggal Sidang</label>
-                  <input 
-                    type="date" 
-                    value={tglSidang}
-                    onChange={(e) => setTglSidang(e.target.value)}
-                    required
-                    className="ps-input"
-                  />
-                </div>
-                <div>
-                  <label className="ps-label">Pilih Ruangan</label>
-                  <select 
-                    value={ruanganSidangId}
-                    onChange={(e) => setRuanganSidangId(e.target.value)}
-                    required
-                    className="ps-input"
-                  >
-                    <option value="" disabled>-- Pilih Ruangan Sidang --</option>
-                    {ruanganList.map(ruang => (
-                      <option key={ruang.id} value={ruang.id}>
-                        {ruang.name} {ruang.gedung ? `(${ruang.gedung})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="ps-modal-actions">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="ps-btn-secondary">
-                    Batal
-                  </button>
-                  <button type="submit" className="ps-btn-primary">
-                    Simpan Jadwal
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {alert.show && (

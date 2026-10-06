@@ -1,5 +1,5 @@
 /* ==========================================================================
-   RESET & LAYOUT GLOBAL (Mengatasi jarak kosong/gap di atas dan samping)
+   RESET & LAYOUT GLOBAL
    ========================================================================== */
 html, body, #root {
   margin: 0 !important;
@@ -16,7 +16,7 @@ html, body, #root {
 .ps-page-root {
   display: flex;
   min-height: 100vh;
-  background-color: #F8FAFC; /* Warna abu-abu terang standar admin */
+  background-color: #F8FAFC; 
   width: 100%;
 }
 
@@ -26,12 +26,11 @@ html, body, #root {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  margin-left: 240px; /* Sesuai dengan --sidebar-width: 240px di sidebar.css */
+  margin-left: 240px; 
   padding: 0;
   transition: margin-left 0.3s ease;
 }
 
-/* Penyesuaian saat mode mobile/tablet */
 @media (max-width: 991.98px) {
   .ps-main-content {
     margin-left: 0 !important;
@@ -53,7 +52,7 @@ html, body, #root {
    ========================================================================== */
 .mobile-menu-bar {
   display: none;
-  background-color: #C0182A; /* Telkom Red */
+  background-color: #C0182A; 
   color: white;
   padding: 12px 20px;
   align-items: center;
@@ -84,7 +83,7 @@ html, body, #root {
   background-color: #C0182A;
   color: white;
   padding: 16px 24px;
-  margin-top: 0 !important; /* Memaksa nempel ke ujung atas */
+  margin-top: 0 !important; 
 }
 
 .top-bar-red h1 {
@@ -98,7 +97,7 @@ html, body, #root {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px; /* Jarak antar section */
+  gap: 20px; 
 }
 
 /* ==========================================================================
@@ -139,7 +138,7 @@ html, body, #root {
 }
 
 /* ==========================================================================
-   STATS CARDS (Card 3 Kolom)
+   STATS CARDS
    ========================================================================== */
 .ps-stats-grid {
   display: grid;
@@ -259,14 +258,14 @@ html, body, #root {
 }
 
 /* ==========================================================================
-   TABEL & FILTER (Dibungkus Card Main)
+   TABEL & FILTER
    ========================================================================== */
 .card-main {
   background-color: #FFFFFF;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid #E2E8F0;
-  overflow: hidden;
+  overflow: visible; 
 }
 
 .ps-filter-bar {
@@ -303,9 +302,7 @@ html, body, #root {
   transition: border-color 0.2s;
 }
 
-.ps-search-input:focus {
-  border-color: #C0182A;
-}
+.ps-search-input:focus { border-color: #C0182A; }
 
 .ps-filter-dropdown-wrapper {
   display: flex;
@@ -313,9 +310,7 @@ html, body, #root {
   gap: 8px;
 }
 
-.ps-filter-icon {
-  color: #64748B;
-}
+.ps-filter-icon { color: #64748B; }
 
 .ps-dropdown {
   border: 1px solid #CBD5E1;
@@ -328,9 +323,7 @@ html, body, #root {
   color: #334155;
 }
 
-.ps-dropdown:focus {
-  border-color: #C0182A;
-}
+.ps-dropdown:focus { border-color: #C0182A; }
 
 .ps-table-divider {
   height: 1px;
@@ -341,13 +334,15 @@ html, body, #root {
 .ps-table-wrap {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .ps-table {
   width: 100%;
   text-align: left;
   border-collapse: collapse;
-  white-space: nowrap;
+  white-space: normal;
+  min-width: 1100px; /* Diperlebar agar input inline tidak sesak */
 }
 
 .ps-table th {
@@ -369,8 +364,19 @@ html, body, #root {
   vertical-align: middle;
 }
 
+.ps-table th:nth-child(1),
+.ps-table td:nth-child(1) {
+  min-width: 200px;
+  max-width: 250px;
+}
+
 .ps-table-row:hover {
   background-color: #F8FAFC;
+}
+
+/* Highlight baris yang sedang diedit */
+.ps-table-row.is-editing {
+  background-color: #FFF1F2;
 }
 
 .ps-font-medium { font-weight: 600; color: #1E293B; margin: 0 0 2px 0; }
@@ -383,6 +389,27 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* ==========================================================================
+   INLINE INPUTS (Di dalam tabel)
+   ========================================================================== */
+.ps-inline-input {
+  width: 100%;
+  min-width: 140px;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  color: #1E293B;
+  outline: none;
+  background-color: #FFFFFF;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.ps-inline-input:focus {
+  border-color: #C0182A;
+  box-shadow: 0 0 0 2px rgba(192, 24, 42, 0.1);
 }
 
 /* ==========================================================================
@@ -405,6 +432,10 @@ html, body, #root {
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .ps-btn-primary:hover:not(:disabled) {
@@ -420,22 +451,21 @@ html, body, #root {
 .ps-btn-secondary {
   background-color: #F1F5F9;
   color: #475569;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 12.5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .ps-btn-secondary:hover:not(:disabled) {
   background-color: #E2E8F0;
-}
-
-.ps-btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .ps-btn-lock {
@@ -455,9 +485,7 @@ html, body, #root {
   color: #DC2626;
 }
 
-.ps-btn-lock.locked:hover {
-  background-color: #FEE2E2;
-}
+.ps-btn-lock.locked:hover { background-color: #FEE2E2; }
 
 .ps-btn-lock.unlocked {
   background-color: #F8FAFC;
@@ -465,87 +493,7 @@ html, body, #root {
   color: #64748B;
 }
 
-.ps-btn-lock.unlocked:hover {
-  background-color: #F1F5F9;
-}
-
-/* ==========================================================================
-   MODAL POPUP SET JADWAL
-   ========================================================================== */
-.ps-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.5); /* Overlay gelap sedikit kebiruan */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1050;
-  padding: 20px;
-  backdrop-filter: blur(2px);
-}
-
-.ps-modal-card {
-  background-color: #FFFFFF;
-  border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  max-width: 420px;
-  width: 100%;
-  padding: 24px;
-}
-
-.ps-modal-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1E293B;
-  margin: 0 0 6px 0;
-}
-
-.ps-modal-subtitle {
-  font-size: 13px;
-  color: #64748B;
-  margin: 0 0 20px 0;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #F1F5F9;
-}
-
-.ps-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.ps-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: #475569;
-  margin-bottom: 6px;
-}
-
-.ps-input {
-  width: 100%;
-  border: 1px solid #CBD5E1;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 13.5px;
-  color: #1E293B;
-  outline: none;
-  background-color: #F8FAFC;
-  transition: border-color 0.2s, background-color 0.2s;
-}
-
-.ps-input:focus {
-  background-color: #FFFFFF;
-  border-color: #C0182A;
-  box-shadow: 0 0 0 3px rgba(192, 24, 42, 0.1);
-}
-
-.ps-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 12px;
-}
+.ps-btn-lock.unlocked:hover { background-color: #F1F5F9; }
 
 /* ==========================================================================
    ALERT OVERLAY (Notifikasi Pojok Kanan Bawah)
