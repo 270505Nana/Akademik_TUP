@@ -5,6 +5,7 @@ import { mapUser } from "../mappers/index.js";
 // Register
 export const register = asyncHandler(async (req, res) => {
   const { user, token } = await authService.registerUser(req.body);
+
   res.status(201).json({
     message: "Registration successful",
     token,

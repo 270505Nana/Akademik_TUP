@@ -32,7 +32,7 @@ const router = express.Router();
  *                 type: string
  *               email:
  *                 type: string
- *                 description: Must use student.telkomuniversity.ac.id or telkomuniversity.ac.id
+ *                 description: Must use student.telkomuniversity.ac.id or telkomuniversity.ac.id email domain
  *               password:
  *                 type: string
  *               confirmPassword:
@@ -40,10 +40,6 @@ const router = express.Router();
  *               phone:
  *                 type: string
  *                 nullable: true
- *               role:
- *                 type: string
- *                 enum: [MAHASISWA, DOSEN, ADMIN]
- *                 description: Required for telkomuniversity.ac.id and must be DOSEN or ADMIN; optional for student.telkomuniversity.ac.id and must be MAHASISWA if provided
  *     responses:
  *       201:
  *         description: Registration successful

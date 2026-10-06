@@ -28,7 +28,6 @@ export const registerSchema = z
       .regex(/^\+?[0-9\s-]{8,15}$/, "Nomor telepon tidak valid")
       .optional()
       .nullable(),
-    role: z.enum([ROLES.MAHASISWA, ROLES.DOSEN, ROLES.ADMIN]).optional(),
     password: z
       .string({ required_error: "Kata sandi wajib diisi" })
       .min(8, "Kata sandi minimal 8 karakter"),
@@ -36,45 +35,9 @@ export const registerSchema = z
       required_error: "Konfirmasi kata sandi wajib diisi",
     }),
   })
-  .superRefine((data, ctx) => {
-    if (data.password !== data.confirmPassword) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["confirmPassword"],
-        message: "Konfirmasi kata sandi tidak cocok",
-      });
-    }
-
-    const domain = data.email ? data.email.toLowerCase().split("@")[1] : "";
-
-    if (
-      domain === EMAIL_DOMAINS.STUDENT &&
-      data.role &&
-      data.role !== ROLES.MAHASISWA
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["role"],
-        message: "Role harus MAHASISWA untuk domain email mahasiswa",
-      });
-    }
-
-    if (domain === EMAIL_DOMAINS.TELKOM) {
-      if (!data.role) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["role"],
-          message: "Role wajib diisi untuk domain email telkomuniversity.ac.id",
-        });
-      } else if (![ROLES.DOSEN, ROLES.ADMIN].includes(data.role)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["role"],
-          message:
-            "Role harus DOSEN atau ADMIN untuk domain email telkomuniversity.ac.id",
-        });
-      }
-    }
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Konfirmasi kata sandi tidak cocok",
   });
 
 export const loginSchema = z.object({
