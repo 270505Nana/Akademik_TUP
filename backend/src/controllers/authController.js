@@ -16,6 +16,7 @@ export const register = asyncHandler(async (req, res) => {
 // Login
 export const login = asyncHandler(async (req, res) => {
   const { user, token } = await authService.loginUser(req.body);
+
   res.json({
     message: "Login successful",
     token,
@@ -26,5 +27,6 @@ export const login = asyncHandler(async (req, res) => {
 // Get User Data
 export const user = asyncHandler(async (req, res) => {
   const currentUser = await authService.getUserById(req.user.id);
+
   res.json({ data: mapUser(currentUser) });
 });

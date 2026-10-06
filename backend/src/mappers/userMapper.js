@@ -1,7 +1,13 @@
 // mapper model user
 export const mapUser = (user) => {
   if (!user) return null;
-  const { password: _, deletedAt: __, ...cleanUser } = user;
+  const {
+    password: _,
+    createdAt: __,
+    updatedAt: ___,
+    deletedAt: ____,
+    ...cleanUser
+  } = user;
   return cleanUser;
 };
 

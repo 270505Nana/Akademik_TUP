@@ -79,10 +79,12 @@ export const getUserById = async (userId) => {
     where: { id: userId },
     omit: { password: true, deletedAt: false },
   });
+
   if (!user || user.deletedAt) {
     const error = new Error("Pengguna tidak ditemukan");
     error.statusCode = 404;
     throw error;
   }
+
   return user;
 };
