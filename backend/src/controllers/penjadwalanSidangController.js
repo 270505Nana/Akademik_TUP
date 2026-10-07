@@ -209,7 +209,7 @@ const checkJadwalConflict = async ({
     const namaRuangan = conflict.ruanganSidang
       ? `${conflict.ruanganSidang.name} (${conflict.ruanganSidang.gedung})`
       : "tersebut";
-    return `Jadwal bentrok: Ruangan ${namaRuangan} sudah terjadwal untuk sidang mahasiswa ${conflict.mahasiswa?.user?.name || "lain"} pada rentang waktu 2 jam (${new Date(conflict.tglSidang).toISOString()}).`;
+    return `Jadwal bentrok: Ruangan ${namaRuangan} sudah terjadwal untuk sidang mahasiswa ${conflict.mahasiswa?.name || "lain"} pada rentang waktu 2 jam (${new Date(conflict.tglSidang).toISOString()}).`;
   }
 
   const conflictingDosen = [
@@ -221,8 +221,8 @@ const checkJadwalConflict = async ({
 
   if (conflictingDosen) {
     const namaDosen =
-      conflictingDosen.user?.name || conflictingDosen.kodeDosen || "Dosen";
-    return `Jadwal bentrok: Dosen ${namaDosen} sudah memiliki jadwal sidang mahasiswa ${conflict.mahasiswa?.user?.name || "lain"} pada rentang waktu 2 jam (${new Date(conflict.tglSidang).toISOString()}).`;
+      conflictingDosen.name || conflictingDosen.kodeDosen || "Dosen";
+    return `Jadwal bentrok: Dosen ${namaDosen} sudah memiliki jadwal sidang mahasiswa ${conflict.mahasiswa?.name || "lain"} pada rentang waktu 2 jam (${new Date(conflict.tglSidang).toISOString()}).`;
   }
 
   return "Jadwal bentrok dengan pelaksanaan sidang lain (jarak minimal 2 jam).";
@@ -436,7 +436,7 @@ const batchSetPengujiSidang = asyncHandler(async (req, res) => {
   const lockedRegistrations = registrations.filter((reg) => reg.isLocked);
   if (lockedRegistrations.length > 0) {
     const lockedNames = lockedRegistrations
-      .map((reg) => reg.mahasiswa?.user?.name || reg.id)
+      .map((reg) => reg.mahasiswa?.name || reg.id)
       .join(", ");
     res.status(400);
     throw new Error(
@@ -474,7 +474,7 @@ const batchSetPengujiSidang = asyncHandler(async (req, res) => {
         ...item,
         isCapstone: isCapstoneScheme(reg),
         tglSidang: reg.tglSidang,
-        mahasiswaName: reg.mahasiswa?.user?.name || "Mahasiswa",
+        mahasiswaName: reg.mahasiswa?.name || "Mahasiswa",
         allDosenIds: [
           reg.dosenPembimbing1Id,
           reg.dosenPembimbing2Id,
@@ -507,7 +507,7 @@ const batchSetPengujiSidang = asyncHandler(async (req, res) => {
         if (commonDosenId) {
           const dosenObj = dosenMap.get(commonDosenId);
           const namaDosen =
-            dosenObj?.user?.name || dosenObj?.kodeDosen || "Dosen";
+            dosenObj?.name || dosenObj?.kodeDosen || "Dosen";
           res.status(400);
           throw new Error(
             `Jadwal bentrok dalam batch: Dosen ${namaDosen} terlibat pada sidang mahasiswa ${itemA.mahasiswaName} dan ${itemB.mahasiswaName} dalam rentang 2 jam.`,
@@ -755,7 +755,7 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
     return {
       ...item,
       isCapstone: isCapstoneScheme(reg),
-      mahasiswaName: reg.mahasiswa?.user?.name || "Mahasiswa",
+      mahasiswaName: reg.mahasiswa?.name || "Mahasiswa",
       involvedDosenIds: [
         reg.dosenPembimbing1Id,
         reg.dosenPembimbing2Id,
@@ -803,7 +803,7 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
         );
         if (commonDosen) {
           const namaDosen =
-            commonDosen.user?.name || commonDosen.kodeDosen || "Dosen";
+            commonDosen.name || commonDosen.kodeDosen || "Dosen";
           res.status(400);
           throw new Error(
             `Jadwal bentrok dalam batch: Dosen ${namaDosen} terjadwal untuk mahasiswa ${itemA.mahasiswaName} dan ${itemB.mahasiswaName} dalam rentang 2 jam.`,
