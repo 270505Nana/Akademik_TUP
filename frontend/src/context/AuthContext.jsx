@@ -7,6 +7,7 @@ import {
   useRef,
   useCallback,
 } from "react";
+import { useLocation } from "react-router-dom";
 import {
   getAcademicStaffData,
   getLecturerData,
@@ -17,8 +18,12 @@ const AuthContext = createContext(null);
 const INACTIVITY_ROLES = ["ADMIN", "DOSEN"];
 // Timeout inactivity: 30 menit tidak ada aktivitas
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+// Throttle refresh profil dosen: minimal 30 detik antar fetch
+const PROFILE_THROTTLE_MS = 30 * 1000;
 
 export const AuthProvider = ({ children }) => {
+  const { pathname } = useLocation();
+
   // cek token di localstorage
   const [user, setUser] = useState(() => {
     try {
@@ -46,6 +51,11 @@ export const AuthProvider = ({ children }) => {
   const inactivityTimer = useRef(null);
   // Flag untuk mencegah mount effect menimpa fetch profil yang sedang dilakukan oleh login()
   const isLoggingIn = useRef(false);
+  // Throttle & guard untuk refresh profil dosen saat focus/route-change
+  const lastProfileFetchRef = useRef(0);
+  const isFetchingProfileRef = useRef(false);
+  // Lewati render pertama di route-change effect agar tidak double-fetch dengan mount effect
+  const hasInitialMountRef = useRef(false);
 
   // login
   const login = async (userData) => {
@@ -83,6 +93,8 @@ export const AuthProvider = ({ children }) => {
       if (profileData) {
         setProfile(profileData);
         localStorage.setItem("simta_profile", JSON.stringify(profileData));
+        // Catat timestamp agar route-change pasca-login tidak langsung fetch ulang
+        if (rest?.role === "DOSEN") lastProfileFetchRef.current = Date.now();
       }
     } catch (err) {
       console.error("Gagal memuat profil saat login:", err);
@@ -111,6 +123,8 @@ export const AuthProvider = ({ children }) => {
         if (profileData) {
           setProfile(profileData);
           localStorage.setItem("simta_profile", JSON.stringify(profileData));
+          // Catat timestamp agar trigger pasca-mount tidak langsung fetch ulang
+          if (user.role === "DOSEN") lastProfileFetchRef.current = Date.now();
         }
       } catch (err) {
         console.error("Gagal refresh profil saat inisialisasi:", err);
@@ -120,6 +134,55 @@ export const AuthProvider = ({ children }) => {
     refreshProfile();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Cukup dijalankan sekali saat mount — user dan token sudah stabil dari localStorage
+
+  // Refresh profil dosen dengan throttle 30 detik dan guard isFetching.
+  // Hanya jalan untuk role DOSEN yang sedang login.
+  // Catch hanya console.error — tidak memanggil logout atau mengubah session.
+  const refreshDosenProfile = useCallback(async () => {
+    if (!user || !token || user.role !== "DOSEN") return;
+    if (isFetchingProfileRef.current) return;
+    if (Date.now() - lastProfileFetchRef.current < PROFILE_THROTTLE_MS) return;
+
+    isFetchingProfileRef.current = true;
+    lastProfileFetchRef.current = Date.now();
+    try {
+      const profileRes = await getLecturerData(user.id);
+      const profileData = profileRes?.data || profileRes;
+      if (profileData) {
+        setProfile(profileData);
+        localStorage.setItem("simta_profile", JSON.stringify(profileData));
+      }
+    } catch (err) {
+      console.error("Gagal refresh profil dosen:", err);
+    } finally {
+      isFetchingProfileRef.current = false;
+    }
+  }, [user, token]);
+
+  // Refresh saat tab/window difokuskan kembali (window focus & document visibilitychange)
+  useEffect(() => {
+    const handleFocus = () => refreshDosenProfile();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refreshDosenProfile();
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [refreshDosenProfile]);
+
+  // Refresh saat route berubah di area dosen.
+  // hasInitialMountRef: lewati render pertama agar tidak double-fetch dengan mount effect.
+  useEffect(() => {
+    if (!hasInitialMountRef.current) {
+      hasInitialMountRef.current = true;
+      return;
+    }
+    if (!pathname.startsWith("/dosen")) return;
+    refreshDosenProfile();
+  }, [pathname, refreshDosenProfile]);
 
   const logout = useCallback(() => {
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
