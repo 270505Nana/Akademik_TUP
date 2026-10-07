@@ -7,7 +7,8 @@ import { mapAdmin } from "../mappers/index.js";
 import {
   getAdminPaginated,
   getAdminByIdOrUserId,
-  upsertAdmin as upsertAdminService,
+  upsertAdminData,
+  getAdminDashboardData,
 } from "../services/adminService.js";
 
 // Daftar Semua Admin
@@ -33,7 +34,7 @@ export const upsertAdmin = asyncHandler(async (req, res) => {
 
   let adminRecord = await getAdminByIdOrUserId(idOrUserId);
   const userId = adminRecord ? adminRecord.userId : idOrUserId;
-  const result = await upsertAdminService({ userId, name });
+  const result = await upsertAdminData({ userId, name });
 
   res.json({
     message: "Create or update admin data successful",
@@ -51,4 +52,14 @@ export const findAdminById = asyncHandler(async (req, res) => {
   }
 
   res.json({ data: mapAdmin(admin) });
+});
+
+// Dashboard
+export const getAdminDashboard = asyncHandler(async (req, res) => {
+  const data = await getAdminDashboardData();
+
+  res.json({
+    message: "Admin dashboard data retrieved successfully",
+    data,
+  });
 });

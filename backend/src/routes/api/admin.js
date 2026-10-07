@@ -3,8 +3,8 @@ import {
   listAdmins,
   upsertAdmin,
   findAdminById,
+  getAdminDashboard,
 } from "../../controllers/adminController.js";
-import { getAdminDashboard } from "../../controllers/dashboardController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { isAdmin } from "../../middlewares/authorize.js";
 

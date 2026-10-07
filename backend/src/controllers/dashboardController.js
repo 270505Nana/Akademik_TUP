@@ -2,7 +2,6 @@ import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
 import { calculateSidangProgress } from "../services/dashboardService.js";
 
-
 //admin
 const getAdminDashboard = asyncHandler(async (req, res) => {
   // 1. Periode Aktif
@@ -215,6 +214,7 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
     },
   });
 });
+
 //dosen
 const getDosenDashboard = asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -232,10 +232,7 @@ const getDosenDashboard = asyncHandler(async (req, res) => {
   const totalMahasiswaBimbingan = await prisma.sidangRegistration.count({
     where: {
       deletedAt: null,
-      OR: [
-        { dosenPembimbing1Id: dosen.id },
-        { dosenPembimbing2Id: dosen.id },
-      ],
+      OR: [{ dosenPembimbing1Id: dosen.id }, { dosenPembimbing2Id: dosen.id }],
     },
   });
 
@@ -243,10 +240,7 @@ const getDosenDashboard = asyncHandler(async (req, res) => {
   const totalMahasiswaSiapSidang = await prisma.sidangRegistration.count({
     where: {
       deletedAt: null,
-      OR: [
-        { dosenPenguji1Id: dosen.id },
-        { dosenPenguji2Id: dosen.id },
-      ],
+      OR: [{ dosenPenguji1Id: dosen.id }, { dosenPenguji2Id: dosen.id }],
     },
   });
 
@@ -327,7 +321,8 @@ const getDosenDashboard = asyncHandler(async (req, res) => {
     return {
       id: sidang.id,
       name:
-        sidang.mahasiswa?.user?.name || `Mahasiswa #${sidang.mahasiswa?.nim || ""}`,
+        sidang.mahasiswa?.user?.name ||
+        `Mahasiswa #${sidang.mahasiswa?.nim || ""}`,
       nim: sidang.mahasiswa?.nim || "-",
       studyProgram: sidang.mahasiswa?.studyProgram?.name || "-",
       position: position,
@@ -346,6 +341,7 @@ const getDosenDashboard = asyncHandler(async (req, res) => {
     },
   });
 });
+
 //mahasiswa
 const getMahasiswaDashboard = asyncHandler(async (req, res) => {
   const userId = req.user.id;
