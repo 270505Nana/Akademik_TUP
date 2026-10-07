@@ -30,7 +30,7 @@ export const mapPermohonanToFrontend = (item, req) => {
           tak: item.mahasiswa.tak,
           studyProgramId: item.mahasiswa.studyProgramId,
           dosenWaliId: item.mahasiswa.dosenWaliId,
-          name: item.mahasiswa.user?.name || "",
+          name: item.mahasiswa.name || "",
           email: item.mahasiswa.user?.email || "",
           phone: item.mahasiswa.user?.phone || null,
           studyProgram: item.mahasiswa.studyProgram
@@ -51,7 +51,7 @@ export const mapPermohonanToFrontend = (item, req) => {
           kodeDosen: item.dosenPembimbing1.kodeDosen,
           researchGroupId: item.dosenPembimbing1.researchGroupId,
           userId: item.dosenPembimbing1.userId,
-          name: item.dosenPembimbing1.user?.name || "",
+          name: item.dosenPembimbing1.name || "",
           email: item.dosenPembimbing1.user?.email || "",
           phone: item.dosenPembimbing1.user?.phone || null,
         }
@@ -64,7 +64,7 @@ export const mapPermohonanToFrontend = (item, req) => {
           kodeDosen: item.dosenPembimbing2.kodeDosen,
           researchGroupId: item.dosenPembimbing2.researchGroupId,
           userId: item.dosenPembimbing2.userId,
-          name: item.dosenPembimbing2.user?.name || "",
+          name: item.dosenPembimbing2.name || "",
           email: item.dosenPembimbing2.user?.email || "",
           phone: item.dosenPembimbing2.user?.phone || null,
         }
@@ -80,7 +80,7 @@ export const mapPermohonanToFrontend = (item, req) => {
       ? {
           id: item.admin.id,
           userId: item.admin.userId,
-          name: item.admin.user?.name || "",
+          name: item.admin.name || "",
           email: item.admin.user?.email || "",
           phone: item.admin.user?.phone || null,
         }

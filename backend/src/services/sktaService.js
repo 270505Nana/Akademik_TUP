@@ -638,7 +638,7 @@ export const getSktaDownloadInfo = async (id) => {
 
   const ext = path.extname(permohonan.sktaUploadPath || "") || ".pdf";
   const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || "nim");
-  const nama = sanitizeFilenamePart(permohonan.mahasiswa?.user?.name || "nama");
+  const nama = sanitizeFilenamePart(permohonan.mahasiswa?.name || "nama");
   const prodi = sanitizeFilenamePart(
     permohonan.mahasiswa?.studyProgram?.name || "study_program",
   );
@@ -732,7 +732,7 @@ export const approvePermohonanSkta = async ({
   if (sktaFile) {
     const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || "nim");
     const nama = sanitizeFilenamePart(
-      permohonan.mahasiswa?.user?.name || "nama",
+      permohonan.mahasiswa?.name || "nama",
     );
     const prodi = sanitizeFilenamePart(
       permohonan.mahasiswa?.studyProgram?.name || "study_program",
@@ -1067,7 +1067,7 @@ export const getSktaFilesForExport = async ({
     if (!item.sktaUploadPath) continue;
     const ext = path.extname(item.sktaUploadPath || "") || ".pdf";
     const nim = sanitizeFilenamePart(item.mahasiswa?.nim || "nim");
-    const nama = sanitizeFilenamePart(item.mahasiswa?.user?.name || "nama");
+    const nama = sanitizeFilenamePart(item.mahasiswa?.name || "nama");
     const prodi = sanitizeFilenamePart(
       item.mahasiswa?.studyProgram?.name || "study_program",
     );
