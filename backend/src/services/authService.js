@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
 import { ROLES, EMAIL_DOMAINS } from "../constants/index.js";
 
-export const registerUser = async ({ name, email, password, phone }) => {
+export const registerUser = async ({ email, password, phone }) => {
   // Cek duplikasi email
   const existingEmail = await prisma.user.findUnique({ where: { email } });
   if (existingEmail) {
@@ -22,13 +22,16 @@ export const registerUser = async ({ name, email, password, phone }) => {
     }
   }
 
+  // Generate username dari bagian sebelum @ pada email
+  const username = email.toLowerCase().split("@")[0];
+
   // Hash password & simpan
   const hashedPassword = await bcrypt.hash(password, 10);
   const domain = email.toLowerCase().split("@")[1];
 
   const user = await prisma.user.create({
     data: {
-      name,
+      username,
       email,
       password: hashedPassword,
       phone: phone || null,

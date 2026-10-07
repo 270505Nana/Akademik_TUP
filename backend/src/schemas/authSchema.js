@@ -3,10 +3,6 @@ import { EMAIL_DOMAINS } from "../constants/roles.js";
 
 export const registerSchema = z
   .object({
-    name: z
-      .string({ required_error: "Nama wajib diisi" })
-      .trim()
-      .min(1, "Nama wajib diisi"),
     email: z
       .string({ required_error: "Email wajib diisi" })
       .trim()

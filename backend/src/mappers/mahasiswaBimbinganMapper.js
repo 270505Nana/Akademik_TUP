@@ -8,7 +8,7 @@ export const mapMahasiswaBimbinganStudent = (mahasiswa, reg = {}) => {
   return {
     id: mahasiswa.id,
     nim: mahasiswa.nim || "",
-    name: mahasiswa.user?.name || "",
+    name: mahasiswa.name || "",
     email: mahasiswa.user?.email || "",
     phone: mahasiswa.user?.phone || null,
     kelasAsal: mahasiswa.kelasAsal || "",

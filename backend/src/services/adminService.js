@@ -12,7 +12,6 @@ export const getAdminPaginated = async ({ skip, take }) => {
       include: {
         user: {
           select: {
-            name: true,
             email: true,
             phone: true,
           },
@@ -56,20 +55,11 @@ export const upsertAdminData = async ({ userId, name }) => {
     throw error;
   }
 
-  return prisma.$transaction(async (tx) => {
-    const updatedUser = await tx.user.update({
-      where: { id: userId },
-      data: { name },
-    });
-
-    const admin = await tx.admin.upsert({
-      where: { userId },
-      update: {},
-      create: { userId },
-      include: { user: true },
-    });
-
-    return { ...admin, user: updatedUser };
+  return prisma.admin.upsert({
+    where: { userId },
+    update: { name },
+    create: { userId, name },
+    include: { user: true },
   });
 };
 
@@ -163,7 +153,6 @@ export const getAdminDashboardData = async () => {
       mahasiswa: {
         include: {
           studyProgram: true,
-          user: { select: { name: true } },
         },
       },
       sidangRegistrationUploads: true,
@@ -172,7 +161,7 @@ export const getAdminDashboardData = async () => {
 
   const sidangRegistration = rawSidangRegistrations.map((reg) => ({
     id: reg.id,
-    name: reg.mahasiswa?.user?.name || `Mahasiswa #${reg.mahasiswa?.nim || ""}`,
+    name: reg.mahasiswa?.name || `Mahasiswa #${reg.mahasiswa?.nim || ""}`,
     nim: reg.mahasiswa?.nim || "-",
     studyProgram: reg.mahasiswa?.studyProgram?.name || "-",
     progress: calculateSidangProgress(reg, docsConfig),
@@ -191,7 +180,7 @@ export const getAdminDashboardData = async () => {
         mahasiswa: {
           select: {
             nim: true,
-            user: { select: { name: true } },
+            name: true,
           },
         },
       },
@@ -211,7 +200,7 @@ export const getAdminDashboardData = async () => {
         mahasiswa: {
           select: {
             nim: true,
-            user: { select: { name: true } },
+            name: true,
           },
         },
       },
@@ -231,7 +220,7 @@ export const getAdminDashboardData = async () => {
         mahasiswa: {
           select: {
             nim: true,
-            user: { select: { name: true } },
+            name: true,
           },
         },
       },
@@ -240,21 +229,21 @@ export const getAdminDashboardData = async () => {
 
   const sktaLogs = rawSktaLogs.map((item) => ({
     name:
-      item.mahasiswa?.user?.name || `Mahasiswa #${item.mahasiswa?.nim || ""}`,
+      item.mahasiswa?.name || `Mahasiswa #${item.mahasiswa?.nim || ""}`,
     activity: "Pengajuan SK",
     date: item.updatedAt || item.createdAt,
   }));
 
   const sidangLogs = rawSidangLogs.map((item) => ({
     name:
-      item.mahasiswa?.user?.name || `Mahasiswa #${item.mahasiswa?.nim || ""}`,
+      item.mahasiswa?.name || `Mahasiswa #${item.mahasiswa?.nim || ""}`,
     activity: "Pendaftaran Sidang",
     date: item.submittedAt || item.updatedAt || item.createdAt,
   }));
 
   const yudisiumLogs = rawYudisiumLogs.map((item) => ({
     name:
-      item.mahasiswa?.user?.name || `Mahasiswa #${item.mahasiswa?.nim || ""}`,
+      item.mahasiswa?.name || `Mahasiswa #${item.mahasiswa?.nim || ""}`,
     activity: "Pendaftaran Yudisium",
     date: item.submittedAt || item.updatedAt || item.createdAt,
   }));

@@ -26,13 +26,11 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, email, password, confirmPassword]
+ *             required: [email, password, confirmPassword]
  *             properties:
- *               name:
- *                 type: string
  *               email:
  *                 type: string
- *                 description: Must use student.telkomuniversity.ac.id or telkomuniversity.ac.id email domain
+ *                 description: Must use student.telkomuniversity.ac.id or telkomuniversity.ac.id email domain. Username will be derived automatically from the email prefix.
  *               password:
  *                 type: string
  *               confirmPassword:

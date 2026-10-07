@@ -24,7 +24,7 @@ export const mapMahasiswa = (mahasiswa) => {
     tak: mahasiswa.tak,
     studyProgramId: mahasiswa.studyProgramId,
     dosenWaliId: mahasiswa.dosenWaliId,
-    name: mahasiswa.user?.name || "",
+    name: mahasiswa.name || "",
     email: mahasiswa.user?.email || "",
     phone: mahasiswa.user?.phone || null,
     studyProgram: mahasiswa.studyProgram
@@ -53,7 +53,7 @@ export const mapDosen = (dosen) => {
     researchGroupId: dosen.researchGroupId,
     studyProgramId: dosen.studyProgramId || null,
     userId: dosen.userId,
-    name: dosen.user?.name || "",
+    name: dosen.name || "",
     email: dosen.user?.email || "",
     phone: dosen.user?.phone || null,
     researchGroup: dosen.researchGroup
@@ -80,7 +80,7 @@ export const mapAdmin = (admin) => {
   return {
     id: admin.id,
     userId: admin.userId,
-    name: admin.user?.name || "",
+    name: admin.name || "",
     email: admin.user?.email || "",
     phone: admin.user?.phone || null,
   };
