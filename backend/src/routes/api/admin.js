@@ -1,16 +1,14 @@
-import express from 'express';
+import express from "express";
+import {
+  listAdmins,
+  upsertAdmin,
+  findAdminById,
+} from "../../controllers/adminController.js";
+import { getAdminDashboard } from "../../controllers/dashboardController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdmin } from "../../middlewares/authorize.js";
 
 const router = express.Router();
-
-import { listAdmins,
-  upsertAdmin,
-  findAdminById, } from '../../controllers/adminController.js';
-
-import {getAdminDashboard} from '../../controllers/dashboardController.js';
-
-import { verifyToken } from '../../middlewares/auth.js';
-
-import { isAdmin } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -105,12 +103,7 @@ router.get("/dashboard", verifyToken, isAdmin, getAdminDashboard);
  *       500:
  *         description: Internal server error
  */
-router.put(
-  "/:id",
-  verifyToken,
-  isAdmin,
-  upsertAdmin,
-);
+router.put("/:id", verifyToken, isAdmin, upsertAdmin);
 
 /**
  * @swagger

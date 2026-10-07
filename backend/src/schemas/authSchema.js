@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ROLES, EMAIL_DOMAINS } from "../constants/roles.js";
+import { EMAIL_DOMAINS } from "../constants/roles.js";
 
 export const registerSchema = z
   .object({
