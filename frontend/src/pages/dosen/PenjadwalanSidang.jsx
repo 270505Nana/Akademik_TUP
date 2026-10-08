@@ -6,7 +6,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarDosen from '../../components/sidebar/SidebarDosen';
 import FooterDosen from '../../components/common/FooterDosen';
-import { getStudyPrograms, getPenjadwalanSidang, getPengujiOptions, setPengujiSidang, setPengujiSidangBatch, getSidangPeriods } from '../../service/api';
+import { getStudyPrograms, getPenjadwalanSidang, getPengujiOptions, setPengujiSidang, setPengujiSidangBatch } from '../../service/api';
 import { getInitials, getAvatarTheme, formatTanggal, formatWaktu } from '../../components/dosen/penjadwalansidang/Helpers';
 import PengujiSearchable from '../../components/dosen/penjadwalansidang/PengujiSearchable';
 import '../dashboard.css';
@@ -67,13 +67,6 @@ const PenjadwalanSidang = () => {
   const [prodiOptions, setProdiOptions] = useState([{ value: '', label: 'Semua Prodi' }]);
   const [prodiFetchError, setProdiFetchError] = useState(false);
   const [isLoadingProdi, setIsLoadingProdi] = useState(true);
-
-  // State periode sidang ('' = BE memilih periode aktif otomatis)
-  const [periodOptions, setPeriodOptions] = useState([]);
-  const [selectedPeriod, setSelectedPeriod] = useState('');
-  const [isLoadingPeriod, setIsLoadingPeriod] = useState(true);
-  const [periodFetchError, setPeriodFetchError] = useState(false);
-
   const [pengujiOptions, setPengujiOptions] = useState([]);
   const [isLoadingPenguji, setIsLoadingPenguji] = useState(true);
   const [pengujiFetchError, setPengujiFetchError] = useState(false);
@@ -177,45 +170,13 @@ const PenjadwalanSidang = () => {
     return () => { isMounted = false; };
   }, []);
 
-  // Fetch daftar periode sidang (untuk dropdown filter periode)
-  useEffect(() => {
-    let isMounted = true;
-    const fetchPeriods = async () => {
-      try {
-        setIsLoadingPeriod(true);
-        setPeriodFetchError(false);
-        const res = await getSidangPeriods();
-        const list = Array.isArray(res) ? res : res?.data || [];
-        if (isMounted) {
-          setPeriodOptions(list.map(p => ({
-            value: p.id,
-            label: `${p.name || `${formatTanggal(p.startDate) || '-'} - ${formatTanggal(p.endDate) || '-'}`}${p.isOpen ? ' (Aktif)' : ''}`,
-          })));
-        }
-      } catch (err) {
-        console.error('Gagal memuat periode sidang:', err);
-        if (isMounted) {
-          setPeriodOptions([]);
-          setPeriodFetchError(true);
-        }
-      } finally {
-        if (isMounted) setIsLoadingPeriod(false);
-      }
-    };
-
-    fetchPeriods();
-    return () => { isMounted = false; };
-  }, []);
-
   useEffect(() => {
     let isMounted = true;
     const fetchSidangData = async () => {
       try {
         setIsLoadingData(true);
         setDataFetchError(false);
-        const params = { limit: 20 };
-        if (selectedPeriod) params.sidangPeriodId = selectedPeriod;
-        const res = await getPenjadwalanSidang(params);
+        const res = await getPenjadwalanSidang({ limit: 20 });
         const rawList = Array.isArray(res) ? res : res?.data || [];
 
         if (isMounted) {
@@ -271,7 +232,7 @@ const PenjadwalanSidang = () => {
 
     fetchSidangData();
     return () => { isMounted = false; };
-  }, [selectedPeriod]);
+  }, []);
 
   // Handler klik kolom Jadwal / Waktu / Ruangan (read-only field)
   const handleLockedFieldClick = () => {
@@ -371,16 +332,6 @@ const PenjadwalanSidang = () => {
   const handleSearchChange = (val) => { setSearchQuery(val); setCurrentPage(1); };
   const handleProdiChange = (val) => { setSelectedProdi(val); setCurrentPage(1); };
 
-  // Ganti periode: ditolak kalau masih ada perubahan penguji yang belum disimpan
-  const handlePeriodChange = (val) => {
-    if (unsavedCount > 0) {
-      showToast('Simpan perubahan penguji dulu sebelum ganti periode.', 'warning');
-      return;
-    }
-    setSelectedPeriod(val);
-    setCurrentPage(1);
-  };
-
   return (
     <>
       <SidebarDosen isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -398,6 +349,7 @@ const PenjadwalanSidang = () => {
         </header>
 
         <main className="page-body">
+          {/* Content Header: judul halaman + info banner */}
           <div className="ps-header-wrap">
             <div>
               <h1 className="ps-title">Penjadwalan Sidang</h1>
@@ -451,35 +403,6 @@ const PenjadwalanSidang = () => {
               {prodiFetchError && (
                 <span className="ps-error-text">
                   Gagal memuat data program studi. Silakan muat ulang halaman.
-                </span>
-              )}
-            </div>
-
-            {/* Filter Periode Sidang */}
-            <div className="ps-prodi-wrap">
-              <select
-                id="penjadwalan-filter-periode"
-                value={selectedPeriod}
-                onChange={e => handlePeriodChange(e.target.value)}
-                disabled={isLoadingPeriod || periodFetchError}
-                className={`ps-prodi-select ${isLoadingPeriod ? 'loading' : ''} ${periodFetchError ? 'error' : ''}`}
-              >
-                {isLoadingPeriod ? (
-                  <option value="">Memuat periode sidang...</option>
-                ) : periodFetchError ? (
-                  <option value="">Gagal memuat periode sidang</option>
-                ) : (
-                  <>
-                    <option value="">Periode Aktif (Otomatis)</option>
-                    {periodOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </>
-                )}
-              </select>
-              {periodFetchError && (
-                <span className="ps-error-text">
-                  Gagal memuat periode. Tabel tetap memakai periode aktif.
                 </span>
               )}
             </div>
@@ -553,10 +476,12 @@ const PenjadwalanSidang = () => {
                           key={m.id}
                           className={`ps-tr ${idx < paginatedData.length - 1 ? 'ps-tr-bordered' : ''}`}
                         >
+                          {/* 1. Kolom: No */}
                           <td className="ps-td-no">
                             {startIndex + idx + 1}
                           </td>
 
+                          {/* 2. Kolom: Identitas Mahasiswa */}
                           <td className="ps-td-mhs">
                             <div className="ps-mhs-wrap">
                               <MahasiswaAvatar student={m} />
