@@ -128,18 +128,19 @@ model Faculty {
 }
 
 model StudyProgram {
-  id                 String              @id @default(uuid())
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
-  deletedAt          DateTime?           @map("deleted_at")
-  name               String
-  isActive           Boolean             @default(true) @map("is_active")
-  faculty            Faculty             @relation(fields: [facultyId], references: [id])
-  facultyId          String              @map("faculty_id")
-  mahasiswa          Mahasiswa[]
-  cloProdis          CloProdi[]
-  skemaPenilaiProdis SkemaPenilaiProdi[]
-  dosens             Dosen[]
+  id                                              String                                            @id @default(uuid())
+  createdAt                                       DateTime                                          @default(now()) @map("created_at")
+  updatedAt                                       DateTime                                          @updatedAt @map("updated_at")
+  deletedAt                                       DateTime?                                         @map("deleted_at")
+  name                                            String
+  isActive                                        Boolean                                           @default(true) @map("is_active")
+  faculty                                         Faculty                                           @relation(fields: [facultyId], references: [id])
+  facultyId                                       String                                            @map("faculty_id")
+  mahasiswa                                       Mahasiswa[]
+  cloProdis                                       CloProdi[]
+  skemaPenilaiProdis                              SkemaPenilaiProdi[]
+  dosens                                          Dosen[]
+  skemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi SkemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi[]
 
   @@index([facultyId])
   @@index([deletedAt])
@@ -562,6 +563,19 @@ model SkemaPenilaiProdi {
   studyProgramId String       @map("study_program_id")
 
   @@map("skema_penilai_prodi")
+}
+
+model SkemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi {
+  id                      String       @id @default(uuid())
+  createdAt               DateTime     @default(now()) @map("created_at")
+  updatedAt               DateTime     @updatedAt @map("updated_at")
+  deletedAt               DateTime?    @map("deleted_at")
+  bobotRataRataPembimbing Decimal      @map("bobot_rata_rata_pembimbing") @db.Decimal(5, 2) // bobot nilai misal 60% -> 0.6
+  bobotRataRataPenguji    Decimal      @map("bobot_rata_rata_penguji") @db.Decimal(5, 2) // bobot nilai misal 40% -> 0.4
+  studyProgram            StudyProgram @relation(fields: [studyProgramId], references: [id], onDelete: Cascade)
+  studyProgramId          String       @map("study_program_id")
+
+  @@map("skema_perhitungan_nilai_berita_acara_tugas_akhir_prodi")
 }
 
 model PenilaianTugasAkhir {
