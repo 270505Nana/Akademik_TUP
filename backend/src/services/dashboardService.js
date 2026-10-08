@@ -1,4 +1,3 @@
-import prisma from "../config/prisma.js";
 import { NON_SIDANG_CATEGORY_MAP } from "../constants/index.js";
 
 /**

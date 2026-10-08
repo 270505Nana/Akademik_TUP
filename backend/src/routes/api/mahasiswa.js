@@ -6,7 +6,6 @@ import {
 } from "../../controllers/mahasiswaController.js";
 import { getMahasiswaDashboard } from "../../controllers/dashboardController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isMahasiswa } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import { upsertMahasiswaSchema } from "../../schemas/index.js";
 

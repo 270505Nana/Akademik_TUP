@@ -1,42 +1,5 @@
 import prisma from "../config/prisma.js";
 
-// === ADMIN ===
-export const getAdmins = async ({ skip, take }) => {
-  const [total, admins] = await Promise.all([
-    prisma.admin.count({ where: { deletedAt: null } }),
-    prisma.admin.findMany({
-      where: { deletedAt: null },
-      skip,
-      take,
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
-      },
-    }),
-  ]);
-  return { total, admins };
-};
-
-export const getAdminByIdOrUserId = async (idOrUserId) => {
-  let admin = await prisma.admin.findUnique({
-    where: { id: idOrUserId },
-    include: { user: true },
-  });
-  if (!admin) {
-    admin = await prisma.admin.findUnique({
-      where: { userId: idOrUserId },
-      include: { user: true },
-    });
-  }
-  return admin;
-};
-
 // === RUANGAN ===
 export const getRuangans = async () => {
   return await prisma.ruangan.findMany({
@@ -129,7 +92,9 @@ export const getResearchGroups = async ({ skip, take }) => {
       skip,
       take,
       orderBy: { createdAt: "desc" },
-      include: { dosen: { where: { deletedAt: null }, include: { user: true } } },
+      include: {
+        dosen: { where: { deletedAt: null }, include: { user: true } },
+      },
     }),
   ]);
   return { total, researchGroups };

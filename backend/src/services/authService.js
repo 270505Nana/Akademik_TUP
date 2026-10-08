@@ -1,10 +1,10 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
-import { ROLES } from "../constants/index.js";
+import { ROLES, EMAIL_DOMAINS } from "../constants/index.js";
 
-export const registerUser = async ({ name, email, password, phone, role }) => {
-  // 1. Cek duplikasi email
+export const registerUser = async ({ email, password, phone }) => {
+  // Cek duplikasi email
   const existingEmail = await prisma.user.findUnique({ where: { email } });
   if (existingEmail) {
     const error = new Error("Email sudah digunakan");
@@ -12,7 +12,7 @@ export const registerUser = async ({ name, email, password, phone, role }) => {
     throw error;
   }
 
-  // 2. Cek duplikasi phone jika diisi
+  // Cek duplikasi phone (jika diisi)
   if (phone) {
     const existingPhone = await prisma.user.findUnique({ where: { phone } });
     if (existingPhone) {
@@ -22,19 +22,24 @@ export const registerUser = async ({ name, email, password, phone, role }) => {
     }
   }
 
-  // 3. Hash password & simpan
+  // Generate username dari bagian sebelum @ pada email
+  const username = email.toLowerCase().split("@")[0];
+
+  // Hash password & simpan
   const hashedPassword = await bcrypt.hash(password, 10);
+  const domain = email.toLowerCase().split("@")[1];
+
   const user = await prisma.user.create({
     data: {
-      name,
+      username,
       email,
       password: hashedPassword,
       phone: phone || null,
-      role: role || ROLES.MAHASISWA,
+      role: domain === EMAIL_DOMAINS.TELKOM ? ROLES.DOSEN : ROLES.MAHASISWA,
     },
   });
 
-  // 4. Generate JWT token
+  // Generate JWT token
   const token = jwt.sign(
     { id: user.id, email: user.email, role: user.role },
     process.env.JWT_SECRET,
@@ -77,10 +82,12 @@ export const getUserById = async (userId) => {
     where: { id: userId },
     omit: { password: true, deletedAt: false },
   });
+
   if (!user || user.deletedAt) {
     const error = new Error("Pengguna tidak ditemukan");
     error.statusCode = 404;
     throw error;
   }
+
   return user;
 };

@@ -26,13 +26,11 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, email, password, confirmPassword]
+ *             required: [email, password, confirmPassword]
  *             properties:
- *               name:
- *                 type: string
  *               email:
  *                 type: string
- *                 description: Must use student.telkomuniversity.ac.id or telkomuniversity.ac.id
+ *                 description: Must use student.telkomuniversity.ac.id or telkomuniversity.ac.id email domain. Username will be derived automatically from the email prefix.
  *               password:
  *                 type: string
  *               confirmPassword:
@@ -40,10 +38,6 @@ const router = express.Router();
  *               phone:
  *                 type: string
  *                 nullable: true
- *               role:
- *                 type: string
- *                 enum: [MAHASISWA, DOSEN, ADMIN]
- *                 description: Required for telkomuniversity.ac.id and must be DOSEN or ADMIN; optional for student.telkomuniversity.ac.id and must be MAHASISWA if provided
  *     responses:
  *       201:
  *         description: Registration successful

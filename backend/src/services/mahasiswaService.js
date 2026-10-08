@@ -13,7 +13,7 @@ export const getMahasiswas = async ({
   const searchTerm = (search || "").trim();
   if (searchTerm) {
     where.OR = [
-      { user: { name: { contains: searchTerm, mode: "insensitive" } } },
+      { name: { contains: searchTerm, mode: "insensitive" } },
       { nim: { contains: searchTerm, mode: "insensitive" } },
       { kelasAsal: { contains: searchTerm, mode: "insensitive" } },
     ];
@@ -126,14 +126,10 @@ export const upsertMahasiswa = async (idOrUserId, payload, currentUser) => {
   }
 
   return await prisma.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id: userId },
-      data: { name },
-    });
-
     return await tx.mahasiswa.upsert({
       where: { userId },
       update: {
+        name,
         nim,
         kelasAsal: kelasAsal || null,
         tahunAngkatan: tahunAngkatan || null,
@@ -144,6 +140,7 @@ export const upsertMahasiswa = async (idOrUserId, payload, currentUser) => {
         dosenWaliId: dosenWaliId || null,
       },
       create: {
+        name,
         nim,
         kelasAsal: kelasAsal || null,
         tahunAngkatan: tahunAngkatan || null,

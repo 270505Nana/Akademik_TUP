@@ -22,7 +22,7 @@ model User {
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
   deletedAt DateTime?  @map("deleted_at")
-  name      String
+  username  String     @unique
   email     String     @unique
   password  String
   phone     String?    @unique
@@ -42,6 +42,7 @@ model Admin {
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
   deletedAt             DateTime?              @map("deleted_at")
+  name                  String
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId                String                 @unique @map("user_id")
   permohonanSkta        PermohonanSkta[]
@@ -74,6 +75,7 @@ model Dosen {
   createdAt                            DateTime               @default(now()) @map("created_at")
   updatedAt                            DateTime               @updatedAt @map("updated_at")
   deletedAt                            DateTime?              @map("deleted_at")
+  name                                 String
   nip                                  String                 @unique
   nidn                                 String?                @unique
   kodeDosen                            String                 @map("kode_dosen")
@@ -150,6 +152,7 @@ model Mahasiswa {
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
   deletedAt             DateTime?              @map("deleted_at")
+  name                  String
   nim                   String                 @unique
   kelasAsal             String                 @map("kelas_asal")
   tahunAngkatan         Int                    @map("tahun_angkatan")

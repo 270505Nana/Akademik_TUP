@@ -17,7 +17,7 @@ export const getDosens = async ({
 
   if (searchTerm) {
     where.OR = [
-      { user: { name: { contains: searchTerm, mode: "insensitive" } } },
+      { name: { contains: searchTerm, mode: "insensitive" } },
       { nip: { contains: searchTerm, mode: "insensitive" } },
       { nidn: { contains: searchTerm, mode: "insensitive" } },
       { kodeDosen: { contains: searchTerm, mode: "insensitive" } },
@@ -38,9 +38,9 @@ export const getDosens = async ({
   let orderBy = { createdAt: "desc" };
 
   if (sortParam === "nameasc" || sortParam === "a-z") {
-    orderBy = { user: { name: "asc" } };
+    orderBy = { name: "asc" };
   } else if (sortParam === "namedesc" || sortParam === "z-a") {
-    orderBy = { user: { name: "desc" } };
+    orderBy = { name: "desc" };
   } else if (sortParam === "researchgroupasc") {
     orderBy = { researchGroup: { name: "asc" } };
   } else if (sortParam === "researchgroupdesc") {
@@ -132,11 +132,6 @@ export const upsertDosen = async (
   }
 
   return await prisma.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id: userId },
-      data: { name },
-    });
-
     const targetStudyProgramId =
       studyProgramId || dosenRecord?.studyProgramId;
 
@@ -156,6 +151,7 @@ export const upsertDosen = async (
     return await tx.dosen.upsert({
       where: { userId },
       update: {
+        name,
         nip,
         nidn: nidn || null,
         kodeDosen,
@@ -168,6 +164,7 @@ export const upsertDosen = async (
           : {}),
       },
       create: {
+        name,
         nip,
         nidn: nidn || null,
         kodeDosen,
