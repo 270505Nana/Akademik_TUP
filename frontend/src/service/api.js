@@ -558,32 +558,36 @@ export const rejectSidangRegistration = async (registrationId, payload) => {
   return response.data?.data ?? response.data;
 };
 
-// PENJADWALAN SIDANG
-
-export const getAllPenjadwalanSidang = async (params) => {
-  return await api.get('/api/penjadwalan-sidang', { params });
-};
+// ----------------------------------------- PENJADWALAN SIDANG ADMIN -----------------------------------------
 
 export const getAllRuangan = async () => {
   return await api.get('/api/ruangan');
 };
 
-export const setJadwalSidang = async (id, payload) => {
-  return await api.put(`/api/penjadwalan-sidang/${id}/set-jadwal`, payload);
+export const setJadwalSidangAdmin = async (id, payload) => {
+  const response = await api.put(`/api/penjadwalan-sidang/${id}/set-jadwal`, payload);
+  return response.data;
 };
 
-export const toggleLockJadwal = async (id) => {
-  return await api.patch(`/api/penjadwalan-sidang/${id}/toggle-lock`);
+export const setJadwalSidangBatchAdmin = async (payload) => {
+  const response = await api.put(`/api/penjadwalan-sidang/set-jadwal/batch`, payload);
+  return response.data;
 };
 
-// ------------------------------------------- ETC & PERIODS -------------------------------------------
+export const toggleLockJadwalAdmin = async (id) => {
+  const response = await api.patch(`/api/penjadwalan-sidang/${id}/toggle-lock`);
+  return response.data;
+};
+
+
+// ------------------------------------------- ETC-------------------------------------------
 export const getLecturers = async (params = { limit: "all", sortBy: "a-z" }) =>
   api.get("/api/dosen", { params }).then((r) => r.data?.data ?? r.data);
 export const getFaculties = async () => api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
 export const getStudyPrograms = async () => api.get("/api/study-programs").then((r) => r.data?.data ?? r.data);
 export const getStudyProgramById = async (id) => api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
 
-// --- SIDANG PERIODS ---
+// ---------------------------------------- SIDANG PERIODS -------------------------------------------
 export const getSidangPeriods = async (params = {}) => {
   try {
     const query = typeof params === 'string' ? { search: params } : params;
@@ -608,7 +612,7 @@ export const updateSidangPeriod = async (id, payload) => {
 };
 
 
-// --- YUDISIUM PERIODS ---
+// ---------------------------------------- YUDISIUM PERIODS -------------------------------------------
 export const getYudisiumPeriods = async (params = '') => {
   try {
     const query = typeof params === 'string' ? (params ? { category: params } : {}) : params;
