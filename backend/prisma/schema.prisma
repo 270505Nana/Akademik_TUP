@@ -589,6 +589,7 @@ model PenilaianTugasAkhir {
   catatanRevisi        String             @map("catatan_revisi") @db.Text
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
   sidangRegistrationId String             @map("sidang_registration_id")
+  penilaiType          String             @map("penilai_type") // pembimbing / penguji
   dosenPenilai         Dosen              @relation("DosenPenilai", fields: [dosenPenilaiId], references: [id]) // Dosen Penilai (Pembimbing 1/2/Penguji 1/2)
   dosenPenilaiId       String             @map("dosen_penilai_id")
   dosenKaprodi         Dosen?             @relation("DosenKaprodi", fields: [dosenKaprodiId], references: [id]) // Kaprodi

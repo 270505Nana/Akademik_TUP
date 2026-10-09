@@ -5,6 +5,8 @@ import {
 } from "../../controllers/penilaianTugasAkhirController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { authorize } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import { savePenilaianTugasAkhirSchema } from "../../schemas/penilaianTugasAkhirSchema.js";
 
 const router = express.Router();
 
@@ -30,11 +32,6 @@ const router = express.Router();
  *         schema:
  *           type: string
  *         description: ID Pendaftaran Sidang (UUID)
- *       - in: query
- *         name: dosenPenilaiId
- *         schema:
- *           type: string
- *         description: ID Dosen Penilai (opsional, default ke dosen yang sedang login jika role DOSEN)
  *     responses:
  *       200:
  *         description: Data penilaian tugas akhir berhasil diambil
@@ -66,19 +63,25 @@ const router = express.Router();
  *                 sidangRegistrationId:
  *                   type: string
  *                   example: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+ *                 penilaiType:
+ *                   type: string
+ *                   enum: ["pembimbing", "penguji"]
+ *                   example: "pembimbing"
  *                 dosenPenilai:
  *                   type: object
  *                 dosenKaprodi:
  *                   type: object
  *       401:
  *         description: Token tidak valid atau tidak ditemukan
+ *       403:
+ *         description: Akses ditolak atau dosen tidak terdaftar sebagai pembimbing/penguji
  *       404:
  *         description: Pendaftaran sidang tidak ditemukan
  */
 router.get(
   "/sidang-registration/:sidangRegistrationId",
   verifyToken,
-  authorize("DOSEN", "ADMIN"),
+  authorize("DOSEN"),
   getPenilaianBySidangRegistrationId
 );
 
@@ -104,10 +107,6 @@ router.get(
  *                 type: string
  *                 description: ID Pendaftaran Sidang (UUID)
  *                 example: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
- *               dosenPenilaiId:
- *                 type: string
- *                 description: ID Dosen Penilai (UUID). Opsional jika login sebagai Dosen.
- *                 example: "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22"
  *               nilai:
  *                 type: object
  *                 description: Komponen nilai dalam bentuk JSON
@@ -120,33 +119,56 @@ router.get(
  *                 type: string
  *                 description: Catatan revisi untuk mahasiswa
  *                 example: "Perbaiki format sitasi daftar pustaka"
- *               bobotNilai:
- *                 type: object
- *                 description: Bobot masing-masing komponen nilai (opsional, default dari JenisAsesmenClo prodi)
- *                 example:
- *                   nilai1: 0.2
- *                   nilai2: 0.3
- *                   nilai3: 0.3
- *                   nilai4: 0.2
- *               dosenKaprodiId:
- *                 type: string
- *                 description: ID Dosen Kaprodi (opsional, otomatis dicari dari prodi mahasiswa)
  *     responses:
  *       201:
  *         description: Penilaian tugas akhir berhasil dibuat
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Penilaian tugas akhir berhasil disimpan"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     bobotPenilai:
+ *                       type: number
+ *                     bobotNilai:
+ *                       type: object
+ *                     nilai:
+ *                       type: object
+ *                     catatanRevisi:
+ *                       type: string
+ *                     sidangRegistrationId:
+ *                       type: string
+ *                     penilaiType:
+ *                       type: string
+ *                       enum: ["pembimbing", "penguji"]
+ *                       example: "pembimbing"
+ *                     dosenPenilai:
+ *                       type: object
+ *                     dosenKaprodi:
+ *                       type: object
  *       200:
  *         description: Penilaian tugas akhir berhasil diperbarui
  *       400:
  *         description: Validasi error
  *       401:
  *         description: Token tidak valid atau tidak ditemukan
+ *       403:
+ *         description: Akses ditolak atau dosen tidak terdaftar sebagai pembimbing/penguji
  *       404:
  *         description: Pendaftaran sidang atau Dosen tidak ditemukan
  */
 router.post(
   "/",
   verifyToken,
-  authorize("DOSEN", "ADMIN"),
+  authorize("DOSEN"),
+  validate(savePenilaianTugasAkhirSchema),
   savePenilaianTugasAkhir
 );
 

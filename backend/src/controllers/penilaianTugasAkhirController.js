@@ -1,7 +1,6 @@
 import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
 import { mapDosen } from "../mappers/userMapper.js";
-import { sendValidationError, isNil } from "../utils/validationHelper.js";
 
 /**
  * Helper to fetch default bobotNilai from JenisAsesmenClo for a study program
@@ -33,14 +32,20 @@ const getDefaultBobotNilaiByStudyProgram = async (studyProgramId) => {
  */
 const calculateBobotPenilai = async (sidangRegistration, dosenPenilaiId) => {
   let type = null;
+  let penilaiType = null;
+
   if (dosenPenilaiId === sidangRegistration.dosenPembimbing1Id) {
     type = "pembimbing_1";
+    penilaiType = "pembimbing";
   } else if (dosenPenilaiId === sidangRegistration.dosenPembimbing2Id) {
     type = "pembimbing_2";
+    penilaiType = "pembimbing";
   } else if (dosenPenilaiId === sidangRegistration.dosenPenguji1Id) {
     type = "penguji_1";
+    penilaiType = "penguji";
   } else if (dosenPenilaiId === sidangRegistration.dosenPenguji2Id) {
     type = "penguji_2";
+    penilaiType = "penguji";
   }
 
   const studyProgramId = sidangRegistration.mahasiswa?.studyProgramId;
@@ -60,17 +65,34 @@ const calculateBobotPenilai = async (sidangRegistration, dosenPenilaiId) => {
     }
   }
 
-  return { type, bobotPenilai };
+  return { type, penilaiType, bobotPenilai };
 };
 
 /**
  * @desc    Get Penilaian Tugas Akhir by Sidang Registration ID
  * @route   GET /api/penilaian-tugas-akhir/sidang-registration/:sidangRegistrationId
- * @access  Private (Dosen / Admin)
+ * @access  Private (Dosen)
  */
 export const getPenilaianBySidangRegistrationId = asyncHandler(async (req, res) => {
   const { sidangRegistrationId } = req.params;
-  const { dosenPenilaiId: queryDosenPenilaiId } = req.query;
+
+  // Dosen penilai diambil dari token login
+  if (req.user?.role !== "DOSEN") {
+    res.status(403);
+    throw new Error("Hanya dosen yang dapat mengakses penilaian tugas akhir");
+  }
+
+  const currentDosen = await prisma.dosen.findUnique({
+    where: { userId: req.user.id },
+    include: { user: true, studyProgram: true, researchGroup: true },
+  });
+
+  if (!currentDosen || currentDosen.deletedAt) {
+    res.status(403);
+    throw new Error("Data dosen tidak ditemukan");
+  }
+
+  const targetDosenPenilaiId = currentDosen.id;
 
   const sidangRegistration = await prisma.sidangRegistration.findUnique({
     where: { id: sidangRegistrationId },
@@ -103,15 +125,16 @@ export const getPenilaianBySidangRegistrationId = asyncHandler(async (req, res) 
 
   const studyProgramId = sidangRegistration.mahasiswa?.studyProgramId;
 
-  // Tentukan dosenPenilaiId target
-  let targetDosenPenilaiId = queryDosenPenilaiId || null;
-  if (!targetDosenPenilaiId && req.user?.role === "DOSEN") {
-    const currentDosen = await prisma.dosen.findUnique({
-      where: { userId: req.user.id },
-    });
-    if (currentDosen) {
-      targetDosenPenilaiId = currentDosen.id;
-    }
+  // Tentukan peran penilai (pembimbing / penguji) dan hitung bobot penilai
+  const { penilaiType, bobotPenilai } = await calculateBobotPenilai(
+    sidangRegistration,
+    targetDosenPenilaiId
+  );
+
+  // Pastikan dosen tersebut terdaftar sebagai pembimbing atau penguji
+  if (!penilaiType) {
+    res.status(403);
+    throw new Error("Anda tidak terdaftar sebagai pembimbing atau penguji pada sidang ini");
   }
 
   // Dosen Kaprodi dari prodi mahasiswa
@@ -135,16 +158,12 @@ export const getPenilaianBySidangRegistrationId = asyncHandler(async (req, res) 
   const defaultBobotNilai = await getDefaultBobotNilaiByStudyProgram(studyProgramId);
 
   // Cari data PenilaianTugasAkhir
-  const where = {
-    sidangRegistrationId,
-    deletedAt: null,
-  };
-  if (targetDosenPenilaiId) {
-    where.dosenPenilaiId = targetDosenPenilaiId;
-  }
-
   const penilaian = await prisma.penilaianTugasAkhir.findFirst({
-    where,
+    where: {
+      sidangRegistrationId,
+      dosenPenilaiId: targetDosenPenilaiId,
+      deletedAt: null,
+    },
     include: {
       dosenPenilai: {
         include: { user: true, studyProgram: true, researchGroup: true },
@@ -168,6 +187,7 @@ export const getPenilaianBySidangRegistrationId = asyncHandler(async (req, res) 
       nilai: penilaian.nilai || {},
       catatanRevisi: penilaian.catatanRevisi || "",
       sidangRegistrationId: penilaian.sidangRegistrationId,
+      penilaiType: penilaian.penilaiType || penilaiType,
       dosenPenilai: penilaian.dosenPenilai ? mapDosen(penilaian.dosenPenilai) : {},
       dosenKaprodi: penilaian.dosenKaprodi
         ? mapDosen(penilaian.dosenKaprodi)
@@ -178,26 +198,14 @@ export const getPenilaianBySidangRegistrationId = asyncHandler(async (req, res) 
   }
 
   // Jika belum ada penilaian yang tersimpan, berikan data template/default
-  const { bobotPenilai } = await calculateBobotPenilai(
-    sidangRegistration,
-    targetDosenPenilaiId
-  );
-
-  let targetDosenPenilai = null;
-  if (targetDosenPenilaiId) {
-    targetDosenPenilai = await prisma.dosen.findUnique({
-      where: { id: targetDosenPenilaiId },
-      include: { user: true, studyProgram: true, researchGroup: true },
-    });
-  }
-
   return res.json({
     bobotPenilai,
     bobotNilai: defaultBobotNilai,
     nilai: {},
     catatanRevisi: "",
     sidangRegistrationId: sidangRegistration.id,
-    dosenPenilai: targetDosenPenilai ? mapDosen(targetDosenPenilai) : {},
+    penilaiType: penilaiType || null,
+    dosenPenilai: mapDosen(currentDosen),
     dosenKaprodi: kaprodi ? mapDosen(kaprodi) : {},
   });
 });
@@ -205,47 +213,27 @@ export const getPenilaianBySidangRegistrationId = asyncHandler(async (req, res) 
 /**
  * @desc    Create or Update Penilaian Tugas Akhir
  * @route   POST /api/penilaian-tugas-akhir
- * @access  Private (Dosen / Admin)
+ * @access  Private (Dosen)
  */
 export const savePenilaianTugasAkhir = asyncHandler(async (req, res) => {
-  const { nilai, catatanRevisi, sidangRegistrationId, dosenPenilaiId: bodyDosenPenilaiId, bobotNilai: bodyBobotNilai, dosenKaprodiId: bodyDosenKaprodiId } = req.body;
-  const errors = [];
+  const { sidangRegistrationId, nilai, catatanRevisi } = req.body;
 
-  if (isNil(sidangRegistrationId)) {
-    errors.push({
-      field: "sidangRegistrationId",
-      message: "ID Pendaftaran Sidang wajib diisi",
-    });
+  // Dosen penilai diambil dari token pengguna yang sedang login
+  if (req.user?.role !== "DOSEN") {
+    res.status(403);
+    throw new Error("Hanya dosen yang dapat melakukan penilaian tugas akhir");
   }
 
-  if (isNil(nilai) || typeof nilai !== "object") {
-    errors.push({
-      field: "nilai",
-      message: "Nilai wajib diisi dalam bentuk object JSON",
-    });
+  const currentDosen = await prisma.dosen.findUnique({
+    where: { userId: req.user.id },
+  });
+
+  if (!currentDosen || currentDosen.deletedAt) {
+    res.status(403);
+    throw new Error("Data dosen penilai tidak ditemukan");
   }
 
-  // Tentukan dosenPenilaiId
-  let dosenPenilaiId = bodyDosenPenilaiId;
-  if (isNil(dosenPenilaiId) && req.user?.role === "DOSEN") {
-    const currentDosen = await prisma.dosen.findUnique({
-      where: { userId: req.user.id },
-    });
-    if (currentDosen) {
-      dosenPenilaiId = currentDosen.id;
-    }
-  }
-
-  if (isNil(dosenPenilaiId)) {
-    errors.push({
-      field: "dosenPenilaiId",
-      message: "ID Dosen Penilai wajib diisi",
-    });
-  }
-
-  if (errors.length > 0) {
-    return sendValidationError(res, errors);
-  }
+  const dosenPenilaiId = currentDosen.id;
 
   // Validasi pendaftaran sidang
   const sidangRegistration = await prisma.sidangRegistration.findUnique({
@@ -260,33 +248,25 @@ export const savePenilaianTugasAkhir = asyncHandler(async (req, res) => {
     throw new Error("Pendaftaran sidang tidak ditemukan");
   }
 
-  // Validasi dosen penilai
-  const dosenPenilai = await prisma.dosen.findUnique({
-    where: { id: dosenPenilaiId },
-  });
-
-  if (!dosenPenilai || dosenPenilai.deletedAt) {
-    res.status(404);
-    throw new Error("Dosen Penilai tidak ditemukan");
-  }
-
-  // Hitung bobotPenilai berdasarkan SkemaPenilaiProdi
-  const { bobotPenilai } = await calculateBobotPenilai(
+  // Tentukan peran penilai (pembimbing / penguji) dan hitung bobot penilai
+  const { penilaiType, bobotPenilai } = await calculateBobotPenilai(
     sidangRegistration,
     dosenPenilaiId
   );
 
-  const studyProgramId = sidangRegistration.mahasiswa?.studyProgramId;
-
-  // Tentukan bobotNilai
-  let bobotNilai = bodyBobotNilai;
-  if (!bobotNilai || typeof bobotNilai !== "object" || Object.keys(bobotNilai).length === 0) {
-    bobotNilai = await getDefaultBobotNilaiByStudyProgram(studyProgramId);
+  if (!penilaiType) {
+    res.status(403);
+    throw new Error("Dosen tidak terdaftar sebagai pembimbing atau penguji pada sidang ini");
   }
 
-  // Tentukan dosenKaprodiId
-  let dosenKaprodiId = bodyDosenKaprodiId || null;
-  if (!dosenKaprodiId && studyProgramId) {
+  const studyProgramId = sidangRegistration.mahasiswa?.studyProgramId;
+
+  // Bobot nilai diisi otomatis oleh backend dari JenisAsesmenClo prodi mahasiswa
+  const bobotNilai = await getDefaultBobotNilaiByStudyProgram(studyProgramId);
+
+  // Tentukan dosenKaprodiId secara otomatis dari prodi mahasiswa
+  let dosenKaprodiId = null;
+  if (studyProgramId) {
     const kaprodi = await prisma.dosen.findFirst({
       where: {
         studyProgramId,
@@ -316,7 +296,8 @@ export const savePenilaianTugasAkhir = asyncHandler(async (req, res) => {
         bobotPenilai,
         bobotNilai: Object.keys(bobotNilai).length > 0 ? bobotNilai : existingPenilaian.bobotNilai,
         nilai,
-        catatanRevisi: catatanRevisi !== undefined ? catatanRevisi : existingPenilaian.catatanRevisi,
+        catatanRevisi: catatanRevisi !== undefined ? (catatanRevisi || "") : existingPenilaian.catatanRevisi,
+        penilaiType,
         dosenKaprodiId: dosenKaprodiId || existingPenilaian.dosenKaprodiId,
       },
       include: {
@@ -336,6 +317,7 @@ export const savePenilaianTugasAkhir = asyncHandler(async (req, res) => {
         nilai,
         catatanRevisi: catatanRevisi || "",
         sidangRegistrationId,
+        penilaiType,
         dosenPenilaiId,
         dosenKaprodiId,
       },
@@ -359,6 +341,7 @@ export const savePenilaianTugasAkhir = asyncHandler(async (req, res) => {
       nilai: savedPenilaian.nilai,
       catatanRevisi: savedPenilaian.catatanRevisi,
       sidangRegistrationId: savedPenilaian.sidangRegistrationId,
+      penilaiType: savedPenilaian.penilaiType,
       dosenPenilai: savedPenilaian.dosenPenilai ? mapDosen(savedPenilaian.dosenPenilai) : {},
       dosenKaprodi: savedPenilaian.dosenKaprodi ? mapDosen(savedPenilaian.dosenKaprodi) : {},
     },
