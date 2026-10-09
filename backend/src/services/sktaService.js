@@ -12,20 +12,12 @@ export const sktaInclude = {
   },
   dosenPembimbing1: {
     include: {
-      user: {
-        select: {
-          name: true,
-        },
-      },
+      name: true,
     },
   },
   dosenPembimbing2: {
     include: {
-      user: {
-        select: {
-          name: true,
-        },
-      },
+      name: true,
     },
   },
   researchGroup: true,
@@ -513,7 +505,9 @@ export const submitPermohonanSkta = async ({
   if (!evidenceUploadPath) {
     const error = new Error("Berkas evidence wajib diunggah");
     error.statusCode = 400;
-    error.errors = [{ field: "evidence", message: "Berkas evidence wajib diunggah" }];
+    error.errors = [
+      { field: "evidence", message: "Berkas evidence wajib diunggah" },
+    ];
     throw error;
   }
 
@@ -731,9 +725,7 @@ export const approvePermohonanSkta = async ({
 
   if (sktaFile) {
     const nim = sanitizeFilenamePart(permohonan.mahasiswa?.nim || "nim");
-    const nama = sanitizeFilenamePart(
-      permohonan.mahasiswa?.name || "nama",
-    );
+    const nama = sanitizeFilenamePart(permohonan.mahasiswa?.name || "nama");
     const prodi = sanitizeFilenamePart(
       permohonan.mahasiswa?.studyProgram?.name || "study_program",
     );
