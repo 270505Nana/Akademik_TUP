@@ -184,6 +184,7 @@ export const setPengujiSidang = async ({
     data: {
       dosenPenguji1Id,
       dosenPenguji2Id,
+      isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
   });
@@ -295,6 +296,7 @@ export const batchSetPengujiSidang = async (items) => {
         data: {
           dosenPenguji1Id: item.dosenPenguji1Id,
           dosenPenguji2Id: item.dosenPenguji2Id,
+          isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
       });
@@ -356,6 +358,7 @@ export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
     data: {
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
+      isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
   });
@@ -455,6 +458,7 @@ export const batchSetJadwalSidang = async (items) => {
         data: {
           tglSidang: new Date(item.tglSidang),
           ruanganSidangId: item.ruanganSidangId,
+          isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
       });
@@ -641,6 +645,7 @@ export const setPengujiJadwalSidang = async ({
       dosenPenguji2Id,
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
+      isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
   });
