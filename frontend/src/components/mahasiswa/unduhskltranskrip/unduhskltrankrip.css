@@ -48,71 +48,43 @@
   } 
 }
 
-.top-header-nav {
+/* ── Top Bar Unduh SKL & Transkrip ──────────────────────────────────────── */
+.ub-topbar {
+  background: #C0182A;
+  height: 64px;
+  padding: 0 32px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding: 0 0.5rem;
+  border-bottom: 1px solid #E9EDF5;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
-.topbar-toggle {
-  background: transparent;
+.ub-topbar-toggle {
+  background: none;
   border: none;
   cursor: pointer;
+  color: #ffffff;
   display: flex;
   align-items: center;
-  padding: 6px;
-  border-radius: 6px;
-  color: #1e293b;
-  transition: background 0.15s;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.22s cubic-bezier(.4, 0, .2, 1);
+  flex-shrink: 0;
 }
 
-.topbar-toggle:hover {
-  background: rgba(0, 0, 0, 0.05);
+.ub-topbar-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.btn-back-square {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #f1f5f9;
-  border: none;
-  padding: 0.8rem 1.4rem;
-  border-radius: 10px;
-  color: #1e293b;
-  font-size: 0.95rem;
+.ub-topbar-brand {
   font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-back-square:hover {
-  background: #e2e8f0;
-}
-
-.header-logos {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.simta-brand-logo {
-  height: 60px;
-  width: auto;
-  object-fit: contain;
-}
-
-.telkom-brand-logo {
-  height: 55px;
-  width: auto;
-  object-fit: contain;
-}
-
-.logo-divider {
-  width: 1px;
-  height: 40px;
-  background: #e2e8f0;
+  font-size: 15px;
+  color: #ffffff;
+  margin-left: 8px;
 }
 
 .simta-container {

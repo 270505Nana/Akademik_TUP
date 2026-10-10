@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { Lock } from 'lucide-react';
 
-const PengujiSearchable = ({ value, placeholder, otherValue, options = [], onChange, status }) => {
+const PengujiSearchable = ({ value, placeholder, otherValue, options = [], onChange, status, disabled = false }) => {
   const [isOpen, setIsOpen]   = useState(false);
   const [query, setQuery]     = useState('');
   const [coords, setCoords]   = useState({ top: 0, left: 0, width: 0 });
@@ -59,6 +60,7 @@ const PengujiSearchable = ({ value, placeholder, otherValue, options = [], onCha
   }, []);
 
   const handleSelect = (optValue) => {
+    if (disabled) return;
     onChange(optValue || null);
     setIsOpen(false);
     setQuery('');
@@ -70,21 +72,28 @@ const PengujiSearchable = ({ value, placeholder, otherValue, options = [], onCha
     <div ref={wrapperRef} className="ps-penguji-searchable-wrap">
       <div
         ref={triggerRef}
-        className={`ps-penguji-trigger ${statusClass}`}
-        onClick={() => setIsOpen(prev => !prev)}
-        title={selectedLabel || placeholder}
+        className={`ps-penguji-trigger ${statusClass} ${disabled ? 'disabled' : ''}`}
+        onClick={() => {
+          if (!disabled) setIsOpen(prev => !prev);
+        }}
+        title={disabled ? 'Data dikunci oleh Admin' : (selectedLabel || placeholder)}
       >
+        {disabled && (
+          <Lock size={11} color="#94A3B8" style={{ flexShrink: 0, marginTop: '1px' }} />
+        )}
         <span className={`ps-penguji-trigger-label ${!selectedLabel ? 'empty' : ''}`}>
           {selectedLabel || placeholder}
         </span>
-        <div className="ps-penguji-trigger-icons">
-          <svg
-            width="10" height="10" viewBox="0 0 10 10"
-            style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: '0.15s', flexShrink: 0 }}
-          >
-            <path d="M1 3l4 4 4-4" stroke="#94A3B8" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          </svg>
-        </div>
+        {!disabled && (
+          <div className="ps-penguji-trigger-icons">
+            <svg
+              width="10" height="10" viewBox="0 0 10 10"
+              style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: '0.15s', flexShrink: 0 }}
+            >
+              <path d="M1 3l4 4 4-4" stroke="#94A3B8" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
       </div>
 
       {isOpen && createPortal(

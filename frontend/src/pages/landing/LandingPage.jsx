@@ -261,7 +261,7 @@ const LandingPage = () => {
                 </span>
               </a>
 
-              <a href="#" className="lp-footer-contact">
+              <a href="https://whatsapp.com/channel/0029Vazvqd2Fy7292bXvzU1n" className="lp-footer-contact">
                 <span className="lp-footer-contact-icon">
                   <Users size={16} />
                 </span>

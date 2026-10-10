@@ -478,9 +478,16 @@ export const downloadYudisiumRegistrationUpload = async (uploadId) => {
 };
 
 // ------------------------------------------- SIDANG ADMIN -------------------------------------------
-export const getAllSidangRegistrations = async () => {
-  const response = await api.get('/api/sidang-registrations');
-  return response.data?.data ?? response.data;
+/**
+ * Mengambil daftar pendaftaran sidang dari backend.
+ * @param {Object} params - Query params opsional (page, limit, search, studyProgramId, status, dll.)
+ *   Gunakan { limit: 'all', pagination: 'false' } untuk mengambil semua data sekaligus
+ *   (untuk halaman dosen yang melakukan filter di sisi klien).
+ * @returns {Promise<{ data: Array, pagination: Object } | Array>}
+ */
+export const getAllSidangRegistrations = async (params = {}) => {
+  const response = await api.get('/api/sidang-registrations', { params });
+  return response.data;
 };
 
 export const getSidangRegistrationById = async (id) => {
@@ -558,14 +565,40 @@ export const rejectSidangRegistration = async (registrationId, payload) => {
   return response.data?.data ?? response.data;
 };
 
-// ------------------------------------------- ETC & PERIODS -------------------------------------------
+// ----------------------------------------- PENJADWALAN SIDANG ADMIN -----------------------------------------
+
+export const getAllRuangan = async () => {
+  return await api.get('/api/ruangan');
+};
+
+export const setJadwalSidangAdmin = async (id, payload) => {
+  const response = await api.put(`/api/penjadwalan-sidang/${id}/set-jadwal`, payload);
+  return response.data;
+};
+
+export const setJadwalSidangBatchAdmin = async (payload) => {
+  const response = await api.put(`/api/penjadwalan-sidang/set-jadwal/batch`, payload);
+  return response.data;
+};
+
+export const toggleLockJadwalAdmin = async (id) => {
+  const response = await api.patch(`/api/penjadwalan-sidang/${id}/toggle-lock`);
+  return response.data;
+};
+
+
+// ------------------------------------------- ETC-------------------------------------------
 export const getLecturers = async (params = { limit: "all", sortBy: "a-z" }) =>
   api.get("/api/dosen", { params }).then((r) => r.data?.data ?? r.data);
-export const getFaculties = async () => api.get("/api/faculties").then((r) => r.data?.data ?? r.data);
-export const getStudyPrograms = async () => api.get("/api/study-programs").then((r) => r.data?.data ?? r.data);
-export const getStudyProgramById = async (id) => api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
+// Gunakan limit=all agar seluruh data dikembalikan (tanpa batas paginasi default 10)
+export const getFaculties = async () =>
+  api.get("/api/faculties", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
+export const getStudyPrograms = async () =>
+  api.get("/api/study-programs", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
+export const getStudyProgramById = async (id) =>
+  api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
 
-// --- SIDANG PERIODS ---
+// ---------------------------------------- SIDANG PERIODS -------------------------------------------
 export const getSidangPeriods = async (params = {}) => {
   try {
     const query = typeof params === 'string' ? { search: params } : params;
@@ -590,7 +623,7 @@ export const updateSidangPeriod = async (id, payload) => {
 };
 
 
-// --- YUDISIUM PERIODS ---
+// ---------------------------------------- YUDISIUM PERIODS -------------------------------------------
 export const getYudisiumPeriods = async (params = '') => {
   try {
     const query = typeof params === 'string' ? (params ? { category: params } : {}) : params;
