@@ -595,6 +595,7 @@ model PenilaianTugasAkhir {
   dosenKaprodi         Dosen?             @relation("DosenKaprodi", fields: [dosenKaprodiId], references: [id]) // Kaprodi
   dosenKaprodiId       String?            @map("dosen_kaprodi_id")
 
+  @@unique([sidangRegistrationId, dosenPenilaiId])
   @@map("penilaian_tugas_akhir")
 }
 

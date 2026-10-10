@@ -82,17 +82,24 @@ router.get(
   "/sidang-registration/:sidangRegistrationId",
   verifyToken,
   authorize("DOSEN"),
-  getPenilaianBySidangRegistrationId
+  getPenilaianBySidangRegistrationId,
 );
 
 /**
  * @swagger
- * /api/penilaian-tugas-akhir:
- *   post:
+ * /api/penilaian-tugas-akhir/sidang-registration/{sidangRegistrationId}:
+ *   put:
  *     summary: Simpan / Submit Penilaian Sidang Tugas Akhir
  *     tags: [Penilaian Tugas Akhir]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sidangRegistrationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID Pendaftaran Sidang (UUID)
  *     requestBody:
  *       required: true
  *       content:
@@ -100,13 +107,8 @@ router.get(
  *           schema:
  *             type: object
  *             required:
- *               - sidangRegistrationId
  *               - nilai
  *             properties:
- *               sidangRegistrationId:
- *                 type: string
- *                 description: ID Pendaftaran Sidang (UUID)
- *                 example: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
  *               nilai:
  *                 type: object
  *                 description: Komponen nilai dalam bentuk JSON
@@ -120,8 +122,8 @@ router.get(
  *                 description: Catatan revisi untuk mahasiswa
  *                 example: "Perbaiki format sitasi daftar pustaka"
  *     responses:
- *       201:
- *         description: Penilaian tugas akhir berhasil dibuat
+ *       200:
+ *         description: Penilaian tugas akhir berhasil diperbarui
  *         content:
  *           application/json:
  *             schema:
@@ -153,8 +155,8 @@ router.get(
  *                       type: object
  *                     dosenKaprodi:
  *                       type: object
- *       200:
- *         description: Penilaian tugas akhir berhasil diperbarui
+ *       201:
+ *         description: Penilaian tugas akhir berhasil dibuat
  *       400:
  *         description: Validasi error
  *       401:
@@ -164,12 +166,12 @@ router.get(
  *       404:
  *         description: Pendaftaran sidang atau Dosen tidak ditemukan
  */
-router.post(
-  "/",
+router.put(
+  "/sidang-registration/:sidangRegistrationId",
   verifyToken,
   authorize("DOSEN"),
   validate(savePenilaianTugasAkhirSchema),
-  savePenilaianTugasAkhir
+  savePenilaianTugasAkhir,
 );
 
 export default router;
