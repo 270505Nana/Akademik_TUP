@@ -89,7 +89,7 @@ router.get(
  * @swagger
  * /api/penilaian-tugas-akhir/sidang-registration/{sidangRegistrationId}:
  *   put:
- *     summary: Simpan / Submit Penilaian Sidang Tugas Akhir
+ *     summary: Create or Update Penilaian Sidang Tugas Akhir
  *     tags: [Penilaian Tugas Akhir]
  *     security:
  *       - bearerAuth: []
