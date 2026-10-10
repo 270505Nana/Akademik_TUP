@@ -1,28 +1,16 @@
 import asyncHandler from "express-async-handler";
-import { mapDosen } from "../mappers/userMapper.js";
+import { mapPenilaianTugasAkhir } from "../mappers/penilaianTugasAkhirMapper.js";
 import * as penilaianTugasAkhirService from "../services/penilaianTugasAkhirService.js";
-
-// Helper formatter untuk response data penilaian tugas akhir
-const formatPenilaianResponse = (penilaian) => ({
-  id: penilaian.id,
-  bobotPenilai: Number(penilaian.bobotPenilai),
-  bobotNilai: penilaian.bobotNilai || {},
-  nilai: penilaian.nilai || {},
-  catatanRevisi: penilaian.catatanRevisi || "",
-  sidangRegistrationId: penilaian.sidangRegistrationId,
-  penilaiType: penilaian.penilaiType,
-  dosenPenilai: penilaian.dosenPenilai
-    ? mapDosen(penilaian.dosenPenilai)
-    : {},
-  dosenKaprodi: penilaian.dosenKaprodi
-    ? mapDosen(penilaian.dosenKaprodi)
-    : {},
-});
 
 // Get Penilaian Tugas Akhir by Sidang Registration ID
 export const getPenilaianBySidangRegistrationId = asyncHandler(
   async (req, res) => {
     const { sidangRegistrationId } = req.params;
+
+    if (!sidangRegistrationId) {
+      res.status(400);
+      throw new Error("ID Pendaftaran Sidang wajib diisi");
+    }
 
     const penilaian =
       await penilaianTugasAkhirService.getPenilaianBySidangRegistrationId({
@@ -31,7 +19,7 @@ export const getPenilaianBySidangRegistrationId = asyncHandler(
         userRole: req.user.role,
       });
 
-    res.json(formatPenilaianResponse(penilaian));
+    res.json(mapPenilaianTugasAkhir(penilaian));
   },
 );
 
@@ -56,6 +44,6 @@ export const savePenilaianTugasAkhir = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     message: "Penilaian tugas akhir berhasil disimpan",
-    data: formatPenilaianResponse(savedPenilaian),
+    data: mapPenilaianTugasAkhir(savedPenilaian),
   });
 });
