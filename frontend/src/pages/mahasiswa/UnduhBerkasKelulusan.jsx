@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Menu,
-  ArrowLeft,
   FileText,
   Download,
   Eye,
@@ -26,8 +24,6 @@ import {
 } from '../../service/api';
 
 import '../../components/mahasiswa/unduhskltranskrip/unduhskltrankrip.css';
-import logoSimta from '../../assets/logo-simta.png';
-import logoTelkom from '../../assets/logo-telkom.png';
 
 /* ─── Helper Format Tanggal ─────────────────────────────────────────────────── */
 const formatDateIndo = (date) => {
@@ -43,11 +39,14 @@ const formatDateIndo = (date) => {
 
 /* ─── Komponen Utama Unduh Berkas Kelulusan Mahasiswa ─────────────────────── */
 const UnduhBerkasKelulusan = () => {
-  const navigate = useNavigate();
-
   /* ── Sidebar State ── */
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const handleToggleSidebar = () => {
+    if (window.innerWidth < 992) setSidebarOpen(!sidebarOpen);
+    else setSidebarCollapsed(!sidebarCollapsed);
+  };
 
   /* ── User & Student Context ── */
   const { user, profile } = useAuth();
@@ -197,35 +196,14 @@ const UnduhBerkasKelulusan = () => {
       />
 
       <div id="yudisium-main" className="flex-1 relative">
+        {/* ── Top Bar Unduh SKL & Transkrip ── */}
+        <header className="ub-topbar">
+          <button className="ub-topbar-toggle" onClick={handleToggleSidebar}>
+            <Menu size={20} color="#fff" />
+          </button>
+          <div className="ub-topbar-brand">Unduh SKL &amp; Transkrip</div>
+        </header>
         <div className="page-wrapper yudisium-wrapper">
-          {/* ── Top Header Nav (Sama dengan Registrasi Yudisium) ── */}
-          <div className="top-header-nav">
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <button
-                className="topbar-toggle"
-                onClick={() => {
-                  if (window.innerWidth < 992) {
-                    setSidebarOpen(!sidebarOpen);
-                  } else {
-                    setSidebarCollapsed(!sidebarCollapsed);
-                  }
-                }}
-                style={{ border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}
-              >
-                <Menu size={20} />
-              </button>
-              <button className="btn-back-square" onClick={() => navigate("/mahasiswa/dashboard")}>
-                <ArrowLeft size={18} />
-                <span className="hidden sm:inline">Kembali</span>
-              </button>
-            </div>
-            <div className="header-logos">
-              <img src={logoSimta} alt="SIMTA" className="simta-brand-logo" />
-              <div className="logo-divider"></div>
-              <img src={logoTelkom} alt="Telkom" className="telkom-brand-logo" />
-            </div>
-          </div>
-
           <div className="simta-container">
             {/* ── Kotak Informasi / Pemberitahuan Berkas Kelulusan ── */}
             <div className="ub-notice-card">

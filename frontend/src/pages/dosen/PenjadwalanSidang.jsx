@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Menu, HelpCircle, Bell, Search, Lock,
   ChevronLeft, ChevronRight, Save, Info, Loader2, Loader,
@@ -13,6 +13,7 @@ import '../dashboard.css';
 import '../../components/dosen/penjadwalansidang/penjadwalansidang.css';
 
 const PAGE_SIZE = 5;
+const POLLING_INTERVAL_MS = 10000;
 
 const TABLE_COLUMNS = [
   { label: 'No', className: 'ps-col-no', align: 'center' },
@@ -75,6 +76,14 @@ const PenjadwalanSidang = () => {
   const [dataFetchError, setDataFetchError] = useState(false);
   const [rowStatus, setRowStatus] = useState({});
   const [rowSaving, setRowSaving] = useState({});
+
+  const isFetchingRef = useRef(false);
+  const rowStatusRef = useRef({});
+
+  useEffect(() => {
+    rowStatusRef.current = rowStatus;
+  }, [rowStatus]);
+
   const unsavedCount = useMemo(() => {
     return Object.values(rowStatus).filter(s => s === 'unsaved').length;
   }, [rowStatus]);
@@ -170,82 +179,141 @@ const PenjadwalanSidang = () => {
     return () => { isMounted = false; };
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchSidangData = async () => {
-      try {
+  const fetchSidangData = useCallback(async (isSilent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
+    try {
+      if (!isSilent) {
         setIsLoadingData(true);
         setDataFetchError(false);
-        const res = await getPenjadwalanSidang({ limit: 20 });
-        const rawList = Array.isArray(res) ? res : res?.data || [];
+      }
+      const res = await getPenjadwalanSidang({ limit: 20 });
+      const rawList = Array.isArray(res) ? res : res?.data || [];
 
-        if (isMounted) {
-          const mapped = rawList.map(item => {
-            const mhs = item.mahasiswa || {};
-            const prodiName = mhs.studyProgram?.name || '-';
-            const dosenPembimbingName = item.dosenPembimbing1?.name || '-';
-            const penguji1Id = item.dosenPenguji1?.id || null;
-            const penguji2Id = item.dosenPenguji2?.id || null;
-            const ruanganName = item.ruanganSidang
-              ? `${item.ruanganSidang.name}${item.ruanganSidang.gedung ? ` (${item.ruanganSidang.gedung})` : ''}`
-              : null;
-            const researchGroupId = item.dosenPembimbing1?.researchGroupId || item.researchGroupId || null;
+      const mapped = rawList.map(item => {
+        const mhs = item.mahasiswa || {};
+        const prodiName = mhs.studyProgram?.name || '-';
+        const dosenPembimbing1Name = item.dosenPembimbing1?.name || null;
+        const dosenPembimbing2Name = item.dosenPembimbing2?.name || null;
+        const penguji1Id = item.dosenPenguji1?.id || null;
+        const penguji2Id = item.dosenPenguji2?.id || null;
+        const ruanganName = item.ruanganSidang
+          ? `${item.ruanganSidang.name}${item.ruanganSidang.gedung ? ` (${item.ruanganSidang.gedung})` : ''}`
+          : null;
+        const researchGroupId = item.dosenPembimbing1?.researchGroupId || item.researchGroupId || null;
 
-            return {
-              id: item.id,
-              raw: item,
-              nama: mhs.name || 'Mahasiswa',
-              nim: mhs.nim || '-',
-              prodi: prodiName,
-              initials: getInitials(mhs.name || 'M'),
-              dosenPembimbing: dosenPembimbingName,
-              penguji1: penguji1Id,
-              penguji2: penguji2Id,
-              jadwal: formatTanggal(item.tglSidang),
-              waktu: formatWaktu(item.tglSidang),
-              ruangan: ruanganName,
-              researchGroupId,
-            };
+        return {
+          id: item.id,
+          raw: item,
+          nama: mhs.name || 'Mahasiswa',
+          nim: mhs.nim || '-',
+          prodi: prodiName,
+          initials: getInitials(mhs.name || 'M'),
+          dosenPembimbing1: dosenPembimbing1Name,
+          dosenPembimbing2: dosenPembimbing2Name,
+          dosenPembimbing: dosenPembimbing1Name || '-',
+          penguji1: penguji1Id,
+          penguji2: penguji2Id,
+          jadwal: formatTanggal(item.tglSidang),
+          waktu: formatWaktu(item.tglSidang),
+          ruangan: ruanganName,
+          researchGroupId,
+          isLocked: Boolean(item.isLocked),
+        };
+      });
+
+      if (!isSilent) {
+        const initialStatus = {};
+        mapped.forEach(item => {
+          const isComplete = Boolean(item.penguji1 && item.penguji2);
+          initialStatus[item.id] = isComplete ? 'saved' : 'incomplete';
+        });
+
+        setSidangList(mapped);
+        setRowStatus(initialStatus);
+        setDataFetchError(false);
+      } else {
+        const currentStatusMap = rowStatusRef.current;
+        const nextStatus = { ...currentStatusMap };
+
+        setSidangList(prevList => {
+          const prevMap = new Map(prevList.map(item => [item.id, item]));
+
+          return mapped.map(newItem => {
+            const oldItem = prevMap.get(newItem.id);
+            const isUnsaved = oldItem && currentStatusMap[newItem.id] === 'unsaved';
+
+            if (newItem.isLocked) {
+              const isComplete = Boolean(newItem.penguji1 && newItem.penguji2);
+              nextStatus[newItem.id] = isComplete ? 'saved' : 'incomplete';
+              return newItem;
+            } else if (isUnsaved) {
+              return {
+                ...newItem,
+                penguji1: oldItem.penguji1,
+                penguji2: oldItem.penguji2,
+              };
+            } else {
+              const isComplete = Boolean(newItem.penguji1 && newItem.penguji2);
+              nextStatus[newItem.id] = isComplete ? 'saved' : 'incomplete';
+              return newItem;
+            }
           });
+        });
 
-          // Inisialisasi status per row
-          const initialStatus = {};
-          mapped.forEach(item => {
-            const isComplete = Boolean(item.penguji1 && item.penguji2);
-            initialStatus[item.id] = isComplete ? 'saved' : 'incomplete';
-          });
-
-          setSidangList(mapped);
-          setRowStatus(initialStatus);
-          setDataFetchError(false);
-        }
-      } catch (err) {
+        setRowStatus(nextStatus);
+      }
+    } catch (err) {
+      if (!isSilent) {
         console.error('Gagal memuat data penjadwalan sidang:', err);
-        if (isMounted) {
-          setSidangList([]);
-          setDataFetchError(true);
-        }
-      } finally {
-        if (isMounted) setIsLoadingData(false);
+        setSidangList([]);
+        setDataFetchError(true);
+      }
+    } finally {
+      isFetchingRef.current = false;
+      if (!isSilent) {
+        setIsLoadingData(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSidangData(false);
+
+    const intervalId = setInterval(() => {
+      if (!document.hidden) {
+        fetchSidangData(true);
+      }
+    }, POLLING_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchSidangData(true);
       }
     };
 
-    fetchSidangData();
-    return () => { isMounted = false; };
-  }, []);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-  // Handler klik kolom Jadwal / Waktu / Ruangan (read-only field)
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchSidangData]);
+
   const handleLockedFieldClick = () => {
     showToast('Kolom ini hanya dapat diisi oleh Admin.', 'warning');
   };
 
-  // Handler perubahan dropdown Penguji (value = dosen id)
   const handlePengujiChange = useCallback((id, field, value) => {
     setSidangList(prev => {
-      const updatedList = prev.map(m => (m.id === id ? { ...m, [field]: value } : m));
-      const targetMhs = updatedList.find(m => m.id === id);
+      const targetMhs = prev.find(m => m.id === id);
+      if (targetMhs?.isLocked) return prev;
 
-      if (!targetMhs.penguji1 || !targetMhs.penguji2) {
+      const updatedList = prev.map(m => (m.id === id ? { ...m, [field]: value } : m));
+      const updatedTarget = updatedList.find(m => m.id === id);
+
+      if (!updatedTarget.penguji1 || !updatedTarget.penguji2) {
         setRowStatus(rs => ({ ...rs, [id]: 'incomplete' }));
       } else {
         setRowStatus(rs => ({ ...rs, [id]: 'unsaved' }));
@@ -256,6 +324,10 @@ const PenjadwalanSidang = () => {
 
   // Simpan per baris (Aksi) — value = dosen id
   const handleSaveRow = async (mhs) => {
+    if (mhs.isLocked) {
+      showToast('❌ Data telah dikunci oleh Admin. Dosen penguji tidak dapat diubah.', 'error');
+      return;
+    }
     const status = rowStatus[mhs.id];
     if (status !== 'unsaved') return;
 
@@ -270,6 +342,7 @@ const PenjadwalanSidang = () => {
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || 'Terjadi kesalahan saat menyimpan penguji.';
       showToast(`❌ ${message}`, 'error');
+      fetchSidangData();
     } finally {
       setRowSaving(prev => ({ ...prev, [mhs.id]: false }));
     }
@@ -278,7 +351,8 @@ const PenjadwalanSidang = () => {
   // Simpan semua row yang unsaved — payload pakai dosen id
   const handleSimpanData = async () => {
     if (unsavedCount === 0) return;
-    const unsavedRows = sidangList.filter(m => rowStatus[m.id] === 'unsaved');
+    const unsavedRows = sidangList.filter(m => rowStatus[m.id] === 'unsaved' && !m.isLocked);
+    if (unsavedRows.length === 0) return;
     const payload = unsavedRows.map(m => ({
       id: m.id,
       dosenPenguji1Id: m.penguji1,
@@ -295,10 +369,10 @@ const PenjadwalanSidang = () => {
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || 'Terjadi kesalahan saat menyimpan data batch.';
       showToast(`❌ ${message}`, 'error');
+      fetchSidangData();
     }
   };
 
-  // Filter client-side berdasarkan search keyword & prodi
   const filteredData = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     const prodiFilter = selectedProdi.toLowerCase().trim();
@@ -502,9 +576,16 @@ const PenjadwalanSidang = () => {
                           </td>
 
                           <td className="ps-td-dosbim">
-                            <span className="ps-dosbim-text">
-                              {m.dosenPembimbing}
-                            </span>
+                            {m.dosenPembimbing1 && m.dosenPembimbing2 && m.dosenPembimbing2 !== '-' ? (
+                              <div className="ps-dosbim-list">
+                                <span className="ps-dosbim-item">1. {m.dosenPembimbing1}</span>
+                                <span className="ps-dosbim-item">2. {m.dosenPembimbing2}</span>
+                              </div>
+                            ) : (
+                              <span className="ps-dosbim-text">
+                                {m.dosenPembimbing1 || m.dosenPembimbing || '-'}
+                              </span>
+                            )}
                           </td>
 
                           <td className="ps-td-penguji">
@@ -516,6 +597,7 @@ const PenjadwalanSidang = () => {
                                 ? pengujiOptions.filter(p => p.researchGroupId === m.researchGroupId)
                                 : pengujiOptions}
                               status={currentStatus}
+                              disabled={m.isLocked}
                               onChange={val => handlePengujiChange(m.id, 'penguji1', val)}
                             />
                             {!m.penguji1 && (
@@ -534,6 +616,7 @@ const PenjadwalanSidang = () => {
                                 ? pengujiOptions.filter(p => p.researchGroupId === m.researchGroupId)
                                 : pengujiOptions}
                               status={currentStatus}
+                              disabled={m.isLocked}
                               onChange={val => handlePengujiChange(m.id, 'penguji2', val)}
                             />
                             {!m.penguji2 && (
@@ -557,8 +640,9 @@ const PenjadwalanSidang = () => {
 
                           <td className="ps-td-aksi">
                             <button
-                              className={`btn-verif ps-btn-simpan-row ${(!isUnsaved || isSaving) ? 'disabled' : 'active'}`}
-                              disabled={!isUnsaved || isSaving}
+                              className={`btn-verif ps-btn-simpan-row ${(!isUnsaved || isSaving || m.isLocked) ? 'disabled' : 'active'}`}
+                              disabled={!isUnsaved || isSaving || m.isLocked}
+                              title={m.isLocked ? "Data dikunci oleh Admin" : (isUnsaved ? "Simpan Perubahan" : "Tidak ada perubahan")}
                               onClick={() => handleSaveRow(m)}
                             >
                               {isSaving ? (

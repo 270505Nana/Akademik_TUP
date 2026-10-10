@@ -95,21 +95,17 @@ const LoginPage = () => {
         return;
       }
 
-      // 1. BERSIHKAN SESI LAMA SECARA MANUAL TERLEBIH DAHULU
       localStorage.removeItem("simta_user");
       localStorage.removeItem("simta_profile");
       localStorage.removeItem("simta_token");
       localStorage.removeItem("student_data");
 
-      // 2. SET TOKEN SEMENTARA AGAR getStudentData BISA BEKERJA
       localStorage.setItem("simta_token", data.token);
 
-      // 3. FETCH DATA MAHASISWA SEBELUM STATE AUTH BERUBAH
       if (role === "MAHASISWA") {
         await fetchAndLoadStudent(data.data?.id);
       }
 
-      // 4. UPDATE AUTH CONTEXT (Memicu router & pindah halaman)
       await login({
         ...data.data,
         role,
