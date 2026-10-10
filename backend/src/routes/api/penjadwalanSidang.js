@@ -1,11 +1,17 @@
 import express from "express";
-const router = express.Router();
 import { verifyToken } from "../../middlewares/auth.js";
 import {
   isKetuaKK,
   isAdmin,
   isAdminOrDosen,
 } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  setPengujiSidangSchema,
+  batchSetPengujiSidangSchema,
+  setJadwalSidangSchema,
+  batchSetJadwalSidangSchema,
+} from "../../schemas/penjadwalanSidangSchema.js";
 import {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -15,6 +21,8 @@ import {
   exportJadwalSidang,
   toggleLockSidangRegistration,
 } from "../../controllers/penjadwalanSidangController.js";
+
+const router = express.Router();
 
 /**
  * @swagger
@@ -207,7 +215,13 @@ router.get("/export", verifyToken, isAdminOrDosen, exportJadwalSidang);
  *       404:
  *         description: Sidang registration or dosen not found
  */
-router.put("/set-penguji/batch", verifyToken, isKetuaKK, batchSetPengujiSidang);
+router.put(
+  "/set-penguji/batch",
+  verifyToken,
+  isKetuaKK,
+  validate(batchSetPengujiSidangSchema),
+  batchSetPengujiSidang,
+);
 
 /**
  * @swagger
@@ -263,7 +277,13 @@ router.put("/set-penguji/batch", verifyToken, isKetuaKK, batchSetPengujiSidang);
  *       404:
  *         description: Sidang registration or ruangan not found
  */
-router.put("/set-jadwal/batch", verifyToken, isAdmin, batchSetJadwalSidang);
+router.put(
+  "/set-jadwal/batch",
+  verifyToken,
+  isAdmin,
+  validate(batchSetJadwalSidangSchema),
+  batchSetJadwalSidang,
+);
 
 /**
  * @swagger
@@ -317,7 +337,13 @@ router.put("/set-jadwal/batch", verifyToken, isAdmin, batchSetJadwalSidang);
  *       404:
  *         description: Sidang registration or dosen not found
  */
-router.put("/:id/set-penguji", verifyToken, isKetuaKK, setPengujiSidang);
+router.put(
+  "/:id/set-penguji",
+  verifyToken,
+  isKetuaKK,
+  validate(setPengujiSidangSchema),
+  setPengujiSidang,
+);
 
 /**
  * @swagger
@@ -372,6 +398,12 @@ router.put("/:id/set-penguji", verifyToken, isKetuaKK, setPengujiSidang);
  *       404:
  *         description: Sidang registration or ruangan not found
  */
-router.put("/:id/set-jadwal", verifyToken, isAdmin, setJadwalSidang);
+router.put(
+  "/:id/set-jadwal",
+  verifyToken,
+  isAdmin,
+  validate(setJadwalSidangSchema),
+  setJadwalSidang,
+);
 
 export default router;
