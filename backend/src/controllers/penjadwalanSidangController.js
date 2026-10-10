@@ -142,6 +142,21 @@ const setPengujiJadwalSidang = asyncHandler(async (req, res) => {
   });
 });
 
+// Toggle Publish Sidang Registration (Admin Only)
+const togglePublishSidangRegistration = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const updatedRegistration =
+    await penjadwalanSidangService.togglePublishSidangRegistration(id);
+
+  res.json({
+    message: updatedRegistration.isPublished
+      ? "Jadwal sidang berhasil dipublikasikan ke mahasiswa"
+      : "Publikasi jadwal sidang berhasil dibatalkan",
+    data: mapPenjadwalanSidangToFrontend(updatedRegistration),
+  });
+});
+
 export {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -151,5 +166,7 @@ export {
   setPengujiJadwalSidang,
   exportJadwalSidang,
   toggleLockSidangRegistration,
+  togglePublishSidangRegistration,
 };
+
 

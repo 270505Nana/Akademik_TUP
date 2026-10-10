@@ -306,6 +306,8 @@ model SidangRegistration {
   dosenPenguji2              Dosen?                     @relation("Penguji2", fields: [dosenPenguji2Id], references: [id]) // Dosen Penguji 2
   dosenPenguji2Id            String?                    @map("dosen_penguji_2_id")
   isLocked                   Boolean                    @default(false) @map("is_locked")
+  isPublished                Boolean                    @default(false) @map("is_published")
+  isInfoPenjadwalanReaded    Boolean                    @default(false) @map("is_info_penjadwalan_readed")
   // Tolak Permohonan
   message                    String?
   isEdit                     DateTime?                  @map("is_edit")
@@ -314,9 +316,6 @@ model SidangRegistration {
   sidangRegistrationUploads  SidangRegistrationUpload[]
   penilaianTugasAkhir        PenilaianTugasAkhir[]
   revisiTugasAkhir           RevisiTugasAkhir[]
-  // formulirPenilaianTugasAkhir  FormulirPenilaianTugasAkhir[]
-  // formulirRevisiTugasAkhirs    FormulirRevisiTugasAkhir[]
-  // beritaAcaraSidangTugasAkhir BeritaAcaraSidangTugasAkhir[]
 
   @@index([mahasiswaId])
   @@index([dosenWaliId])
@@ -618,38 +617,6 @@ model RevisiTugasAkhir {
 
   @@map("revisi_tugas_akhir")
 }
-
-// model FormulirPenilaianTugasAkhir {
-//   id                   String             @id @default(uuid())
-//   createdAt            DateTime           @default(now()) @map("created_at")
-//   updatedAt            DateTime           @updatedAt @map("updated_at")
-//   deletedAt            DateTime?          @map("deleted_at")
-//   // berdasarkan SkemaPenilaiProdi ada berapa penilai pada prodi tersebut
-//   skemaPenilai         Json               @default("{}") @map("skema_penilai") // { pembimbing_1: 0.5, pembimbing_2: 0.5, penguji_1: 0.5, penguji_2: 0.5 }
-//   // berdasarkan JenisAsesmenClo ada berapa jenis asesmen pada prodi tersebut
-//   bobotNilai           Json               @default("{}") @map("bobot_nilai") // { nilai_1: 0.1, nilai_1: 0.1, nilai_1: 0.1, nilai_1: 0.1, nilai_1: 0.1, }
-//   komponenNilai        Json               @default("{}") @map("komponen_nilai") // NOTE: jumlah komponen nilai harus sama dengan jumlah bobot nilai
-//   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
-//   sidangRegistrationId String             @map("sidang_registration_id")
-//   dosenPenilai         Dosen              @relation("DosenPenilai", fields: [dosenPenilaiId], references: [id]) // Dosen Penilai (Pembimbing 1/2/Penguji 1/2)
-//   dosenPenilaiId       String             @map("dosen_penilai_id")
-//   dosenKaprodi         Dosen?             @relation("DosenKaprodi", fields: [dosenKaprodiId], references: [id]) // Kaprodi
-//   dosenKaprodiId       String?            @map("dosen_kaprodi_id")
-
-//   @@map("formulir_penilaian_tugas_akhir")
-// }
-
-// model FormulirRevisiTugasAkhirDetail {
-//   id             String    @id @default(uuid())
-//   createdAt      DateTime  @default(now()) @map("created_at")
-//   updatedAt      DateTime  @updatedAt @map("updated_at")
-//   deletedAt      DateTime? @map("deleted_at")
-//   catatanRevisi  String    @map("catatan_revisi") @db.Text
-//   dosenPenilai   Dosen     @relation("DosenPenilaiRevisi", fields: [dosenPenilaiId], references: [id]) // Dosen Penilai (Pembimbing 1/2/Penguji 1/2)
-//   dosenPenilaiId String    @map("dosen_penilai_id")
-
-//   @@map("formulir_revisi_tugas_akhir_detail")
-// }
 
 // model BeritaAcaraSidangTugasAkhir {
 //   id                   String             @id @default(uuid())

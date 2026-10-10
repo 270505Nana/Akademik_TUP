@@ -15,5 +15,8 @@ export const mapPenjadwalanSidangToFrontend = (item) => {
     tglSidang: item.tglSidang,
     ruanganSidang: mapRuangan(item.ruanganSidang),
     isLocked: item.isLocked ?? false,
+    isPublished: item.isPublished ?? false,
+    isInfoPenjadwalanReaded: item.isInfoPenjadwalanReaded ?? false,
   };
 };
+

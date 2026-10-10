@@ -646,3 +646,37 @@ export const setPengujiJadwalSidang = async ({
   });
 };
 
+/**
+ * Toggle status publish pendaftaran sidang ke mahasiswa (Admin Only)
+ * Ketika publish di-toggle:
+ * - jika isPublished menjadi true, maka isLocked juga menjadi true.
+ * - jika isPublished menjadi false, isLocked tidak ikut menjadi false.
+ */
+export const togglePublishSidangRegistration = async (id) => {
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!registration || registration.deletedAt) {
+    const error = new Error("Pendaftaran sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const nextPublished = !registration.isPublished;
+  const updateData = {
+    isPublished: nextPublished,
+  };
+
+  if (nextPublished) {
+    updateData.isLocked = true;
+  }
+
+  return prisma.sidangRegistration.update({
+    where: { id },
+    data: updateData,
+    include: penjadwalanSidangInclude,
+  });
+};
+
+

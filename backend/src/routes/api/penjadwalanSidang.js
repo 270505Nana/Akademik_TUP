@@ -22,6 +22,7 @@ import {
   setPengujiJadwalSidang,
   exportJadwalSidang,
   toggleLockSidangRegistration,
+  togglePublishSidangRegistration,
 } from "../../controllers/penjadwalanSidangController.js";
 
 const router = express.Router();
@@ -90,6 +91,9 @@ const router = express.Router();
  *                       isLocked:
  *                         type: boolean
  *                         description: Lock status to prevent examiners changes by dosen
+ *                       isPublished:
+ *                         type: boolean
+ *                         description: Publish status of sidang schedule to mahasiswa
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
@@ -138,6 +142,48 @@ router.patch(
   verifyToken,
   isAdmin,
   toggleLockSidangRegistration,
+);
+
+/**
+ * @swagger
+ * /api/penjadwalan-sidang/{id}/toggle-publish:
+ *   patch:
+ *     summary: Toggle publish status of sidang registration to mahasiswa (Admin only)
+ *     description: Ketika publish di-toggle, jika isPublished menjadi true maka isLocked juga menjadi true. Jika isPublished menjadi false, isLocked tidak ikut menjadi false.
+ *     tags: [Penjadwalan Sidang]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     responses:
+ *       200:
+ *         description: Status publikasi jadwal sidang berhasil diperbarui
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya admin yang dapat mengakses)
+ *       404:
+ *         description: Sidang registration not found
+ */
+router.patch(
+  "/:id/toggle-publish",
+  verifyToken,
+  isAdmin,
+  togglePublishSidangRegistration,
 );
 
 /**
