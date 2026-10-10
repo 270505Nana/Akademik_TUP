@@ -679,4 +679,43 @@ export const togglePublishSidangRegistration = async (id) => {
   });
 };
 
+/**
+ * Tandai info penjadwalan sidang telah dibaca oleh mahasiswa
+ * Bersifat satu arah: hanya mengubah isInfoPenjadwalanReaded menjadi true.
+ * Jika jadwal belum dipublikasikan, melempar error 404.
+ */
+export const toggleReadInfoPenjadwalan = async ({ id, user }) => {
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+    include: {
+      mahasiswa: true,
+    },
+  });
+
+  if (!registration || registration.deletedAt || !registration.isPublished) {
+    const error = new Error("Pendaftaran sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (user?.role === "MAHASISWA") {
+    if (!registration.mahasiswa || registration.mahasiswa.userId !== user.id) {
+      const error = new Error(
+        "Anda tidak memiliki akses ke pendaftaran sidang ini",
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+
+  return prisma.sidangRegistration.update({
+    where: { id },
+    data: {
+      isInfoPenjadwalanReaded: true,
+    },
+    include: penjadwalanSidangInclude,
+  });
+};
+
+
 

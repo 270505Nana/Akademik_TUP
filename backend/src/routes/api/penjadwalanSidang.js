@@ -4,6 +4,7 @@ import {
   isKetuaKK,
   isAdmin,
   isAdminOrDosen,
+  isMahasiswa,
 } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
@@ -23,6 +24,7 @@ import {
   exportJadwalSidang,
   toggleLockSidangRegistration,
   togglePublishSidangRegistration,
+  toggleReadInfoPenjadwalan,
 } from "../../controllers/penjadwalanSidangController.js";
 
 const router = express.Router();
@@ -184,6 +186,49 @@ router.patch(
   verifyToken,
   isAdmin,
   togglePublishSidangRegistration,
+);
+
+/**
+ * @swagger
+ * /api/penjadwalan-sidang/{id}/toggle-read-info-penjadwalan:
+ *   patch:
+ *     summary: Tandai info penjadwalan sidang telah dibaca (Mahasiswa only)
+ *     description: Digunakan oleh mahasiswa untuk menandai bahwa ia telah membaca info penjadwalan sidang terbaru (hanya satu arah, membuat isInfoPenjadwalanReaded menjadi true).
+ *     tags: [Penjadwalan Sidang]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     responses:
+ *       200:
+ *         description: Info penjadwalan sidang berhasil ditandai sudah dibaca
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Info penjadwalan sidang berhasil ditandai sudah dibaca
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya mahasiswa pemilik pendaftaran yang dapat mengakses)
+ *       404:
+ *         description: Sidang registration not found atau jadwal belum dipublikasikan
+ */
+router.patch(
+  "/:id/toggle-read-info-penjadwalan",
+  verifyToken,
+  isMahasiswa,
+  toggleReadInfoPenjadwalan,
 );
 
 /**

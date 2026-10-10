@@ -157,6 +157,22 @@ const togglePublishSidangRegistration = asyncHandler(async (req, res) => {
   });
 });
 
+// Tandai Baca Info Penjadwalan Sidang (Mahasiswa)
+const toggleReadInfoPenjadwalan = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const updatedRegistration =
+    await penjadwalanSidangService.toggleReadInfoPenjadwalan({
+      id,
+      user: req.user,
+    });
+
+  res.json({
+    message: "Info penjadwalan sidang berhasil ditandai sudah dibaca",
+    data: mapPenjadwalanSidangToFrontend(updatedRegistration),
+  });
+});
+
 export {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -167,6 +183,8 @@ export {
   exportJadwalSidang,
   toggleLockSidangRegistration,
   togglePublishSidangRegistration,
+  toggleReadInfoPenjadwalan,
 };
+
 
 
