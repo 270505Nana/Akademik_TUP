@@ -11,6 +11,7 @@ import {
   batchSetPengujiSidangSchema,
   setJadwalSidangSchema,
   batchSetJadwalSidangSchema,
+  setPengujiJadwalSidangSchema,
 } from "../../schemas/penjadwalanSidangSchema.js";
 import {
   listPenjadwalanSidang,
@@ -18,6 +19,7 @@ import {
   batchSetPengujiSidang,
   setJadwalSidang,
   batchSetJadwalSidang,
+  setPengujiJadwalSidang,
   exportJadwalSidang,
   toggleLockSidangRegistration,
 } from "../../controllers/penjadwalanSidangController.js";
@@ -404,6 +406,75 @@ router.put(
   isAdmin,
   validate(setJadwalSidangSchema),
   setJadwalSidang,
+);
+
+/**
+ * @swagger
+ * /api/penjadwalan-sidang/{id}/set-penguji-jadwal:
+ *   put:
+ *     summary: Set dosen penguji dan jadwal sidang sekaligus (Admin only)
+ *     tags: [Penjadwalan Sidang]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - dosenPenguji1Id
+ *               - dosenPenguji2Id
+ *               - tglSidang
+ *               - ruanganSidangId
+ *             properties:
+ *               dosenPenguji1Id:
+ *                 type: string
+ *                 description: ID dosen penguji 1 (UUID)
+ *               dosenPenguji2Id:
+ *                 type: string
+ *                 description: ID dosen penguji 2 (UUID)
+ *               tglSidang:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Tanggal dan waktu pelaksanaan sidang (ISO 8601)
+ *               ruanganSidangId:
+ *                 type: string
+ *                 description: ID ruangan sidang (UUID)
+ *     responses:
+ *       200:
+ *         description: Dosen penguji dan jadwal sidang berhasil ditentukan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Validation error / Jadwal bentrok
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya admin yang dapat mengakses)
+ *       404:
+ *         description: Sidang registration, dosen, atau ruangan not found
+ */
+router.put(
+  "/:id/set-penguji-jadwal",
+  verifyToken,
+  isAdmin,
+  validate(setPengujiJadwalSidangSchema),
+  setPengujiJadwalSidang,
 );
 
 export default router;

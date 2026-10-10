@@ -195,3 +195,55 @@ export const batchSetJadwalSidangSchema = z
       });
     }),
   );
+
+/**
+ * Schema untuk Set Penguji dan Jadwal Sidang Sekaligus (PUT /api/penjadwalan-sidang/:id/set-penguji-jadwal)
+ */
+export const setPengujiJadwalSidangSchema = z
+  .object({
+    dosenPenguji1Id: z
+      .string({
+        error: (iss) =>
+          iss.input === undefined || iss.input === null
+            ? "ID dosen penguji 1 wajib diisi"
+            : "ID dosen penguji 1 harus berupa string",
+      })
+      .trim()
+      .min(1, "ID dosen penguji 1 wajib diisi"),
+    dosenPenguji2Id: z
+      .string({
+        error: (iss) =>
+          iss.input === undefined || iss.input === null
+            ? "ID dosen penguji 2 wajib diisi"
+            : "ID dosen penguji 2 harus berupa string",
+      })
+      .trim()
+      .min(1, "ID dosen penguji 2 wajib diisi"),
+    tglSidang: z
+      .string({
+        error: (iss) =>
+          iss.input === undefined || iss.input === null
+            ? "Tanggal sidang wajib diisi"
+            : "Tanggal sidang harus berupa string",
+      })
+      .trim()
+      .min(1, "Tanggal sidang wajib diisi")
+      .refine((val) => !isNaN(Date.parse(val)), {
+        message:
+          "Tanggal sidang harus berupa tanggal yang valid (format ISO 8601)",
+      }),
+    ruanganSidangId: z
+      .string({
+        error: (iss) =>
+          iss.input === undefined || iss.input === null
+            ? "ID ruangan sidang wajib diisi"
+            : "ID ruangan sidang harus berupa string",
+      })
+      .trim()
+      .min(1, "ID ruangan sidang wajib diisi"),
+  })
+  .refine((data) => data.dosenPenguji1Id !== data.dosenPenguji2Id, {
+    path: ["dosenPenguji2Id"],
+    message: "Dosen penguji 1 dan dosen penguji 2 tidak boleh sama",
+  });
+

@@ -559,3 +559,90 @@ export const toggleLockSidangRegistration = async (id) => {
     include: penjadwalanSidangInclude,
   });
 };
+
+/**
+ * Menentukan dosen penguji dan jadwal sidang (tanggal dan ruangan) sekaligus untuk satu pendaftaran (Admin Only)
+ */
+export const setPengujiJadwalSidang = async ({
+  id,
+  dosenPenguji1Id,
+  dosenPenguji2Id,
+  tglSidang,
+  ruanganSidangId,
+}) => {
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!registration || registration.deletedAt) {
+    const error = new Error("Pendaftaran sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const ruangan = await prisma.ruangan.findUnique({
+    where: { id: ruanganSidangId },
+  });
+
+  if (!ruangan || ruangan.deletedAt) {
+    const error = new Error("Ruangan sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const [dosen1, dosen2] = await Promise.all([
+    prisma.dosen.findUnique({
+      where: { id: dosenPenguji1Id },
+    }),
+    prisma.dosen.findUnique({
+      where: { id: dosenPenguji2Id },
+    }),
+  ]);
+
+  if (!dosen1 || dosen1.deletedAt) {
+    const error = new Error("Dosen penguji 1 tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!dosen2 || dosen2.deletedAt) {
+    const error = new Error("Dosen penguji 2 tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Kumpulkan semua dosen yang terlibat dalam sidang ini (Pembimbing 1 & 2, Penguji 1 & 2 yang baru)
+  const involvedDosenIds = [
+    registration.dosenPembimbing1Id,
+    registration.dosenPembimbing2Id,
+    dosenPenguji1Id,
+    dosenPenguji2Id,
+  ].filter(Boolean);
+
+  // Validasi bentrok jadwal (jarak 2 jam untuk ruangan dan semua dosen terkait)
+  const conflictMessage = await checkJadwalConflict({
+    registrationId: id,
+    tglSidang,
+    ruanganSidangId,
+    dosenIds: involvedDosenIds,
+    isCapstone: isCapstoneScheme(registration),
+  });
+
+  if (conflictMessage) {
+    const error = new Error(conflictMessage);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return prisma.sidangRegistration.update({
+    where: { id },
+    data: {
+      dosenPenguji1Id,
+      dosenPenguji2Id,
+      tglSidang: new Date(tglSidang),
+      ruanganSidangId,
+    },
+    include: penjadwalanSidangInclude,
+  });
+};
+

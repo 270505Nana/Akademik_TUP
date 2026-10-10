@@ -121,12 +121,35 @@ const toggleLockSidangRegistration = asyncHandler(async (req, res) => {
   });
 });
 
+// Set Dosen Penguji dan Jadwal Sidang Sekaligus (Admin Only)
+const setPengujiJadwalSidang = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { dosenPenguji1Id, dosenPenguji2Id, tglSidang, ruanganSidangId } =
+    req.body;
+
+  const updatedRegistration =
+    await penjadwalanSidangService.setPengujiJadwalSidang({
+      id,
+      dosenPenguji1Id,
+      dosenPenguji2Id,
+      tglSidang,
+      ruanganSidangId,
+    });
+
+  res.json({
+    message: "Dosen penguji dan jadwal sidang berhasil ditentukan",
+    data: mapPenjadwalanSidangToFrontend(updatedRegistration),
+  });
+});
+
 export {
   listPenjadwalanSidang,
   setPengujiSidang,
   batchSetPengujiSidang,
   setJadwalSidang,
   batchSetJadwalSidang,
+  setPengujiJadwalSidang,
   exportJadwalSidang,
   toggleLockSidangRegistration,
 };
+
