@@ -11,7 +11,7 @@ import {
 } from '../../controllers/jenisAsesmenController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -47,7 +47,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token
+ *         description: Invalid token or access denied
  */
 router.get("/", verifyToken, getJenisAsesmens);
 
@@ -55,7 +55,7 @@ router.get("/", verifyToken, getJenisAsesmens);
  * @swagger
  * /api/jenis-asesmen:
  *   post:
- *     summary: Create new Jenis Asesmen
+ *     summary: Create new Jenis Asesmen (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [Jenis Asesmen]
  *     security:
  *       - bearerAuth: []
@@ -87,9 +87,9 @@ router.get("/", verifyToken, getJenisAsesmens);
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Admin only)
+ *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
  */
-router.post("/", verifyToken, isAdmin, createJenisAsesmen); 
+router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createJenisAsesmen); 
 
 /**
  * @swagger
@@ -118,7 +118,7 @@ router.get("/:id", verifyToken, getJenisAsesmenById);
  * @swagger
  * /api/jenis-asesmen/{id}:
  *   put:
- *     summary: Update Jenis Asesmen
+ *     summary: Update Jenis Asesmen (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [Jenis Asesmen]
  *     security:
  *       - bearerAuth: []
@@ -148,13 +148,13 @@ router.get("/:id", verifyToken, getJenisAsesmenById);
  *       404:
  *         description: Jenis Asesmen not found
  */
-router.put("/:id", verifyToken, isAdmin, updateJenisAsesmen); 
+router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateJenisAsesmen); 
 
 /**
  * @swagger
  * /api/jenis-asesmen/{id}:
  *   delete:
- *     summary: Delete Jenis Asesmen (soft delete)
+ *     summary: Delete Jenis Asesmen (soft delete) (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [Jenis Asesmen]
  *     security:
  *       - bearerAuth: []
@@ -170,6 +170,6 @@ router.put("/:id", verifyToken, isAdmin, updateJenisAsesmen);
  *       404:
  *         description: Jenis Asesmen not found
  */
-router.delete("/:id", verifyToken, isAdmin, deleteJenisAsesmen); 
+router.delete("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, deleteJenisAsesmen); 
 
-export default router;
+export default router;

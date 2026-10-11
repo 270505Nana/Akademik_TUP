@@ -11,7 +11,7 @@ import {
 } from '../../controllers/cloController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -47,7 +47,7 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token
+ *         description: Invalid token or access denied
  */
 router.get("/", verifyToken, getCloProdis);
 
@@ -55,7 +55,7 @@ router.get("/", verifyToken, getCloProdis);
  * @swagger
  * /api/clo:
  *   post:
- *     summary: Create new CLO
+ *     summary: Create new CLO (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [CLO]
  *     security:
  *       - bearerAuth: []
@@ -86,9 +86,9 @@ router.get("/", verifyToken, getCloProdis);
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Admin only)
+ *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
  */
-router.post("/", verifyToken, isAdmin, createCloProdi); 
+router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createCloProdi); 
 
 /**
  * @swagger
@@ -117,7 +117,7 @@ router.get("/:id", verifyToken, getCloProdiById);
  * @swagger
  * /api/clo/{id}:
  *   put:
- *     summary: Update CLO
+ *     summary: Update CLO (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [CLO]
  *     security:
  *       - bearerAuth: []
@@ -144,13 +144,13 @@ router.get("/:id", verifyToken, getCloProdiById);
  *       404:
  *         description: CLO not found
  */
-router.put("/:id", verifyToken, isAdmin, updateCloProdi); 
+router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateCloProdi); 
 
 /**
  * @swagger
  * /api/clo/{id}:
  *   delete:
- *     summary: Delete CLO (soft delete)
+ *     summary: Delete CLO (soft delete) (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [CLO]
  *     security:
  *       - bearerAuth: []
@@ -166,6 +166,6 @@ router.put("/:id", verifyToken, isAdmin, updateCloProdi);
  *       404:
  *         description: CLO not found
  */
-router.delete("/:id", verifyToken, isAdmin, deleteCloProdi); 
+router.delete("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, deleteCloProdi); 
 
-export default router;
+export default router;
