@@ -1,7 +1,8 @@
 import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
 import { getPaginationParams, formatPaginationResponse } from "../utils/paginationHelper.js";
-import {sendValidationError, isNil } from "../utils/validationHelper.js";
+import { sendValidationError, isNil } from "../utils/validationHelper.js";
+import { getAcademicAccessContext } from "../middlewares/authorize.js";
 
 //create clo
 const createCloProdi = asyncHandler(async (req, res) => {
@@ -13,6 +14,15 @@ const createCloProdi = asyncHandler(async (req, res) => {
     if (isNil(studyProgramId)) errors.push({ field: "studyProgramId", message: "ID Program Studi wajib diisi" });
 
     if (errors.length > 0) return sendValidationError(res, errors);
+
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId || studyProgramId !== access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Ketua Prodi hanya dapat membuat data untuk program studinya sendiri.",
+            });
+        }
+    }
 
     const studyProgram = await prisma.studyProgram.findUnique({
         where: { id: studyProgramId },
@@ -32,15 +42,32 @@ const getCloProdis = asyncHandler(async (req, res) => {
     const paginationParams = getPaginationParams(req.query);
     const { search, studyProgramId } = req.query;
 
-    const where = {deletedAt: null};
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Akun Ketua Prodi belum terasosiasi dengan Program Studi manapun.",
+            });
+        }
+        if (studyProgramId && studyProgramId !== access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Ketua Prodi hanya dapat mengakses data untuk program studinya sendiri.",
+            });
+        }
+    }
 
-    if (studyProgramId) {
+    const where = { deletedAt: null };
+
+    if (access.isRestrictedKaprodi) {
+        where.studyProgramId = access.studyProgramId;
+    } else if (studyProgramId) {
         where.studyProgramId = studyProgramId;
     }
+
     if (search) {
         where.OR = [
             { name: { contains: search, mode: "insensitive" } },
-            {description: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
         ];
     }
     const [total, cloList] = await Promise.all([
@@ -77,6 +104,16 @@ const getCloProdiById = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error("CLO tidak ditemukan");
     }
+
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId || clo.studyProgramId !== access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Ketua Prodi hanya dapat mengakses data untuk program studinya sendiri.",
+            });
+        }
+    }
+
     res.json({ data: clo });
 });
 
@@ -89,6 +126,15 @@ const updateCloProdi = asyncHandler(async (req, res) => {
     if (!existingClo || existingClo.deletedAt) {
         res.status(404);
         throw new Error("CLO tidak ditemukan");
+    }
+
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId || existingClo.studyProgramId !== access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Ketua Prodi hanya dapat mengubah data untuk program studinya sendiri.",
+            });
+        }
     }
 
     const updatedClo = await prisma.cloProdi.update({
@@ -109,6 +155,15 @@ const deleteCloProdi = asyncHandler(async (req, res) => {
     if (!existingClo || existingClo.deletedAt) {
         res.status(404);
         throw new Error("CLO tidak ditemukan");
+    }
+
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId || existingClo.studyProgramId !== access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Ketua Prodi hanya dapat menghapus data untuk program studinya sendiri.",
+            });
+        }
     }
 
     await prisma.cloProdi.update({
