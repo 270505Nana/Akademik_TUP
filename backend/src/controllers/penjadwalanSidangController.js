@@ -142,21 +142,6 @@ const setPengujiJadwalSidang = asyncHandler(async (req, res) => {
   });
 });
 
-// Toggle Publish Sidang Registration (Admin Only)
-const togglePublishSidangRegistration = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const updatedRegistration =
-    await penjadwalanSidangService.togglePublishSidangRegistration(id);
-
-  res.json({
-    message: updatedRegistration.isPublished
-      ? "Jadwal sidang berhasil dipublikasikan ke mahasiswa"
-      : "Publikasi jadwal sidang berhasil dibatalkan",
-    data: mapPenjadwalanSidangToFrontend(updatedRegistration),
-  });
-});
-
 // Tandai Baca Info Penjadwalan Sidang (Mahasiswa)
 const toggleReadInfoPenjadwalan = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -173,6 +158,21 @@ const toggleReadInfoPenjadwalan = asyncHandler(async (req, res) => {
   });
 });
 
+// Toggle Publish Sidang Period (Admin Only)
+const togglePublishSidangPeriod = asyncHandler(async (req, res) => {
+  const { sidangPeriodId } = req.params;
+
+  const updatedPeriod =
+    await penjadwalanSidangService.togglePublishSidangPeriod(sidangPeriodId);
+
+  res.json({
+    message: updatedPeriod.isPublished
+      ? "Jadwal sidang untuk periode ini berhasil dipublikasikan ke mahasiswa"
+      : "Publikasi jadwal sidang untuk periode ini berhasil dibatalkan",
+    data: updatedPeriod,
+  });
+});
+
 export {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -182,8 +182,8 @@ export {
   setPengujiJadwalSidang,
   exportJadwalSidang,
   toggleLockSidangRegistration,
-  togglePublishSidangRegistration,
   toggleReadInfoPenjadwalan,
+  togglePublishSidangPeriod,
 };
 
 

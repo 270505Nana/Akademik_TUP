@@ -250,12 +250,14 @@ model SidangPeriod {
   startDate                 DateTime             @map("start_date")
   endDate                   DateTime             @map("end_date")
   isOpen                    Boolean              @default(false) @map("is_open")
+  isPublished               Boolean              @default(false) @map("is_published")
   sidangRegistrationPeriods SidangRegistration[] @relation("SidangRegistrationPeriod")
   sidangPeriods             SidangRegistration[] @relation("SidangPeriod")
 
   @@index([category])
   @@index([period])
   @@index([isOpen])
+  @@index([isPublished])
   @@index([deletedAt])
   @@map("sidang_period")
 }
@@ -306,7 +308,6 @@ model SidangRegistration {
   dosenPenguji2              Dosen?                     @relation("Penguji2", fields: [dosenPenguji2Id], references: [id]) // Dosen Penguji 2
   dosenPenguji2Id            String?                    @map("dosen_penguji_2_id")
   isLocked                   Boolean                    @default(false) @map("is_locked")
-  isPublished                Boolean                    @default(false) @map("is_published")
   isInfoPenjadwalanReaded    Boolean                    @default(false) @map("is_info_penjadwalan_readed")
   // Tolak Permohonan
   message                    String?

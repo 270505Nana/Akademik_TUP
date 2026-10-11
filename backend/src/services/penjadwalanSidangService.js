@@ -36,6 +36,7 @@ export const penjadwalanSidangInclude = {
     },
   },
   ruanganSidang: true,
+  sidangPeriod: true,
 };
 
 /**
@@ -126,6 +127,9 @@ export const setPengujiSidang = async ({
 }) => {
   const registration = await prisma.sidangRegistration.findUnique({
     where: { id },
+    include: {
+      sidangPeriod: true,
+    },
   });
 
   if (!registration || registration.deletedAt) {
@@ -134,9 +138,9 @@ export const setPengujiSidang = async ({
     throw error;
   }
 
-  if (registration.isLocked) {
+  if (registration.isLocked || registration.sidangPeriod?.isPublished) {
     const error = new Error(
-      "Pendaftaran sidang telah dikunci oleh admin. Dosen penguji tidak dapat diubah.",
+      "Pendaftaran sidang telah dikunci atau telah dipublikasikan oleh admin. Dosen penguji tidak dapat diubah.",
     );
     error.statusCode = 400;
     throw error;
@@ -204,6 +208,7 @@ export const batchSetPengujiSidang = async (items) => {
       mahasiswa: { include: { user: true } },
       dosenPembimbing1: { include: { user: true } },
       dosenPembimbing2: { include: { user: true } },
+      sidangPeriod: true,
     },
   });
 
@@ -216,13 +221,15 @@ export const batchSetPengujiSidang = async (items) => {
     }
   }
 
-  const lockedRegistrations = registrations.filter((reg) => reg.isLocked);
+  const lockedRegistrations = registrations.filter(
+    (reg) => reg.isLocked || reg.sidangPeriod?.isPublished,
+  );
   if (lockedRegistrations.length > 0) {
     const lockedNames = lockedRegistrations
       .map((reg) => reg.mahasiswa?.name || reg.id)
       .join(", ");
     const error = new Error(
-      `Tidak dapat mengubah dosen penguji karena pendaftaran sidang berikut telah dikunci oleh admin: ${lockedNames}`,
+      `Tidak dapat mengubah dosen penguji karena pendaftaran sidang berikut telah dikunci atau telah dipublikasikan oleh admin: ${lockedNames}`,
     );
     error.statusCode = 400;
     throw error;
@@ -651,38 +658,6 @@ export const setPengujiJadwalSidang = async ({
   });
 };
 
-/**
- * Toggle status publish pendaftaran sidang ke mahasiswa (Admin Only)
- * Ketika publish di-toggle:
- * - jika isPublished menjadi true, maka isLocked juga menjadi true.
- * - jika isPublished menjadi false, isLocked tidak ikut menjadi false.
- */
-export const togglePublishSidangRegistration = async (id) => {
-  const registration = await prisma.sidangRegistration.findUnique({
-    where: { id },
-  });
-
-  if (!registration || registration.deletedAt) {
-    const error = new Error("Pendaftaran sidang tidak ditemukan");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const nextPublished = !registration.isPublished;
-  const updateData = {
-    isPublished: nextPublished,
-  };
-
-  if (nextPublished) {
-    updateData.isLocked = true;
-  }
-
-  return prisma.sidangRegistration.update({
-    where: { id },
-    data: updateData,
-    include: penjadwalanSidangInclude,
-  });
-};
 
 /**
  * Tandai info penjadwalan sidang telah dibaca oleh mahasiswa
@@ -694,10 +669,15 @@ export const toggleReadInfoPenjadwalan = async ({ id, user }) => {
     where: { id },
     include: {
       mahasiswa: true,
+      sidangPeriod: true,
     },
   });
 
-  if (!registration || registration.deletedAt || !registration.isPublished) {
+  if (
+    !registration ||
+    registration.deletedAt ||
+    !registration.sidangPeriod?.isPublished
+  ) {
     const error = new Error("Pendaftaran sidang tidak ditemukan");
     error.statusCode = 404;
     throw error;
@@ -719,6 +699,31 @@ export const toggleReadInfoPenjadwalan = async ({ id, user }) => {
       isInfoPenjadwalanReaded: true,
     },
     include: penjadwalanSidangInclude,
+  });
+};
+
+/**
+ * Toggle status publish periode sidang ke mahasiswa (Admin Only)
+ */
+export const togglePublishSidangPeriod = async (sidangPeriodId) => {
+  const period = await prisma.sidangPeriod.findFirst({
+    where: {
+      id: sidangPeriodId,
+      deletedAt: null,
+    },
+  });
+
+  if (!period) {
+    const error = new Error("Periode sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return prisma.sidangPeriod.update({
+    where: { id: sidangPeriodId },
+    data: {
+      isPublished: !period.isPublished,
+    },
   });
 };
 
