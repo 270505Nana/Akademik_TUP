@@ -32,7 +32,7 @@ import {
   updatePusatInformasi,
   deletePusatInformasi
 } from '../../service/api';
-import '../../components/admin/css/pusatInformasi.css';
+import '../../style/css/admin/pusatInformasi.css';
 
 const PRESET_CATEGORIES = [
   "Pendaftaran Sidang",

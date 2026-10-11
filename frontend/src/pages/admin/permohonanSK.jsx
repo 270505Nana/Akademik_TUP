@@ -19,7 +19,7 @@ import {
   getEvidenceUploadsByStudentId,
 } from '../../service/api';
 import { useAuth } from '../../context/AuthContext';
-import '../../components/admin/css/permohonanSK.css';
+import '../../style/css/admin/permohonanSK.css';
 
 const STATUS_CONFIG = {
   'sudah-terbit'    : { label: 'Sudah Terbit',    cls: 'sudah-terbit'    },

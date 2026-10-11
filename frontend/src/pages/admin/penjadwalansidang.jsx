@@ -1,4 +1,4 @@
-import '../../components/admin/css/penjadwalansidang.css';
+import '../../style/css/admin/penjadwalansidang.css';
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Lock, Unlock, Menu,

@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getAllYudisiumRegistrations, getYudisiumPeriods } from '../../service/api';
 import { determineYudisiumStatus, STATUS_YUDISIUM, YUDISIUM_STATUS_CONFIG } from '../../components/admin/yudisium/Yudisiumstatushelper';
 import VerifikasiYudisiumModal from '../../components/admin/yudisium/VerifikasiYudisiumModal';
-import '../../components/admin/sidang/RegistrasiSidang.css'; 
+import '../../style/css/admin/RegistrasiSidang.css'; 
 
 const FILTER_TABS = [
   { key: '',                                   label: 'Semua'                },

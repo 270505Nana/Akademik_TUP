@@ -22,7 +22,7 @@ import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerka
 import { useAuth }           from '../../context/AuthContext';
 import {getAllSidangRegistrations,getSidangPeriods,} from '../../service/api';
 import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/Sidangstatushelper';
-import '../../components/admin/sidang/RegistrasiSidang.css';
+import '../../style/css/admin/RegistrasiSidang.css';
 
 const FILTER_TABS = [
   { key: '',                                 label: 'Semua'                },

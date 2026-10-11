@@ -8,7 +8,7 @@ import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
 import KelolaKKModal from '../../components/common/KelolaKKModal';
 import { getAllDosen, getResearchGroups, toggleDosenKetuaKK, updateDosenKK, createResearchGroup, updateResearchGroup, deleteResearchGroup } from '../../service/api';
-import '../../components/admin/css/keloladatadosen.css';
+import '../../style/css/admin/keloladatadosen.css';
 
 const PAGE_SIZE = 10;
 
