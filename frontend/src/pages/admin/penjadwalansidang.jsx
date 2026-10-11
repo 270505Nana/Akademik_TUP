@@ -1,13 +1,13 @@
-import '../../components/admin/css/penjadwalansidang.css';
+import '../../style/css/admin/penjadwalansidang.css';
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Lock, Unlock, Menu,
-  ChevronLeft, ChevronRight, Save, AlertTriangle, RotateCcw
+  ChevronLeft, ChevronRight, Save, AlertTriangle, RotateCcw, Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
+import KelolaRuanganModal from '../../components/admin/sidang/KelolaRuanganModal'; 
 
 import { 
   getStudyPrograms, 
@@ -19,8 +19,8 @@ import {
 } from '../../service/api';
 
 export default function PenjadwalanSidang() {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Sidebar Mobile
-  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false); // Sidebar Desktop
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
 
   const [alert, setAlert] = useState({ show: false, type: '', title: '', message: '' });
   
@@ -36,6 +36,9 @@ export default function PenjadwalanSidang() {
   const [selectedProgramStudi, setSelectedProgramStudi] = useState('');
   
   const [drafts, setDrafts] = useState({}); 
+
+  // STATE UNTUK MODAL KELOLA RUANGAN
+  const [isRuanganModalOpen, setIsRuanganModalOpen] = useState(false);
 
   const showAlert = (type, title, message) => {
     setAlert({ show: true, type, title, message });
@@ -66,9 +69,13 @@ export default function PenjadwalanSidang() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  useEffect(() => {
+  const fetchDropdownData = async () => {
     getStudyPrograms().then(res => setProdiList(Array.isArray(res) ? res : []));
-    getAllRuangan().then(res => setRuanganList(Array.isArray(res?.data?.data ?? res?.data) ? (res?.data?.data ?? res?.data) : []));
+    getAllRuangan().then(res => setRuanganList(Array.isArray(res) ? res : (res?.data || [])));
+  };
+
+  useEffect(() => {
+    fetchDropdownData();
   }, []);
 
   const fetchData = async (page = 1) => {
@@ -100,6 +107,11 @@ export default function PenjadwalanSidang() {
       fetchData(1);
     }
   }, [searchDebounced, selectedProgramStudi]);
+
+  const handleCloseRuanganModal = () => {
+    setIsRuanganModalOpen(false);
+    fetchDropdownData(); 
+  };
 
   const formatLocal = (isoString) => {
     if (!isoString) return { date: '', time: '' };
@@ -203,7 +215,6 @@ export default function PenjadwalanSidang() {
       <SidebarAdmin isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="ps-main-content">
-        {/* TOPBAR RESPONSIVE */}
         <header className="ps-topbar">
           <button className="ps-toggle-btn" onClick={handleToggleSidebar}>
             <Menu size={20} />
@@ -213,14 +224,24 @@ export default function PenjadwalanSidang() {
 
         <div className="ps-page-wrapper">
           <div className="ps-content-container">
-            <div className="ps-header-info">
+            
+            {/* BAGIAN HEADER HALAMAN */}
+            <div className="ps-header-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <p className="ps-subtitle">Tentukan dosen penguji, tanggal, dan ruangan sesi sidang mahasiswa secara massal maupun individu.</p>
+              
+              {/* TOMBOL PANGGIL MODAL KELOLA RUANGAN */}
+              <button 
+                onClick={() => setIsRuanganModalOpen(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
+              >
+                <Settings size={14} /> Kelola Ruangan
+              </button>
             </div>
 
             <section className="ps-card-main">
               <div className="ps-card-body">
                 
-                {/* TOOLBAR (SEARCH & FILTER) */}
+                {/* TOOLBAR */}
                 <div className="ps-filter-bar">
                   <div className="ps-filter-left">
                     <div className="ps-search-wrapper">
@@ -256,7 +277,7 @@ export default function PenjadwalanSidang() {
 
                 <div className="ps-table-divider" />
                 
-                {/* TABEL RESPONSIVE */}
+                {/* TABEL */}
                 <div className="ps-table-wrap">
                   <table className="ps-table">
                     <thead>
@@ -307,14 +328,12 @@ export default function PenjadwalanSidang() {
                                 </div>
                               </td>
 
-                              {/* PENGUJI 1 (Badge) */}
                               <td>
                                 <div className={`ps-badge-dosen ${!item.dosenPenguji1 ? 'empty' : ''}`}>
                                   {item.dosenPenguji1?.name || 'Belum diplot'}
                                 </div>
                               </td>
 
-                              {/* PENGUJI 2 (Badge) */}
                               <td>
                                 <div className={`ps-badge-dosen ${!item.dosenPenguji2 ? 'empty' : ''}`}>
                                   {item.dosenPenguji2?.name || 'Belum diplot'}
@@ -399,6 +418,11 @@ export default function PenjadwalanSidang() {
           </div>
         </div>
       </div>
+
+      <KelolaRuanganModal 
+        isOpen={isRuanganModalOpen} 
+        onClose={handleCloseRuanganModal} 
+      />
 
       <AnimatePresence>
         {alert.show && (

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
-import '../admin/css/keloladatadosen.css';
+import '../../style/css/admin/keloladatadosen.css';
 
 const TambahKKModal = ({ onClose, onCreate }) => {
   const [name, setName] = useState('');
