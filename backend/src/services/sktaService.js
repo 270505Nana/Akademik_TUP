@@ -12,16 +12,20 @@ export const sktaInclude = {
   },
   dosenPembimbing1: {
     include: {
-      name: true,
+      user: true,
     },
   },
   dosenPembimbing2: {
     include: {
-      name: true,
+      user: true,
     },
   },
   researchGroup: true,
-  admin: true,
+  admin: {
+    include: {
+      user: true,
+    },
+  },
 };
 
 export const sanitizeFilenamePart = (str) => {

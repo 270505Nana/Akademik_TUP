@@ -14,8 +14,8 @@ export const mapPenjadwalanSidangToFrontend = (item) => {
     dosenPenguji2: mapDosen(item.dosenPenguji2),
     tglSidang: item.tglSidang,
     ruanganSidang: mapRuangan(item.ruanganSidang),
-    isLocked: item.isLocked ?? false,
-    isPublished: item.isPublished ?? false,
+    isLocked: (item.isLocked || item.sidangPeriod?.isPublished) ?? false,
+    isPublished: item.sidangPeriod?.isPublished ?? false,
     isInfoPenjadwalanReaded: item.isInfoPenjadwalanReaded ?? false,
   };
 };

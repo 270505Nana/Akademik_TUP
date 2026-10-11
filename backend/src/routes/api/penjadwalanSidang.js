@@ -23,8 +23,8 @@ import {
   setPengujiJadwalSidang,
   exportJadwalSidang,
   toggleLockSidangRegistration,
-  togglePublishSidangRegistration,
   toggleReadInfoPenjadwalan,
+  togglePublishSidangPeriod,
 } from "../../controllers/penjadwalanSidangController.js";
 
 const router = express.Router();
@@ -148,23 +148,23 @@ router.patch(
 
 /**
  * @swagger
- * /api/penjadwalan-sidang/{id}/toggle-publish:
+ * /api/penjadwalan-sidang/period/{sidangPeriodId}/toggle-publish:
  *   patch:
- *     summary: Toggle publish status of sidang registration to mahasiswa (Admin only)
- *     description: Ketika publish di-toggle, jika isPublished menjadi true maka isLocked juga menjadi true. Jika isPublished menjadi false, isLocked tidak ikut menjadi false.
+ *     summary: Toggle publish status of sidang period to mahasiswa (Admin only)
+ *     description: Mempublikasikan atau membatalkan publikasi seluruh jadwal sidang pada periode tertentu kepada mahasiswa.
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: sidangPeriodId
  *         required: true
  *         schema:
  *           type: string
- *         description: Sidang registration ID (UUID)
+ *         description: ID Periode Sidang (UUID)
  *     responses:
  *       200:
- *         description: Status publikasi jadwal sidang berhasil diperbarui
+ *         description: Status publikasi jadwal sidang untuk periode ini berhasil diperbarui
  *         content:
  *           application/json:
  *             schema:
@@ -179,14 +179,16 @@ router.patch(
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  *       404:
- *         description: Sidang registration not found
+ *         description: Periode sidang tidak ditemukan
  */
 router.patch(
-  "/:id/toggle-publish",
+  "/period/:sidangPeriodId/toggle-publish",
   verifyToken,
   isAdmin,
-  togglePublishSidangRegistration,
+  togglePublishSidangPeriod,
 );
+
+
 
 /**
  * @swagger
