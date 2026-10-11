@@ -30,7 +30,7 @@ import {
   listSklUploads,
   listTranskripUploads,
 } from '../../../service/api';
-import '../css/skltranskrip.css';
+import '../../../style/css/admin/skltranskrip.css';
 
 const FILTER_STATUS_TABS = [
   { key: '', label: 'Semua' },
