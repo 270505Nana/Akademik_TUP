@@ -560,10 +560,6 @@ export const rejectSidangRegistration = async (registrationId, payload) => {
 
 // ----------------------------------------- PENJADWALAN SIDANG ADMIN -----------------------------------------
 
-export const getAllRuangan = async () => {
-  return await api.get('/api/ruangan');
-};
-
 export const setJadwalSidangAdmin = async (id, payload) => {
   const response = await api.put(`/api/penjadwalan-sidang/${id}/set-jadwal`, payload);
   return response.data;
@@ -914,4 +910,25 @@ export const getPusatInformasiPublic = async () => {
   return response.data;
 };
 
+// ------------------------------------------- KELOLA RUANGAN (CRUD) -------------------------------------------
+
+export const getAllRuangan = async (params = {}) => {
+  const response = await api.get('/api/ruangan', { params });
+  return response.data?.data ?? response.data;
+};
+
+export const createRuangan = async (payload) => {
+  const response = await api.post('/api/ruangan', payload);
+  return response.data?.data ?? response.data;
+};
+
+export const updateRuangan = async (id, payload) => {
+  const response = await api.put(`/api/ruangan/${id}`, payload);
+  return response.data?.data ?? response.data;
+};
+
+export const deleteRuangan = async (id) => {
+  const response = await api.delete(`/api/ruangan/${id}`);
+  return response.data;
+};
 export default api;

@@ -1,0 +1,288 @@
+
+.krm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.krm-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.krm-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.krm-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.krm-header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.krm-btn-add {
+  background: #fff;
+  border: 1px solid #C0182A;
+  color: #C0182A;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.krm-btn-add:hover {
+  background: #FEF2F2;
+}
+
+.krm-btn-close {
+  background: #F1F5F9;
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.krm-btn-close:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.krm-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.krm-empty-text {
+  text-align: center;
+  color: #64748B;
+  font-size: 14px;
+}
+
+.krm-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.krm-list-item:hover {
+  border-color: #CBD5E1;
+  background: #F8FAFC;
+}
+
+.krm-item-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.krm-item-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #64748B;
+}
+
+.krm-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.krm-btn-edit {
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.krm-btn-edit:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.krm-btn-delete {
+  background: #fff;
+  border: 1px solid #FCA5A5;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #DC2626;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.krm-btn-delete:hover {
+  background: #FEF2F2;
+  border-color: #F87171;
+}
+
+/*
+   MODAL FORM TAMBAH (TUMPUK)*/
+.krm-form-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.krm-form-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  padding: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.krm-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.krm-form-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.krm-form-close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.krm-form-close:hover {
+  color: #0F172A;
+}
+
+.krm-form-group {
+  margin-bottom: 16px;
+}
+
+.krm-form-group.last {
+  margin-bottom: 24px;
+}
+
+.krm-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #334155;
+}
+
+.krm-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #CBD5E1;
+  outline: none;
+  box-sizing: border-box;
+  font-size: 13px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.krm-input:focus {
+  border-color: #C0182A;
+  box-shadow: 0 0 0 3px rgba(192, 24, 42, 0.1);
+}
+
+.krm-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.krm-btn-cancel {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: #F1F5F9;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.krm-btn-cancel:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.krm-btn-save {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: #C0182A;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.krm-btn-save:hover:not(:disabled) {
+  background: #A01423;
+}
+
+.krm-btn-save:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
