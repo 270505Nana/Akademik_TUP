@@ -137,7 +137,7 @@ const createSidangPeriod = asyncHandler(async (req, res) => {
   const newSidangPeriod = await prisma.sidangPeriod.create({
     data: {
       name,
-      category,
+      category: category.trim().toLowerCase(),
       period,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
@@ -221,7 +221,7 @@ const updateSidangPeriod = asyncHandler(async (req, res) => {
     },
     data: {
       ...(name !== undefined && { name }),
-      ...(category !== undefined && { category }),
+      ...(category !== undefined && { category: category.trim().toLowerCase() }),
       ...(period !== undefined && { period }),
       ...(startDate && { startDate: new Date(startDate) }),
       ...(endDate && { endDate: new Date(endDate) }),

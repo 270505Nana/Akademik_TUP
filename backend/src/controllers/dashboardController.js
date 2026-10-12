@@ -186,14 +186,21 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
 
   // 2. Periode Sidang (Data 1: Pendaftaran Sidang, Data 2: Pelaksanaan Sidang - Sepasang dengan Name & Period yang sama)
   const activeSidangReg = await prisma.sidangPeriod.findFirst({
-    where: { category: "pendaftaran sidang", isOpen: true, deletedAt: null },
+    where: {
+      category: "pendaftaran",
+      isOpen: true,
+      deletedAt: null,
+    },
     orderBy: { updatedAt: "desc" },
   });
 
   const latestSidangReg =
     activeSidangReg ||
     (await prisma.sidangPeriod.findFirst({
-      where: { category: "pendaftaran sidang", deletedAt: null },
+      where: {
+        category: "pendaftaran",
+        deletedAt: null,
+      },
       orderBy: { startDate: "desc" },
     }));
 
@@ -201,7 +208,7 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
   if (latestSidangReg) {
     pelaksanaanSidang = await prisma.sidangPeriod.findFirst({
       where: {
-        category: "sidang",
+        category: { in: ["pelaksanaan", "sidang"] },
         name: latestSidangReg.name,
         period: latestSidangReg.period,
         deletedAt: null,
@@ -212,7 +219,7 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
     if (!pelaksanaanSidang) {
       pelaksanaanSidang = await prisma.sidangPeriod.findFirst({
         where: {
-          category: "sidang",
+          category: { in: ["pelaksanaan", "sidang"] },
           period: latestSidangReg.period,
           deletedAt: null,
         },
@@ -222,7 +229,10 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
   }
   if (!pelaksanaanSidang) {
     pelaksanaanSidang = await prisma.sidangPeriod.findFirst({
-      where: { category: "sidang", deletedAt: null },
+      where: {
+        category: { in: ["pelaksanaan", "sidang"] },
+        deletedAt: null,
+      },
       orderBy: { startDate: "desc" },
     });
   }
@@ -231,7 +241,9 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
     .filter(Boolean)
     .map((p) => ({
       name: p.name,
-      category: p.category,
+      category: (p.category || "").toLowerCase().includes("pendaftaran")
+        ? "pendaftaran"
+        : "pelaksanaan",
       period: p.period,
       startDate: p.startDate,
       endDate: p.endDate,
@@ -239,14 +251,21 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
 
   // 3. Periode Yudisium (Data 1: Pendaftaran Yudisium, Data 2: Pelaksanaan Yudisium - Sepasang dengan Name & Period yang sama)
   const activeYudisiumReg = await prisma.yudisiumPeriod.findFirst({
-    where: { category: "pendaftaran yudisium", isOpen: true, deletedAt: null },
+    where: {
+      category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+      isOpen: true,
+      deletedAt: null,
+    },
     orderBy: { updatedAt: "desc" },
   });
 
   const latestYudisiumReg =
     activeYudisiumReg ||
     (await prisma.yudisiumPeriod.findFirst({
-      where: { category: "pendaftaran yudisium", deletedAt: null },
+      where: {
+        category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+        deletedAt: null,
+      },
       orderBy: { startDate: "desc" },
     }));
 
@@ -254,7 +273,7 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
   if (latestYudisiumReg) {
     pelaksanaanYudisium = await prisma.yudisiumPeriod.findFirst({
       where: {
-        category: "yudisium",
+        category: { in: ["pelaksanaan", "yudisium"] },
         name: latestYudisiumReg.name,
         period: latestYudisiumReg.period,
         deletedAt: null,
@@ -265,7 +284,7 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
     if (!pelaksanaanYudisium) {
       pelaksanaanYudisium = await prisma.yudisiumPeriod.findFirst({
         where: {
-          category: "yudisium",
+          category: { in: ["pelaksanaan", "yudisium"] },
           period: latestYudisiumReg.period,
           deletedAt: null,
         },
@@ -275,7 +294,10 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
   }
   if (!pelaksanaanYudisium) {
     pelaksanaanYudisium = await prisma.yudisiumPeriod.findFirst({
-      where: { category: "yudisium", deletedAt: null },
+      where: {
+        category: { in: ["pelaksanaan", "yudisium"] },
+        deletedAt: null,
+      },
       orderBy: { startDate: "desc" },
     });
   }
@@ -284,7 +306,9 @@ const getMahasiswaDashboard = asyncHandler(async (req, res) => {
     .filter(Boolean)
     .map((p) => ({
       name: p.name,
-      category: p.category,
+      category: (p.category || "").toLowerCase().includes("pendaftaran")
+        ? "pendaftaran"
+        : "pelaksanaan",
       period: p.period,
       startDate: p.startDate,
       endDate: p.endDate,

@@ -486,7 +486,11 @@ const saveYudisiumRegistration = asyncHandler(async (req, res) => {
 
   // Get active registration period
   const activePeriod = await prisma.yudisiumPeriod.findFirst({
-    where: { category: "pendaftaran yudisium", isOpen: true, deletedAt: null },
+    where: {
+      category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+      isOpen: true,
+      deletedAt: null,
+    },
   });
 
   // Check edit permission if updating an existing registration by ID
@@ -869,7 +873,11 @@ const submitYudisiumRegistration = asyncHandler(async (req, res) => {
   };
 
   const activePeriod = await prisma.yudisiumPeriod.findFirst({
-    where: { category: "pendaftaran yudisium", isOpen: true, deletedAt: null },
+    where: {
+      category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+      isOpen: true,
+      deletedAt: null,
+    },
   });
 
   const periodIdToCheck = yudisiumRegistrationPeriodId
@@ -1384,7 +1392,10 @@ const exportYudisium = asyncHandler(async (req, res) => {
     });
   } else {
     selectedPeriod = await prisma.yudisiumPeriod.findFirst({
-      where: { category: "yudisium", deletedAt: null },
+      where: {
+        category: { in: ["pelaksanaan", "yudisium"] },
+        deletedAt: null,
+      },
       orderBy: { endDate: "desc" },
     });
 

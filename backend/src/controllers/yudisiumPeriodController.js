@@ -144,7 +144,7 @@ const createYudisiumPeriod = asyncHandler(async (req, res) => {
   const newYudisiumPeriod = await prisma.yudisiumPeriod.create({
     data: {
       name,
-      category,
+      category: category.trim().toLowerCase(),
       period,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
@@ -235,7 +235,7 @@ const updateYudisiumPeriod = asyncHandler(async (req, res) => {
     },
     data: {
       ...(name !== undefined && { name }),
-      ...(category !== undefined && { category }),
+      ...(category !== undefined && { category: category.trim().toLowerCase() }),
       ...(period !== undefined && { period }),
       ...(startDate && { startDate: new Date(startDate) }),
       ...(endDate && { endDate: new Date(endDate) }),
