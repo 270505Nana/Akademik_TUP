@@ -636,7 +636,7 @@ export const getYudisiumPeriods = async (params = '') => {
 export const getActiveYudisiumPeriod = async () => {
   try {
     const response = await api.get('/api/yudisium-periods', {
-      params: { category: 'pendaftaran yudisium', limit: 'all' }
+      params: { category: 'pendaftaran', limit: 'all' }
     });
     const periods = response.data?.data ?? response.data;
     const list = Array.isArray(periods) ? periods : [];

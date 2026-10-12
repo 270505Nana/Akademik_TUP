@@ -28,8 +28,8 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         name: category
  *         schema:
  *           type: string
- *           enum: [Penjadwalan, Pelaksanaan]
- *         description: Filter periods by category (Penjadwalan / Pelaksanaan)
+ *           enum: [pendaftaran, pelaksanaan]
+ *         description: Filter periods by category (pendaftaran / pelaksanaan)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -107,9 +107,9 @@ router.get("/:id", verifyToken, getYudisiumPeriodById);
  *                 description: Period name
  *               category:
  *                 type: string
- *                 enum: [Penjadwalan, Pelaksanaan]
- *                 example: Penjadwalan
- *                 description: Type of activity (Penjadwalan / Pelaksanaan)
+ *                 enum: [pendaftaran, pelaksanaan]
+ *                 example: pendaftaran
+ *                 description: Type of activity (pendaftaran / pelaksanaan)
  *               period:
  *                 type: string
  *                 example: "1"
@@ -169,9 +169,9 @@ router.post(
  *                 example: Ganjil 2026/2027
  *               category:
  *                 type: string
- *                 enum: [Penjadwalan, Pelaksanaan]
- *                 example: Pelaksanaan
- *                 description: Type of activity (Penjadwalan / Pelaksanaan)
+ *                 enum: [pendaftaran, pelaksanaan]
+ *                 example: pelaksanaan
+ *                 description: Type of activity (pendaftaran / pelaksanaan)
  *               period:
  *                 type: string
  *                 example: "1"

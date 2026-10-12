@@ -32,7 +32,14 @@ import {
 // Sidang Registration List (with search, studyProgramId, skemaSidang, jalurNonSidang, status filter, sort, and pagination)
 const listSidangRegistrations = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search, studyProgramId, skemaSidang, jalurNonSidang, status, sortBy } = req.query;
+  const {
+    search,
+    studyProgramId,
+    skemaSidang,
+    jalurNonSidang,
+    status,
+    sortBy,
+  } = req.query;
 
   const where = {
     deletedAt: null,
@@ -105,10 +112,7 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
           },
         },
         {
-          OR: [
-            { skemaSidangFinal: null },
-            { skemaSidangFinal: "" },
-          ],
+          OR: [{ skemaSidangFinal: null }, { skemaSidangFinal: "" }],
           skemaSidang: {
             equals: skema,
             mode: "insensitive",
@@ -135,10 +139,7 @@ const listSidangRegistrations = asyncHandler(async (req, res) => {
           },
         },
         {
-          OR: [
-            { jalurNonSidangFinal: null },
-            { jalurNonSidangFinal: "" },
-          ],
+          OR: [{ jalurNonSidangFinal: null }, { jalurNonSidangFinal: "" }],
           jalurNonSidang: {
             has: jalur,
           },
@@ -398,7 +399,11 @@ const saveSidangRegistration = asyncHandler(async (req, res) => {
 
   // Get active registration period
   const activePeriod = await prisma.sidangPeriod.findFirst({
-    where: { category: "pendaftaran sidang", isOpen: true, deletedAt: null },
+    where: {
+      category: "pendaftaran",
+      isOpen: true,
+      deletedAt: null,
+    },
   });
 
   // Check edit permission if updating an existing registration by ID
@@ -751,7 +756,11 @@ const submitSidangRegistration = asyncHandler(async (req, res) => {
   };
 
   const activePeriod = await prisma.sidangPeriod.findFirst({
-    where: { category: "pendaftaran sidang", isOpen: true, deletedAt: null },
+    where: {
+      category: "pendaftaran",
+      isOpen: true,
+      deletedAt: null,
+    },
   });
 
   if (existingRegistration.sidangRegistrationPeriodId) {
