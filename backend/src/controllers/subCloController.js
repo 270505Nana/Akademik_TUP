@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import prisma from "../config/prisma.js";
 import { getPaginationParams, formatPaginationResponse } from "../utils/paginationHelper.js";
 import { sendValidationError, isNil } from "../utils/validationHelper.js";
+import { getAcademicAccessContext } from "../middlewares/authorize.js";
 
 const createSubcloProdi = asyncHandler(async (req, res) => {
     const { name, description, cloProdiId } = req.body;
@@ -22,6 +23,15 @@ const createSubcloProdi = asyncHandler(async (req, res) => {
         throw new Error("CLO tidak ditemukan");
     }
 
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId || clo.studyProgramId !== access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Ketua Prodi hanya dapat membuat data untuk program studinya sendiri.",
+            });
+        }
+    }
+
     const subclo = await prisma.subcloProdi.create({
         data: { name, description, cloProdiId },
     });
@@ -33,16 +43,44 @@ const getSubcloProdis = asyncHandler(async (req, res) => {
     const paginationParams = getPaginationParams(req.query);
     const { search, cloProdiId } = req.query;
 
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Akun Ketua Prodi belum terasosiasi dengan Program Studi manapun.",
+            });
+        }
+        if (cloProdiId) {
+            const clo = await prisma.cloProdi.findUnique({
+                where: { id: cloProdiId },
+            });
+            if (!clo || clo.deletedAt || clo.studyProgramId !== access.studyProgramId) {
+                return res.status(403).json({
+                    message: "Access denied. Ketua Prodi hanya dapat mengakses data untuk program studinya sendiri.",
+                });
+            }
+        }
+    }
+
     const where = { deletedAt: null };
 
-    if (cloProdiId){
+    if (access.isRestrictedKaprodi) {
+        if (cloProdiId) {
+            where.cloProdiId = cloProdiId;
+        } else {
+            where.cloProdi = {
+                studyProgramId: access.studyProgramId,
+                deletedAt: null,
+            };
+        }
+    } else if (cloProdiId) {
         where.cloProdiId = cloProdiId;
     }
 
     if (search) {
         where.OR = [
-            { name: { contains: search, mode: "insensitive"}},
-            { description: { contains: search, mode: "insensitive"}},
+            { name: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
         ];
     }
 
@@ -53,9 +91,9 @@ const getSubcloProdis = asyncHandler(async (req, res) => {
             skip: paginationParams.skip,
             take: paginationParams.take,
             include: {
-                cloProdi: true
+                cloProdi: true,
             },
-            orderBy: { name: "asc" }
+            orderBy: { name: "asc" },
         }),
     ]);
     res.json(formatPaginationResponse(subcloList, total, paginationParams));
@@ -70,7 +108,16 @@ const getSubcloProdiById = asyncHandler(async (req, res) => {
 
     if (!subclo || subclo.deletedAt) {
         res.status(404);
-        throw new Error("Sub clo tidak didetumakn");
+        throw new Error("Sub clo tidak ditemukan");
+    }
+
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId || subclo.cloProdi?.studyProgramId !== access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Ketua Prodi hanya dapat mengakses data untuk program studinya sendiri.",
+            });
+        }
     }
 
     res.json({ data: subclo });
@@ -80,10 +127,22 @@ const updateSubcloProdi = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { name, description } = req.body;
 
-    const existingSubclo = await prisma.subcloProdi.findUnique({ where: { id } });
-    if (!existingSubclo || existingSubclo.deletedAt){
+    const existingSubclo = await prisma.subcloProdi.findUnique({
+        where: { id },
+        include: { cloProdi: true },
+    });
+    if (!existingSubclo || existingSubclo.deletedAt) {
         res.status(404);
         throw new Error("Sub clo tidak ditemukan");
+    }
+
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId || existingSubclo.cloProdi?.studyProgramId !== access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Ketua Prodi hanya dapat mengubah data untuk program studinya sendiri.",
+            });
+        }
     }
 
     const updatedSubclo = await prisma.subcloProdi.update({
@@ -100,10 +159,22 @@ const updateSubcloProdi = asyncHandler(async (req, res) => {
 const deleteSubcloProdi = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const existingSubclo = await prisma.subcloProdi.findUnique({ where: { id } });
+    const existingSubclo = await prisma.subcloProdi.findUnique({
+        where: { id },
+        include: { cloProdi: true },
+    });
     if (!existingSubclo || existingSubclo.deletedAt) {
         res.status(404);
         throw new Error("Sub clo tidak ditemukan");
+    }
+
+    const access = await getAcademicAccessContext(req);
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId || existingSubclo.cloProdi?.studyProgramId !== access.studyProgramId) {
+            return res.status(403).json({
+                message: "Access denied. Ketua Prodi hanya dapat menghapus data untuk program studinya sendiri.",
+            });
+        }
     }
 
     await prisma.subcloProdi.update({
@@ -111,7 +182,7 @@ const deleteSubcloProdi = asyncHandler(async (req, res) => {
         data: { deletedAt: new Date() },
     });
 
-    res.json({ message: "Sub CLO berhasil dihapus"});
+    res.json({ message: "Sub CLO berhasil dihapus" });
 });
 
 export {
@@ -120,4 +191,4 @@ export {
     getSubcloProdiById,
     updateSubcloProdi,
     deleteSubcloProdi,
-}
+};

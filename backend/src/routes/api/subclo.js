@@ -11,7 +11,7 @@ import {
 } from '../../controllers/subCloController.js';
 
 import { verifyToken } from '../../middlewares/auth.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
 
 /**
  * @swagger
@@ -49,7 +49,7 @@ router.get("/", verifyToken, getSubcloProdis);
  * @swagger
  * /api/subclo:
  *   post:
- *     summary: Create new Sub CLO
+ *     summary: Create new Sub CLO (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [Sub CLO]
  *     security:
  *       - bearerAuth: []
@@ -74,8 +74,10 @@ router.get("/", verifyToken, getSubcloProdis);
  *     responses:
  *       201:
  *         description: Sub CLO created successfully
+ *       403:
+ *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
  */
-router.post("/", verifyToken, isAdmin, createSubcloProdi);
+router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createSubcloProdi);
 
 /**
  * @swagger
@@ -94,6 +96,8 @@ router.post("/", verifyToken, isAdmin, createSubcloProdi);
  *     responses:
  *       200:
  *         description: Success
+ *       404:
+ *         description: CLO not found
  */
 router.get("/:id", verifyToken, getSubcloProdiById);
 
@@ -101,7 +105,7 @@ router.get("/:id", verifyToken, getSubcloProdiById);
  * @swagger
  * /api/subclo/{id}:
  *   put:
- *     summary: Update Sub CLO
+ *     summary: Update Sub CLO (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [Sub CLO]
  *     security:
  *       - bearerAuth: []
@@ -125,14 +129,16 @@ router.get("/:id", verifyToken, getSubcloProdiById);
  *     responses:
  *       200:
  *         description: Updated successfully
+ *       403:
+ *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
  */
-router.put("/:id", verifyToken, isAdmin, updateSubcloProdi);
+router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateSubcloProdi);
 
 /**
  * @swagger
  * /api/subclo/{id}:
  *   delete:
- *     summary: Delete Sub CLO
+ *     summary: Delete Sub CLO (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [Sub CLO]
  *     security:
  *       - bearerAuth: []
@@ -145,7 +151,9 @@ router.put("/:id", verifyToken, isAdmin, updateSubcloProdi);
  *     responses:
  *       200:
  *         description: Deleted successfully
+ *       403:
+ *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
  */
-router.delete("/:id", verifyToken, isAdmin, deleteSubcloProdi);
+router.delete("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, deleteSubcloProdi);
 
-export default router;
+export default router;
