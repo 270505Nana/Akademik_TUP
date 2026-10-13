@@ -30,6 +30,7 @@ const basePrisma = new PrismaClient({
     mahasiswa: hideTimestamps,
     permohonanSkta: hideUpdateDelete,
     researchGroupStudyProgram: hideTimestamps,
+    approvalChangeRequest: hideTimestamps,
   },
 });
 

@@ -231,6 +231,7 @@ const getAcademicAccessContext = async (req) => {
           isRestrictedKetuaKK: true,
           studyProgramId: dosen.studyProgramId || null,
           allowedStudyProgramIds: Array.from(combined),
+          dosen,
         };
       }
 
@@ -242,6 +243,7 @@ const getAcademicAccessContext = async (req) => {
           isRestrictedKetuaKK: true,
           studyProgramId: null,
           allowedStudyProgramIds: kkStudyProgramIds,
+          dosen,
         };
       }
 
@@ -253,6 +255,7 @@ const getAcademicAccessContext = async (req) => {
           isRestrictedKetuaKK: false,
           studyProgramId: dosen.studyProgramId || null,
           allowedStudyProgramIds: dosen.studyProgramId ? [dosen.studyProgramId] : [],
+          dosen,
         };
       }
     }
@@ -264,6 +267,7 @@ const getAcademicAccessContext = async (req) => {
     isRestrictedKetuaKK: false,
     studyProgramId: null,
     allowedStudyProgramIds: [],
+    dosen: null,
   };
 };
 
