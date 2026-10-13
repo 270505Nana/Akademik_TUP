@@ -170,7 +170,13 @@ const isAdminOrKetuaKKOrKetuaProdi = async (req, res, next) => {
 
 const getAcademicAccessContext = async (req) => {
   if (req.user?.role === "ADMIN") {
-    return { isFullAccess: true, isRestrictedKaprodi: false, studyProgramId: null };
+    return {
+      isFullAccess: true,
+      isRestrictedKaprodi: false,
+      isRestrictedKetuaKK: false,
+      studyProgramId: null,
+      allowedStudyProgramIds: [],
+    };
   }
 
   if (req.user?.role === "DOSEN") {
@@ -185,20 +191,84 @@ const getAcademicAccessContext = async (req) => {
     }
 
     if (dosen && !dosen.deletedAt) {
-      if (dosen.isKetuaKK) {
-        return { isFullAccess: true, isRestrictedKaprodi: false, studyProgramId: null };
+      const isKetuaKK = Boolean(dosen.isKetuaKK);
+      const isKetuaProdi = Boolean(dosen.isKetuaProdi);
+
+      // Jika bukan Ketua KK dan bukan Ketua Prodi
+      if (!isKetuaKK && !isKetuaProdi) {
+        return {
+          isFullAccess: false,
+          isRestrictedKaprodi: false,
+          isRestrictedKetuaKK: false,
+          studyProgramId: null,
+          allowedStudyProgramIds: [],
+        };
       }
-      if (dosen.isKetuaProdi) {
+
+      let kkStudyProgramIds = [];
+      if (isKetuaKK && dosen.researchGroupId) {
+        const mappings = await prisma.researchGroupStudyProgram.findMany({
+          where: {
+            researchGroupId: dosen.researchGroupId,
+            deletedAt: null,
+          },
+          select: {
+            studyProgramId: true,
+          },
+        });
+        kkStudyProgramIds = mappings.map((m) => m.studyProgramId);
+      }
+
+      // Jika Dosen merangkap sebagai Ketua KK dan Ketua Prodi
+      if (isKetuaKK && isKetuaProdi) {
+        const combined = new Set(kkStudyProgramIds);
+        if (dosen.studyProgramId) {
+          combined.add(dosen.studyProgramId);
+        }
+        return {
+          isFullAccess: false,
+          isRestrictedKaprodi: false,
+          isRestrictedKetuaKK: true,
+          studyProgramId: dosen.studyProgramId || null,
+          allowedStudyProgramIds: Array.from(combined),
+          dosen,
+        };
+      }
+
+      // Jika Ketua KK
+      if (isKetuaKK) {
+        return {
+          isFullAccess: false,
+          isRestrictedKaprodi: false,
+          isRestrictedKetuaKK: true,
+          studyProgramId: null,
+          allowedStudyProgramIds: kkStudyProgramIds,
+          dosen,
+        };
+      }
+
+      // Jika Ketua Prodi
+      if (isKetuaProdi) {
         return {
           isFullAccess: false,
           isRestrictedKaprodi: true,
+          isRestrictedKetuaKK: false,
           studyProgramId: dosen.studyProgramId || null,
+          allowedStudyProgramIds: dosen.studyProgramId ? [dosen.studyProgramId] : [],
+          dosen,
         };
       }
     }
   }
 
-  return { isFullAccess: false, isRestrictedKaprodi: false, studyProgramId: null };
+  return {
+    isFullAccess: false,
+    isRestrictedKaprodi: false,
+    isRestrictedKetuaKK: false,
+    studyProgramId: null,
+    allowedStudyProgramIds: [],
+    dosen: null,
+  };
 };
 
 export {

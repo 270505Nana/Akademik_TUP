@@ -128,4 +128,5 @@ export const upsertResearchGroupSchema = z.object({
     .trim()
     .min(1, "Nama kelompok keahlian wajib diisi"),
   isActive: z.boolean().optional(),
+  studyProgramIds: z.array(z.string()).optional(),
 });

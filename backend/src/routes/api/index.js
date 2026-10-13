@@ -24,6 +24,7 @@ import subcloRouter from './subclo.js';
 import jenisAsesmenRouter from './jenisAsesmen.js';
 import skemaPenilaiRouter from './skemaPenilai.js';
 import penilaianTugasAkhirRouter from './penilaianTugasAkhir.js';
+import approvalRequestRouter from './approvalRequest.js';
 
 const router = express.Router();
 
@@ -52,5 +53,6 @@ router.use("/subclo", subcloRouter);
 router.use("/jenis-asesmen", jenisAsesmenRouter);
 router.use("/skema-penilai", skemaPenilaiRouter);
 router.use("/penilaian-tugas-akhir", penilaianTugasAkhirRouter);
+router.use("/approval-requests", approvalRequestRouter);
 
 export default router;

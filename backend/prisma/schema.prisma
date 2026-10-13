@@ -55,15 +55,16 @@ model Admin {
 
 // Master Data Dosen
 model ResearchGroup {
-  id                  String               @id @default(uuid())
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
-  deletedAt           DateTime?            @map("deleted_at")
-  name                String
-  isActive            Boolean              @default(true) @map("is_active")
-  dosen               Dosen[]
-  permohonanSkta      PermohonanSkta[]
-  sidangRegistrations SidangRegistration[]
+  id                         String                       @id @default(uuid())
+  createdAt                  DateTime                     @default(now()) @map("created_at")
+  updatedAt                  DateTime                     @updatedAt @map("updated_at")
+  deletedAt                  DateTime?                    @map("deleted_at")
+  name                       String
+  isActive                   Boolean                      @default(true) @map("is_active")
+  dosen                      Dosen[]
+  permohonanSkta             PermohonanSkta[]
+  sidangRegistrations        SidangRegistration[]
+  researchGroupStudyPrograms ResearchGroupStudyProgram[]
 
   @@index([deletedAt])
   @@index([isActive])
@@ -104,6 +105,8 @@ model Dosen {
   dosenKaprodiPenyetujuPenilaianSidang PenilaianTugasAkhir[]  @relation("DosenKaprodi")
   setujuiUntukRevisi                   RevisiTugasAkhir[]     @relation("SetujuiUntukRevisi")
   setujuiHasilRevisi                   RevisiTugasAkhir[]     @relation("SetujuiHasilRevisi")
+  requestedApprovalChanges             ApprovalChangeRequest[] @relation("RequestedApprovalChanges")
+  approvedApprovalChanges              ApprovalChangeRequest[] @relation("ApprovedApprovalChanges")
   // dosenPenilaiRevisi               FormulirRevisiTugasAkhirDetail[] @relation("DosenPenilaiRevisi")
 
   @@index([researchGroupId])
@@ -141,11 +144,59 @@ model StudyProgram {
   skemaPenilaiProdis                              SkemaPenilaiProdi[]
   dosens                                          Dosen[]
   skemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi SkemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi[]
+  researchGroupStudyPrograms                      ResearchGroupStudyProgram[]
+  approvalChangeRequests                          ApprovalChangeRequest[]
 
   @@index([facultyId])
   @@index([deletedAt])
   @@index([isActive])
   @@map("study_program")
+}
+
+model ResearchGroupStudyProgram {
+  id              String        @id @default(uuid())
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  deletedAt       DateTime?     @map("deleted_at")
+  researchGroup   ResearchGroup @relation(fields: [researchGroupId], references: [id], onDelete: Cascade)
+  researchGroupId String        @map("research_group_id")
+  studyProgram    StudyProgram  @relation(fields: [studyProgramId], references: [id], onDelete: Cascade)
+  studyProgramId  String        @map("study_program_id")
+
+  @@unique([researchGroupId, studyProgramId])
+  @@index([researchGroupId])
+  @@index([studyProgramId])
+  @@index([deletedAt])
+  @@map("research_group_study_program")
+}
+
+model ApprovalChangeRequest {
+  id             String        @id @default(uuid())
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+  entityType     String        @map("entity_type") // CLO, SUB_CLO, JENIS_ASESMEN
+  action         String        // CREATE, UPDATE, DELETE
+  targetId       String?       @map("target_id")
+  title          String?
+  payload        Json          @default("{}")
+  oldData        Json?         @map("old_data")
+  status         String        @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  rejectionNote  String?       @map("rejection_note")
+  studyProgram   StudyProgram  @relation(fields: [studyProgramId], references: [id], onDelete: Cascade)
+  studyProgramId String        @map("study_program_id")
+  requestedBy    Dosen         @relation("RequestedApprovalChanges", fields: [requestedById], references: [id], onDelete: Cascade)
+  requestedById  String        @map("requested_by_id")
+  approvedBy     Dosen?        @relation("ApprovedApprovalChanges", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById   String?       @map("approved_by_id")
+
+  @@index([entityType])
+  @@index([status])
+  @@index([studyProgramId])
+  @@index([requestedById])
+  @@index([approvedById])
+  @@index([deletedAt])
+  @@map("approval_change_request")
 }
 
 model Mahasiswa {

@@ -3,6 +3,7 @@ import prisma from "../config/prisma.js";
 import { getPaginationParams, formatPaginationResponse } from "../utils/paginationHelper.js";
 import { sendValidationError, isNil } from "../utils/validationHelper.js";
 import { getAcademicAccessContext } from "../middlewares/authorize.js";
+import { checkActivePendingRequest } from "../services/approvalService.js";
 
 //create clo
 const createCloProdi = asyncHandler(async (req, res) => {
@@ -22,6 +23,12 @@ const createCloProdi = asyncHandler(async (req, res) => {
                 message: "Access denied. Ketua Prodi hanya dapat membuat data untuk program studinya sendiri.",
             });
         }
+    } else if (access.isRestrictedKetuaKK) {
+        if (!access.allowedStudyProgramIds.includes(studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat membuat data CLO untuk program studi yang terhubung dengan kelompok keahliannya.",
+            });
+        }
     }
 
     const studyProgram = await prisma.studyProgram.findUnique({
@@ -31,6 +38,34 @@ const createCloProdi = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error("Program Studi tidak ditemukan");
     }
+
+    // Jika pembuat adalah Kaprodi, alihkan ke antrean persetujuan (menunggu approval Ketua KK)
+    if (access.isRestrictedKaprodi) {
+        const changeRequest = await prisma.approvalChangeRequest.create({
+            data: {
+                entityType: "CLO",
+                action: "CREATE",
+                targetId: null,
+                title: `Penambahan CLO: ${name}`,
+                payload: { name, description, studyProgramId },
+                oldData: null,
+                status: "PENDING",
+                studyProgramId,
+                requestedById: access.dosen.id,
+            },
+        });
+
+        return res.status(202).json({
+            message: "Permohonan penambahan CLO berhasil diajukan dan sedang menunggu persetujuan Ketua Kelompok Keahlian",
+            data: {
+                requestId: changeRequest.id,
+                status: changeRequest.status,
+                entityType: changeRequest.entityType,
+                action: changeRequest.action,
+            },
+        });
+    }
+
     const clo = await prisma.cloProdi.create({
         data: { name, description, studyProgramId },
     });
@@ -54,12 +89,29 @@ const getCloProdis = asyncHandler(async (req, res) => {
                 message: "Access denied. Ketua Prodi hanya dapat mengakses data untuk program studinya sendiri.",
             });
         }
+    } else if (access.isRestrictedKetuaKK) {
+        if (access.allowedStudyProgramIds.length === 0) {
+            return res.status(403).json({
+                message: "Access denied. Kelompok Keahlian akun Ketua KK belum terhubung dengan Program Studi manapun.",
+            });
+        }
+        if (studyProgramId && !access.allowedStudyProgramIds.includes(studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat mengakses data untuk program studi yang terhubung dengan kelompok keahliannya.",
+            });
+        }
     }
 
     const where = { deletedAt: null };
 
     if (access.isRestrictedKaprodi) {
         where.studyProgramId = access.studyProgramId;
+    } else if (access.isRestrictedKetuaKK) {
+        if (studyProgramId) {
+            where.studyProgramId = studyProgramId;
+        } else {
+            where.studyProgramId = { in: access.allowedStudyProgramIds };
+        }
     } else if (studyProgramId) {
         where.studyProgramId = studyProgramId;
     }
@@ -112,6 +164,12 @@ const getCloProdiById = asyncHandler(async (req, res) => {
                 message: "Access denied. Ketua Prodi hanya dapat mengakses data untuk program studinya sendiri.",
             });
         }
+    } else if (access.isRestrictedKetuaKK) {
+        if (!access.allowedStudyProgramIds.includes(clo.studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat mengakses data untuk program studi yang terhubung dengan kelompok keahliannya.",
+            });
+        }
     }
 
     res.json({ data: clo });
@@ -133,6 +191,80 @@ const updateCloProdi = asyncHandler(async (req, res) => {
         if (!access.studyProgramId || existingClo.studyProgramId !== access.studyProgramId) {
             return res.status(403).json({
                 message: "Access denied. Ketua Prodi hanya dapat mengubah data untuk program studinya sendiri.",
+            });
+        }
+
+        const existingPending = await checkActivePendingRequest({
+            entityType: "CLO",
+            targetId: id,
+        });
+        if (existingPending) {
+            if (existingPending.requestedById === access.dosen.id) {
+                const payload = {
+                    name: name !== undefined ? name : existingClo.name,
+                    description: description !== undefined ? description : existingClo.description,
+                };
+                const updatedRequest = await prisma.approvalChangeRequest.update({
+                    where: { id: existingPending.id },
+                    data: {
+                        action: "UPDATE",
+                        title: `Pembaruan CLO: ${payload.name}`,
+                        payload,
+                    },
+                });
+
+                return res.status(200).json({
+                    message: "Permohonan pembaruan CLO berhasil diperbarui dengan data terbaru dan sedang menunggu persetujuan Ketua Kelompok Keahlian",
+                    data: {
+                        requestId: updatedRequest.id,
+                        status: updatedRequest.status,
+                        entityType: updatedRequest.entityType,
+                        action: updatedRequest.action,
+                    },
+                });
+            } else {
+                return res.status(409).json({
+                    message: `Data ini sedang dalam proses permohonan persetujuan oleh ${existingPending.requestedBy?.name || "pengguna lain"}. Perubahan tidak dapat diajukan sampai usulan sebelumnya selesai.`,
+                    data: { requestId: existingPending.id },
+                });
+            }
+        }
+
+        const payload = {
+            name: name !== undefined ? name : existingClo.name,
+            description: description !== undefined ? description : existingClo.description,
+        };
+
+        const changeRequest = await prisma.approvalChangeRequest.create({
+            data: {
+                entityType: "CLO",
+                action: "UPDATE",
+                targetId: id,
+                title: `Pembaruan CLO: ${payload.name}`,
+                payload,
+                oldData: {
+                    name: existingClo.name,
+                    description: existingClo.description,
+                },
+                status: "PENDING",
+                studyProgramId: existingClo.studyProgramId,
+                requestedById: access.dosen.id,
+            },
+        });
+
+        return res.status(202).json({
+            message: "Permohonan pembaruan CLO berhasil diajukan dan sedang menunggu persetujuan Ketua Kelompok Keahlian",
+            data: {
+                requestId: changeRequest.id,
+                status: changeRequest.status,
+                entityType: changeRequest.entityType,
+                action: changeRequest.action,
+            },
+        });
+    } else if (access.isRestrictedKetuaKK) {
+        if (!access.allowedStudyProgramIds.includes(existingClo.studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat mengubah data untuk program studi yang terhubung dengan kelompok keahliannya.",
             });
         }
     }
@@ -162,6 +294,71 @@ const deleteCloProdi = asyncHandler(async (req, res) => {
         if (!access.studyProgramId || existingClo.studyProgramId !== access.studyProgramId) {
             return res.status(403).json({
                 message: "Access denied. Ketua Prodi hanya dapat menghapus data untuk program studinya sendiri.",
+            });
+        }
+
+        const existingPending = await checkActivePendingRequest({
+            entityType: "CLO",
+            targetId: id,
+        });
+        if (existingPending) {
+            if (existingPending.requestedById === access.dosen.id) {
+                const updatedRequest = await prisma.approvalChangeRequest.update({
+                    where: { id: existingPending.id },
+                    data: {
+                        action: "DELETE",
+                        title: `Penghapusan CLO: ${existingClo.name}`,
+                        payload: {},
+                    },
+                });
+
+                return res.status(200).json({
+                    message: "Permohonan CLO berhasil diperbarui menjadi permohonan penghapusan dan sedang menunggu persetujuan Ketua Kelompok Keahlian",
+                    data: {
+                        requestId: updatedRequest.id,
+                        status: updatedRequest.status,
+                        entityType: updatedRequest.entityType,
+                        action: updatedRequest.action,
+                    },
+                });
+            } else {
+                return res.status(409).json({
+                    message: `Data ini sedang dalam proses permohonan persetujuan oleh ${existingPending.requestedBy?.name || "pengguna lain"}. Perubahan tidak dapat diajukan sampai usulan sebelumnya selesai.`,
+                    data: { requestId: existingPending.id },
+                });
+            }
+        }
+
+        const changeRequest = await prisma.approvalChangeRequest.create({
+            data: {
+                entityType: "CLO",
+                action: "DELETE",
+                targetId: id,
+                title: `Penghapusan CLO: ${existingClo.name}`,
+                payload: {},
+                oldData: {
+                    name: existingClo.name,
+                    description: existingClo.description,
+                },
+                status: "PENDING",
+                studyProgramId: existingClo.studyProgramId,
+                requestedById: access.dosen.id,
+            },
+        });
+
+        return res.status(202).json({
+            message: "Permohonan penghapusan CLO berhasil diajukan dan sedang menunggu persetujuan Ketua Kelompok Keahlian",
+            data: {
+                requestId: changeRequest.id,
+                status: changeRequest.status,
+                entityType: changeRequest.entityType,
+                action: changeRequest.action,
+            },
+        });
+    } else if (access.isRestrictedKetuaKK) {
+        if (!access.allowedStudyProgramIds.includes(existingClo.studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat menghapus data untuk program studi yang terhubung dengan kelompok keahliannya.",
             });
         }
     }
