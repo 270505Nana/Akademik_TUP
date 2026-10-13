@@ -41,6 +41,11 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *           type: boolean
  *         description: Filter by active status (true/false)
  *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: string
+ *         description: Filter research groups by connected Study Program ID
+ *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
@@ -92,6 +97,11 @@ router.get("/", verifyToken, listResearchGroups);
  *               isActive:
  *                 type: boolean
  *                 example: true
+ *               studyProgramIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
  *     responses:
  *       201:
  *         description: Research group created successfully
@@ -159,6 +169,11 @@ router.get("/:id", verifyToken, findResearchGroupById);
  *                 type: string
  *               isActive:
  *                 type: boolean
+ *               studyProgramIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
  *     responses:
  *       200:
  *         description: Research group updated successfully

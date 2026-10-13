@@ -22,6 +22,12 @@ const createCloProdi = asyncHandler(async (req, res) => {
                 message: "Access denied. Ketua Prodi hanya dapat membuat data untuk program studinya sendiri.",
             });
         }
+    } else if (access.isRestrictedKetuaKK) {
+        if (!access.allowedStudyProgramIds.includes(studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat membuat data CLO untuk program studi yang terhubung dengan kelompok keahliannya.",
+            });
+        }
     }
 
     const studyProgram = await prisma.studyProgram.findUnique({
@@ -54,12 +60,29 @@ const getCloProdis = asyncHandler(async (req, res) => {
                 message: "Access denied. Ketua Prodi hanya dapat mengakses data untuk program studinya sendiri.",
             });
         }
+    } else if (access.isRestrictedKetuaKK) {
+        if (access.allowedStudyProgramIds.length === 0) {
+            return res.status(403).json({
+                message: "Access denied. Kelompok Keahlian akun Ketua KK belum terhubung dengan Program Studi manapun.",
+            });
+        }
+        if (studyProgramId && !access.allowedStudyProgramIds.includes(studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat mengakses data untuk program studi yang terhubung dengan kelompok keahliannya.",
+            });
+        }
     }
 
     const where = { deletedAt: null };
 
     if (access.isRestrictedKaprodi) {
         where.studyProgramId = access.studyProgramId;
+    } else if (access.isRestrictedKetuaKK) {
+        if (studyProgramId) {
+            where.studyProgramId = studyProgramId;
+        } else {
+            where.studyProgramId = { in: access.allowedStudyProgramIds };
+        }
     } else if (studyProgramId) {
         where.studyProgramId = studyProgramId;
     }
@@ -112,6 +135,12 @@ const getCloProdiById = asyncHandler(async (req, res) => {
                 message: "Access denied. Ketua Prodi hanya dapat mengakses data untuk program studinya sendiri.",
             });
         }
+    } else if (access.isRestrictedKetuaKK) {
+        if (!access.allowedStudyProgramIds.includes(clo.studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat mengakses data untuk program studi yang terhubung dengan kelompok keahliannya.",
+            });
+        }
     }
 
     res.json({ data: clo });
@@ -133,6 +162,12 @@ const updateCloProdi = asyncHandler(async (req, res) => {
         if (!access.studyProgramId || existingClo.studyProgramId !== access.studyProgramId) {
             return res.status(403).json({
                 message: "Access denied. Ketua Prodi hanya dapat mengubah data untuk program studinya sendiri.",
+            });
+        }
+    } else if (access.isRestrictedKetuaKK) {
+        if (!access.allowedStudyProgramIds.includes(existingClo.studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat mengubah data untuk program studi yang terhubung dengan kelompok keahliannya.",
             });
         }
     }
@@ -162,6 +197,12 @@ const deleteCloProdi = asyncHandler(async (req, res) => {
         if (!access.studyProgramId || existingClo.studyProgramId !== access.studyProgramId) {
             return res.status(403).json({
                 message: "Access denied. Ketua Prodi hanya dapat menghapus data untuk program studinya sendiri.",
+            });
+        }
+    } else if (access.isRestrictedKetuaKK) {
+        if (!access.allowedStudyProgramIds.includes(existingClo.studyProgramId)) {
+            return res.status(403).json({
+                message: "Access denied. Ketua KK hanya dapat menghapus data untuk program studi yang terhubung dengan kelompok keahliannya.",
             });
         }
     }
