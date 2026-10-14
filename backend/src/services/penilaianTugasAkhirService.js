@@ -93,6 +93,31 @@ export const savePenilaianTugasAkhir = async ({
     throw error;
   }
 
+  // Validasi waktu sidang: penilaian hanya boleh dilakukan saat atau setelah sidang dimulai
+  if (!sidangRegistration.tglSidang) {
+    const error = new Error(
+      "Penilaian belum dapat dilakukan karena sidang belum memiliki jadwal",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const tglSidang = new Date(sidangRegistration.tglSidang);
+  if (isNaN(tglSidang.getTime())) {
+    const error = new Error("Jadwal tanggal sidang tidak valid");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const now = new Date();
+  if (now < tglSidang) {
+    const error = new Error(
+      "Penilaian belum dapat dilakukan karena sidang belum dimulai",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
   // Tentukan peran penilai (pembimbing / penguji) dan hitung bobot penilai
   let type = null;
   let penilaiType = null;
