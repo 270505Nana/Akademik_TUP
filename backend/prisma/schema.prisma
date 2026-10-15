@@ -573,6 +573,7 @@ model CloProdi {
   studyProgramId  String            @map("study_program_id")
   subcloProdi     SubcloProdi[]
   jenisAsesmenClo JenisAsesmenClo[]
+  skemaPerhitungan SkemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi[]
 
   @@map("clo_prodi")
 }
@@ -625,6 +626,8 @@ model SkemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi {
   bobotRataRataPenguji    Decimal      @map("bobot_rata_rata_penguji") @db.Decimal(5, 2) // bobot nilai misal 40% -> 0.4
   studyProgram            StudyProgram @relation(fields: [studyProgramId], references: [id], onDelete: Cascade)
   studyProgramId          String       @map("study_program_id")
+  cloProdi                CloProdi?    @relation(fields: [cloProdiId], references: [id], onDelete: Cascade)
+  cloProdiId              String?      @map("clo_prodi_id")
 
   @@map("skema_perhitungan_nilai_berita_acara_tugas_akhir_prodi")
 }
