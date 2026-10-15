@@ -19,3 +19,23 @@ export const savePenilaianTugasAkhirSchema = z.object({
     .min(1, "Minimal satu komponen nilai harus diisi"),
   catatanRevisi: z.string().optional().nullable(),
 });
+
+export const tutupSidangSchema = z.object({
+  deadlineRevisi: z
+    .string({ required_error: "Batas waktu revisi (deadlineRevisi) wajib diisi" })
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "Format tanggal batas waktu revisi tidak valid",
+    }),
+  keterangan: z.enum(["Lulus", "Lulus Bersyarat", "Tidak Lulus"], {
+    required_error:
+      "Keterangan kelulusan wajib diisi ('Lulus', 'Lulus Bersyarat', atau 'Tidak Lulus')",
+    invalid_type_error:
+      "Keterangan kelulusan harus bernilai 'Lulus', 'Lulus Bersyarat', atau 'Tidak Lulus'",
+  }),
+  nilaiAkhir: z
+    .union([z.number(), z.string()])
+    .optional()
+    .nullable(),
+  justifikasi: z.string().optional().nullable(),
+});
+
