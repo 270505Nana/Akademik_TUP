@@ -18,42 +18,85 @@ const findActiveOrThrow = async (id) => {
     return skema;
 };
 
-export const createSkemaPerhitungan = async (data) => {
-    const studyProgram = await prisma.studyProgram.findFirst({
-        where: { id: data.studyProgramId, deletedAt: null },
-    });
-    if (!studyProgram) throwError(404, "Program Studi tidak ditemukan");
-
-    if (data.cloProdiId) {
-        const cloProdi = await prisma.cloProdi.findFirst({
-            where: { id: data.cloProdiId, studyProgramId: data.studyProgramId, deletedAt: null },
-        });
-        if (!cloProdi) throwError(404, "CLO tidak ditemukan pada Program Studi ini");
+export const createSkemaPerhitungan = async (data, access) => {
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId || data.studyProgramId !== access.studyProgramId) {
+            throwError(403, "Access denied. Ketua Prodi hanya dapat membuat data untuk program studinya sendiri.");
+        }
+    } else if (access.isRestrictedKetuaKK) {
+        if (!access.allowedStudyProgramIds.includes(data.studyProgramId)) {
+            throwError(403, "Access denied. Ketua KK hanya dapat membuat data untuk program studi yang terhubung dengan kelompok keahliannya.");
+        }
     }
 
-    const existing = await skemaModel.findFirst({
-        where: { studyProgramId: data.studyProgramId, cloProdiId: data.cloProdiId ?? null, deletedAt: null },
+    const cloProdi = await prisma.cloProdi.findFirst({
+        where: { id: data.cloProdiId, studyProgramId: data.studyProgramId, deletedAt: null },
+        include: { studyProgram: true }
     });
-    if (existing) throwError(409, "Skema untuk Prodi/CLO ini sudah ada");
+    if (!cloProdi) throwError(404, "CLO tidak ditemukan pada Program Studi ini");
 
-    return await skemaModel.create({
+    const existing = await skemaModel.findFirst({
+        where: { studyProgramId: data.studyProgramId, cloProdiId: data.cloProdiId, deletedAt: null },
+    });
+    if (existing) throwError(409, "Skema perhitungan untuk CLO ini sudah ada");
+
+    if (access.isRestrictedKaprodi) {
+        const changeRequest = await prisma.approvalChangeRequest.create({
+            data: {
+                entityType: "SKEMA_PERHITUNGAN",
+                action: "CREATE",
+                targetId: null,
+                title: `Penambahan Skema Perhitungan (CLO: ${cloProdi.name})`,
+                payload: {
+                    bobotRataRataPembimbing: data.bobotRataRataPembimbing,
+                    bobotRataRataPenguji: data.bobotRataRataPenguji,
+                    studyProgramId: data.studyProgramId,
+                    cloProdiId: data.cloProdiId
+                },
+                oldData: null,
+                status: "PENDING",
+                studyProgramId: data.studyProgramId,
+                requestedById: access.dosen.id,
+            },
+        });
+        return { isPending: true, data: changeRequest };
+    }
+    const result = await skemaModel.create({
         data: { 
             bobotRataRataPembimbing: data.bobotRataRataPembimbing, 
             bobotRataRataPenguji: data.bobotRataRataPenguji, 
             studyProgramId: data.studyProgramId,
-            cloProdiId: data.cloProdiId ?? null
+            cloProdiId: data.cloProdiId
         },
         include: { studyProgram: true, cloProdi: true },
     });
+    return { isPending: false, data: result };
 };
 
-export const getSkemaPerhitungans = async (query) => {
+export const getSkemaPerhitungans = async (query, access) => {
     const paginationParams = getPaginationParams(query);
     const { studyProgramId, cloProdiId } = query;
 
     const where = { deletedAt: null };
-    if (studyProgramId) where.studyProgramId = studyProgramId;
-    if (cloProdiId !== undefined) where.cloProdiId = cloProdiId || null;
+    if (access.isRestrictedKaprodi) {
+        if (!access.studyProgramId) throwError(403, "Access denied. Akun Ketua Prodi belum terasosiasi dengan Program Studi manapun.");
+        if (studyProgramId && studyProgramId !== access.studyProgramId) {
+            throwError(403, "Access denied. Ketua Prodi hanya dapat mengakses data untuk program studinya sendiri.");
+        }
+        where.studyProgramId = access.studyProgramId;
+    } else if (access.isRestrictedKetuaKK) {
+        if (access.allowedStudyProgramIds.length === 0) throwError(403, "Access denied. Kelompok Keahlian belum terhubung dengan Program Studi manapun.");
+        if (studyProgramId) {
+            if (!access.allowedStudyProgramIds.includes(studyProgramId)) throwError(403, "Access denied. Ketua KK tidak dapat mengakses prodi ini.");
+            where.studyProgramId = studyProgramId;
+        } else {
+            where.studyProgramId = { in: access.allowedStudyProgramIds };
+        }
+    } else if (studyProgramId) {
+        where.studyProgramId = studyProgramId;
+    }
+
+    if (cloProdiId) where.cloProdiId = cloProdiId;
     
     const [total, skemaList] = await Promise.all([
         skemaModel.count({ where }),
@@ -69,29 +112,116 @@ export const getSkemaPerhitungans = async (query) => {
     return formatPaginationResponse(skemaList, total, paginationParams);
 };
 
-export const getSkemaPerhitunganById = async (id) => {
-    return await findActiveOrThrow(id);
+export const getSkemaPerhitunganById = async (id, access) => {
+    const skema = await findActiveOrThrow(id);
+
+    if (access.isRestrictedKaprodi && skema.studyProgramId !== access.studyProgramId) {
+        throwError(403, "Access denied.");
+    } else if (access.isRestrictedKetuaKK && !access.allowedStudyProgramIds.includes(skema.studyProgramId)) {
+        throwError(403, "Access denied.");
+    }
+
+    return skema;
 };
 
-export const updateSkemaPerhitungan = async (id, data) => {
+export const updateSkemaPerhitungan = async (id, data, access) => {
     const existing = await findActiveOrThrow(id);
+
+    if (access.isRestrictedKaprodi) {
+        if (existing.studyProgramId !== access.studyProgramId) throwError(403, "Access denied.");
+
+        const newBobotPembimbing = data.bobotRataRataPembimbing ?? Number(existing.bobotRataRataPembimbing);
+        const newBobotPenguji = data.bobotRataRataPenguji ?? Number(existing.bobotRataRataPenguji);
+        
+        if (Math.abs(newBobotPembimbing + newBobotPenguji - 1) >= 0.001) {
+            throwError(400, "Total kombinasi bobot pembimbing + penguji harus 1 (100%)");
+        }
+
+        const payload = { bobotRataRataPembimbing: newBobotPembimbing, bobotRataRataPenguji: newBobotPenguji };
+
+        const existingPending = await checkActivePendingRequest({ entityType: "SKEMA_PERHITUNGAN", targetId: id });
+        if (existingPending) {
+            if (existingPending.requestedById === access.dosen.id) {
+                const updatedRequest = await prisma.approvalChangeRequest.update({
+                    where: { id: existingPending.id },
+                    data: {
+                        action: "UPDATE",
+                        title: `Pembaruan Skema Perhitungan (CLO: ${existing.cloProdi.name})`,
+                        payload,
+                    },
+                });
+                return { isPending: true, isUpdatedPending: true, data: updatedRequest };
+            } else {
+                throwError(409, `Data ini sedang dalam proses permohonan persetujuan oleh pengguna lain.`);
+            }
+        }
+
+        const changeRequest = await prisma.approvalChangeRequest.create({
+            data: {
+                entityType: "SKEMA_PERHITUNGAN",
+                action: "UPDATE",
+                targetId: id,
+                title: `Pembaruan Skema Perhitungan (CLO: ${existing.cloProdi.name})`,
+                payload,
+                oldData: { bobotRataRataPembimbing: existing.bobotRataRataPembimbing, bobotRataRataPenguji: existing.bobotRataRataPenguji },
+                status: "PENDING",
+                studyProgramId: existing.studyProgramId,
+                requestedById: access.dosen.id,
+            },
+        });
+        return { isPending: true, data: changeRequest };
+    } else if (access.isRestrictedKetuaKK && !access.allowedStudyProgramIds.includes(existing.studyProgramId)) {
+        throwError(403, "Access denied.");
+    }
 
     const newBobotPembimbing = data.bobotRataRataPembimbing ?? Number(existing.bobotRataRataPembimbing);
     const newBobotPenguji = data.bobotRataRataPenguji ?? Number(existing.bobotRataRataPenguji);
-    
-    if (Math.abs(newBobotPembimbing + newBobotPenguji - 1) >= 0.001) {
-        throwError(400, "Total kombinasi bobot pembimbing + penguji harus 1 (100%)");
-    }
+    if (Math.abs(newBobotPembimbing + newBobotPenguji - 1) >= 0.001) throwError(400, "Total kombinasi bobot pembimbing + penguji harus 1 (100%)");
 
-    return await skemaModel.update({
+    const result = await skemaModel.update({
         where: { id },
         data: { ...data },
         include: { studyProgram: true, cloProdi: true }
     });
+    return { isPending: false, data: result };
 };
 
-export const deleteSkemaPerhitungan = async (id) => {
-    await findActiveOrThrow(id);
+export const deleteSkemaPerhitungan = async (id, access) => {
+    const existing = await findActiveOrThrow(id);
+
+    if (access.isRestrictedKaprodi) {
+        if (existing.studyProgramId !== access.studyProgramId) throwError(403, "Access denied.");
+
+        const existingPending = await checkActivePendingRequest({ entityType: "SKEMA_PERHITUNGAN", targetId: id });
+        if (existingPending) {
+            if (existingPending.requestedById === access.dosen.id) {
+                const updatedRequest = await prisma.approvalChangeRequest.update({
+                    where: { id: existingPending.id },
+                    data: { action: "DELETE", title: `Penghapusan Skema Perhitungan (CLO: ${existing.cloProdi.name})`, payload: {} },
+                });
+                return { isPending: true, isUpdatedPending: true, data: updatedRequest };
+            } else {
+                throwError(409, `Data ini sedang dalam proses permohonan persetujuan oleh pengguna lain.`);
+            }
+        }
+
+        const changeRequest = await prisma.approvalChangeRequest.create({
+            data: {
+                entityType: "SKEMA_PERHITUNGAN",
+                action: "DELETE",
+                targetId: id,
+                title: `Penghapusan Skema Perhitungan (CLO: ${existing.cloProdi.name})`,
+                payload: {},
+                oldData: { bobotRataRataPembimbing: existing.bobotRataRataPembimbing, bobotRataRataPenguji: existing.bobotRataRataPenguji },
+                status: "PENDING",
+                studyProgramId: existing.studyProgramId,
+                requestedById: access.dosen.id,
+            },
+        });
+        return { isPending: true, data: changeRequest };
+    } else if (access.isRestrictedKetuaKK && !access.allowedStudyProgramIds.includes(existing.studyProgramId)) {
+        throwError(403, "Access denied.");
+    }
 
     return await skemaModel.update({
         where: { id },
@@ -99,19 +229,12 @@ export const deleteSkemaPerhitungan = async (id) => {
     });
 };
 
-// Helper pencarian bobot Ra/Rb spesifik CLO (Fallback ke Default Prodi jika null)
 export const getBobotUntukClo = async (studyProgramId, cloProdiId) => {
-    const kandidat = await skemaModel.findMany({
-        where: {
-            studyProgramId,
-            deletedAt: null,
-            OR: [{ cloProdiId }, { cloProdiId: null }],
-        },
+    const skema = await skemaModel.findFirst({
+        where: { studyProgramId, cloProdiId, deletedAt: null },
     });
 
-    const skema = kandidat.find((s) => s.cloProdiId === cloProdiId) ?? kandidat.find((s) => s.cloProdiId === null);
-    
-    if (!skema) throwError(404, "Skema perhitungan belum diatur untuk prodi ini");
+    if (!skema) throwError(404, "Skema perhitungan belum diatur untuk CLO ini");
     
     return {
         pembimbing: Number(skema.bobotRataRataPembimbing),

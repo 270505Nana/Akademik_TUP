@@ -13,7 +13,7 @@ export const createSkemaSchema = z.object({
     bobotRataRataPembimbing: bobot,
     bobotRataRataPenguji: bobot,
     studyProgramId: z.string({ required_error: "ID Program Studi wajib diisi" }),
-    cloProdiId: z.string().uuid("Format ID CLO tidak valid").optional().nullable(),
+    cloProdiId: z.string({ required_error: "ID CLO wajib diisi" }).uuid("Format ID CLO tidak valid")
 }).refine(isTotalOne, { 
     message: "Total bobot pembimbing + penguji harus 1 (100%)",
     path: ["bobotRataRataPembimbing"] 
