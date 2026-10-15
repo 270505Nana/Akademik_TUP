@@ -27,6 +27,8 @@ export const createSkemaPerhitungan = async (data, access) => {
         if (!access.allowedStudyProgramIds.includes(data.studyProgramId)) {
             throwError(403, "Access denied. Ketua KK hanya dapat membuat data untuk program studi yang terhubung dengan kelompok keahliannya.");
         }
+    } else if (!access.isFullAccess) {
+        throwError(403, "Access denied. Hanya Admin, Ketua KK, atau Ketua Prodi yang dapat mengakses.");
     }
 
     const cloProdi = await prisma.cloProdi.findFirst({
@@ -172,6 +174,8 @@ export const updateSkemaPerhitungan = async (id, data, access) => {
         return { isPending: true, data: changeRequest };
     } else if (access.isRestrictedKetuaKK && !access.allowedStudyProgramIds.includes(existing.studyProgramId)) {
         throwError(403, "Access denied.");
+    } else if (!access.isFullAccess && !access.isRestrictedKetuaKK) {
+        throwError(403, "Access denied. Hanya Admin, Ketua KK, atau Ketua Prodi yang dapat mengakses.");
     }
 
     const newBobotPembimbing = data.bobotRataRataPembimbing ?? Number(existing.bobotRataRataPembimbing);
@@ -221,6 +225,8 @@ export const deleteSkemaPerhitungan = async (id, access) => {
         return { isPending: true, data: changeRequest };
     } else if (access.isRestrictedKetuaKK && !access.allowedStudyProgramIds.includes(existing.studyProgramId)) {
         throwError(403, "Access denied.");
+    } else if (!access.isFullAccess && !access.isRestrictedKetuaKK) {
+        throwError(403, "Access denied. Hanya Admin, Ketua KK, atau Ketua Prodi yang dapat mengakses.");
     }
 
     return await skemaModel.update({

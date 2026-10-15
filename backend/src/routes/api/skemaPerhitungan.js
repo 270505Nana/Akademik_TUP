@@ -7,6 +7,7 @@ import {
   deleteSkemaPerhitungan,
 } from '../../controllers/skemaPerhitunganController.js';
 import { verifyToken } from '../../middlewares/auth.js';
+import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
 
 const router = express.Router();
 
@@ -79,8 +80,10 @@ router.get("/", verifyToken, getSkemaPerhitungans);
  *     responses:
  *       201:
  *         description: Created successfully
+ *       403:
+ *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi)
  */
-router.post("/", verifyToken, createSkemaPerhitungan);
+router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createSkemaPerhitungan);
 
 /**
  * @swagger
@@ -132,8 +135,10 @@ router.get("/:id", verifyToken, getSkemaPerhitunganById);
  *     responses:
  *       200:
  *         description: Updated successfully
+ *       403:
+ *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi)
  */
-router.put("/:id", verifyToken, updateSkemaPerhitungan);
+router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateSkemaPerhitungan);
 
 /**
  * @swagger
@@ -152,7 +157,9 @@ router.put("/:id", verifyToken, updateSkemaPerhitungan);
  *     responses:
  *       200:
  *         description: Deleted successfully
+ *       403:
+ *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi)
  */
-router.delete("/:id", verifyToken, deleteSkemaPerhitungan);
+router.delete("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, deleteSkemaPerhitungan);
 
 export default router;
