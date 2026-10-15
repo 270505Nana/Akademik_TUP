@@ -7,7 +7,6 @@ import {
   deleteSkemaPerhitungan,
 } from '../../controllers/skemaPerhitunganController.js';
 import { verifyToken } from '../../middlewares/auth.js';
-import { isAdmin } from '../../middlewares/authorize.js';
 
 const router = express.Router();
 
@@ -76,12 +75,12 @@ router.get("/", verifyToken, getSkemaPerhitungans);
  *                 type: string
  *               cloProdiId:
  *                 type: string
- *                 description: "Kosongkan atau jangan kirim jika ingin berlaku sebagai default Prodi (untuk semua CLO)"
+ *                 description: "ID CLO yang akan diatur bobot perhitungannya"
  *     responses:
  *       201:
  *         description: Created successfully
  */
-router.post("/", verifyToken, isAdmin, createSkemaPerhitungan);
+router.post("/", verifyToken, createSkemaPerhitungan);
 
 /**
  * @swagger
@@ -134,7 +133,7 @@ router.get("/:id", verifyToken, getSkemaPerhitunganById);
  *       200:
  *         description: Updated successfully
  */
-router.put("/:id", verifyToken, isAdmin, updateSkemaPerhitungan);
+router.put("/:id", verifyToken, updateSkemaPerhitungan);
 
 /**
  * @swagger
@@ -154,6 +153,6 @@ router.put("/:id", verifyToken, isAdmin, updateSkemaPerhitungan);
  *       200:
  *         description: Deleted successfully
  */
-router.delete("/:id", verifyToken, isAdmin, deleteSkemaPerhitungan);
+router.delete("/:id", verifyToken, deleteSkemaPerhitungan);
 
 export default router;
