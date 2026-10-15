@@ -14,14 +14,15 @@ const router = express.Router();
  * @swagger
  * tags:
  *   name: Penilaian Tugas Akhir
- *   description: Endpoints pengelolaan penilaian sidang tugas akhir oleh dosen penilai & kaprodi
+ *   description: Manajemen penilaian sidang tugas akhir oleh dosen pembimbing dan penguji
  */
 
 /**
  * @swagger
  * /api/penilaian-tugas-akhir/sidang-registration/{sidangRegistrationId}:
  *   get:
- *     summary: Get Penilaian Tugas Akhir by Sidang Registration ID
+ *     summary: Get Penilaian Sidang Tugas Akhir by Sidang Registration ID
+ *     description: Mengembalikan data penilaian jika sudah ada (snapshot), atau template formulir kosong dari kurikulum master data prodi jika belum pernah dinilai (id: null).
  *     tags: [Penilaian Tugas Akhir]
  *     security:
  *       - bearerAuth: []
@@ -34,29 +35,59 @@ const router = express.Router();
  *         description: ID Pendaftaran Sidang (UUID)
  *     responses:
  *       200:
- *         description: Data penilaian tugas akhir berhasil diambil
+ *         description: Data penilaian tugas akhir atau template formulir berhasil diambil
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
+ *                 id:
+ *                   type: string
+ *                   nullable: true
+ *                   example: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
  *                 bobotPenilai:
  *                   type: number
- *                   example: 0.5
- *                 bobotNilai:
- *                   type: object
- *                   example:
- *                     nilai1: 0.2
- *                     nilai2: 0.3
- *                     nilai3: 0.3
- *                     nilai4: 0.2
+ *                   example: 0.6
  *                 nilai:
- *                   type: object
- *                   example:
- *                     nilai1: 90.0
- *                     nilai2: 80.0
- *                     nilai3: 85.0
- *                     nilai4: 98.0
+ *                   type: array
+ *                   description: Hierarchical snapshot CLO, Sub-CLO, dan Asesmen
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       cloProdiId:
+ *                         type: string
+ *                       cloName:
+ *                         type: string
+ *                         example: "CLO7"
+ *                       deskripsi:
+ *                         type: string
+ *                       subClo:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                             name:
+ *                               type: string
+ *                             deskripsi:
+ *                               type: string
+ *                       asesmen:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             jenisAsesmenId:
+ *                               type: string
+ *                             content:
+ *                               type: string
+ *                             bobot:
+ *                               type: number
+ *                               example: 0.1
+ *                             nilai:
+ *                               type: number
+ *                               nullable: true
+ *                               example: 85.0
  *                 catatanRevisi:
  *                   type: string
  *                   example: "Perbaiki format penulisan bab 4"
@@ -73,10 +104,22 @@ const router = express.Router();
  *                   type: object
  *       401:
  *         description: Token tidak valid atau tidak ditemukan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
  *         description: Akses ditolak atau dosen tidak terdaftar sebagai pembimbing/penguji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Pendaftaran sidang tidak ditemukan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get(
   "/sidang-registration/:sidangRegistrationId",
@@ -110,20 +153,31 @@ router.get(
  *               - nilai
  *             properties:
  *               nilai:
- *                 type: object
- *                 description: Komponen nilai dalam bentuk JSON
- *                 example:
- *                   nilai1: 90.0
- *                   nilai2: 80.0
- *                   nilai3: 85.0
- *                   nilai4: 98.0
+ *                 type: array
+ *                 description: Daftar nilai per jenis asesmen
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - jenisAsesmenId
+ *                     - nilai
+ *                   properties:
+ *                     jenisAsesmenId:
+ *                       type: string
+ *                       format: uuid
+ *                       example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+ *                     nilai:
+ *                       type: number
+ *                       format: float
+ *                       minimum: 0
+ *                       maximum: 100
+ *                       example: 85.0
  *               catatanRevisi:
  *                 type: string
  *                 description: Catatan revisi untuk mahasiswa
  *                 example: "Perbaiki format sitasi daftar pustaka"
  *     responses:
  *       200:
- *         description: Penilaian tugas akhir berhasil diperbarui
+ *         description: Penilaian tugas akhir berhasil disimpan / diperbarui
  *         content:
  *           application/json:
  *             schema:
@@ -139,10 +193,8 @@ router.get(
  *                       type: string
  *                     bobotPenilai:
  *                       type: number
- *                     bobotNilai:
- *                       type: object
  *                     nilai:
- *                       type: object
+ *                       type: array
  *                     catatanRevisi:
  *                       type: string
  *                     sidangRegistrationId:
@@ -150,21 +202,34 @@ router.get(
  *                     penilaiType:
  *                       type: string
  *                       enum: ["pembimbing", "penguji"]
- *                       example: "pembimbing"
  *                     dosenPenilai:
  *                       type: object
  *                     dosenKaprodi:
  *                       type: object
- *       201:
- *         description: Penilaian tugas akhir berhasil dibuat
  *       400:
- *         description: Validasi error
+ *         description: Validasi error atau komponen belum lengkap
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Token tidak valid atau tidak ditemukan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
  *         description: Akses ditolak atau dosen tidak terdaftar sebagai pembimbing/penguji
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Pendaftaran sidang atau Dosen tidak ditemukan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put(
   "/sidang-registration/:sidangRegistrationId",
