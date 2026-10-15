@@ -25,6 +25,7 @@ import jenisAsesmenRouter from './jenisAsesmen.js';
 import skemaPenilaiRouter from './skemaPenilai.js';
 import penilaianTugasAkhirRouter from './penilaianTugasAkhir.js';
 import approvalRequestRouter from './approvalRequest.js';
+import skemaPerhitungan from './skemaPerhitungan.js';
 
 const router = express.Router();
 
@@ -54,5 +55,6 @@ router.use("/jenis-asesmen", jenisAsesmenRouter);
 router.use("/skema-penilai", skemaPenilaiRouter);
 router.use("/penilaian-tugas-akhir", penilaianTugasAkhirRouter);
 router.use("/approval-requests", approvalRequestRouter);
+router.use("/skema-perhitungan", skemaPerhitungan);
 
 export default router;
