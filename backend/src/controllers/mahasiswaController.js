@@ -9,12 +9,14 @@ import {
 // Daftar Semua Mahasiswa
 const listMahasiswa = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search, studyProgramId, tahunAngkatan } = req.query;
+  const { search, studyProgramId, tahunAngkatan, sortBy, sortOrder } = req.query;
 
   const { total, mahasiswas } = await mahasiswaService.getMahasiswas({
     search,
     studyProgramId,
     tahunAngkatan,
+    sortBy,
+    sortOrder,
     ...paginationParams,
   });
 
@@ -48,4 +50,18 @@ const findMahasiswaById = asyncHandler(async (req, res) => {
   res.json({ data: mapMahasiswa(mahasiswa) });
 });
 
-export { listMahasiswa, upsertMahasiswa, findMahasiswaById };
+// Get Mahasiswa Dashboard
+const getMahasiswaDashboard = asyncHandler(async (req, res) => {
+  const data = await mahasiswaService.getMahasiswaDashboardData(req.user.id);
+  res.json({
+    message: "Mahasiswa dashboard data retrieved successfully",
+    data,
+  });
+});
+
+export {
+  listMahasiswa,
+  upsertMahasiswa,
+  findMahasiswaById,
+  getMahasiswaDashboard,
+};
