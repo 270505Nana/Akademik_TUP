@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import prisma from "../config/prisma.js";
 import { uploadFile, deleteFile } from "./storageService.js";
 
-export const sktaInclude = {
+export const permohonanSktaInclude = {
   mahasiswa: {
     include: {
       studyProgram: true,
@@ -142,7 +142,7 @@ export const getPermohonanSktas = async ({ skip, take }, customWhere = {}) => {
       where,
       skip,
       take,
-      include: sktaInclude,
+      include: permohonanSktaInclude,
       orderBy: {
         createdAt: "desc",
       },
@@ -158,7 +158,7 @@ export const getPermohonanSktas = async ({ skip, take }, customWhere = {}) => {
 export const getPermohonanSktaById = async (id) => {
   return await prisma.permohonanSkta.findUnique({
     where: { id },
-    include: sktaInclude,
+    include: permohonanSktaInclude,
   });
 };
 
@@ -192,7 +192,7 @@ export const getLatestPermohonanByMahasiswaId = async (idOrUserId) => {
     orderBy: {
       createdAt: "desc",
     },
-    include: sktaInclude,
+    include: permohonanSktaInclude,
   });
 };
 
@@ -207,6 +207,7 @@ export const saveDraftPermohonanSkta = async ({
   judulProposalInggris,
   dosenPembimbing1Id,
   dosenPembimbing2Id,
+  researchGroupId: explicitResearchGroupId,
   evidenceFile,
 }) => {
   if (id) {
@@ -226,8 +227,8 @@ export const saveDraftPermohonanSkta = async ({
       throw error;
     }
 
-    let researchGroupId;
-    if (dosenPembimbing1Id) {
+    let researchGroupId = explicitResearchGroupId;
+    if (dosenPembimbing1Id && !researchGroupId) {
       const dosenPembimbing1 = await prisma.dosen.findUnique({
         where: { id: dosenPembimbing1Id },
       });
@@ -272,7 +273,7 @@ export const saveDraftPermohonanSkta = async ({
     return await prisma.permohonanSkta.update({
       where: { id },
       data: updateData,
-      include: sktaInclude,
+      include: permohonanSktaInclude,
     });
   } else if (mahasiswaId) {
     const student = await prisma.mahasiswa.findFirst({
@@ -301,8 +302,8 @@ export const saveDraftPermohonanSkta = async ({
         throw error;
       }
 
-      let researchGroupId;
-      if (dosenPembimbing1Id) {
+      let researchGroupId = explicitResearchGroupId;
+      if (dosenPembimbing1Id && !researchGroupId) {
         const dosenPembimbing1 = await prisma.dosen.findUnique({
           where: { id: dosenPembimbing1Id },
         });
@@ -347,7 +348,7 @@ export const saveDraftPermohonanSkta = async ({
       return await prisma.permohonanSkta.update({
         where: { id: existing.id },
         data: updateData,
-        include: sktaInclude,
+        include: permohonanSktaInclude,
       });
     } else {
       if (category === "Permohonan Baru") {
@@ -368,8 +369,8 @@ export const saveDraftPermohonanSkta = async ({
         }
       }
 
-      let researchGroupId;
-      if (dosenPembimbing1Id) {
+      let researchGroupId = explicitResearchGroupId;
+      if (dosenPembimbing1Id && !researchGroupId) {
         const dosenPembimbing1 = await prisma.dosen.findUnique({
           where: { id: dosenPembimbing1Id },
         });
@@ -401,12 +402,12 @@ export const saveDraftPermohonanSkta = async ({
           evidenceUploadPath: evidenceUploadPath || undefined,
           isDraft: true,
         },
-        include: sktaInclude,
+        include: permohonanSktaInclude,
       });
     }
   } else {
     const error = new Error(
-      "mahasiswaId wajib diisi untuk membuat draft permohonan",
+      "mahasiswaId atau id permohonan wajib diisi untuk membuat draft permohonan",
     );
     error.statusCode = 400;
     throw error;
@@ -424,6 +425,7 @@ export const submitPermohonanSkta = async ({
   judulProposalInggris,
   dosenPembimbing1Id,
   dosenPembimbing2Id,
+  researchGroupId: explicitResearchGroupId,
   evidenceFile,
 }) => {
   const existingRecord = await prisma.permohonanSkta.findUnique({
@@ -470,7 +472,7 @@ export const submitPermohonanSkta = async ({
     throw error;
   }
 
-  const researchGroupId = dosenPembimbing1.researchGroupId;
+  const researchGroupId = explicitResearchGroupId || dosenPembimbing1.researchGroupId;
 
   if (category === "Permohonan Baru") {
     const existingSubmitted = await prisma.permohonanSkta.findFirst({
@@ -530,7 +532,7 @@ export const submitPermohonanSkta = async ({
       message: null,
       isEdit: null,
     },
-    include: sktaInclude,
+    include: permohonanSktaInclude,
   });
 };
 
@@ -544,6 +546,7 @@ export const updatePermohonanSktaData = async (
     judulProposalInggris,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
+    researchGroupId: explicitResearchGroupId,
     evidenceFile,
   },
 ) => {
@@ -578,15 +581,22 @@ export const updatePermohonanSktaData = async (
 
   if (dosenPembimbing1Id) {
     updateData.dosenPembimbing1Id = dosenPembimbing1Id;
-    const dosenPembimbing1 = await prisma.dosen.findUnique({
-      where: { id: dosenPembimbing1Id },
-    });
-    if (dosenPembimbing1) {
-      updateData.researchGroupId = dosenPembimbing1.researchGroupId;
+    if (!explicitResearchGroupId) {
+      const dosenPembimbing1 = await prisma.dosen.findUnique({
+        where: { id: dosenPembimbing1Id },
+      });
+      if (dosenPembimbing1) {
+        updateData.researchGroupId = dosenPembimbing1.researchGroupId;
+      }
     }
   }
+
   if (dosenPembimbing2Id) {
     updateData.dosenPembimbing2Id = dosenPembimbing2Id;
+  }
+
+  if (explicitResearchGroupId) {
+    updateData.researchGroupId = explicitResearchGroupId;
   }
 
   if (evidenceFile) {
@@ -606,7 +616,7 @@ export const updatePermohonanSktaData = async (
   return await prisma.permohonanSkta.update({
     where: { id },
     data: updateData,
-    include: sktaInclude,
+    include: permohonanSktaInclude,
   });
 };
 
@@ -754,7 +764,7 @@ export const approvePermohonanSkta = async ({
   return await prisma.permohonanSkta.update({
     where: { id },
     data: updateData,
-    include: sktaInclude,
+    include: permohonanSktaInclude,
   });
 };
 
@@ -806,7 +816,7 @@ export const rejectPermohonanSkta = async ({
       adminId: adminExist.id,
       isEdit: isEdit ? new Date(isEdit) : null,
     },
-    include: sktaInclude,
+    include: permohonanSktaInclude,
   });
 };
 
@@ -816,13 +826,10 @@ export const rejectPermohonanSkta = async ({
 export const getBerkasByPermohonanIdAndCategory = async ({
   permohonanId,
   category,
-  notFoundMessage,
+  notFoundMessage = "Berkas tidak ditemukan",
 }) => {
   const permohonan = await prisma.permohonanSkta.findUnique({
     where: { id: permohonanId },
-    include: {
-      mahasiswa: true,
-    },
   });
 
   if (!permohonan) {
@@ -833,15 +840,16 @@ export const getBerkasByPermohonanIdAndCategory = async ({
 
   if (permohonan.isDraft) {
     const error = new Error(
-      "Dokumen validasi SKTA hanya dapat diakses untuk permohonan yang sudah disubmit (bukan draft)",
+      `${category} hanya dapat diakses untuk permohonan yang sudah disubmit (bukan draft)`,
     );
     error.statusCode = 400;
     throw error;
   }
 
+  const mahasiswaId = permohonan.mahasiswaId;
   const existingBerkas = await prisma.berkasMahasiswa.findFirst({
     where: {
-      mahasiswaId: permohonan.mahasiswaId,
+      mahasiswaId,
       category,
       deletedAt: null,
     },
@@ -849,9 +857,7 @@ export const getBerkasByPermohonanIdAndCategory = async ({
   });
 
   if (!existingBerkas) {
-    const error = new Error(
-      notFoundMessage || "Berkas tidak ditemukan di database",
-    );
+    const error = new Error(notFoundMessage);
     error.statusCode = 404;
     throw error;
   }
@@ -866,7 +872,7 @@ export const uploadBerkasMahasiswaForSkta = async ({
   permohonanId,
   category,
   file,
-  filePrefix,
+  filePrefix = "Dokumen_",
 }) => {
   const permohonan = await prisma.permohonanSkta.findUnique({
     where: { id: permohonanId },
@@ -883,7 +889,7 @@ export const uploadBerkasMahasiswaForSkta = async ({
 
   if (permohonan.isDraft) {
     const error = new Error(
-      "Dokumen SKTA hanya dapat diunggah untuk permohonan yang sudah disubmit (bukan draft)",
+      `Dokumen hanya dapat diunggah untuk permohonan yang sudah disubmit (bukan draft)`,
     );
     error.statusCode = 400;
     throw error;
@@ -938,7 +944,7 @@ export const uploadBerkasMahasiswaForSkta = async ({
 };
 
 /**
- * Mengambil record BerkasMahasiswa berdasarkan berkasId
+ * Mengambil record berkas mahasiswa berdasarkan berkasId
  */
 export const getBerkasMahasiswaById = async (berkasId) => {
   const upload = await prisma.berkasMahasiswa.findFirst({
@@ -956,12 +962,12 @@ export const getBerkasMahasiswaById = async (berkasId) => {
 
 /**
  * Mengambil data berkas SKTA untuk export file ZIP beserta filter-filternya
+ * Parameter kanonikal: studyProgramId (sesuai standar workspace rules)
  */
 export const getSktaFilesForExport = async ({
   startDate,
   endDate,
   dateField = "createdAt",
-  studyProgram,
   studyProgramId,
   tahunAngkatan,
   kelasAsal,
@@ -1014,14 +1020,13 @@ export const getSktaFilesForExport = async ({
     };
   }
 
-  const spFilter = studyProgramId || studyProgram;
-  if (spFilter) {
+  if (studyProgramId) {
     mahasiswaWhere.OR = [
-      { studyProgramId: spFilter },
+      { studyProgramId: String(studyProgramId).trim() },
       {
         studyProgram: {
           name: {
-            contains: String(spFilter).trim(),
+            contains: String(studyProgramId).trim(),
             mode: "insensitive",
           },
         },
@@ -1094,29 +1099,4 @@ export const getSktaFilesForExport = async ({
   }
 
   return validFiles;
-};
-
-export const findExistingPermohonanBaru = async (mahasiswaId) => {
-  return await prisma.permohonanSkta.findFirst({
-    where: {
-      mahasiswaId,
-      category: "Permohonan Baru",
-      deletedAt: null,
-    },
-  });
-};
-
-export const createPermohonanSkta = async (data) => {
-  return await prisma.permohonanSkta.create({
-    data,
-    include: sktaInclude,
-  });
-};
-
-export const updatePermohonanSkta = async (id, data) => {
-  return await prisma.permohonanSkta.update({
-    where: { id },
-    data,
-    include: sktaInclude,
-  });
 };

@@ -23,6 +23,15 @@ import {
 import { verifyToken } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
 import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
+import { validate } from '../../middlewares/validate.js';
+import {
+  savePermohonanSktaDraftSchema,
+  submitPermohonanSktaSchema,
+  updatePermohonanSktaSchema,
+  approvePermohonanSktaSchema,
+  rejectPermohonanSktaSchema,
+  exportSktaZipSchema,
+} from '../../schemas/permohonanSktaSchema.js';
 
 /**
  * @swagger
@@ -93,10 +102,10 @@ router.get("/", verifyToken, listPermohonanSkta);
  *           enum: [createdAt, updatedAt, expDate]
  *         description: Kolom tanggal acuan (default adalah createdAt)
  *       - in: query
- *         name: studyProgram
+ *         name: studyProgramId
  *         schema:
  *           type: string
- *         description: Nama atau ID Program Studi
+ *         description: ID atau nama Program Studi
  *       - in: query
  *         name: tahunAngkatan
  *         schema:
@@ -120,12 +129,20 @@ router.get("/", verifyToken, listPermohonanSkta);
  *             schema:
  *               type: string
  *               format: binary
+ *       400:
+ *         description: Validation error pada query parameter
  *       403:
  *         description: Akses ditolak - Hanya Admin
  *       404:
  *         description: Tidak ada berkas SKTA yang sesuai dengan filter
- */
-router.get("/export-skta", verifyToken, isAdmin, exportSktaZip);
+ *   */
+router.get(
+  "/export-skta",
+  verifyToken,
+  isAdmin,
+  validate(exportSktaZipSchema, "query"),
+  exportSktaZip
+);
 
 /**
  * @swagger
@@ -184,6 +201,7 @@ router.post(
   verifyToken,
   isMahasiswa,
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
+  validate(savePermohonanSktaDraftSchema),
   createPermohonanSkta
 );
 
@@ -248,12 +266,13 @@ router.post(
  *         description: Mahasiswa sudah memiliki pengajuan SK aktif
  *       500:
  *         description: Internal server error
- */
+ *   */
 router.post(
   "/submit",
   verifyToken,
   isMahasiswa,
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
+  validate(submitPermohonanSktaSchema),
   submitPermohonanSkta
 );
 
@@ -369,6 +388,7 @@ router.put(
   verifyToken,
   isMahasiswa,
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
+  validate(updatePermohonanSktaSchema),
   updatePermohonanSkta
 );
 
@@ -464,6 +484,7 @@ router.put(
   verifyToken,
   isAdmin,
   upload("skta").fields([{ name: "skta", maxCount: 1 }]),
+  validate(approvePermohonanSktaSchema),
   approvePermohonanSkta
 );
 
@@ -512,11 +533,12 @@ router.put(
  *         description: Token tidak valid
  *       404:
  *         description: Permohonan SKTA atau Admin tidak ditemukan
- */
+ *   */
 router.put(
   "/:id/reject",
   verifyToken,
   isAdmin,
+  validate(rejectPermohonanSktaSchema),
   rejectPermohonanSkta
 );
 
