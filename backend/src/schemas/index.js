@@ -1,3 +1,4 @@
+export * from "./adminSchema.js";
 export * from "./authSchema.js";
 export * from "./masterDataSchema.js";
 export * from "./periodSchema.js";

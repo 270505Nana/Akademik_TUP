@@ -7,6 +7,8 @@ import {
 } from "../../controllers/adminController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import { upsertAdminSchema } from "../../schemas/adminSchema.js";
 
 const router = express.Router();
 
@@ -103,7 +105,7 @@ router.get("/dashboard", verifyToken, isAdmin, getAdminDashboard);
  *       500:
  *         description: Internal server error
  */
-router.put("/:id", verifyToken, isAdmin, upsertAdmin);
+router.put("/:id", verifyToken, isAdmin, validate(upsertAdminSchema), upsertAdmin);
 
 /**
  * @swagger

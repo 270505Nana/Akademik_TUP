@@ -70,14 +70,6 @@ export const upsertMahasiswaSchema = z.object({
   tak: z.coerce.number().int().min(0).optional().nullable(),
 });
 
-// Schema Admin
-export const upsertAdminSchema = z.object({
-  name: z
-    .string({ required_error: "Nama wajib diisi" })
-    .trim()
-    .min(1, "Nama wajib diisi"),
-});
-
 // Schema Ruangan
 export const upsertRuanganSchema = z.object({
   name: z
