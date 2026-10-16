@@ -1,5 +1,6 @@
 export * from "./adminSchema.js";
 export * from "./authSchema.js";
+export * from "./dosenSchema.js";
 export * from "./masterDataSchema.js";
 export * from "./periodSchema.js";
 export * from "./permohonanSktaSchema.js";

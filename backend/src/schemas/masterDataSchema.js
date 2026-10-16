@@ -1,37 +1,5 @@
 import { z } from "zod";
 
-// Schema Dosen
-export const upsertDosenSchema = z.object({
-  name: z
-    .string({ required_error: "Nama wajib diisi" })
-    .trim()
-    .min(1, "Nama wajib diisi"),
-  nip: z
-    .string({ required_error: "NIP wajib diisi" })
-    .trim()
-    .min(1, "NIP wajib diisi"),
-  nidn: z.string().trim().optional().nullable(),
-  kodeDosen: z
-    .string({ required_error: "Kode dosen wajib diisi" })
-    .trim()
-    .min(1, "Kode dosen wajib diisi"),
-  // NOTE: Validasi UUID sementara dilonggarkan menjadi non-empty string untuk fleksibilitas format ID (legacy / custom ID).
-  // TODO (Production): Kembalikan ke .uuid("ID kelompok keahlian tidak valid") jika semua ID sudah terstandarisasi UUID.
-  researchGroupId: z
-    .string({ required_error: "ID kelompok keahlian wajib diisi" })
-    .trim()
-    .min(1, "ID kelompok keahlian wajib diisi"),
-    // .uuid("ID kelompok keahlian tidak valid"),
-  studyProgramId: z
-    .string({ required_error: "Program Studi wajib dipilih" })
-    .trim()
-    .min(1, "Program Studi wajib dipilih"),
-    // .uuid("ID Program Studi tidak valid"),
-  isKetuaKK: z.boolean().optional(),
-  isKetuaProdi: z.boolean().optional(),
-  isKepalaUrusanAkademik: z.string().trim().optional().nullable(),
-});
-
 // Schema Mahasiswa
 export const upsertMahasiswaSchema = z.object({
   name: z
