@@ -13,10 +13,9 @@ import '../../style/css/admin/keloladatadosen.css';
 
 const PAGE_SIZE = 10;
 
-// Daftar statis pilihan Kepala Urusan Akademik (KAUR) untuk menjaga konsistensi format
 const KAUR_OPTIONS = [
   { value: 'Kepala Urusan Akademik Fakultas Informatika', label: 'Kepala Urusan Akademik Fakultas Informatika' },
-  // Kamu bisa menambahkan opsi fakultas lain di sini jika diperlukan ke depannya
+
 ];
 
 const ToggleSwitch = ({ checked, onChange, disabled }) => (
@@ -41,7 +40,6 @@ const EditDosenModal = ({ dosen, researchGroups, studyPrograms, dosenList, onClo
   const [studyProgramId, setStudyProgramId] = useState(dosen.studyProgramId);
   const [warningProdi, setWarningProdi] = useState(null);
 
-  // State KAUR (Kepala Urusan Akademik) - Menggunakan Dropdown Statis
   const [isKepalaUrusanAkademik, setIsKepalaUrusanAkademik] = useState(dosen.isKepalaUrusanAkademik ?? '');
 
   // Validasi 1 KK = 1 Ketua
@@ -123,7 +121,6 @@ const EditDosenModal = ({ dosen, researchGroups, studyPrograms, dosenList, onClo
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        style={{ maxHeight: '90vh', overflowY: 'auto' }}
       >
         <div className="dd-modal-header">
           <h3 className="dd-modal-title">Edit Data Dosen</h3>
@@ -139,7 +136,7 @@ const EditDosenModal = ({ dosen, researchGroups, studyPrograms, dosenList, onClo
             </div>
           </div>
 
-          <hr style={{ margin: '16px 0', borderColor: '#E5E7EB' }} />
+          <hr className="dd-divider" />
 
           {/* Section Prodi & Jabatan KAUR/Kaprodi */}
           <div className="dd-form-group">
@@ -167,7 +164,7 @@ const EditDosenModal = ({ dosen, researchGroups, studyPrograms, dosenList, onClo
             </div>
             {warningProdi && (
               <div className="dd-toggle-warning">
-                <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                <AlertTriangle size={14} className="dd-warning-icon" />
                 {warningProdi}
               </div>
             )}
@@ -188,7 +185,7 @@ const EditDosenModal = ({ dosen, researchGroups, studyPrograms, dosenList, onClo
             </select>
           </div>
 
-          <hr style={{ margin: '16px 0', borderColor: '#E5E7EB' }} />
+          <hr className="dd-divider" />
 
           {/* Section Kelompok Keahlian */}
           <div className="dd-form-group">
@@ -206,7 +203,7 @@ const EditDosenModal = ({ dosen, researchGroups, studyPrograms, dosenList, onClo
             </select>
           </div>
 
-          <div className="dd-form-group" style={{ marginBottom: 0 }}>
+          <div className="dd-form-group dd-mb-0">
             <div className="dd-toggle-row">
               <div>
                 <div className="dd-toggle-label">Ketua KK</div>
@@ -216,7 +213,7 @@ const EditDosenModal = ({ dosen, researchGroups, studyPrograms, dosenList, onClo
             </div>
             {warningKK && (
               <div className="dd-toggle-warning">
-                <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                <AlertTriangle size={14} className="dd-warning-icon" />
                 {warningKK}
               </div>
             )}
@@ -450,20 +447,22 @@ const KelolaDataDosen = () => {
                 <table className="dd-table">
                   <thead>
                     <tr>
-                      <th style={{ width: 44 }}>NO</th>
+                      <th className="dd-th-no">NO</th>
                       <th>NAMA DOSEN</th>
                       <th>NIDN/NIP</th>
                       <th>PRODI</th>
-                      <th>KELOMPOK KEAHLIAN</th>
                       <th>JABATAN</th>
-                      <th style={{ textAlign: 'center' }}>AKSI</th>
+                      <th>KELOMPOK KEAHLIAN</th>
+                      <th className="dd-th-center">AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoadingData ? (
                       <tr>
                         <td colSpan={7}>
-                          <div className="dd-empty-state"><span style={{ fontSize: 13, color: '#9CA3AF' }}>Memuat data dosen...</span></div>
+                          <div className="dd-empty-state">
+                            <span className="dd-empty-text">Memuat data dosen...</span>
+                          </div>
                         </td>
                       </tr>
                     ) : paginated.length === 0 ? (
@@ -471,7 +470,7 @@ const KelolaDataDosen = () => {
                         <td colSpan={7}>
                           <div className="dd-empty-state">
                             <Users size={36} color="#D1D5DB" />
-                            <span style={{ fontSize: 13, color: '#9CA3AF' }}>{search ? 'Tidak ada hasil pencarian.' : 'Belum ada data dosen.'}</span>
+                            <span className="dd-empty-text">{search ? 'Tidak ada hasil pencarian.' : 'Belum ada data dosen.'}</span>
                           </div>
                         </td>
                       </tr>
@@ -488,15 +487,15 @@ const KelolaDataDosen = () => {
                           <td>{d.nip || d.nidn || '-'}</td>
                           <td>{prodiNameById(d.studyProgramId)}</td>
                           <td>
-                            <span className="dd-kk-badge">{kkNameById(d.researchGroupId)}</span>
+                            <div className="dd-jabatan-wrap">
+                              {d.isKetuaKK && <span className="dd-ketua-badge">Ketua KK</span>}
+                              {d.isKetuaProdi && <span className="dd-ketua-badge kaprodi">Kaprodi</span>}
+                              {d.isKepalaUrusanAkademik && <span className="dd-ketua-badge kaur" title={d.isKepalaUrusanAkademik}>Kepala Urusan Akademik</span>}
+                              {!d.isKetuaKK && !d.isKetuaProdi && !d.isKepalaUrusanAkademik && <span className="dd-jabatan-empty">-</span>}
+                            </div>
                           </td>
                           <td>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                              {d.isKetuaKK && <span className="dd-ketua-badge">Ketua KK</span>}
-                              {d.isKetuaProdi && <span className="dd-ketua-badge" style={{ background: '#047857' }}>Kaprodi</span>}
-                              {d.isKepalaUrusanAkademik && <span className="dd-ketua-badge" style={{ background: '#4F46E5', fontSize: '10px' }} title={d.isKepalaUrusanAkademik}>KAUR</span>}
-                              {!d.isKetuaKK && !d.isKetuaProdi && !d.isKepalaUrusanAkademik && <span style={{ color: '#9ca3af', fontSize: '12px' }}>-</span>}
-                            </div>
+                            <span className="dd-kk-badge">{kkNameById(d.researchGroupId)}</span>
                           </td>
                           <td className="dd-td-center">
                             <button className="dd-btn-edit" onClick={() => setEditingDosen(d)}>Edit</button>
@@ -513,7 +512,7 @@ const KelolaDataDosen = () => {
                   <span className="dd-page-info">
                     Menampilkan {Math.min((currentPage - 1) * PAGE_SIZE + 1, totalItems)}–{Math.min(currentPage * PAGE_SIZE, totalItems)} dari {totalItems} data
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div className="dd-pagination-wrap">
                     <button className="dd-btn-page" disabled={currentPage === 1 || isLoadingData} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft size={14} /></button>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                       <button key={p} className={`dd-btn-page ${p === currentPage ? 'active' : ''}`} onClick={() => setCurrentPage(p)} disabled={isLoadingData}>{p}</button>
@@ -530,7 +529,7 @@ const KelolaDataDosen = () => {
       <AnimatePresence>
         {alert.show && (
           <motion.div
-            style={{ position: 'fixed', top: 24, right: 24, zIndex: 9999, maxWidth: 380 }}
+            className="dd-alert-wrapper"
             initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 300, opacity: 0 }}
