@@ -7,6 +7,7 @@ import {
   ClipboardList,
   ChevronDown,
   LogOut,
+  FileText,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -18,11 +19,19 @@ const SidebarDosen = ({ isOpen, onClose }) => {
   const location  = useLocation();
   const navigate  = useNavigate();
   const { user, profile, logout } = useAuth();
+  
   const namaDisplay  = profile?.name || user?.name || user?.username || 'Dosen';
   const avatarChar   = (namaDisplay.trim().charAt(0) || 'D').toUpperCase();
-  const isKetuaKK    = profile?.isKetuaKK ?? false;
-  const roleDisplay  = isKetuaKK ? 'Dosen dan KK' : 'Dosen';
   const fotoProfil   = profile?.avatarUrl || profile?.avatar || profile?.foto || null;
+
+  // Deteksi Jabatan (Role)
+  const isKetuaKK = profile?.isKetuaKK ?? false;
+  const isKaprodi = profile?.isKetuaProdi ?? false;
+
+  let roleDisplay = 'Dosen';
+  if (isKaprodi && isKetuaKK) roleDisplay = 'Kaprodi & Ketua KK';
+  else if (isKaprodi) roleDisplay = 'Kaprodi';
+  else if (isKetuaKK) roleDisplay = 'Ketua KK';
 
   const [expandedMenus, setExpandedMenus]         = useState({});
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -35,8 +44,7 @@ const SidebarDosen = ({ isOpen, onClose }) => {
     setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
   };
 
-  // Menu "Penjadwalan Sidang" hanya ditampilkan jika dosen adalah Ketua KK,
-  // berdasarkan data profil fresh yang di-fetch dari BE saat halaman dimuat.
+  // Menu "Penjadwalan Sidang" hanya ditampilkan jika dosen adalah Ketua KK
   const sidangItems = [
     { label: 'Jadwal & Nilai Sidang', icon: <Calendar className="nav-icon" />, path: '/dosen/jadwal-nilai-sidang' },
     ...(isKetuaKK ? [{ label: 'Penjadwalan Sidang', icon: <ClipboardList className="nav-icon" />, path: '/dosen/penjadwalan-sidang' }] : []),
@@ -49,6 +57,13 @@ const SidebarDosen = ({ isOpen, onClose }) => {
         { label: 'Beranda', icon: <Home className="nav-icon" />, path: '/dosen/dashboard' },
       ],
     },
+    // Menu "Kelola CLO" hanya ditampilkan jika dosen adalah Kaprodi
+    ...(isKaprodi ? [{
+      label: 'Manajemen Prodi',
+      items: [
+        { label: 'Kelola CLO', icon: <FileText className="nav-icon" />, path: '/dosen/kelola-clo' },
+      ],
+    }] : []),
     {
       label: 'Tugas Akhir',
       items: [

@@ -942,4 +942,52 @@ export const deleteRuangan = async (id) => {
   const response = await api.delete(`/api/ruangan/${id}`);
   return response.data;
 };
+
+
+// ------------------------------------------- MANAJEMEN CLO -------------------------------------------
+
+export const getCLOs = async (params = {}) => {
+  const response = await api.get('/api/clo', { params });
+  return response.data?.data ?? response.data;
+};
+
+export const getCLOById = async (id) => {
+  const response = await api.get(`/api/clo/${id}`);
+  return response.data?.data ?? response.data;
+};
+
+export const createCLO = async (payload) => {
+  const response = await api.post('/api/clo', payload);
+  return response.data?.data ?? response.data;
+};
+
+export const updateCLO = async (id, payload) => {
+  const response = await api.put(`/api/clo/${id}`, payload);
+  return response.data?.data ?? response.data;
+};
+
+export const deleteCLO = async (id) => {
+  const response = await api.delete(`/api/clo/${id}`);
+  return response.data;
+};
+
+export const createSubCLO = async (payload) => {
+  const response = await api.post('/api/subclo', payload);
+  return response.data?.data ?? response.data;
+};
+
+export const createJenisAsesmen = async (payload) => {
+  const response = await api.post('/api/jenis-asesmen', payload);
+  return response.data?.data ?? response.data;
+};
+
+export const createSubCLO = async (payload) => {
+  const response = await api.post('/api/subclo', payload);
+  return response.data?.data ?? response.data;
+};
+
+export const createJenisAsesmen = async (payload) => {
+  const response = await api.post('/api/jenis-asesmen', payload);
+  return response.data?.data ?? response.data;
+};
 export default api;
