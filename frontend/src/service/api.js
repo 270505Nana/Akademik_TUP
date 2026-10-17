@@ -981,13 +981,4 @@ export const createJenisAsesmen = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
-export const createSubCLO = async (payload) => {
-  const response = await api.post('/api/subclo', payload);
-  return response.data?.data ?? response.data;
-};
-
-export const createJenisAsesmen = async (payload) => {
-  const response = await api.post('/api/jenis-asesmen', payload);
-  return response.data?.data ?? response.data;
-};
 export default api;

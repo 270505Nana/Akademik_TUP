@@ -6,6 +6,7 @@ import {
 import { motion } from 'motion/react';
 
 import SidebarAdmin from '../../components/sidebar/SidebarDosen'; 
+import KelolaCLOModal from '../../components/dosen/KelolaClo/Kelolaclomodal'; 
 import '../../style/css/dosen/kelolaclo.css';
 
 const PAGE_SIZE = 10;
@@ -48,6 +49,10 @@ const KelolaCLO = () => {
   const [cloList, setCloList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // --- STATE MODAL ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCLO, setSelectedCLO] = useState(null);
+
   const handleToggleSidebar = () => {
     if (window.innerWidth < 992) setSidebarOpen(!sidebarOpen);
     else setIsDesktopCollapsed(!isDesktopCollapsed);
@@ -73,12 +78,22 @@ const KelolaCLO = () => {
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const paginatedList = cloList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const handleEditCLO = (id) => {
-    console.log("Buka Modal Edit untuk CLO ID:", id);
+  // Trigger Buka Modal Tambah Baru
+  const handleAddCLO = () => {
+    setSelectedCLO(null);
+    setIsModalOpen(true);
   };
 
-  const handleAddCLO = () => {
-    console.log("Buka Modal Tambah CLO Baru");
+  // Trigger Buka Modal Mode Edit (Kita parkir alur edit di backend-nya)
+  const handleEditCLO = (item) => {
+    setSelectedCLO(item);
+    setIsModalOpen(true);
+  };
+
+  // Callback ketika Modal berhasil submit
+  const handleModalSuccess = () => {
+    // Nanti ganti dengan pemanggilan fetchCLO() ke backend
+    console.log("Submit sukses! Saatnya refresh tabel...");
   };
 
   return (
@@ -116,7 +131,7 @@ const KelolaCLO = () => {
 
             <section className="clo-card">
               
-              {/* FILTER BAR (Tema Mahasiswa Bimbingan) */}
+              {/* FILTER BAR */}
               <div className="clo-filter-bar">
                 <div className="clo-search-wrap">
                   <Search size={16} className="clo-search-icon" />
@@ -236,11 +251,10 @@ const KelolaCLO = () => {
                             </td>
 
                             <td className="col-aksi">
-                              {/* TOMBOL BERUBAH MENJADI TEKS "Edit" */}
                               <button 
                                 className="clo-btn-edit-text" 
                                 title="Edit CLO"
-                                onClick={() => handleEditCLO(item.id)}
+                                onClick={() => handleEditCLO(item)}
                               >
                                 Edit
                               </button>
@@ -294,6 +308,15 @@ const KelolaCLO = () => {
           </main>
         </div>
       </div>
+
+      {/* RENDER MODAL TAMBAH/EDIT */}
+      <KelolaCLOModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        existingData={selectedCLO}
+        onSuccess={handleModalSuccess}
+      />
+
     </div>
   );
 };
