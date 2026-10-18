@@ -981,4 +981,4 @@ export const createJenisAsesmen = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
-export default api;
+export default api; 
