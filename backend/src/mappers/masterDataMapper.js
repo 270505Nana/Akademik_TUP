@@ -1,3 +1,5 @@
+import { mapFaculty } from "./facultyMapper.js";
+
 export const mapRuangan = (ruangan) => {
   if (!ruangan) return null;
   return {
@@ -5,16 +7,6 @@ export const mapRuangan = (ruangan) => {
     name: ruangan.name,
     gedung: ruangan.gedung,
     isActive: ruangan.isActive,
-  };
-};
-
-export const mapFaculty = (faculty) => {
-  if (!faculty) return null;
-  return {
-    id: faculty.id,
-    name: faculty.name,
-    code: faculty.code,
-    isActive: faculty.isActive,
   };
 };
 
@@ -29,4 +21,3 @@ export const mapStudyProgram = (prodi) => {
     faculty: prodi.faculty ? mapFaculty(prodi.faculty) : undefined,
   };
 };
-

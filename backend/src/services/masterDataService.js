@@ -34,29 +34,6 @@ export const deleteRuangan = async (id) => {
   });
 };
 
-// === FACULTY ===
-export const getFaculties = async ({ skip, take }) => {
-  const where = { deletedAt: null };
-  const [total, faculties] = await Promise.all([
-    prisma.faculty.count({ where }),
-    prisma.faculty.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { createdAt: "desc" },
-      include: { studyPrograms: { where: { deletedAt: null } } },
-    }),
-  ]);
-  return { total, faculties };
-};
-
-export const getFacultyById = async (id) => {
-  return await prisma.faculty.findFirst({
-    where: { id, deletedAt: null },
-    include: { studyPrograms: { where: { deletedAt: null } } },
-  });
-};
-
 // === STUDY PROGRAM ===
 export const getStudyPrograms = async ({ skip, take, facultyId }) => {
   const where = { deletedAt: null };

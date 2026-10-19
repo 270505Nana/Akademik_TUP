@@ -31,16 +31,4 @@ export const upsertStudyProgramSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-// Schema Fakultas
-export const upsertFacultySchema = z.object({
-  name: z
-    .string({ required_error: "Nama fakultas wajib diisi" })
-    .trim()
-    .min(1, "Nama fakultas wajib diisi"),
-  code: z
-    .string({ required_error: "Kode fakultas wajib diisi" })
-    .trim()
-    .min(1, "Kode fakultas wajib diisi"),
-  isActive: z.boolean().optional(),
-});
 
