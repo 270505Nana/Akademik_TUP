@@ -33,28 +33,3 @@ export const deleteRuangan = async (id) => {
     data: { deletedAt: new Date() },
   });
 };
-
-// === STUDY PROGRAM ===
-export const getStudyPrograms = async ({ skip, take, facultyId }) => {
-  const where = { deletedAt: null };
-  if (facultyId) where.facultyId = facultyId;
-
-  const [total, studyPrograms] = await Promise.all([
-    prisma.studyProgram.count({ where }),
-    prisma.studyProgram.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { createdAt: "desc" },
-      include: { faculty: true },
-    }),
-  ]);
-  return { total, studyPrograms };
-};
-
-export const getStudyProgramById = async (id) => {
-  return await prisma.studyProgram.findFirst({
-    where: { id, deletedAt: null },
-    include: { faculty: true },
-  });
-};

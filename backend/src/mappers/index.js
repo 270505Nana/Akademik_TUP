@@ -1,5 +1,6 @@
 export * from "./userMapper.js";
 export * from "./facultyMapper.js";
+export * from "./studyProgramMapper.js";
 export * from "./masterDataMapper.js";
 export * from "./penjadwalanMapper.js";
 export * from "./documentMapper.js";
