@@ -1,0 +1,442 @@
+/* ==========================================================
+   KELOLA CLO - TEMA MAHASISWA BIMBINGAN (CLEAN & MODERN)
+   ========================================================== */
+
+.clo-root {
+  display: flex;
+  min-height: 100vh;
+  background: #F8FAFC;
+}
+
+.clo-main {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-left: 240px;
+  transition: margin-left 0.25s ease;
+}
+
+.clo-root.desktop-collapsed .clo-main {
+  margin-left: 0 !important;
+}
+
+@media (max-width: 991.98px) {
+  .clo-main { margin-left: 0 !important; }
+  .clo-mobile-bar { display: flex !important; }
+}
+
+.clo-page-wrapper {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* MOBILE BAR */
+.clo-mobile-bar {
+  display: none;
+  height: 60px;
+  background: #C0182A;
+  align-items: center;
+  padding: 0 16px;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 1001;
+}
+
+.clo-mobile-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+
+.clo-mobile-title {
+  font-weight: 800;
+  color: #fff;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+/* TOPBAR DESKTOP */
+.clo-topbar {
+  height: 70px;
+  background: #C0182A;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  gap: 16px;
+}
+
+.clo-topbar-toggle {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.clo-topbar h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* KONTEN UTAMA */
+.clo-content {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .clo-content { padding: 16px; }
+}
+
+/* HEADER HALAMAN */
+.clo-page-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.clo-page-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+}
+
+.clo-btn-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 6px;
+  background: #C0182A;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.clo-btn-add:hover {
+  background: #A01423;
+}
+
+/* KOTAK KONTEN (CARD) - TEMA MAHASISWA BIMBINGAN */
+.clo-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+/* FILTER & PENCARIAN */
+.clo-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #ffffff;
+}
+
+.clo-search-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.clo-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.clo-search-input {
+  width: 100%;
+  padding: 9px 14px 9px 38px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e293b;
+  outline: none;
+  background: #ffffff;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.clo-search-input:focus {
+  border-color: #c0182a;
+}
+
+/* TABEL THEME MAHASISWA BIMBINGAN */
+.clo-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.clo-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 900px;
+  font-size: 13px;
+  text-align: left;
+}
+
+/* LEBAR KOLOM */
+.col-no { width: 5%; text-align: center; }
+.col-clo { width: 18%; }
+.col-sub { width: 32%; }
+.col-asesmen { width: 22%; }
+.col-bobot { width: 8%; text-align: center; }
+.col-status { width: 9%; text-align: center; }
+.col-aksi { width: 6%; text-align: center; }
+
+/* HEADER TABEL */
+.clo-table th {
+  background-color: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #e2e8f0; /* Garis tipis bersih standar */
+}
+
+/* BARIS KONTEN TABEL */
+.clo-table tbody tr {
+  border-bottom: 1px solid #e2e8f0; /* Garis tipis bersih standar */
+}
+
+.clo-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.clo-table td {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #1e293b;
+  vertical-align: middle; /* Middle alignment standar */
+}
+
+.clo-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.clo-text-bold {
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.clo-text-muted {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* SUB-GROUP BORDER LURUS & RAPI */
+.col-sub-group {
+  padding: 0 !important;
+  vertical-align: top !important;
+}
+
+.clo-sub-row-item {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border-bottom: 1px solid #e2e8f0; /* Mempertahankan garis tipis lurus */
+}
+
+.clo-sub-row-item:last-child {
+  border-bottom: none;
+}
+
+/* Sel Sub CLO */
+.col-sub-cell {
+  flex: 32;
+  padding: 14px 16px;
+  border-right: 1px solid #f1f5f9; /* Border pembatas vertikal sangat soft */
+  box-sizing: border-box;
+}
+
+/* Sel Asesmen */
+.col-asesmen-cell {
+  flex: 22;
+  padding: 14px 16px;
+  border-right: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+/* Sel Bobot */
+.col-bobot-cell {
+  flex: 8;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.clo-sub-title {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 12.5px;
+}
+
+.clo-sub-desc {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* BADGE STATUS */
+.clo-status-badge {
+  display: inline-flex;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.clo-status-badge.active {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.clo-status-badge.review {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+/* TOMBOL AKSI (ICON PENCIL) */
+.col-aksi {
+  vertical-align: middle !important;
+}
+
+.clo-btn-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clo-btn-icon:hover {
+  background: #f8fafc;
+  color: #c0182a;
+  border-color: #cbd5e1;
+}
+
+/* PAGINATION FOOTER - TEMA MAHASISWA BIMBINGAN */
+.clo-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.clo-page-info {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.clo-pagination-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clo-btn-page {
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clo-btn-page:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.clo-btn-page.active {
+  background: #c0182a;
+  color: #ffffff;
+  border-color: #c0182a;
+}
+
+.clo-btn-page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f8fafc;
+}
+
+.clo-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 20px;
+  color: #64748b;
+}
+
+.clo-empty-text {
+  font-size: 13px;
+}

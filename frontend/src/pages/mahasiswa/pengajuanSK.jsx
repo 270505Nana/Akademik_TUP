@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
-import { Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, RefreshCw, AlertCircle, Menu, Eye } from 'lucide-react';
+import { Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, Download, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, RefreshCw, AlertCircle, Menu, Eye } from 'lucide-react';
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
 import api, { getLecturers, getSKTARequest, getAllSktaRequests, submitSKTARequest, submitFinalSKTARequest, downloadTemplate, downloadSK } from '../../service/api';
@@ -15,45 +15,29 @@ import {
 } from '../../components/common/Skstatushelper';
 import CustomAlert from '../../components/common/CustomAlert';
 import SidebarMahasiswa from '../../components/sidebar/SidebarMahasiswa';
-import '../../components/mahasiswa/pengajuanSK/pengajuanSK.css';
+import '../../style/css/mahasiswa/pengajuansk.css';
 
-// KOMPONEN BARU: Banner Notifikasi Pembaruan SK
 const OngoingPembaruanBanner = ({ pembaruan, navigate }) => {
   if (!pembaruan) return null;
   return (
-    <div style={{
-      background: '#F0F9FF', border: '1px solid #BAE6FD',
-      borderRadius: 12, padding: '16px 20px', marginBottom: 24,
-      display: 'flex', alignItems: 'flex-start', gap: 12,
-      boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-    }}>
-      <Info size={20} color="#0284C7" style={{ marginTop: 2, flexShrink: 0 }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <h4 style={{ fontSize: 13, fontWeight: 800, color: '#0369A1', margin: 0 }}>
+    <div className="sk-banner-ongoing">
+      <Info size={20} color="#0284C7" className="sk-banner-icon" />
+      <div className="sk-banner-content">
+        <div className="sk-banner-header">
+          <h4 className="sk-banner-title">
             Pengajuan Pembaruan SK Sedang Berjalan
           </h4>
-          <span style={{
-            fontSize: 9, fontWeight: 700, padding: '2px 8px',
-            borderRadius: 9999, background: '#E0F2FE', color: '#0369A1',
-            textTransform: 'uppercase', letterSpacing: 0.5,
-          }}>
+          <span className="sk-banner-badge">
             {determineSkStatus(pembaruan).replace('-', ' ')}
           </span>
         </div>
-        <p style={{ fontSize: 11.5, color: '#075985', margin: 0, lineHeight: 1.5 }}>
+        <p className="sk-banner-desc">
           Kamu memiliki pengajuan <strong>{pembaruan.category}</strong> yang sedang aktif. 
           Silakan pantau atau lanjutkan permohonan tersebut melalui menu <strong>Pembaruan SK Tugas Akhir</strong>.
         </p>
         <button
           onClick={() => navigate('/mahasiswa/pembaruan-sk')}
-          style={{
-            marginTop: 12, padding: '6px 16px', borderRadius: 9999,
-            fontSize: 11, fontWeight: 700, background: '#0284C7',
-            color: '#fff', border: 'none', cursor: 'pointer', transition: 'background 0.2s'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.background = '#0369A1'}
-          onMouseLeave={(e) => e.currentTarget.style.background = '#0284C7'}
+          className="sk-btn-ongoing"
         >
           Cek Pembaruan SK
         </button>
@@ -91,30 +75,30 @@ const PreviewModal = ({ code, onClose }) => {
   }, [code]);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)' }}>
-      <div style={{ background: '#fff', width: '90%', maxWidth: '850px', height: '85vh', borderRadius: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-        <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E5E7EB', background: '#F8FAFC' }}>
-          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#111827' }}>Preview Dokumen Template</h3>
-          <button onClick={onClose} style={{ background: '#E2E8F0', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#CBD5E1'} onMouseLeave={e => e.currentTarget.style.background = '#E2E8F0'}>
-            <span style={{ fontWeight: 'bold', fontSize: '14px', lineHeight: 1 }}>✕</span>
+    <div className="sk-modal-overlay">
+      <div className="sk-modal-container">
+        <div className="sk-modal-header">
+          <h3 className="sk-modal-title">Preview Dokumen Template</h3>
+          <button onClick={onClose} className="sk-modal-close">
+            <span>✕</span>
           </button>
         </div>
-        <div style={{ flex: 1, position: 'relative', background: '#F3F4F6' }}>
+        <div className="sk-modal-body">
           {loading && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-              <Loader size={32} color="#C0182A" style={{ animation: 'spin 1s linear infinite' }} />
+            <div className="sk-modal-state">
+              <Loader size={32} color="#C0182A" className="sk-spinner" />
               <p style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>Memuat preview dokumen...</p>
             </div>
           )}
           {error && !loading && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <div className="sk-modal-state error">
               <AlertTriangle size={32} color="#B91C1C" />
-              <p style={{ fontSize: '13px', color: '#B91C1C', fontWeight: 700, margin: 0 }}>Gagal memuat preview dokumen.</p>
-              <p style={{ fontSize: '11px', color: '#6B7280', margin: 0 }}>Pastikan koneksi stabil atau coba unduh secara langsung.</p>
+              <p>Gagal memuat preview dokumen.</p>
+              <span>Pastikan koneksi stabil atau coba unduh secara langsung.</span>
             </div>
           )}
           {blobUrl && !loading && (
-            <iframe src={blobUrl} style={{ width: '100%', height: '100%', border: 'none' }} title="Preview PDF Template" />
+            <iframe src={blobUrl} className="sk-modal-iframe" title="Preview PDF Template" />
           )}
         </div>
       </div>
@@ -148,19 +132,11 @@ const TemplateActionButtons = ({ code }) => {
 
   return (
     <>
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginLeft: '6px' }}>
+      <div className="sk-template-actions">
         <button
           type="button"
           onClick={() => setShowPreview(true)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '6px 14px', borderRadius: 9999,
-            fontSize: 11, fontWeight: 700,
-            background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', cursor: 'pointer',
-            transition: 'background 0.2s'
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = '#E2E8F0'}
-          onMouseLeave={e => e.currentTarget.style.background = '#F1F5F9'}
+          className="sk-btn-preview"
         >
           <Eye size={13} /> Preview
         </button>
@@ -168,13 +144,7 @@ const TemplateActionButtons = ({ code }) => {
           type="button"
           onClick={handleDownload}
           disabled={isDownloading}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '6px 14px', borderRadius: 9999,
-            fontSize: 11, fontWeight: 700,
-            background: isDownloading ? '#9CA3AF' : '#C0182A',
-            color: '#fff', border: 'none', cursor: isDownloading ? 'not-allowed' : 'pointer',
-          }}
+          className="sk-btn-download-template"
         >
           {isDownloading ? 'Mengunduh...' : '⬇ Download Template'}
         </button>
@@ -185,10 +155,9 @@ const TemplateActionButtons = ({ code }) => {
 };
 
 const PageLoader = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 12 }}>
-    <Loader size={32} color="#C0182A" style={{ animation: 'spin 1s linear infinite' }} />
-    <p style={{ fontSize: 12, color: '#6B7280' }}>Memuat data...</p>
-    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  <div className="sk-page-loader">
+    <Loader size={32} color="#C0182A" className="sk-spinner" />
+    <p>Memuat data...</p>
   </div>
 );
 
@@ -221,32 +190,32 @@ const SkStatusBanner = ({ status, permohonan }) => {
 
   const configs = {
     [STATUS_SK.DALAM_PROSES]: {
-      bg: '#EFF6FF', border: '#BFDBFE', icon: <Clock size={16} color="#2563EB" />,
+      styleClass: 'proses', icon: <Clock size={16} color="#2563EB" />,
       title: isPerpanjangan ? 'Perpanjangan SK Sedang Diproses' : 'Pengajuan SK Sedang Diproses',
       desc: isPerpanjangan 
         ? 'Permohonan perpanjangan SK Tugas Akhir kamu sudah terkirim dan sedang dalam antrian verifikasi admin. Proses maksimal 3×24 jam kerja.'
         : 'Permohonan Penerbitan SK Tugas Akhir kamu sedang dalam antrian verifikasi oleh tim akademik. Proses maksimal 3×24 jam kerja. Mohon ditunggu dan pantau status di dashboard.',
-      badgeBg: '#DBEAFE', badgeColor: '#1D4ED8', badgeText: 'Dalam Proses',
+      badgeText: 'Dalam Proses',
     },
     [STATUS_SK.BELUM_TERBIT]: {
-      bg: '#FFFBEB', border: '#FDE68A', icon: <AlertCircle size={16} color="#D97706" />,
+      styleClass: 'revisi', icon: <AlertCircle size={16} color="#D97706" />,
       title: 'Pengajuan SK Memerlukan Perbaikan Dokumen',
       desc: permohonan?.message
         ? `Tim akademik memberikan catatan: "${permohonan.message}". Silakan perbaiki pengajuan kamu melalui formulir di bawah ini dan kirim ulang.`
         : 'Pengajuan SK kamu perlu diperbaiki. Tim akademik telah meninjau dokumenmu dan meminta perbaikan. Silakan perbarui data pengajuan melalui formulir di bawah ini, lalu kirim ulang.',
-      badgeBg: '#FEF3C7', badgeColor: '#92400E', badgeText: 'Perlu Perbaikan',
+      badgeText: 'Perlu Perbaikan',
     },
     [STATUS_SK.SUDAH_TERBIT]: {
-      bg: '#F0FDF4', border: '#BBF7D0', icon: <CheckCircle size={16} color="#16A34A" />,
+      styleClass: 'terbit', icon: <CheckCircle size={16} color="#16A34A" />,
       title: 'SK Pembimbing TA Sudah Terbit',
       desc: 'Selamat! SK Pembimbing Tugas Akhir kamu sudah diterbitkan. Kamu dapat mengunduh SK melalui tombol di bawah atau melalui menu dashboard.',
-      badgeBg: '#DCFCE7', badgeColor: '#15803D', badgeText: 'Sudah Terbit',
+      badgeText: 'Sudah Terbit',
     },
     [STATUS_SK.EXPIRED]: {
-      bg: '#F5F3FF', border: '#DDD6FE', icon: <RefreshCw size={16} color="#7C3AED" />,
+      styleClass: 'expired', icon: <RefreshCw size={16} color="#7C3AED" />,
       title: 'SK Pembimbing TA Sudah Kadaluarsa',
       desc: 'SK Pembimbing Tugas Akhir kamu telah melewati batas masa berlaku. Kamu perlu mengajukan permohonan perpanjangan SK melalui formulir di bawah ini. Data pengajuan telah di-lock untuk mencegah perubahan.',
-      badgeBg: '#EDE9FE', badgeColor: '#5B21B6', badgeText: 'Kadaluarsa',
+      badgeText: 'Kadaluarsa',
     },
   };
 
@@ -254,32 +223,21 @@ const SkStatusBanner = ({ status, permohonan }) => {
   if (!cfg) return null;
 
   return (
-    <div style={{
-      background: cfg.bg, border: `1px solid ${cfg.border}`,
-      borderRadius: 12, padding: '16px 20px', marginBottom: 24,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ marginTop: 2, flexShrink: 0 }}>{cfg.icon}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{cfg.title}</span>
-            <span style={{
-              fontSize: 9, fontWeight: 700, padding: '2px 8px',
-              borderRadius: 9999, background: cfg.badgeBg, color: cfg.badgeColor,
-              textTransform: 'uppercase', letterSpacing: 0.5,
-            }}>
-              {cfg.badgeText}
-            </span>
+    <div className={`sk-status-banner ${cfg.styleClass}`}>
+      <div className="sk-status-banner-inner">
+        <div className="sk-banner-icon">{cfg.icon}</div>
+        <div className="sk-banner-content">
+          <div className="sk-status-header">
+            <span className="sk-status-title">{cfg.title}</span>
+            <span className="sk-status-badge">{cfg.badgeText}</span>
           </div>
-          <p style={{ fontSize: 11.5, color: '#4B5563', lineHeight: 1.6, margin: 0 }}>
-            {cfg.desc}
-          </p>
+          <p className="sk-status-desc">{cfg.desc}</p>
           {permohonan && (
-            <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(255,255,255,0.7)', borderRadius: 8, fontSize: 11, color: '#6B7280' }}>
+            <div className="sk-status-meta">
               <div><strong>Judul (ID):</strong> {permohonan.judulProposalIndonesia ?? permohonan.proposalTitleId}</div>
-              <div style={{ marginTop: 4 }}><strong>Judul (EN):</strong> {permohonan.judulProposalInggris ?? permohonan.proposalTitleEn}</div>
+              <div className="sk-status-meta-row"><strong>Judul (EN):</strong> {permohonan.judulProposalInggris ?? permohonan.proposalTitleEn}</div>
               {permohonan?.expDate && (
-                <div style={{ marginTop: 4 }}>
+                <div className="sk-status-meta-row">
                   <strong>Expired:</strong> {new Date(permohonan.expDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </div>
               )}
@@ -287,11 +245,7 @@ const SkStatusBanner = ({ status, permohonan }) => {
           )}
           {status === STATUS_SK.SUDAH_TERBIT && (
             <button
-              style={{
-                marginTop: 12, padding: '6px 16px', borderRadius: 9999,
-                fontSize: 11, fontWeight: 700, background: downloading ? '#9CA3AF' : '#16A34A',
-                color: '#fff', border: 'none', cursor: downloading ? 'not-allowed' : 'pointer',
-              }}
+              className="sk-btn-download-sk"
               disabled={downloading}
               onClick={handleDownload}
             >
@@ -401,9 +355,10 @@ const PengajuanSK = () => {
       if (!mahasiswaId) { navigate('/lengkapi-data', { replace: true }); return; }
 
       try {
+        const latestSk = await getSKTARequest(mahasiswaId);
         const allReq = await getAllSktaRequests({ mahasiswaId, limit: 100 });
         
-        if (!allReq || allReq.length === 0) {
+        if (!latestSk && (!allReq || allReq.length === 0)) {
           setPermohonan(null);
           setSubmissionMode('create-baru');
           setSkStatus(null);
@@ -411,21 +366,25 @@ const PengajuanSK = () => {
           return;
         }
 
-        // Urutkan dari yang terbaru berdasarkan createdAt
-        const sortedReq = allReq.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        // 1. SCAN seluruh array: Cari Pembaruan SK (Perubahan) yang SEDANG BERJALAN
+        const sortedReq = (allReq || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         const activePembaruan = sortedReq.find(req => 
-          !isMainPageCategory(req) && determineSkStatus(req) !== STATUS_SK.SUDAH_TERBIT
+          !isMainPageCategory(req) && 
+          [STATUS_SK.DRAFT, STATUS_SK.DALAM_PROSES, STATUS_SK.BELUM_TERBIT].includes(determineSkStatus(req))
         );
 
-        // 2. SCAN seluruh array: Cari SK Utama (Main category) untuk ditampilkan
-        // Ambil data pertama yang BUKAN merupakan activePembaruan
-        let displaySk = sortedReq.find(req => req.id !== activePembaruan?.id) || sortedReq[0];
-
         setOngoingPembaruan(activePembaruan);
+
+        let displaySk = latestSk || sortedReq[0];
+
+        if (displaySk && activePembaruan && displaySk.id === activePembaruan.id) {
+          const latestPublishedSk = sortedReq.find(req => determineSkStatus(req) === STATUS_SK.SUDAH_TERBIT);
+          if (latestPublishedSk) {
+             displaySk = latestPublishedSk;
+          }
+        }
+
         setPermohonan(displaySk);
-        updateSktaRequestId(displaySk.id);
+        updateSktaRequestId(displaySk?.id);
 
         const status = determineSkStatus(displaySk);
         const mode   = getSubmissionMode(displaySk);
@@ -440,10 +399,8 @@ const PengajuanSK = () => {
           let matchedKode1 = null;
           if (d1) {
             matchedKode1 = {
-              value: String(d1.id),
-              label: `${d1.kodeDosen || ''} — ${d1.name || ''}`,
-              nama: d1.name || '',
-              researchGroupId: d1.researchGroupId || null,
+              value: String(d1.id), label: `${d1.kodeDosen || ''} — ${d1.name || ''}`,
+              nama: d1.name || '', researchGroupId: d1.researchGroupId || null,
             };
           } else {
             matchedKode1 = lecturerOptions.find(opt => String(opt.value) === String(displaySk.dosenPembimbing1Id));
@@ -452,10 +409,8 @@ const PengajuanSK = () => {
           let matchedKode2 = null;
           if (d2) {
             matchedKode2 = {
-              value: String(d2.id),
-              label: `${d2.kodeDosen || ''} — ${d2.name || ''}`,
-              nama: d2.name || '',
-              researchGroupId: d2.researchGroupId || null,
+              value: String(d2.id), label: `${d2.kodeDosen || ''} — ${d2.name || ''}`,
+              nama: d2.name || '', researchGroupId: d2.researchGroupId || null,
             };
           } else {
             matchedKode2 = lecturerOptions.find(opt => String(opt.value) === String(displaySk.dosenPembimbing2Id));
@@ -507,13 +462,9 @@ const PengajuanSK = () => {
   const isLockedFields = isExpired || isReadOnlyForm || (isBelumTerbit && isPerpanjanganRequest);
 
   let dynamicTitle = 'Permohonan Penerbitan SK Pembimbing Tugas Akhir';
-  if (isExpired) {
-    dynamicTitle = 'Perpanjangan SK Pembimbing Tugas Akhir';
-  } else if (isBelumTerbit) {
-    dynamicTitle = 'Perbaikan Revisi SK Pembimbing Tugas Akhir';
-  } else if (permohonan?.category === SKTA_CATEGORY.PERPANJANGAN_SK || permohonan?.category === 'Perpanjangan SK') {
-    dynamicTitle = 'Perpanjangan SK Pembimbing Tugas Akhir';
-  }
+  if (isExpired) dynamicTitle = 'Perpanjangan SK Pembimbing Tugas Akhir';
+  else if (isBelumTerbit) dynamicTitle = 'Perbaikan Revisi SK Pembimbing Tugas Akhir';
+  else if (isPerpanjanganRequest) dynamicTitle = 'Perpanjangan SK Pembimbing Tugas Akhir';
 
   const handleDosenChange = useCallback((field, val) => {
     if (isLockedFields) return; 
@@ -618,13 +569,19 @@ const PengajuanSK = () => {
     setPageStatus('submitting');
 
     try {
-      if (submissionMode === 'patch-revisi') {
+      // Bypass pembuatan draft untuk Revisi maupun Perpanjangan
+      if (submissionMode === 'patch-revisi' || submissionMode === 'create-perpanjangan') {
         const activeRequestId = sktaRequestId ?? permohonan?.id;
 
         const finalPayload = new FormData();
         finalPayload.append('id', activeRequestId);
         finalPayload.append('mahasiswaId', mahasiswaId);
-        finalPayload.append('category', permohonan?.category || SKTA_CATEGORY.PERMOHONAN_BARU);
+        
+        const categoryString = submissionMode === 'create-perpanjangan' 
+          ? SKTA_CATEGORY.PERPANJANGAN_SK 
+          : (permohonan?.category || SKTA_CATEGORY.PERMOHONAN_BARU);
+          
+        finalPayload.append('category', categoryString);
         finalPayload.append('judulProposalIndonesia', formData.judulIndo.trim());
         finalPayload.append('judulProposalInggris', formData.judulInggris.trim());
         if (formData.kode1?.value) finalPayload.append('dosenPembimbing1Id', formData.kode1.value);
@@ -632,12 +589,14 @@ const PengajuanSK = () => {
         if (actualFile) finalPayload.append('evidence', actualFile);
 
         await submitFinalSKTARequest(finalPayload);
-        setPageStatus('revision_sent');
-
+        
+        if (submissionMode === 'patch-revisi') {
+          setPageStatus('revision_sent');
+        } else {
+          setPageStatus('success');
+        }
       } else {
-        const categoryString = submissionMode === 'create-perpanjangan'
-          ? SKTA_CATEGORY.PERPANJANGAN_SK
-          : SKTA_CATEGORY.PERMOHONAN_BARU;
+        const categoryString = SKTA_CATEGORY.PERMOHONAN_BARU;
 
         const draftResult = await submitSKTARequest({
           proposalTitleId:    formData.judulIndo.trim(),
@@ -645,8 +604,7 @@ const PengajuanSK = () => {
           studentId:          mahasiswaId,
           dosenPembimbing1Id: formData.kode1?.value,
           dosenPembimbing2Id: formData.kode2?.value,
-          category:           categoryString,
-          evidence:           actualFile 
+          category:           categoryString
         });
         
         const newSktaRequestId = draftResult?.data?.id || draftResult?.id;
@@ -660,13 +618,11 @@ const PengajuanSK = () => {
         finalPayload.append('judulProposalInggris', formData.judulInggris.trim());
         if (formData.kode1?.value) finalPayload.append('dosenPembimbing1Id', formData.kode1.value);
         if (formData.kode2?.value) finalPayload.append('dosenPembimbing2Id', formData.kode2.value);
-        
         if (actualFile) finalPayload.append('evidence', actualFile);
 
         await submitFinalSKTARequest(finalPayload);
         
         updateSktaRequestId(newSktaRequestId);
-        
         if (permohonan) {
           setPermohonan({ ...permohonan, category: categoryString });
         }
@@ -707,28 +663,21 @@ const PengajuanSK = () => {
 
     if (pageStatus === 'revision_sent') {
       return (
-        <div style={{ padding: '40px 20px', textAlign: 'center', maxWidth: 500, margin: '0 auto' }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: '50%',
-            background: '#DBEAFE', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px',
-          }}>
+        <div className="sk-result-container">
+          <div className="sk-result-icon-wrap revisi">
             <Clock size={32} color="#2563EB" />
           </div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', marginBottom: 10 }}>
+          <h2 className="sk-result-title">
             Revisi Pengajuan SK Berhasil Dikirim!
           </h2>
-          <div style={{
-            background: '#EFF6FF', border: '1px solid #BFDBFE',
-            borderRadius: 10, padding: '16px 20px', marginBottom: 24, textAlign: 'left',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <CheckCircle size={18} color="#2563EB" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div className="sk-status-banner proses" style={{ textAlign: 'left', marginBottom: 24 }}>
+            <div className="sk-status-banner-inner">
+              <CheckCircle size={18} color="#2563EB" className="sk-banner-icon" />
               <div>
-                <p style={{ fontSize: 12, fontWeight: 700, color: '#1E40AF', marginBottom: 4 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#1E40AF', margin: '0 0 4px' }}>
                   Revisi dokumen sudah kami terima
                 </p>
-                <p style={{ fontSize: 11.5, color: '#3B82F6', lineHeight: 1.6, margin: 0 }}>
+                <p className="sk-status-desc" style={{ color: '#3B82F6' }}>
                   Tim akademik akan memverifikasi kembali pengajuan SK Pembimbing Tugas Akhir kamu.
                   Proses verifikasi membutuhkan waktu maksimal <strong>3×24 jam kerja</strong>.
                   Pantau status terbaru melalui dashboard.
@@ -738,11 +687,7 @@ const PengajuanSK = () => {
           </div>
           <button
             onClick={() => navigate('/mahasiswa/dashboard')}
-            style={{
-              padding: '10px 24px', borderRadius: 9999, fontSize: 12,
-              fontWeight: 700, background: '#2563EB', color: '#fff',
-              border: 'none', cursor: 'pointer',
-            }}
+            className="sk-btn-action blue"
           >
             Kembali ke Dashboard
           </button>
@@ -752,29 +697,21 @@ const PengajuanSK = () => {
 
     if (pageStatus === 'success') {
       return (
-        <div style={{ padding: '40px 20px', textAlign: 'center', maxWidth: 500, margin: '0 auto' }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: '50%',
-            background: '#D1FAE5', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px',
-          }}>
+        <div className="sk-result-container">
+          <div className="sk-result-icon-wrap success">
             <CheckCircle size={32} color="#10B981" />
           </div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', marginBottom: 10 }}>
+          <h2 className="sk-result-title">
             {isExpired ? 'Perpanjangan SK Berhasil Dikirim!' : 'Pengajuan SK Berhasil Dikirim!'}
           </h2>
-          <p style={{ fontSize: 11.5, color: '#6B7280', lineHeight: 1.6, marginBottom: 28 }}>
+          <p className="sk-result-desc">
             {isExpired
-              ? 'Permohonan perpanjangan SK Tugas Akhir kamu sudah kami terima sebagai pengajuan baru. Proses verifikasi membutuhkan waktu maksimal 3×24 jam kerja.'
+              ? 'Permohonan perpanjangan SK Tugas Akhir kamu sudah kami terima. Proses verifikasi membutuhkan waktu maksimal 3×24 jam kerja.'
               : 'Permohonan Penerbitan SK Tugas Akhir kamu sudah kami terima. Proses verifikasi membutuhkan waktu maksimal 3×24 jam kerja. Pantau status pengajuan di dashboard.'}
           </p>
           <button
             onClick={() => navigate('/mahasiswa/dashboard')}
-            style={{
-              padding: '10px 24px', borderRadius: 9999, fontSize: 12,
-              fontWeight: 700, background: '#C0182A', color: '#fff',
-              border: 'none', cursor: 'pointer',
-            }}
+            className="sk-btn-action primary"
           >
             Kembali ke Dashboard
           </button>
@@ -782,25 +719,16 @@ const PengajuanSK = () => {
       );
     }
 
-    // Tampilan ketika form tertutup (Sudah Terbit / Sedang Proses)
     if (pageStatus === 'status_only') {
       return (
-        <div style={{ padding: '24px 16px', maxWidth: 600, margin: '0 auto' }}>
-          
-          {/* BANNER BIRU: Akan selalu diprioritaskan muncul jika ada draft/proses pembaruan SKTA */}
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
           <OngoingPembaruanBanner pembaruan={ongoingPembaruan} navigate={navigate} />
-
-          {/* BANNER HIJAU: SK Utama (TETAP TAMPIL) */}
           <SkStatusBanner status={skStatus} permohonan={permohonan} />
           
           <div style={{ textAlign: 'center' }}>
             <button
               onClick={() => navigate('/mahasiswa/dashboard')}
-              style={{
-                padding: '8px 24px', borderRadius: 9999, fontSize: 11.5,
-                fontWeight: 700, background: '#C0182A', color: '#fff',
-                border: 'none', cursor: 'pointer',
-              }}
+              className="sk-btn-action primary"
             >
               Kembali ke Dashboard
             </button>
@@ -809,25 +737,17 @@ const PengajuanSK = () => {
       );
     }
 
-    // Tampilan ketika form terbuka (Permohonan Baru, Perpanjangan, Revisi)
     return (
-      <div className="sk-content-wrapper" style={{ padding: '0 8px' }}>
+      <div className="sk-content-wrapper">
         
-        {/* Banner Biru ditambahkan juga di halaman form untuk antisipasi (jaga-jaga) */}
         <OngoingPembaruanBanner pembaruan={ongoingPembaruan} navigate={navigate} />
 
         {isExpired && <SkStatusBanner status={STATUS_SK.EXPIRED} permohonan={permohonan} />}
         {isBelumTerbit && <SkStatusBanner status={STATUS_SK.BELUM_TERBIT} permohonan={permohonan} />}
 
         {isBelumTerbit && permohonan?.isEdit && (
-          <div style={{
-            background: isReadOnlyForm ? '#FEF2F2' : '#FFF7ED', 
-            border: `1px solid ${isReadOnlyForm ? '#FECACA' : '#FED7AA'}`,
-            borderRadius: 8, padding: '10px 14px', marginBottom: 20,
-            display: 'flex', alignItems: 'center', gap: 8,
-            fontSize: 11.5, color: isReadOnlyForm ? '#B91C1C' : '#92400E',
-          }}>
-            <span style={{ fontWeight: 700 }}>
+          <div className={`sk-deadline-alert ${isReadOnlyForm ? 'expired' : 'active'}`}>
+            <span>
               {isReadOnlyForm ? '❌ Masa perbaikan dokumen telah habis:' : '⏰ Batas perbaikan dokumen:'}
             </span>
             <span>
@@ -838,45 +758,44 @@ const PengajuanSK = () => {
           </div>
         )}
 
-        {/* SECTION: Info Box */}
-        <div className="info-box-red" style={{ padding: '16px 20px', borderRadius: '10px', marginBottom: '32px' }}>
-          <div className="info-content" style={{ display: 'flex', gap: '12px' }}>
-            <div className="info-icon-circle" style={{ width: '32px', height: '32px', padding: '6px' }}>
+        <div className="sk-info-box">
+          <div className="sk-info-content">
+            <div className="sk-info-icon-circle">
               <Info size={20} />
             </div>
-            <div className="info-text">
-              <h4 style={{ fontSize: '13.5px', color: '#B91C1C', marginBottom: '10px', fontWeight: 800 }}>
+            <div className="sk-info-text">
+              <h4>
                 {isExpired
                   ? 'Perpanjangan SK Tugas Akhir'
                   : isBelumTerbit
                     ? 'Perbaikan Dokumen SK Tugas Akhir'
                     : 'Permohonan Penerbitan SK Tugas Akhir'}
               </h4>
-              <p style={{ fontSize: '11px', marginBottom: '6px' }}><strong>Formulir ini ditujukan bagi mahasiswa yang belum memiliki SK TA pada menu TA/PA iGracias</strong></p>
-              <p style={{ fontSize: '11px', marginBottom: '6px' }}><strong>Harap Baca Secara Teliti</strong></p>
-              <p style={{ fontSize: '11px', marginBottom: '6px' }}>Formulir ini diajukan setelah mahasiswa mengajukan pembimbing di igracias dan sudah di approve oleh ketua KK.</p>
-              <p style={{ fontSize: '11px', marginBottom: '6px' }}>
+              <p><strong>Formulir ini ditujukan bagi mahasiswa yang belum memiliki SK TA pada menu TA/PA iGracias</strong></p>
+              <p><strong>Harap Baca Secara Teliti</strong></p>
+              <p>Formulir ini diajukan setelah mahasiswa mengajukan pembimbing di igracias dan sudah di approve oleh ketua KK.</p>
+              <p>
                 Apabila belum diapprove, silahkan dapat meminta Approval Dosen Pembimbing kepada ketua KK. Pemilihan KK berdasarkan Dosen Pembimbing I, cek KK dosen di:{' '}
                 <a href="http://tel-u.ac.id/dosentatup" target="_blank" rel="noreferrer" style={{ color: '#0070f3', textDecoration: 'underline' }}>
                   tel-u.ac.id/dosentatup
                 </a>
               </p>
-              <ul style={{ listStyleType: 'disc', paddingLeft: '16px', marginTop: '8px', marginBottom: '8px', fontSize: '11px' }}>
-                <li style={{ marginBottom: '6px' }}>KK Electronics and Telecommunications Science — Bu Solichah Larasati: 085726234838</li>
-                <li style={{ marginBottom: '6px' }}>KK Industrial Systems Engineering — Pak Alza Yudha: 085200330027</li>
-                <li style={{ marginBottom: '6px' }}>KK Applied Artificial Intelligence — Bu Paradise: 082243368605</li>
-                <li style={{ marginBottom: '6px' }}>KK Media, Design and Creative Innovation — Bu Agatha: 081331379241</li>
-                <li style={{ marginBottom: '6px' }}>KK Cyber Security, IOT, and Cloud System — Pak Eko Fajar Cahyadi: 085132323346</li>
-                <li style={{ marginBottom: '6px' }}>KK Data Science and Optimization — Pak Andi Prademon Yunus: 08114091048</li>
-                <li style={{ marginBottom: '6px' }}>KK Bioengineering, Food Technology and Advance Material — Bu Nur Afifah Zen: 081227684018</li>
-                <li style={{ marginBottom: '6px' }}>KK Information System, Digital Business & Data Driven Solution — Bu Rona Nisa Sofia Amriza: 085878447414</li>
+              <ul>
+                <li>KK Electronics and Telecommunications Science — Bu Solichah Larasati: 085726234838</li>
+                <li>KK Industrial Systems Engineering — Pak Alza Yudha: 085200330027</li>
+                <li>KK Applied Artificial Intelligence — Bu Paradise: 082243368605</li>
+                <li>KK Media, Design and Creative Innovation — Bu Agatha: 081331379241</li>
+                <li>KK Cyber Security, IOT, and Cloud System — Pak Eko Fajar Cahyadi: 085132323346</li>
+                <li>KK Data Science and Optimization — Pak Andi Prademon Yunus: 08114091048</li>
+                <li>KK Bioengineering, Food Technology and Advance Material — Bu Nur Afifah Zen: 081227684018</li>
+                <li>KK Information System, Digital Business & Data Driven Solution — Bu Rona Nisa Sofia Amriza: 085878447414</li>
                 <li>KK Software Engineering and Multimedia — Pak Arif Amrulloh: 08567424313</li>
               </ul>
-              <p style={{ fontSize: '11px' }}>Pengajuan penerbitan SK diproses dalam waktu maksimal 3×24 jam sesuai antrian</p>
+              <p>Pengajuan penerbitan SK diproses dalam waktu maksimal 3×24 jam sesuai antrian</p>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-            <div className="contact-badge" style={{ fontSize: '10.5px', padding: '6px 12px' }} onClick={() => window.open('https://wa.me/6285117001281', '_blank')}>
+          <div className="sk-contact-badge-wrap">
+            <div className="sk-contact-badge" onClick={() => window.open('https://wa.me/6285117001281', '_blank')}>
               <MessageCircle size={12} /> Contact Person : Helpdesk Layanan Sidang-Yudisium TUP
             </div>
           </div>
@@ -893,82 +812,82 @@ const PengajuanSK = () => {
           </div>
         )}
 
-        {/* SECTION 1: Identitas */}
-        <section className="form-section" style={{ marginBottom: '40px', padding: '20px', borderRadius: '12px' }}>
-          <h2 className="section-title" style={{ fontSize: '14px', marginBottom: '16px' }}>Identitas & Program Studi</h2>
-          <div className="form-grid" style={{ gap: '16px' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Nama</label>
-              <div className="input-with-icon">
-                <User className="field-icon" size={16} />
-                <input type="text" value={namaDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px' }} />
+        <section className="sk-form-section">
+          <h2 className="sk-section-title">Identitas & Program Studi</h2>
+          <div className="sk-form-grid">
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">Nama</label>
+              <div className="sk-input-wrap">
+                <User className="sk-input-icon" size={16} />
+                <input type="text" value={namaDisplay} readOnly className="sk-input with-icon" disabled />
               </div>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>NIM (Nomor Induk Mahasiswa) *</label>
-              <div className="input-with-icon">
-                <input type="text" value={nimDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed', fontSize: '12.5px', padding: '8px 12px', height: '40px' }} />
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">NIM (Nomor Induk Mahasiswa) *</label>
+              <div className="sk-input-wrap">
+                <input type="text" value={nimDisplay} readOnly className="sk-input" disabled />
               </div>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Nomor HP / WhatsApp Aktif *</label>
-              <div className="input-with-icon">
-                <Phone className="field-icon" size={16} />
-                <input type="text" value={noHpDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px' }} />
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">Nomor HP / WhatsApp Aktif *</label>
+              <div className="sk-input-wrap">
+                <Phone className="sk-input-icon" size={16} />
+                <input type="text" value={noHpDisplay} readOnly className="sk-input with-icon" disabled />
               </div>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Program Studi</label>
-              <div className="input-with-icon">
-                <GraduationCap className="field-icon" size={16} />
-                <input type="text" value={prodiDisplay} readOnly style={{ backgroundColor: '#F3F4F6', cursor: 'not-allowed', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px' }} />
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">Program Studi</label>
+              <div className="sk-input-wrap">
+                <GraduationCap className="sk-input-icon" size={16} />
+                <input type="text" value={prodiDisplay} readOnly className="sk-input with-icon" disabled />
               </div>
             </div>
           </div>
         </section>
 
-        {/* SECTION 2: Informasi TA */}
-        <section className="form-section" style={{ marginBottom: '40px', padding: '20px', borderRadius: '12px' }}>
-          <h2 className="section-title" style={{ fontSize: '14px', marginBottom: '16px' }}>Informasi Tugas Akhir</h2>
+        <section className="sk-form-section">
+          <h2 className="sk-section-title">Informasi Tugas Akhir</h2>
 
-          <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Judul Tugas Akhir (Bahasa Indonesia) *</label>
-            <div className="input-with-icon">
+          <div className="sk-form-group">
+            <label className="sk-form-label">Judul Tugas Akhir (Bahasa Indonesia) *</label>
+            <div className="sk-input-wrap">
               <textarea
                 placeholder="Masukkan judul tugas akhir dalam Bahasa Indonesia"
                 value={formData.judulIndo}
                 onChange={(e) => { setFormData(prev => ({ ...prev, judulIndo: e.target.value })); setSubmitError(null); }}
                 readOnly={isLockedFields}
-                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px', backgroundColor: isLockedFields ? '#F3F4F6' : '#fff', cursor: isLockedFields ? 'not-allowed' : 'text' }}
+                disabled={isLockedFields}
+                className="sk-input sk-textarea"
               />
             </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Judul Tugas Akhir (Bahasa Inggris) *</label>
-            <div className="input-with-icon">
+          <div className="sk-form-group sk-mb-20">
+            <label className="sk-form-label">Judul Tugas Akhir (Bahasa Inggris) *</label>
+            <div className="sk-input-wrap">
               <textarea
                 placeholder="Enter your thesis/final project title in English"
                 value={formData.judulInggris}
                 onChange={(e) => { setFormData(prev => ({ ...prev, judulInggris: e.target.value })); setSubmitError(null); }}
                 readOnly={isLockedFields}
-                style={{ fontSize: '12.5px', padding: '10px 12px', minHeight: '70px', backgroundColor: isLockedFields ? '#F3F4F6' : '#fff', cursor: isLockedFields ? 'not-allowed' : 'text' }}
+                disabled={isLockedFields}
+                className="sk-input sk-textarea"
               />
             </div>
           </div>
 
-          <div className="form-grid" style={{ gap: '16px', marginBottom: '20px' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Nama Dosen Pembimbing 1 *</label>
-              <div className="input-with-icon">
-                <User className="field-icon" size={16} />
-                <input type="text" placeholder="Auto-terisi setelah pilih kode dosen" value={formData.dosen1} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px' }} />
+          <div className="sk-form-grid sk-mb-20">
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">Nama Dosen Pembimbing 1 *</label>
+              <div className="sk-input-wrap">
+                <User className="sk-input-icon" size={16} />
+                <input type="text" placeholder="Auto-terisi setelah pilih kode dosen" value={formData.dosen1} readOnly className="sk-input with-icon" disabled />
               </div>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Kode Dosen Pembimbing 1 *</label>
-              <div className="input-with-icon block-select">
-                <FileBadge className="field-icon" size={16} style={{ zIndex: 10 }} />
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">Kode Dosen Pembimbing 1 *</label>
+              <div className="sk-input-wrap block-select">
+                <FileBadge className="sk-input-icon" size={16} />
                 <Select
                   placeholder={loadingDosen ? "Memuat data dosen..." : "Pilih Kode Dosen 1"}
                   options={lecturerOptions} styles={customSelectStyles}
@@ -978,17 +897,17 @@ const PengajuanSK = () => {
                 />
               </div>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Nama Dosen Pembimbing 2 *</label>
-              <div className="input-with-icon">
-                <User className="field-icon" size={16} />
-                <input type="text" placeholder="Auto-terisi setelah pilih kode dosen" value={formData.dosen2} readOnly style={{ backgroundColor: '#F3F4F6', fontSize: '12.5px', padding: '8px 12px 8px 36px', height: '40px' }} />
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">Nama Dosen Pembimbing 2 *</label>
+              <div className="sk-input-wrap">
+                <User className="sk-input-icon" size={16} />
+                <input type="text" placeholder="Auto-terisi setelah pilih kode dosen" value={formData.dosen2} readOnly className="sk-input with-icon" disabled />
               </div>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Kode Dosen Pembimbing 2 *</label>
-              <div className="input-with-icon block-select">
-                <FileBadge className="field-icon" size={16} style={{ zIndex: 10 }} />
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">Kode Dosen Pembimbing 2 *</label>
+              <div className="sk-input-wrap block-select">
+                <FileBadge className="sk-input-icon" size={16} />
                 <Select
                   placeholder={loadingDosen ? "Memuat data dosen..." : "Pilih Kode Dosen 2"}
                   options={lecturerOptions} styles={customSelectStyles}
@@ -1000,28 +919,20 @@ const PengajuanSK = () => {
             </div>
           </div>
 
-          {/* Kelompok Keilmuan */}
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-              <label style={{ margin: 0, fontSize: '11.5px' }}>Kelompok Keilmuan</label>
-              <span style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>Otomatis diambil dari KK Dosen Pembimbing 1</span>
+          <div className="sk-form-group sk-mb-0">
+            <div className="sk-kk-header">
+              <label>Kelompok Keilmuan</label>
+              <span>Otomatis diambil dari KK Dosen Pembimbing 1</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' }}>
+            <div className="sk-kk-grid">
               {kelompokKeilmuan.map((item) => {
                 const isSelected = formData.kelompok === item.label;
                 return (
-                  <div key={item.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6,
-                    border: `1px solid ${isSelected ? '#C0182A' : '#E5E7EB'}`, background: isSelected ? '#FEF2F2' : '#F9FAFB',
-                    cursor: 'default', opacity: isLockedFields && !isSelected ? 0.6 : 1
-                  }}>
-                    <div style={{
-                      width: 14, height: 14, borderRadius: '50%', flexShrink: 0, border: `1.5px solid ${isSelected ? '#C0182A' : '#D1D5DB'}`,
-                      background: isSelected ? '#C0182A' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {isSelected && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />}
+                  <div key={item.id} className={`sk-kk-item ${isSelected ? 'selected' : ''} ${isLockedFields && !isSelected ? 'locked' : ''}`}>
+                    <div className="sk-kk-radio">
+                      {isSelected && <div className="sk-kk-radio-inner" />}
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: isSelected ? 700 : 500, color: isSelected ? '#B91C1C' : '#6B7280', lineHeight: 1.3 }}>{item.label}</span>
+                    <span className="sk-kk-label">{item.label}</span>
                   </div>
                 );
               })}
@@ -1029,71 +940,69 @@ const PengajuanSK = () => {
           </div>
         </section>
 
-        {/* SECTION 3: Upload Dokumen */}
-        <section className="form-section" style={{ padding: '20px', borderRadius: '12px' }}>
-          <h2 className="section-title" style={{ fontSize: '14px', marginBottom: '16px' }}>
+        <section className="sk-form-section">
+          <h2 className="sk-section-title">
             Dokumen Evidence Sudah Di Approve Pengajuan Pembimbing Oleh Ketua KK Di iGracias
           </h2>
 
-          <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11.5 }}>Berkas Lampiran Bukti Dosbing Sudah Diacc KK :</span>
-             <TemplateActionButtons code="permohonan-skta-pengajuan-skta-evidence-approve-dospem-kk" />
+          <div className="sk-template-header">
+            <span className="sk-template-label">Berkas Lampiran Bukti Dosbing Sudah Diacc KK :</span>
+            <TemplateActionButtons code="permohonan-skta-pengajuan-skta-evidence-approve-dospem-kk" />
           </div>
 
           {(isBelumTerbit || isExpired) && (
-            <p style={{ fontSize: 10.5, color: isBelumTerbit ? '#D97706' : '#7C3AED', marginBottom: 14, fontStyle: 'italic', fontWeight: 600 }}>
+            <p className={`sk-upload-hint ${isBelumTerbit ? 'revisi' : 'perpanjangan'}`}>
               * Dokumen evidence bersifat opsional untuk {isExpired ? 'perpanjangan SK' : 'revisi'}. Kosongkan jika evidence lama masih berlaku.
             </p>
           )}
 
-          <div className="form-grid" style={{ gap: '16px' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>Unggah Dokumen Prasyarat {(!isBelumTerbit && !isExpired) ? '*' : ''}</label>
+          <div className="sk-form-grid">
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">Unggah Dokumen Prasyarat {(!isBelumTerbit && !isExpired) ? '*' : ''}</label>
               <div 
-                className={`upload-area ${isDragging ? 'dragging' : ''} ${isReadOnlyForm ? 'disabled' : ''}`} 
+                className={`sk-upload-area ${isDragging ? 'dragging' : ''} ${isReadOnlyForm ? 'disabled' : ''}`} 
                 onClick={() => !isReadOnlyForm && fileInputRef.current.click()}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                style={{ padding: '24px 16px', minHeight: '120px', opacity: isReadOnlyForm ? 0.5 : 1, cursor: isReadOnlyForm ? 'not-allowed' : 'pointer' }}
               >
                 <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept=".pdf, .png, .jpg, .jpeg" />
-                <div className="upload-icon-circle" style={{ width: '40px', height: '40px', marginBottom: '10px' }}>
+                <div className="sk-upload-icon-circle">
                   <UploadCloud size={32} color={isDragging ? "#c0182a" : "#6B7280"} />
                 </div>
-                <div className="upload-text">
-                  <p style={{ fontSize: '12px' }}><strong>Pilih File</strong> atau Tarik dan Lepaskan di sini</p>
-                  <div className="file-type-badges" style={{ marginTop: '6px' }}>
-                    <span style={{ fontSize: '9px', padding: '2px 6px' }}>PDF / PNG / JPG</span>
-                    <span style={{ fontSize: '9px', padding: '2px 6px' }}>MAX 3MB</span>
+                <div className="sk-upload-text">
+                  <p><strong>Pilih File</strong> atau Tarik dan Lepaskan di sini</p>
+                  <div className="sk-file-type-badges">
+                    <span>PDF / PNG / JPG</span>
+                    <span>MAX 3MB</span>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '11.5px', marginBottom: '6px' }}>File Terpilih</label>
-              <div className="file-status-list">
+            <div className="sk-form-group sk-mb-0">
+              <label className="sk-form-label">File Terpilih</label>
+              <div className="sk-file-status-list">
                 {selectedFile && (
-                  <div className="status-card success" style={{ padding: '12px', borderRadius: '8px' }}>
-                    <div className="status-icon-wrap" style={{ background: '#10B981', width: '32px', height: '32px' }}><FileText size={16} /></div>
-                    <div className="status-info">
-                      <div className="status-filename" style={{ fontSize: '12px' }}>{selectedFile.name}{' '}<span className="label-siap" style={{ fontSize: '9px', padding: '2px 6px' }}>Siap</span></div>
-                      <div className="status-meta" style={{ fontSize: '10.5px' }}>{selectedFile.size} MB • {selectedFile.type}</div>
+                  <div className="sk-status-card success">
+                    <div className="sk-status-icon-wrap"><FileText size={16} /></div>
+                    <div className="sk-status-info">
+                      <div className="sk-status-filename">{selectedFile.name} <span className="sk-label-siap">Siap</span></div>
+                      <div className="sk-status-meta">{selectedFile.size} MB • {selectedFile.type}</div>
                     </div>
                   </div>
                 )}
                 {fileError && (
-                  <div className="status-card error" style={{ padding: '12px', borderRadius: '8px' }}>
-                    <div className="status-icon-wrap" style={{ background: '#EF4444', width: '32px', height: '32px' }}><AlertTriangle size={16} /></div>
-                    <div className="status-info">
-                      <div className="error-title" style={{ fontSize: '12px' }}>File Tidak Valid</div>
-                      <div className="error-desc" style={{ fontSize: '10.5px' }}>{fileError}</div>
+                  <div className="sk-status-card error">
+                    <div className="sk-status-icon-wrap"><AlertTriangle size={16} /></div>
+                    <div className="sk-status-info">
+                      <div className="sk-error-title">File Tidak Valid</div>
+                      <div className="sk-error-desc">{fileError}</div>
                     </div>
                   </div>
                 )}
                 {!selectedFile && !fileError && (
-                  <div className="empty-file-state" style={{ padding: '16px', border: '1px dashed #E5E7EB', borderRadius: '8px', textAlign: 'center', color: '#9CA3AF', fontSize: '11px' }}>
+                  <div className="sk-empty-state">
                     {isExpired ? 'Opsional: kosongkan jika evidence lama masih berlaku' : isBelumTerbit ? 'Opsional kosongkan jika evidence lama masih berlaku' : 'Belum ada file yang dipilih'}
                   </div>
                 )}
@@ -1102,18 +1011,14 @@ const PengajuanSK = () => {
           </div>
         </section>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #E9EDF5', paddingBottom: '32px' }}>
+        <div className="sk-bottom-actions">
           <button
-            className="btn-submit"
+            className={`sk-btn-submit ${isReadOnlyForm ? 'disabled-gray' : ''}`}
             onClick={handleSubmit}
             disabled={pageStatus === 'submitting' || isReadOnlyForm}
-            style={{
-              ...((pageStatus === 'submitting' || isReadOnlyForm) ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
-              padding: '12px 32px', fontSize: '13px', borderRadius: '8px', background: isReadOnlyForm ? '#6B7280' : '#C0182A', color: '#fff', fontWeight: 700, border: 'none'
-            }}
           >
             {pageStatus === 'submitting' ? (
-              <><Loader size={14} style={{ animation: 'spin 1s linear infinite', display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} /> Mengirim...</>
+              <><Loader size={14} className="sk-spinner-inline" /> Mengirim...</>
             ) : isReadOnlyForm ? (
               'Batas Waktu Habis'
             ) : isExpired ? (
@@ -1130,23 +1035,16 @@ const PengajuanSK = () => {
   };
 
   return (
-    <div className={`flex bg-[#F4F6FB] min-h-screen ${isDesktopCollapsed ? 'desktop-collapsed' : ''}`}>
-      <style>{`
-        .topbar-toggle { display: flex !important; cursor: pointer; }
-        @media (min-width: 992px) {
-          .desktop-collapsed #sidebar { transform: translateX(-100%) !important; }
-          .desktop-collapsed #main-content { margin-left: 0 !important; }
-        }
-      `}</style>
+    <div className={`sk-layout ${isDesktopCollapsed ? 'desktop-collapsed' : ''}`}>
       <SidebarMahasiswa isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div id="main-content" className="flex-1 flex flex-col" style={{ transition: 'margin-left 0.22s ease' }}>
+      <div id="main-content">
         <header className="topbar">
           <button className="topbar-toggle" onClick={handleToggleSidebar}>
             <Menu size={20} color="#fff" />
           </button>
           <div className="topbar-brand text-white" style={{ fontSize: '15px' }}>{dynamicTitle}</div>
         </header>
-        <main className="page-body px-4 py-6 md:px-8 md:py-8" style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+        <main className="sk-page-body">
           {renderContent()}
         </main>
       </div>

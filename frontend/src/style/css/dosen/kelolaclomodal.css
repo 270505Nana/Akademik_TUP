@@ -1,0 +1,248 @@
+/* ==========================================================
+   MODAL KELOLA CLO - STYLING
+   ========================================================== */
+
+.clo-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.clo-modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.clo-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+}
+
+.clo-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.clo-modal-close {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.clo-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.clo-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.clo-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.clo-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.clo-section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.clo-divider {
+  border: none;
+  border-top: 1px dashed #cbd5e1;
+  margin: 0;
+}
+
+.clo-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clo-form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.req {
+  color: #e11d48;
+}
+
+.clo-form-group input,
+.clo-form-group textarea,
+.clo-dynamic-fields input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #1e293b;
+  outline: none;
+  background: #ffffff;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.clo-form-group input:focus,
+.clo-form-group textarea:focus,
+.clo-dynamic-fields input:focus {
+  border-color: #c0182a;
+}
+
+.clo-form-group textarea {
+  resize: vertical;
+}
+
+/* DINAMIS ROW (SUB CLO & ASESMEN) */
+.clo-dynamic-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #f8fafc;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.clo-dynamic-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.asesmen-fields {
+  flex-direction: row;
+}
+
+.asesmen-fields input[type="number"] {
+  width: 120px;
+}
+
+.clo-btn-add-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clo-btn-add-sm:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.clo-btn-remove {
+  background: #fee2e2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.clo-btn-remove:hover {
+  background: #fecdd3;
+}
+
+/* FOOTER */
+.clo-modal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
+}
+
+.clo-btn-cancel {
+  padding: 10px 18px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clo-btn-cancel:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.clo-btn-submit {
+  padding: 10px 20px;
+  background: #c0182a;
+  border: none;
+  color: #ffffff;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clo-btn-submit:hover:not(:disabled) {
+  background: #a01423;
+}
+
+.clo-btn-submit:disabled, .clo-btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
