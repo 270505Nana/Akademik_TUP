@@ -6,3 +6,4 @@ export * from "./sidangMapper.js";
 export * from "./yudisiumMapper.js";
 export * from "./permohonanSktaMapper.js";
 export * from "./mahasiswaBimbinganMapper.js";
+export * from "./researchGroupMapper.js";

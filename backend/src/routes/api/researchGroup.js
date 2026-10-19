@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 
 const router = express.Router();
 
@@ -9,10 +9,16 @@ import {
   updateResearchGroup,
   deleteResearchGroup,
   toggleResearchGroupActive,
-} from '../../controllers/researchGroupController.js';
+} from "../../controllers/researchGroupController.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listResearchGroupQuerySchema,
+  createResearchGroupSchema,
+  updateResearchGroupSchema,
+} from "../../schemas/index.js";
 
 /**
  * @swagger
@@ -49,8 +55,16 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [nameAsc, nameDesc, activeInactive, inactiveActive, newest, oldest]
- *         description: Sort research groups by name (nameAsc, nameDesc), status (activeInactive, inactiveActive), or creation time (newest, oldest)
+ *           enum: [name, isActive, createdAt]
+ *           default: name
+ *         description: Field to sort research groups by (name, isActive, or createdAt)
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort order direction (asc or desc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -72,7 +86,12 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listResearchGroups);
+router.get(
+  "/",
+  verifyToken,
+  validate(listResearchGroupQuerySchema, "query"),
+  listResearchGroups,
+);
 
 /**
  * @swagger
@@ -114,7 +133,13 @@ router.get("/", verifyToken, listResearchGroups);
  *       403:
  *         description: Access denied (Admin only)
  */
-router.post("/", verifyToken, isAdmin, createResearchGroup);
+router.post(
+  "/",
+  verifyToken,
+  isAdmin,
+  validate(createResearchGroupSchema),
+  createResearchGroup,
+);
 
 /**
  * @swagger
@@ -186,7 +211,13 @@ router.get("/:id", verifyToken, findResearchGroupById);
  *       404:
  *         description: Research group not found
  */
-router.put("/:id", verifyToken, isAdmin, updateResearchGroup);
+router.put(
+  "/:id",
+  verifyToken,
+  isAdmin,
+  validate(updateResearchGroupSchema),
+  updateResearchGroup,
+);
 
 /**
  * @swagger
@@ -240,6 +271,11 @@ router.delete("/:id", verifyToken, isAdmin, deleteResearchGroup);
  *       404:
  *         description: Research group not found
  */
-router.patch("/:id/toggle-active", verifyToken, isAdmin, toggleResearchGroupActive);
+router.patch(
+  "/:id/toggle-active",
+  verifyToken,
+  isAdmin,
+  toggleResearchGroupActive,
+);
 
 export default router;

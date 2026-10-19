@@ -30,11 +30,3 @@ export const mapStudyProgram = (prodi) => {
   };
 };
 
-export const mapResearchGroup = (rg) => {
-  if (!rg) return null;
-  return {
-    id: rg.id,
-    name: rg.name,
-    isActive: rg.isActive,
-  };
-};

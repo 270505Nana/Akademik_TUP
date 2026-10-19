@@ -81,28 +81,3 @@ export const getStudyProgramById = async (id) => {
     include: { faculty: true },
   });
 };
-
-// === RESEARCH GROUP ===
-export const getResearchGroups = async ({ skip, take }) => {
-  const where = { deletedAt: null };
-  const [total, researchGroups] = await Promise.all([
-    prisma.researchGroup.count({ where }),
-    prisma.researchGroup.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { createdAt: "desc" },
-      include: {
-        dosen: { where: { deletedAt: null }, include: { user: true } },
-      },
-    }),
-  ]);
-  return { total, researchGroups };
-};
-
-export const getResearchGroupById = async (id) => {
-  return await prisma.researchGroup.findFirst({
-    where: { id, deletedAt: null },
-    include: { dosen: { where: { deletedAt: null }, include: { user: true } } },
-  });
-};

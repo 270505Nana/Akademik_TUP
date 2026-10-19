@@ -44,12 +44,3 @@ export const upsertFacultySchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-// Schema Kelompok Keahlian (Research Group)
-export const upsertResearchGroupSchema = z.object({
-  name: z
-    .string({ required_error: "Nama kelompok keahlian wajib diisi" })
-    .trim()
-    .min(1, "Nama kelompok keahlian wajib diisi"),
-  isActive: z.boolean().optional(),
-  studyProgramIds: z.array(z.string()).optional(),
-});

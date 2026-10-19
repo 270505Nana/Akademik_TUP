@@ -8,5 +8,6 @@ export * from "./permohonanSktaSchema.js";
 export * from "./sidangSchema.js";
 export * from "./penilaianTugasAkhirSchema.js";
 export * from "./penjadwalanSidangSchema.js";
+export * from "./researchGroupSchema.js";
 export * from "./yudisiumSchema.js";
 
