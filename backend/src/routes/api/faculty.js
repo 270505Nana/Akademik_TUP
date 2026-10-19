@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 
 const router = express.Router();
 
@@ -9,10 +9,16 @@ import {
   updateFaculty,
   deleteFaculty,
   toggleFacultyActive,
-} from '../../controllers/facultyController.js';
+} from "../../controllers/facultyController.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { isAdmin, authorize } from '../../middlewares/authorize.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listFacultyQuerySchema,
+  createFacultySchema,
+  updateFacultySchema,
+} from "../../schemas/index.js";
 
 /**
  * @swagger
@@ -44,8 +50,16 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [nameAsc, nameDesc, activeInactive, inactiveActive, newest, oldest]
- *         description: Sort faculties by name (nameAsc, nameDesc), status (activeInactive, inactiveActive), or creation time (newest, oldest)
+ *           enum: [name, isActive, createdAt]
+ *           default: name
+ *         description: Field to sort faculties by (name, isActive, or createdAt)
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort order direction (asc or desc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -67,7 +81,12 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listFaculties);
+router.get(
+  "/",
+  verifyToken,
+  validate(listFacultyQuerySchema, "query"),
+  listFaculties,
+);
 
 /**
  * @swagger
@@ -107,7 +126,8 @@ router.get("/", verifyToken, listFaculties);
 router.post(
   "/",
   verifyToken,
-  authorize("ADMIN"),
+  isAdmin,
+  validate(createFacultySchema),
   createFaculty,
 );
 
@@ -179,7 +199,8 @@ router.get("/:id", verifyToken, findFacultyById);
 router.put(
   "/:id",
   verifyToken,
-  authorize("ADMIN"),
+  isAdmin,
+  validate(updateFacultySchema),
   updateFaculty,
 );
 
@@ -208,7 +229,7 @@ router.put(
  *       404:
  *         description: Faculty not found
  */
-router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
+router.delete("/:id", verifyToken, isAdmin, deleteFaculty);
 
 /**
  * @swagger
@@ -238,7 +259,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
 router.patch(
   "/:id/toggle-active",
   verifyToken,
-  authorize("ADMIN"),
+  isAdmin,
   toggleFacultyActive,
 );
 

@@ -1,412 +1,96 @@
-import asyncHandler from 'express-async-handler';
-import prisma from "../config/prisma.js";
-import { sendValidationError, isNil, parseBoolean } from '../utils/validationHelper.js';
-import { getPaginationParams, formatPaginationResponse } from '../utils/paginationHelper.js';
+import asyncHandler from "express-async-handler";
+import * as researchGroupService from "../services/researchGroupService.js";
+import { mapResearchGroup } from "../mappers/index.js";
+import {
+  getPaginationParams,
+  formatPaginationResponse,
+} from "../utils/paginationHelper.js";
 
 // Daftar Semua Kelompok Keahlian (dengan search, filter, sort, dan pagination)
 const listResearchGroups = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search, name, isActive, sortBy, studyProgramId } = req.query;
+  const { search, isActive, studyProgramId, sortBy, sortOrder } = req.query;
 
-  const where = { deletedAt: null };
+  const { total, researchGroups } = await researchGroupService.getResearchGroups({
+    search,
+    isActive,
+    studyProgramId,
+    sortBy,
+    sortOrder,
+    ...paginationParams,
+  });
 
-  const searchTerm = (search || name || '').trim();
-  if (searchTerm) {
-    where.name = {
-      contains: searchTerm,
-      mode: 'insensitive',
-    };
-  }
-
-  if (isActive !== undefined) {
-    const parsedActive = parseBoolean(isActive);
-    if (parsedActive !== undefined) {
-      where.isActive = parsedActive;
-    }
-  }
-
-  if (studyProgramId) {
-    where.researchGroupStudyPrograms = {
-      some: {
-        studyProgramId: studyProgramId.trim(),
-        deletedAt: null,
-      },
-    };
-  }
-
-  let orderBy = { name: 'asc' };
-  const sortParam = (sortBy || '').toLowerCase().trim();
-
-  if (sortParam === 'nameasc' || sortParam === 'a-z') {
-    orderBy = { name: 'asc' };
-  } else if (sortParam === 'namedesc' || sortParam === 'z-a') {
-    orderBy = { name: 'desc' };
-  } else if (sortParam === 'activeinactive' || sortParam === 'active-inactive' || sortParam === 'active') {
-    orderBy = [{ isActive: 'desc' }, { name: 'asc' }];
-  } else if (sortParam === 'inactiveactive' || sortParam === 'inactive-active' || sortParam === 'inactive') {
-    orderBy = [{ isActive: 'asc' }, { name: 'asc' }];
-  } else if (sortParam === 'newest') {
-    orderBy = { createdAt: 'desc' };
-  } else if (sortParam === 'oldest') {
-    orderBy = { createdAt: 'asc' };
-  }
-
-  const [total, researchGroups] = await Promise.all([
-    prisma.researchGroup.count({ where }),
-    prisma.researchGroup.findMany({
-      where,
-      orderBy,
-      skip: paginationParams.skip,
-      take: paginationParams.take,
-      include: {
-        researchGroupStudyPrograms: {
-          where: { deletedAt: null },
-          include: {
-            studyProgram: {
-              select: {
-                id: true,
-                name: true,
-                isActive: true,
-                facultyId: true,
-              },
-            },
-          },
-        },
-      },
-    }),
-  ]);
-
-  res.json(formatPaginationResponse(researchGroups, total, paginationParams));
+  res.json(
+    formatPaginationResponse(
+      researchGroups.map(mapResearchGroup),
+      total,
+      paginationParams,
+    ),
+  );
 });
 
 // Ambil Detail Kelompok Keahlian By ID
 const findResearchGroupById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const researchGroup = await prisma.researchGroup.findFirst({
-    where: {
-      id,
-      deletedAt: null,
-    },
-    include: {
-      researchGroupStudyPrograms: {
-        where: { deletedAt: null },
-        include: {
-          studyProgram: {
-            select: {
-              id: true,
-              name: true,
-              isActive: true,
-              facultyId: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!researchGroup) {
-    res.status(404);
-    throw new Error("Kelompok keahlian tidak ditemukan");
-  }
+  const researchGroup = await researchGroupService.getResearchGroupById(
+    req.params.id,
+  );
 
   res.json({
-    data: researchGroup,
+    data: mapResearchGroup(researchGroup),
   });
 });
 
 // Buat Kelompok Keahlian Baru (Restore jika sudah ada tapi soft-deleted)
 const createResearchGroup = asyncHandler(async (req, res) => {
-  const { name, isActive, studyProgramIds } = req.body;
+  const { isRestored, researchGroup } =
+    await researchGroupService.createResearchGroup(req.body);
 
-  const errors = [];
-  if (isNil(name)) {
-    errors.push({ field: 'name', message: 'Nama kelompok keahlian wajib diisi' });
-  } else {
-    const trimmed = String(name).trim();
-    if (trimmed.length < 3) {
-      errors.push({ field: 'name', message: 'Nama kelompok keahlian minimal 3 karakter' });
-    } else if (trimmed.length > 100) {
-      errors.push({ field: 'name', message: 'Nama kelompok keahlian maksimal 100 karakter' });
-    }
-  }
-
-  if (errors.length > 0) {
-    return sendValidationError(res, errors, req);
-  }
-
-  const trimmedName = String(name).trim();
-
-  // Cari apakah ada data dengan nama yang sama (termasuk yang soft-deleted)
-  const existing = await prisma.researchGroup.findFirst({
-    where: {
-      name: {
-        equals: trimmedName,
-        mode: 'insensitive',
-      },
-    },
-    omit: {
-      deletedAt: false,
-    },
-  });
-
-  if (existing) {
-    if (existing.deletedAt === null) {
-      return sendValidationError(res, [
-        { field: 'name', message: 'Nama kelompok keahlian sudah terdaftar' }
-      ], req);
-    }
-
-    // Jika sebelumnya soft-deleted, hapus status soft-delete (restore)
-    await prisma.researchGroup.update({
-      where: { id: existing.id },
-      data: {
-        name: trimmedName,
-        deletedAt: null,
-        isActive: isActive !== undefined ? (parseBoolean(isActive) ?? true) : true,
-      },
-    });
-
-    if (Array.isArray(studyProgramIds)) {
-      for (const spId of studyProgramIds) {
-        const existingMapping = await prisma.researchGroupStudyProgram.findFirst({
-          where: { researchGroupId: existing.id, studyProgramId: spId },
-          omit: { deletedAt: false },
-        });
-        if (existingMapping) {
-          if (existingMapping.deletedAt !== null) {
-            await prisma.researchGroupStudyProgram.update({
-              where: { id: existingMapping.id },
-              data: { deletedAt: null },
-            });
-          }
-        } else {
-          await prisma.researchGroupStudyProgram.create({
-            data: { researchGroupId: existing.id, studyProgramId: spId },
-          });
-        }
-      }
-    }
-
-    const restored = await prisma.researchGroup.findUnique({
-      where: { id: existing.id },
-      include: {
-        researchGroupStudyPrograms: {
-          where: { deletedAt: null },
-          include: {
-            studyProgram: {
-              select: { id: true, name: true, isActive: true, facultyId: true },
-            },
-          },
-        },
-      },
-    });
-
+  if (isRestored) {
     return res.status(200).json({
       message: "Kelompok keahlian berhasil dipulihkan",
-      data: restored,
+      data: mapResearchGroup(researchGroup),
     });
   }
 
-  const researchGroup = await prisma.researchGroup.create({
-    data: {
-      name: trimmedName,
-      isActive: isActive !== undefined ? (parseBoolean(isActive) ?? true) : true,
-      ...(Array.isArray(studyProgramIds) && studyProgramIds.length > 0 && {
-        researchGroupStudyPrograms: {
-          create: studyProgramIds.map((spId) => ({
-            studyProgramId: spId,
-          })),
-        },
-      }),
-    },
-    include: {
-      researchGroupStudyPrograms: {
-        where: { deletedAt: null },
-        include: {
-          studyProgram: {
-            select: { id: true, name: true, isActive: true, facultyId: true },
-          },
-        },
-      },
-    },
-  });
-
-  res.status(201).json({
+  return res.status(201).json({
     message: "Research group created successfully",
-    data: researchGroup,
+    data: mapResearchGroup(researchGroup),
   });
 });
 
 // Update Kelompok Keahlian
 const updateResearchGroup = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { name, isActive, studyProgramIds } = req.body;
-
-  const errors = [];
-  if (req.body.name !== undefined) {
-    if (isNil(name)) {
-      errors.push({ field: 'name', message: 'Nama kelompok keahlian tidak boleh kosong' });
-    } else {
-      const trimmed = String(name).trim();
-      if (trimmed.length < 3) {
-        errors.push({ field: 'name', message: 'Nama kelompok keahlian minimal 3 karakter' });
-      } else if (trimmed.length > 100) {
-        errors.push({ field: 'name', message: 'Nama kelompok keahlian maksimal 100 karakter' });
-      }
-    }
-  }
-
-  if (errors.length > 0) {
-    return sendValidationError(res, errors, req);
-  }
-
-  const researchGroup = await prisma.researchGroup.findFirst({
-    where: { id, deletedAt: null },
-  });
-
-  if (!researchGroup) {
-    res.status(404);
-    throw new Error("Kelompok keahlian tidak ditemukan");
-  }
-
-  const updateData = {};
-  if (name !== undefined) {
-    const trimmedName = String(name).trim();
-    // Cek duplikasi nama dengan data lain yang aktif
-    const duplicate = await prisma.researchGroup.findFirst({
-      where: {
-        name: { equals: trimmedName, mode: 'insensitive' },
-        deletedAt: null,
-        NOT: { id },
-      },
-    });
-
-    if (duplicate) {
-      return sendValidationError(res, [
-        { field: 'name', message: 'Nama kelompok keahlian sudah terdaftar' }
-      ], req);
-    }
-    updateData.name = trimmedName;
-  }
-
-  if (isActive !== undefined) {
-    const parsed = parseBoolean(isActive);
-    if (parsed !== undefined) {
-      updateData.isActive = parsed;
-    }
-  }
-
-  if (Array.isArray(studyProgramIds)) {
-    // Soft delete relasi yang dihapus
-    await prisma.researchGroupStudyProgram.updateMany({
-      where: {
-        researchGroupId: id,
-        deletedAt: null,
-        studyProgramId: { notIn: studyProgramIds },
-      },
-      data: { deletedAt: new Date() },
-    });
-
-    // Buat atau restore relasi baru
-    for (const spId of studyProgramIds) {
-      const existingMapping = await prisma.researchGroupStudyProgram.findFirst({
-        where: { researchGroupId: id, studyProgramId: spId },
-        omit: { deletedAt: false },
-      });
-
-      if (existingMapping) {
-        if (existingMapping.deletedAt !== null) {
-          await prisma.researchGroupStudyProgram.update({
-            where: { id: existingMapping.id },
-            data: { deletedAt: null },
-          });
-        }
-      } else {
-        await prisma.researchGroupStudyProgram.create({
-          data: {
-            researchGroupId: id,
-            studyProgramId: spId,
-          },
-        });
-      }
-    }
-  }
-
-  const updatedResearchGroup = await prisma.researchGroup.update({
-    where: { id },
-    data: updateData,
-    include: {
-      researchGroupStudyPrograms: {
-        where: { deletedAt: null },
-        include: {
-          studyProgram: {
-            select: { id: true, name: true, isActive: true, facultyId: true },
-          },
-        },
-      },
-    },
-  });
+  const researchGroup = await researchGroupService.updateResearchGroup(
+    req.params.id,
+    req.body,
+  );
 
   res.json({
     message: "Research group updated successfully",
-    data: updatedResearchGroup,
+    data: mapResearchGroup(researchGroup),
   });
 });
 
 // Soft Delete Kelompok Keahlian
 const deleteResearchGroup = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const researchGroup = await prisma.researchGroup.findFirst({
-    where: { id, deletedAt: null },
-  });
-
-  if (!researchGroup) {
-    res.status(404);
-    throw new Error("Kelompok keahlian tidak ditemukan");
-  }
-
-  const [deletedResearchGroup] = await Promise.all([
-    prisma.researchGroup.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    }),
-    prisma.researchGroupStudyProgram.updateMany({
-      where: { researchGroupId: id, deletedAt: null },
-      data: { deletedAt: new Date() },
-    }),
-  ]);
+  const deletedResearchGroup = await researchGroupService.deleteResearchGroup(
+    req.params.id,
+  );
 
   res.json({
     message: "Research group deleted successfully",
-    data: deletedResearchGroup,
+    data: mapResearchGroup(deletedResearchGroup),
   });
 });
 
 // Toggle Status Aktif (isActive)
 const toggleResearchGroupActive = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const researchGroup = await prisma.researchGroup.findFirst({
-    where: { id, deletedAt: null },
-  });
-
-  if (!researchGroup) {
-    res.status(404);
-    throw new Error("Kelompok keahlian tidak ditemukan");
-  }
-
-  const nextStatus = !researchGroup.isActive;
-
-  const updatedResearchGroup = await prisma.researchGroup.update({
-    where: { id },
-    data: { isActive: nextStatus },
-  });
+  const { nextStatus, researchGroup } =
+    await researchGroupService.toggleResearchGroupActive(req.params.id);
 
   res.json({
     message: `Research group ${nextStatus ? "activated" : "deactivated"} successfully`,
-    data: updatedResearchGroup,
+    data: mapResearchGroup(researchGroup),
   });
 });
 

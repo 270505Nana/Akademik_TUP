@@ -1,5 +1,5 @@
 import { mapMahasiswa, mapDosen } from "./userMapper.js";
-import { mapRuangan } from "./masterDataMapper.js";
+import { mapRuangan } from "./ruanganMapper.js";
 
 export const mapPenjadwalanSidangToFrontend = (item) => {
   if (!item) return null;

@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
 import {
   createRuangan,
@@ -6,10 +6,16 @@ import {
   getRuanganById,
   updateRuangan,
   deleteRuangan,
-} from '../../controllers/ruanganController.js';
+} from "../../controllers/ruanganController.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  createRuanganSchema,
+  updateRuanganSchema,
+  listRuanganQuerySchema,
+} from "../../schemas/index.js";
 
 /**
  * @swagger
@@ -32,6 +38,9 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - gedung
  *             properties:
  *               name:
  *                 type: string
@@ -39,13 +48,22 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *               gedung:
  *                 type: string
  *                 example: "Gedung IoT"
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
  *     responses:
  *       201:
  *         description: Data ruangan berhasil ditambahkan
  *       400:
  *         description: Nama ruangan dan gedung wajib diisi
  */
-router.post('/', verifyToken, isAdmin, createRuangan);
+router.post(
+  "/",
+  verifyToken,
+  isAdmin,
+  validate(createRuanganSchema),
+  createRuangan,
+);
 
 /**
  * @swagger
@@ -55,11 +73,46 @@ router.post('/', verifyToken, isAdmin, createRuangan);
  *     tags: [Ruangan]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Keyword pencarian berdasarkan nama ruangan atau gedung
+ *       - in: query
+ *         name: gedung
+ *         schema:
+ *           type: string
+ *         description: Filter berdasarkan nama gedung
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter status aktif (true/false)
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [name, gedung, isActive, createdAt]
+ *           default: gedung
+ *         description: Field untuk sorting
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Arah sorting (asc atau desc)
  *     responses:
  *       200:
  *         description: Berhasil mengambil data ruangan
  */
-router.get('/', verifyToken, getRuangans);
+router.get(
+  "/",
+  verifyToken,
+  validate(listRuanganQuerySchema, "query"),
+  getRuangans,
+);
 
 /**
  * @swagger
@@ -82,7 +135,7 @@ router.get('/', verifyToken, getRuangans);
  *       404:
  *         description: Data ruangan tidak ditemukan
  */
-router.get('/:id', verifyToken, getRuanganById);
+router.get("/:id", verifyToken, getRuanganById);
 
 /**
  * @swagger
@@ -121,7 +174,13 @@ router.get('/:id', verifyToken, getRuanganById);
  *       404:
  *         description: Data ruangan tidak ditemukan
  */
-router.put('/:id', verifyToken, isAdmin, updateRuangan);
+router.put(
+  "/:id",
+  verifyToken,
+  isAdmin,
+  validate(updateRuanganSchema),
+  updateRuangan,
+);
 
 /**
  * @swagger
@@ -144,6 +203,6 @@ router.put('/:id', verifyToken, isAdmin, updateRuangan);
  *       404:
  *         description: Data ruangan tidak ditemukan
  */
-router.delete('/:id', verifyToken, isAdmin, deleteRuangan);
+router.delete("/:id", verifyToken, isAdmin, deleteRuangan);
 
 export default router;

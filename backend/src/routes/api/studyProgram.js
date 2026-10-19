@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 
 const router = express.Router();
 
@@ -9,10 +9,16 @@ import {
   updateStudyProgram,
   deleteStudyProgram,
   toggleStudyProgramActive,
-} from '../../controllers/studyProgramController.js';
+} from "../../controllers/studyProgramController.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { isAdmin, authorize } from '../../middlewares/authorize.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listStudyProgramQuerySchema,
+  createStudyProgramSchema,
+  updateStudyProgramSchema,
+} from "../../schemas/index.js";
 
 /**
  * @swagger
@@ -44,13 +50,21 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *         name: facultyId
  *         schema:
  *           type: string
- *         description: Filter by Faculty UUID or Name
+ *         description: Filter by Faculty UUID
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [nameAsc, nameDesc, facultyAsc, facultyDesc, activeInactive, inactiveActive, newest, oldest]
- *         description: Sort study programs by name (nameAsc, nameDesc), faculty (facultyAsc, facultyDesc), status (activeInactive, inactiveActive), or creation time (newest, oldest)
+ *           enum: [name, faculty, isActive, createdAt]
+ *           default: name
+ *         description: Field to sort study programs by (name, faculty, isActive, or createdAt)
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort order direction (asc or desc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -72,7 +86,12 @@ import { isAdmin, authorize } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listStudyPrograms);
+router.get(
+  "/",
+  verifyToken,
+  validate(listStudyProgramQuerySchema, "query"),
+  listStudyPrograms,
+);
 
 /**
  * @swagger
@@ -118,7 +137,8 @@ router.get("/", verifyToken, listStudyPrograms);
 router.post(
   "/",
   verifyToken,
-  authorize("ADMIN"),
+  isAdmin,
+  validate(createStudyProgramSchema),
   createStudyProgram,
 );
 
@@ -192,7 +212,8 @@ router.get("/:id", verifyToken, findStudyProgramById);
 router.put(
   "/:id",
   verifyToken,
-  authorize("ADMIN"),
+  isAdmin,
+  validate(updateStudyProgramSchema),
   updateStudyProgram,
 );
 
@@ -221,12 +242,7 @@ router.put(
  *       404:
  *         description: Study program not found
  */
-router.delete(
-  "/:id",
-  verifyToken,
-  authorize("ADMIN"),
-  deleteStudyProgram,
-);
+router.delete("/:id", verifyToken, isAdmin, deleteStudyProgram);
 
 /**
  * @swagger
@@ -256,7 +272,7 @@ router.delete(
 router.patch(
   "/:id/toggle-active",
   verifyToken,
-  authorize("ADMIN"),
+  isAdmin,
   toggleStudyProgramActive,
 );
 
