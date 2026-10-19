@@ -6,13 +6,16 @@ import {
   toggleKetuaKK,
   uploadSignature,
   deleteSignature,
+  getDosenDashboard,
 } from "../../controllers/dosenController.js";
-import { getDosenDashboard } from "../../controllers/dashboardController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { isAdmin, isDosen } from "../../middlewares/authorize.js";
 import { upload } from "../../middlewares/upload.js";
 import { validate } from "../../middlewares/validate.js";
-import { upsertDosenSchema } from "../../schemas/index.js";
+import {
+  upsertDosenSchema,
+  listDosenQuerySchema,
+} from "../../schemas/dosenSchema.js";
 
 const router = express.Router();
 
@@ -51,8 +54,14 @@ const router = express.Router();
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [nameAsc, nameDesc, researchGroupAsc, researchGroupDesc, newest, oldest]
- *         description: Sort dosen by name (nameAsc, nameDesc), research group (researchGroupAsc, researchGroupDesc), or creation time (newest, oldest)
+ *           enum: [name, nip, nidn, kodeDosen, researchGroup, createdAt]
+ *         description: Nama kolom target sorting (default adalah createdAt)
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *         description: Arah sorting (asc atau desc, default adalah desc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -69,12 +78,14 @@ const router = express.Router();
  *                     type: object
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
+ *       400:
+ *         description: Validation error pada query parameters
  *       401:
  *         description: Token not found
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listDosens);
+router.get("/", verifyToken, validate(listDosenQuerySchema, "query"), listDosens);
 
 /**
  * @swagger

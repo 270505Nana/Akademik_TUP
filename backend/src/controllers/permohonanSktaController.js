@@ -4,14 +4,10 @@ import {
   getPaginationParams,
   formatPaginationResponse,
 } from "../utils/paginationHelper.js";
-import {
-  sendValidationError,
-  isNil,
-  isValidISO8601,
-} from "../utils/validationHelper.js";
+import { sendValidationError } from "../utils/validationHelper.js";
 import { serveDownload, getFileStream } from "../services/storageService.js";
 import { mapPermohonanToFrontend } from "../mappers/index.js";
-import * as sktaService from "../services/sktaService.js";
+import * as permohonanSktaService from "../services/permohonanSktaService.js";
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
 
@@ -26,7 +22,7 @@ const buildDownloadUrl = (req, berkasId) => {
 const listPermohonanSkta = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
   const { total, data } =
-    await sktaService.getPermohonanSktas(paginationParams);
+    await permohonanSktaService.getPermohonanSktas(paginationParams);
   const enriched = data.map((item) => mapPermohonanToFrontend(item, req));
   res.json(formatPaginationResponse(enriched, total, paginationParams));
 });
@@ -35,20 +31,20 @@ const listPermohonanSkta = asyncHandler(async (req, res) => {
  * [Route] Menyimpan Draft Permohonan SKTA (Save Draft)
  */
 const createPermohonanSkta = asyncHandler(async (req, res) => {
-  const category =
-    req.query.category || req.body.category || "Permohonan Baru";
   const {
     id,
     mahasiswaId,
+    category = "Permohonan Baru",
     judulProposalIndonesia,
     judulProposalInggris,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
+    researchGroupId,
   } = req.body;
 
   const evidenceFile = getUploadedFile(req.files, "evidence");
 
-  const permohonan = await sktaService.saveDraftPermohonanSkta({
+  const permohonan = await permohonanSktaService.saveDraftPermohonanSkta({
     id,
     mahasiswaId,
     category,
@@ -56,6 +52,7 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
     judulProposalInggris,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
+    researchGroupId,
     evidenceFile,
   });
 
@@ -69,60 +66,21 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
  * [Route] Submit Permohonan SKTA
  */
 const submitPermohonanSkta = asyncHandler(async (req, res) => {
-  const category =
-    req.query.category || req.body.category || "Permohonan Baru";
   const {
     id,
     mahasiswaId,
+    category = "Permohonan Baru",
     judulProposalIndonesia,
     judulProposalInggris,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
+    researchGroupId,
   } = req.body;
 
   const evidenceFile = getUploadedFile(req.files, "evidence");
 
-  const errors = [];
-  if (isNil(id)) {
-    errors.push({ field: "id", message: "ID wajib diisi untuk submit" });
-  } else if (typeof id !== "string") {
-    errors.push({ field: "id", message: "ID harus berupa string" });
-  }
-
-  if (isNil(mahasiswaId)) {
-    errors.push({ field: "mahasiswaId", message: "Mahasiswa ID wajib diisi" });
-  }
-  if (isNil(judulProposalIndonesia)) {
-    errors.push({
-      field: "judulProposalIndonesia",
-      message: "Judul proposal (Indonesia) wajib diisi",
-    });
-  }
-  if (isNil(judulProposalInggris)) {
-    errors.push({
-      field: "judulProposalInggris",
-      message: "Judul proposal (Inggris) wajib diisi",
-    });
-  }
-  if (isNil(dosenPembimbing1Id)) {
-    errors.push({
-      field: "dosenPembimbing1Id",
-      message: "Dosen Pembimbing 1 wajib diisi",
-    });
-  }
-  if (isNil(dosenPembimbing2Id)) {
-    errors.push({
-      field: "dosenPembimbing2Id",
-      message: "Dosen Pembimbing 2 wajib diisi",
-    });
-  }
-
-  if (errors.length > 0) {
-    return sendValidationError(res, errors, req);
-  }
-
   try {
-    const result = await sktaService.submitPermohonanSkta({
+    const result = await permohonanSktaService.submitPermohonanSkta({
       id,
       mahasiswaId,
       category,
@@ -130,6 +88,7 @@ const submitPermohonanSkta = asyncHandler(async (req, res) => {
       judulProposalInggris,
       dosenPembimbing1Id,
       dosenPembimbing2Id,
+      researchGroupId,
       evidenceFile,
     });
 
@@ -155,15 +114,17 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
     judulProposalInggris,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
+    researchGroupId,
   } = req.body;
 
   const evidenceFile = getUploadedFile(req.files, "evidence");
 
-  const data = await sktaService.updatePermohonanSktaData(id, {
+  const data = await permohonanSktaService.updatePermohonanSktaData(id, {
     judulProposalIndonesia,
     judulProposalInggris,
     dosenPembimbing1Id,
     dosenPembimbing2Id,
+    researchGroupId,
     evidenceFile,
   });
 
@@ -178,7 +139,7 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
  */
 const getPermohonanSktaById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const data = await sktaService.getPermohonanSktaById(id);
+  const data = await permohonanSktaService.getPermohonanSktaById(id);
 
   if (!data) {
     res.status(404);
@@ -199,7 +160,7 @@ const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
     throw new Error("ID mahasiswa atau sesi login tidak valid");
   }
 
-  const data = await sktaService.getLatestPermohonanByMahasiswaId(targetId);
+  const data = await permohonanSktaService.getLatestPermohonanByMahasiswaId(targetId);
 
   if (!data) {
     res.status(404);
@@ -214,7 +175,7 @@ const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
  */
 const downloadSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const downloadInfo = await sktaService.getSktaDownloadInfo(id);
+  const downloadInfo = await permohonanSktaService.getSktaDownloadInfo(id);
 
   await serveDownload(res, downloadInfo);
 });
@@ -224,7 +185,7 @@ const downloadSkta = asyncHandler(async (req, res) => {
  */
 const downloadEvidence = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const downloadInfo = await sktaService.getEvidenceDownloadInfo(id);
+  const downloadInfo = await permohonanSktaService.getEvidenceDownloadInfo(id);
 
   await serveDownload(res, downloadInfo);
 });
@@ -239,7 +200,7 @@ const approvePermohonanSkta = asyncHandler(async (req, res) => {
 
   const sktaFile = getUploadedFile(req.files, "skta");
 
-  const data = await sktaService.approvePermohonanSkta({
+  const data = await permohonanSktaService.approvePermohonanSkta({
     id,
     hasUploadedFinalProposal,
     hasTakenLanguageTest,
@@ -262,25 +223,7 @@ const rejectPermohonanSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { message, adminId, isEdit } = req.body;
 
-  const errors = [];
-  if (isNil(adminId)) {
-    errors.push({ field: "adminId", message: "ID staf akademik wajib diisi" });
-  }
-  if (isNil(message)) {
-    errors.push({ field: "message", message: "Pesan penolakan wajib diisi" });
-  }
-  if (!isNil(isEdit) && !isValidISO8601(isEdit)) {
-    errors.push({
-      field: "isEdit",
-      message: "isEdit harus berupa tanggal yang valid (format ISO 8601)",
-    });
-  }
-
-  if (errors.length > 0) {
-    return sendValidationError(res, errors);
-  }
-
-  const data = await sktaService.rejectPermohonanSkta({
+  const data = await permohonanSktaService.rejectPermohonanSkta({
     id,
     message,
     adminId,
@@ -301,7 +244,7 @@ const generateDokumenValidasiSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const existingBerkas =
-    await sktaService.getBerkasByPermohonanIdAndCategory({
+    await permohonanSktaService.getBerkasByPermohonanIdAndCategory({
       permohonanId: id,
       category: "Dokumen Validasi Skta",
       notFoundMessage: "Berkas validasi SKTA belum ditemukan di database",
@@ -337,7 +280,7 @@ const uploadDokumenValidasiSkta = asyncHandler(async (req, res) => {
     throw new Error("Tipe file tidak valid (hanya diperbolehkan PDF)");
   }
 
-  const berkasRecord = await sktaService.uploadBerkasMahasiswaForSkta({
+  const berkasRecord = await permohonanSktaService.uploadBerkasMahasiswaForSkta({
     permohonanId: id,
     category: "Dokumen Validasi Skta",
     file,
@@ -360,7 +303,7 @@ const generateFormulirSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const existingBerkas =
-    await sktaService.getBerkasByPermohonanIdAndCategory({
+    await permohonanSktaService.getBerkasByPermohonanIdAndCategory({
       permohonanId: id,
       category: "Formulir Penerbitan Skta",
       notFoundMessage: "Berkas formulir SKTA belum ditemukan di database",
@@ -396,7 +339,7 @@ const uploadFormulirSkta = asyncHandler(async (req, res) => {
     throw new Error("Tipe file tidak valid (hanya diperbolehkan PDF)");
   }
 
-  const berkasRecord = await sktaService.uploadBerkasMahasiswaForSkta({
+  const berkasRecord = await permohonanSktaService.uploadBerkasMahasiswaForSkta({
     permohonanId: id,
     category: "Formulir Penerbitan Skta",
     file,
@@ -417,7 +360,7 @@ const uploadFormulirSkta = asyncHandler(async (req, res) => {
  */
 const downloadValidasi = asyncHandler(async (req, res) => {
   const { berkasId } = req.params;
-  const upload = await sktaService.getBerkasMahasiswaById(berkasId);
+  const upload = await permohonanSktaService.getBerkasMahasiswaById(berkasId);
 
   await serveDownload(res, {
     filepath: upload.filepath,
@@ -434,18 +377,16 @@ const exportSktaZip = asyncHandler(async (req, res) => {
     startDate,
     endDate,
     dateField = "createdAt",
-    studyProgram,
     studyProgramId,
     tahunAngkatan,
     kelasAsal,
     category,
   } = req.query;
 
-  const validFiles = await sktaService.getSktaFilesForExport({
+  const validFiles = await permohonanSktaService.getSktaFilesForExport({
     startDate,
     endDate,
     dateField,
-    studyProgram,
     studyProgramId,
     tahunAngkatan,
     kelasAsal,

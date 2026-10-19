@@ -9,13 +9,14 @@ import {
 // Daftar Semua Dosen (dengan search, filter, sort, dan pagination)
 export const listDosens = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search, researchGroupId, studyProgramId, sortBy } = req.query;
+  const { search, researchGroupId, studyProgramId, sortBy, sortOrder } = req.query;
 
   const { total, dosens } = await dosenService.getDosens({
     search,
     researchGroupId,
     studyProgramId,
     sortBy,
+    sortOrder,
     ...paginationParams,
   });
 
@@ -63,5 +64,14 @@ export const deleteSignature = asyncHandler(async (req, res) => {
   res.json({
     message: "Tanda tangan berhasil dihapus",
     data: mapDosen(dosen),
+  });
+});
+
+// Dashboard Dosen
+export const getDosenDashboard = asyncHandler(async (req, res) => {
+  const data = await dosenService.getDosenDashboardData(req.user.id);
+  res.json({
+    message: "Dosen dashboard data retrieved successfully",
+    data,
   });
 });

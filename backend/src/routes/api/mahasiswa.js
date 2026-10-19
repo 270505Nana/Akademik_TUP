@@ -3,11 +3,14 @@ import {
   listMahasiswa,
   upsertMahasiswa,
   findMahasiswaById,
+  getMahasiswaDashboard,
 } from "../../controllers/mahasiswaController.js";
-import { getMahasiswaDashboard } from "../../controllers/dashboardController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { validate } from "../../middlewares/validate.js";
-import { upsertMahasiswaSchema } from "../../schemas/index.js";
+import {
+  upsertMahasiswaSchema,
+  listMahasiswaQuerySchema,
+} from "../../schemas/index.js";
 
 const router = express.Router();
 
@@ -27,6 +30,35 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Keyword pencarian berdasarkan nama, NIM, atau kelas asal
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: string
+ *         description: Filter berdasarkan ID Program Studi
+ *       - in: query
+ *         name: tahunAngkatan
+ *         schema:
+ *           type: integer
+ *         description: Filter berdasarkan tahun angkatan
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, name, nim, kelasAsal, tahunAngkatan, ipk, sks, tak]
+ *           default: createdAt
+ *         description: Field untuk sorting
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Arah sorting (asc atau desc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -48,7 +80,12 @@ const router = express.Router();
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listMahasiswa);
+router.get(
+  "/",
+  verifyToken,
+  validate(listMahasiswaQuerySchema, "query"),
+  listMahasiswa,
+);
 
 /**
  * @swagger

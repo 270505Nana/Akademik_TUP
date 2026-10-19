@@ -6,7 +6,8 @@ export const getDosens = async ({
   search,
   researchGroupId,
   studyProgramId,
-  sortBy,
+  sortBy = "createdAt",
+  sortOrder = "desc",
   skip,
   take,
 }) => {
@@ -34,19 +35,22 @@ export const getDosens = async ({
   }
 
   // Sort
-  const sortParam = (sortBy || "").toLowerCase().trim();
-  let orderBy = { createdAt: "desc" };
+  const orderDirection = (sortOrder || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+  const sortField = (sortBy || "createdAt").trim();
+  let orderBy = { createdAt: orderDirection };
 
-  if (sortParam === "nameasc" || sortParam === "a-z") {
-    orderBy = { name: "asc" };
-  } else if (sortParam === "namedesc" || sortParam === "z-a") {
-    orderBy = { name: "desc" };
-  } else if (sortParam === "researchgroupasc") {
-    orderBy = { researchGroup: { name: "asc" } };
-  } else if (sortParam === "researchgroupdesc") {
-    orderBy = { researchGroup: { name: "desc" } };
-  } else if (sortParam === "oldest") {
-    orderBy = { createdAt: "asc" };
+  if (sortField === "name") {
+    orderBy = { name: orderDirection };
+  } else if (sortField === "nip") {
+    orderBy = { nip: orderDirection };
+  } else if (sortField === "nidn") {
+    orderBy = { nidn: orderDirection };
+  } else if (sortField === "kodeDosen") {
+    orderBy = { kodeDosen: orderDirection };
+  } else if (sortField === "researchGroup") {
+    orderBy = { researchGroup: { name: orderDirection } };
+  } else if (sortField === "createdAt") {
+    orderBy = { createdAt: orderDirection };
   }
 
   const [total, dosens] = await Promise.all([
@@ -191,6 +195,15 @@ export const uploadSignature = async (userId, file) => {
     throw error;
   }
 
+  const allowedMimeTypes = ["image/png", "image/jpeg", "image/jpg"];
+  if (!allowedMimeTypes.includes(file.mimetype)) {
+    const error = new Error(
+      "Tipe file tidak valid (hanya diperbolehkan PNG, JPG, JPEG)",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
   const dosen = await prisma.dosen.findUnique({
     where: { userId },
     include: { user: true, researchGroup: true, studyProgram: true },
@@ -261,4 +274,123 @@ export const toggleKetuaKK = async (idOrUserId) => {
     data: { isKetuaKK: !dosen.isKetuaKK },
     include: { user: true, researchGroup: true, studyProgram: true },
   });
+};
+
+export const getDosenDashboardData = async (userId) => {
+  const dosen = await prisma.dosen.findUnique({
+    where: { userId, deletedAt: null },
+  });
+
+  if (!dosen) {
+    const error = new Error("Data Dosen tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // 1. Total Mahasiswa Bimbingan
+  const totalMahasiswaBimbingan = await prisma.sidangRegistration.count({
+    where: {
+      deletedAt: null,
+      OR: [{ dosenPembimbing1Id: dosen.id }, { dosenPembimbing2Id: dosen.id }],
+    },
+  });
+
+  // 2. Total Mahasiswa Siap Sidang
+  const totalMahasiswaSiapSidang = await prisma.sidangRegistration.count({
+    where: {
+      deletedAt: null,
+      OR: [{ dosenPenguji1Id: dosen.id }, { dosenPenguji2Id: dosen.id }],
+    },
+  });
+
+  // 3. Jadwal Sidang Hari Ini & Mendatang
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const dosenSidangCondition = {
+    deletedAt: null,
+    dosenPenguji1Id: { not: null },
+    dosenPenguji2Id: { not: null },
+    ruanganSidangId: { not: null },
+    tglSidang: { not: null },
+    OR: [
+      { dosenPembimbing1Id: dosen.id },
+      { dosenPembimbing2Id: dosen.id },
+      { dosenPenguji1Id: dosen.id },
+      { dosenPenguji2Id: dosen.id },
+    ],
+  };
+
+  const includeConfig = {
+    mahasiswa: {
+      include: {
+        studyProgram: true,
+      },
+    },
+    ruanganSidang: true,
+  };
+
+  const todaySidangList = await prisma.sidangRegistration.findMany({
+    where: {
+      ...dosenSidangCondition,
+      tglSidang: {
+        gte: startOfToday,
+        lte: endOfToday,
+      },
+    },
+    orderBy: { tglSidang: "asc" },
+    include: includeConfig,
+  });
+
+  let combinedSidangList = [...todaySidangList];
+
+  if (combinedSidangList.length < 3) {
+    const startOfTomorrow = new Date(startOfToday);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
+    const needed = 3 - combinedSidangList.length;
+
+    const upcomingSidangList = await prisma.sidangRegistration.findMany({
+      where: {
+        ...dosenSidangCondition,
+        tglSidang: {
+          gte: startOfTomorrow,
+        },
+      },
+      orderBy: { tglSidang: "asc" },
+      take: needed,
+      include: includeConfig,
+    });
+
+    combinedSidangList.push(...upcomingSidangList);
+  }
+
+  const jadwalSidang = combinedSidangList.map((sidang) => {
+    let position = "";
+    if (sidang.dosenPenguji1Id === dosen.id) position = "Penguji 1";
+    else if (sidang.dosenPenguji2Id === dosen.id) position = "Penguji 2";
+    else if (sidang.dosenPembimbing1Id === dosen.id) position = "Pembimbing 1";
+    else if (sidang.dosenPembimbing2Id === dosen.id) position = "Pembimbing 2";
+
+    return {
+      id: sidang.id,
+      name:
+        sidang.mahasiswa?.name || `Mahasiswa #${sidang.mahasiswa?.nim || ""}`,
+      nim: sidang.mahasiswa?.nim || "-",
+      studyProgram: sidang.mahasiswa?.studyProgram?.name || "-",
+      position,
+      ruangan: sidang.ruanganSidang?.name || "Ruangan Belum Ditentukan",
+      tglSidang: sidang.tglSidang,
+    };
+  });
+
+  return {
+    totalMahasiswaBimbingan,
+    totalMahasiswaSiapSidang,
+    totalNilaiBelumDiinput: 0,
+    jadwalSidang,
+  };
 };
