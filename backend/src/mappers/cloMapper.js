@@ -1,21 +1,7 @@
 import { mapStudyProgram } from "./studyProgramMapper.js";
+import { mapSubclo } from "./subcloMapper.js";
 
-/**
- * Mapper untuk Sub CLO
- */
-export const mapSubclo = (subclo) => {
-  if (!subclo) return null;
-
-  return {
-    id: subclo.id,
-    name: subclo.name,
-    description: subclo.description,
-    cloProdiId: subclo.cloProdiId,
-    createdAt: subclo.createdAt,
-    updatedAt: subclo.updatedAt,
-    deletedAt: subclo.deletedAt ?? null,
-  };
-};
+export { mapSubclo };
 
 /**
  * Mapper untuk CLO (Course Learning Outcomes)

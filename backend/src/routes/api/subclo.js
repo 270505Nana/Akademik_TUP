@@ -1,17 +1,21 @@
-import express from 'express';
-
-const router = express.Router();
-
+import express from "express";
 import {
   createSubcloProdi,
   getSubcloProdis,
   getSubcloProdiById,
   updateSubcloProdi,
   deleteSubcloProdi,
-} from '../../controllers/subCloController.js';
+} from "../../controllers/subCloController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listSubcloQuerySchema,
+  createSubcloSchema,
+  updateSubcloSchema,
+} from "../../schemas/subcloSchema.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
+const router = express.Router();
 
 /**
  * @swagger
@@ -24,7 +28,7 @@ import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
  * @swagger
  * /api/subclo:
  *   get:
- *     summary: Get all Sub CLO data
+ *     summary: Get all Sub CLO data (with filter, sort, and pagination)
  *     tags: [Sub CLO]
  *     security:
  *       - bearerAuth: []
@@ -33,17 +37,42 @@ import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
  *         name: search
  *         schema:
  *           type: string
+ *         description: Search by Sub CLO name or description
  *       - in: query
  *         name: cloProdiId
  *         schema:
  *           type: string
+ *         description: Filter by Parent CLO ID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [name, createdAt]
+ *           default: name
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
  *         description: Sub CLO retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token or access denied
  */
-router.get("/", verifyToken, getSubcloProdis);
+router.get(
+  "/",
+  verifyToken,
+  validate(listSubcloQuerySchema, "query"),
+  getSubcloProdis
+);
 
 /**
  * @swagger
@@ -69,15 +98,30 @@ router.get("/", verifyToken, getSubcloProdis);
  *                 example: Sub CLO 5.1.1
  *               description:
  *                 type: string
+ *                 example: Mampu menyusun materi presentasi teknis.
  *               cloProdiId:
  *                 type: string
  *     responses:
  *       201:
- *         description: Sub CLO created successfully
+ *         description: Sub CLO created successfully (Admin / Ketua KK)
+ *       202:
+ *         description: Approval request submitted successfully (Ketua Prodi)
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
+ *       404:
+ *         description: CLO tidak ditemukan
  */
-router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createSubcloProdi);
+router.post(
+  "/",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(createSubcloSchema),
+  createSubcloProdi
+);
 
 /**
  * @swagger
@@ -93,11 +137,16 @@ router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createSubcloProdi);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Sub CLO UUID
  *     responses:
  *       200:
- *         description: Success
+ *         description: Sub CLO retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied
  *       404:
- *         description: CLO not found
+ *         description: Sub clo tidak ditemukan
  */
 router.get("/:id", verifyToken, getSubcloProdiById);
 
@@ -128,17 +177,33 @@ router.get("/:id", verifyToken, getSubcloProdiById);
  *                 type: string
  *     responses:
  *       200:
- *         description: Updated successfully
+ *         description: Sub CLO updated successfully (Admin/Ketua KK) or existing request updated (Ketua Prodi)
+ *       202:
+ *         description: Approval request submitted successfully (Ketua Prodi)
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
  *       403:
- *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
+ *         description: Access denied
+ *       404:
+ *         description: Sub clo tidak ditemukan
+ *       409:
+ *         description: Pending approval request conflict
  */
-router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateSubcloProdi);
+router.put(
+  "/:id",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(updateSubcloSchema),
+  updateSubcloProdi
+);
 
 /**
  * @swagger
  * /api/subclo/{id}:
  *   delete:
- *     summary: Delete Sub CLO (Admin, Ketua KK, atau Ketua Prodi)
+ *     summary: Delete Sub CLO (soft delete) (Admin, Ketua KK, atau Ketua Prodi)
  *     tags: [Sub CLO]
  *     security:
  *       - bearerAuth: []
@@ -150,10 +215,23 @@ router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateSubcloProdi)
  *           type: string
  *     responses:
  *       200:
- *         description: Deleted successfully
+ *         description: Sub CLO deleted successfully (Admin/Ketua KK) or existing request updated to delete (Ketua Prodi)
+ *       202:
+ *         description: Delete approval request submitted successfully (Ketua Prodi)
+ *       401:
+ *         description: Token not found
  *       403:
- *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
+ *         description: Access denied
+ *       404:
+ *         description: Sub clo tidak ditemukan
+ *       409:
+ *         description: Pending approval request conflict
  */
-router.delete("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, deleteSubcloProdi);
+router.delete(
+  "/:id",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  deleteSubcloProdi
+);
 
-export default router;
+export default router;
