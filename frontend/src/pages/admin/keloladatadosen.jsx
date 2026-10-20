@@ -1,18 +1,22 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';import {
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
   Search, ChevronLeft, ChevronRight, Menu,
   Users, Settings2, X, AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+import api, { getAllDosen, getResearchGroups, getStudyPrograms, createResearchGroup, updateResearchGroup, deleteResearchGroup } from '../../service/api';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
 import KelolaKKModal from '../../components/common/KelolaKKModal';
-import { getAllDosen, getResearchGroups, toggleDosenKetuaKK, updateDosenKK, createResearchGroup, updateResearchGroup, deleteResearchGroup } from '../../service/api';
 import '../../style/css/admin/keloladatadosen.css';
 
 const PAGE_SIZE = 10;
 
+const KAUR_OPTIONS = [
+  { value: 'Kepala Urusan Akademik Fakultas Informatika', label: 'Kepala Urusan Akademik Fakultas Informatika' },
 
+];
 
 const ToggleSwitch = ({ checked, onChange, disabled }) => (
   <button
@@ -25,12 +29,21 @@ const ToggleSwitch = ({ checked, onChange, disabled }) => (
   </button>
 );
 
-// Catatan investigasi: BE sudah menangani aturan "satu ketua per KK" via Prisma transaction
-const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave, isSaving }) => {
+const EditDosenModal = ({ dosen, researchGroups, studyPrograms, dosenList, onClose, onSave, isSaving }) => {
+  // State KK
   const [isKetuaKK, setIsKetuaKK] = useState(dosen.isKetuaKK);
   const [researchGroupId, setResearchGroupId] = useState(dosen.researchGroupId);
-  const [warning, setWarning] = useState(null);
-  const currentKetua = useMemo(() => {
+  const [warningKK, setWarningKK] = useState(null);
+
+  // State Prodi & Kaprodi
+  const [isKetuaProdi, setIsKetuaProdi] = useState(dosen.isKetuaProdi);
+  const [studyProgramId, setStudyProgramId] = useState(dosen.studyProgramId);
+  const [warningProdi, setWarningProdi] = useState(null);
+
+  const [isKepalaUrusanAkademik, setIsKepalaUrusanAkademik] = useState(dosen.isKepalaUrusanAkademik ?? '');
+
+  // Validasi 1 KK = 1 Ketua
+  const currentKetuaKK = useMemo(() => {
     return dosenList.find(d =>
       d.id !== dosen.id &&
       d.researchGroupId === researchGroupId &&
@@ -38,27 +51,66 @@ const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave, isS
     ) || null;
   }, [dosenList, dosen.id, researchGroupId]);
 
-  const handleToggleKetua = (nextValue) => {
-    if (nextValue && currentKetua) {
-      setWarning(`Tidak bisa, KK ini sudah memiliki ketua: ${currentKetua.nama}`);
+  // Validasi 1 Prodi = 1 Kaprodi
+  const currentKaprodi = useMemo(() => {
+    return dosenList.find(d =>
+      d.id !== dosen.id &&
+      d.studyProgramId === studyProgramId &&
+      d.isKetuaProdi
+    ) || null;
+  }, [dosenList, dosen.id, studyProgramId]);
+
+  const handleToggleKetuaKK = (nextValue) => {
+    if (nextValue && currentKetuaKK) {
+      setWarningKK(`Tidak bisa, KK ini sudah memiliki ketua: ${currentKetuaKK.nama}`);
       return;
     }
-    setWarning(null);
+    setWarningKK(null);
     setIsKetuaKK(nextValue);
   };
 
   const handleKKChange = (newGroupId) => {
     setResearchGroupId(newGroupId);
-    setWarning(null);
+    setWarningKK(null);
     if (isKetuaKK) setIsKetuaKK(false);
   };
 
-  const handleSubmit = () => {
-    if (isKetuaKK && currentKetua) {
-      setWarning(`Tidak bisa, KK ini sudah memiliki ketua: ${currentKetua.nama}`);
+  const handleToggleKaprodi = (nextValue) => {
+    if (!studyProgramId) {
+      setWarningProdi('Pilih Program Studi terlebih dahulu.');
       return;
     }
-    onSave(dosen.id, { isKetuaKK, researchGroupId });
+    if (nextValue && currentKaprodi) {
+      setWarningProdi(`Tidak bisa, Prodi ini sudah memiliki Kaprodi: ${currentKaprodi.nama}`);
+      return;
+    }
+    setWarningProdi(null);
+    setIsKetuaProdi(nextValue);
+  };
+
+  const handleProdiChange = (newProdiId) => {
+    setStudyProgramId(newProdiId);
+    setWarningProdi(null);
+    if (isKetuaProdi) setIsKetuaProdi(false);
+  };
+
+  const handleSubmit = () => {
+    if (isKetuaKK && currentKetuaKK) {
+      setWarningKK(`Tidak bisa, KK ini sudah memiliki ketua: ${currentKetuaKK.nama}`);
+      return;
+    }
+    if (isKetuaProdi && currentKaprodi) {
+      setWarningProdi(`Tidak bisa, Prodi ini sudah memiliki Kaprodi: ${currentKaprodi.nama}`);
+      return;
+    }
+
+    onSave(dosen.id, { 
+      isKetuaKK, 
+      researchGroupId, 
+      isKetuaProdi, 
+      studyProgramId, 
+      isKepalaUrusanAkademik 
+    });
   };
 
   return (
@@ -80,13 +132,64 @@ const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave, isS
             <label className="dd-form-label">Nama Dosen</label>
             <div className="dd-form-static">
               {dosen.nama}
-              <div className="dd-form-sub">NIDN/NIP: {dosen.nip}</div>
+              <div className="dd-form-sub">NIDN/NIP: {dosen.nip || dosen.nidn || '-'}</div>
             </div>
           </div>
 
+          <hr className="dd-divider" />
+
+          {/* Section Prodi & Jabatan KAUR/Kaprodi */}
+          <div className="dd-form-group">
+            <label className="dd-form-label">Program Studi</label>
+            <select
+              className="dd-select"
+              value={studyProgramId ?? ''}
+              onChange={e => handleProdiChange(e.target.value)}
+              disabled={isSaving}
+            >
+              <option value="">— Pilih Program Studi —</option>
+              {studyPrograms.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="dd-form-group">
+            <div className="dd-toggle-row">
+              <div>
+                <div className="dd-toggle-label">Ketua Prodi (Kaprodi)</div>
+                <div className="dd-toggle-desc">Tandai dosen ini sebagai Kaprodi</div>
+              </div>
+              <ToggleSwitch checked={isKetuaProdi} onChange={handleToggleKaprodi} disabled={isSaving} />
+            </div>
+            {warningProdi && (
+              <div className="dd-toggle-warning">
+                <AlertTriangle size={14} className="dd-warning-icon" />
+                {warningProdi}
+              </div>
+            )}
+          </div>
+
+          <div className="dd-form-group">
+            <label className="dd-form-label">Kepala Urusan Akademik (KAUR)</label>
+            <select
+              className="dd-select"
+              value={isKepalaUrusanAkademik}
+              onChange={e => setIsKepalaUrusanAkademik(e.target.value)}
+              disabled={isSaving}
+            >
+              <option value="">— Bukan Kepala Urusan Akademik —</option>
+              {KAUR_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <hr className="dd-divider" />
+
+          {/* Section Kelompok Keahlian */}
           <div className="dd-form-group">
             <label className="dd-form-label">Kelompok Keahlian</label>
-            {/* PUT /api/dosen/:id kini dilindungi isAdmin — Admin bisa mengubah researchGroupId */}
             <select
               className="dd-select"
               value={researchGroupId ?? ''}
@@ -100,21 +203,22 @@ const EditDosenModal = ({ dosen, researchGroups, dosenList, onClose, onSave, isS
             </select>
           </div>
 
-          <div className="dd-form-group" style={{ marginBottom: 0 }}>
+          <div className="dd-form-group dd-mb-0">
             <div className="dd-toggle-row">
               <div>
                 <div className="dd-toggle-label">Ketua KK</div>
-                <div className="dd-toggle-desc">Tandai dosen ini sebagai ketua kelompok keahlian</div>
+                <div className="dd-toggle-desc">Tandai dosen ini sebagai ketua KK</div>
               </div>
-              <ToggleSwitch checked={isKetuaKK} onChange={handleToggleKetua} disabled={isSaving} />
+              <ToggleSwitch checked={isKetuaKK} onChange={handleToggleKetuaKK} disabled={isSaving} />
             </div>
-            {warning && (
+            {warningKK && (
               <div className="dd-toggle-warning">
-                <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                {warning}
+                <AlertTriangle size={14} className="dd-warning-icon" />
+                {warningKK}
               </div>
             )}
           </div>
+
         </div>
 
         <div className="dd-modal-footer">
@@ -133,7 +237,7 @@ const KelolaDataDosen = () => {
 
   const [dosenList, setDosenList] = useState([]);
   const [researchGroups, setResearchGroups] = useState([]);
-  // Server-side pagination state
+  const [studyPrograms, setStudyPrograms] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
 
   const [search, setSearch] = useState('');
@@ -152,7 +256,6 @@ const KelolaDataDosen = () => {
     setTimeout(() => setAlert(p => ({ ...p, show: false })), 3500);
   }, []);
 
-
   const fetchData = useCallback(async ({ page = 1, search: q = '', researchGroupId = '' } = {}) => {
     setIsLoadingData(true);
     try {
@@ -162,9 +265,10 @@ const KelolaDataDosen = () => {
         ...(q && { search: q }),
         ...(researchGroupId && { researchGroupId }),
       };
-      const [dosenRes, kkRaw] = await Promise.all([
+      const [dosenRes, kkRaw, prodiRaw] = await Promise.all([
         getAllDosen(params),
         getResearchGroups(),
+        getStudyPrograms().catch(() => [])
       ]);
 
       const rawList = Array.isArray(dosenRes?.data) ? dosenRes.data : [];
@@ -173,15 +277,20 @@ const KelolaDataDosen = () => {
       const mapped = rawList.map(d => ({
         id: d.id,
         nama: d.name,
-        nip: d.nip ?? d.nidn ?? '',
+        nip: d.nip ?? '',
+        nidn: d.nidn ?? '',
         kodeDosen: d.kodeDosen ?? '',
         researchGroupId: d.researchGroupId,
+        studyProgramId: d.studyProgramId,
         isKetuaKK: d.isKetuaKK ?? false,
+        isKetuaProdi: d.isKetuaProdi ?? false,
+        isKepalaUrusanAkademik: d.isKepalaUrusanAkademik ?? '',
       }));
 
       setDosenList(mapped);
       setTotalItems(pagination.total ?? rawList.length);
       setResearchGroups(Array.isArray(kkRaw) ? kkRaw : []);
+      setStudyPrograms(Array.isArray(prodiRaw) ? prodiRaw : []);
     } catch (err) {
       showAlert('error', 'Gagal Memuat Data', 'Tidak dapat mengambil data dosen. Coba muat ulang halaman.');
     } finally {
@@ -211,49 +320,51 @@ const KelolaDataDosen = () => {
     return researchGroups.find(g => g.id === id)?.name ?? '—';
   }, [researchGroups]);
 
+  const prodiNameById = useCallback((id) => {
+    return studyPrograms.find(p => p.id === id)?.name ?? '—';
+  }, [studyPrograms]);
+
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const paginated = dosenList;
 
-  const handleSaveDosen = async (dosenId, { isKetuaKK, researchGroupId }) => {
+  const handleSaveDosen = async (dosenId, payload) => {
     const original = dosenList.find(d => d.id === dosenId);
     if (!original) return;
 
-    const kkChanged = original.researchGroupId !== researchGroupId;
-    const ketuaChanged = original.isKetuaKK !== isKetuaKK;
+    const changed = 
+      original.researchGroupId !== payload.researchGroupId ||
+      original.isKetuaKK !== payload.isKetuaKK ||
+      original.studyProgramId !== payload.studyProgramId ||
+      original.isKetuaProdi !== payload.isKetuaProdi ||
+      original.isKepalaUrusanAkademik !== payload.isKepalaUrusanAkademik;
 
-    if (!kkChanged && !ketuaChanged) {
+    if (!changed) {
       setEditingDosen(null);
       return;
     }
 
     setIsSaving(true);
     try {
-      if (kkChanged) {
-        await updateDosenKK(dosenId, {
-          nip: original.nip,
-          name: original.nama,
-          researchGroupId: researchGroupId,
-          kodeDosen: original.kodeDosen,
-        });
-      }
-      if (ketuaChanged) {
-        await toggleDosenKetuaKK(dosenId);
-      }
-      await fetchData({ page: currentPage, search: searchDebounced, researchGroupId: filterKK });
+      await api.put(`/api/dosen/${dosenId}`, {
+        nip: original.nip,
+        nidn: original.nidn,
+        kodeDosen: original.kodeDosen,
+        name: original.nama,
+        researchGroupId: payload.researchGroupId || null,
+        studyProgramId: payload.studyProgramId || null,
+        isKetuaKK: payload.isKetuaKK,
+        isKetuaProdi: payload.isKetuaProdi,
+        isKepalaUrusanAkademik: payload.isKepalaUrusanAkademik || null
+      });
 
+      await fetchData({ page: currentPage, search: searchDebounced, researchGroupId: filterKK });
       setEditingDosen(null);
       showAlert('success', 'Berhasil', 'Data dosen berhasil diperbarui.');
     } catch (err) {
       const status = err?.response?.status;
-      if (status === 403) {
-        showAlert('error', 'Akses Ditolak', 'Anda tidak memiliki izin untuk mengubah data dosen.');
-      } else if (status === 404) {
-        showAlert('error', 'Data Tidak Ditemukan', 'Data dosen tidak ditemukan di server.');
-      } else if (status === 400) {
-        showAlert('error', 'Data Tidak Valid', 'Periksa kembali data yang diisi dan coba lagi.');
-      } else {
-        showAlert('error', 'Gagal Menyimpan', 'Terjadi kesalahan saat menyimpan perubahan. Silakan coba lagi.');
-      }
+      if (status === 403) showAlert('error', 'Akses Ditolak', 'Anda tidak memiliki izin untuk mengubah data dosen.');
+      else if (status === 400) showAlert('error', 'Data Tidak Valid', 'Periksa kembali data yang diisi dan coba lagi.');
+      else showAlert('error', 'Gagal Menyimpan', 'Terjadi kesalahan saat menyimpan perubahan. Silakan coba lagi.');
     } finally {
       setIsSaving(false);
     }
@@ -265,24 +376,17 @@ const KelolaDataDosen = () => {
       setResearchGroups(prev => prev.map(g => g.id === groupId ? { ...g, name: updated.name } : g));
       showAlert('success', 'Berhasil', 'Nama kelompok keahlian berhasil diperbarui.');
     } catch (err) {
-      const msg = err?.response?.data?.errors?.[0]?.message
-        ?? err?.response?.data?.message
-        ?? 'Terjadi kesalahan saat memperbarui nama KK.';
-      showAlert('error', 'Gagal Memperbarui', msg);
+      showAlert('error', 'Gagal Memperbarui', 'Terjadi kesalahan saat memperbarui nama KK.');
     }
   };
 
-  
   const handleCreateKK = async (name) => {
     try {
       const created = await createResearchGroup(name);
       setResearchGroups(prev => [...prev, created]);
       showAlert('success', 'Berhasil', 'Kelompok keahlian baru berhasil ditambahkan.');
     } catch (err) {
-      const msg = err?.response?.data?.errors?.[0]?.message
-        ?? err?.response?.data?.message
-        ?? 'Terjadi kesalahan saat membuat KK baru.';
-      showAlert('error', 'Gagal Membuat KK', msg);
+      showAlert('error', 'Gagal Membuat KK', 'Terjadi kesalahan saat membuat KK baru.');
     }
   };
 
@@ -293,9 +397,7 @@ const KelolaDataDosen = () => {
       if (filterKK === groupId) setFilterKK('');
       showAlert('success', 'Berhasil', 'Kelompok keahlian berhasil dihapus.');
     } catch (err) {
-      const msg = err?.response?.data?.message
-        ?? 'Terjadi kesalahan saat menghapus KK.';
-      showAlert('error', 'Gagal Menghapus', msg);
+      showAlert('error', 'Gagal Menghapus', 'Terjadi kesalahan saat menghapus KK.');
     }
   };
 
@@ -305,9 +407,7 @@ const KelolaDataDosen = () => {
 
       <div className="dd-main">
         <div className="dd-mobile-bar">
-          <button className="dd-mobile-btn" onClick={() => setSidebarOpen(true)}>
-            <Menu size={20} />
-          </button>
+          <button className="dd-mobile-btn" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button>
           <span className="dd-mobile-title">SIMTA</span>
         </div>
 
@@ -335,15 +435,9 @@ const KelolaDataDosen = () => {
                     onChange={e => setSearch(e.target.value)}
                   />
                 </div>
-                <select
-                  className="dd-select"
-                  value={filterKK}
-                  onChange={(e) => setFilterKK(e.target.value)}
-                >
+                <select className="dd-select" value={filterKK} onChange={(e) => setFilterKK(e.target.value)}>
                   <option value="">Semua Kelompok Keahlian</option>
-                  {researchGroups.map(g => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
+                  {researchGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
               </div>
 
@@ -353,31 +447,30 @@ const KelolaDataDosen = () => {
                 <table className="dd-table">
                   <thead>
                     <tr>
-                      <th style={{ width: 44 }}>NO</th>
+                      <th className="dd-th-no">NO</th>
                       <th>NAMA DOSEN</th>
                       <th>NIDN/NIP</th>
-                      {/* <th>PRODI</th> */}
+                      <th>PRODI</th>
+                      <th>JABATAN</th>
                       <th>KELOMPOK KEAHLIAN</th>
-                      <th style={{ textAlign: 'center' }}>AKSI</th>
+                      <th className="dd-th-center">AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoadingData ? (
                       <tr>
-                        <td colSpan={6}>
+                        <td colSpan={7}>
                           <div className="dd-empty-state">
-                            <span style={{ fontSize: 13, color: '#9CA3AF' }}>Memuat data dosen...</span>
+                            <span className="dd-empty-text">Memuat data dosen...</span>
                           </div>
                         </td>
                       </tr>
                     ) : paginated.length === 0 ? (
                       <tr>
-                        <td colSpan={6}>
+                        <td colSpan={7}>
                           <div className="dd-empty-state">
                             <Users size={36} color="#D1D5DB" />
-                            <span style={{ fontSize: 13, color: '#9CA3AF' }}>
-                              {search ? 'Tidak ada hasil pencarian.' : 'Belum ada data dosen.'}
-                            </span>
+                            <span className="dd-empty-text">{search ? 'Tidak ada hasil pencarian.' : 'Belum ada data dosen.'}</span>
                           </div>
                         </td>
                       </tr>
@@ -389,22 +482,23 @@ const KelolaDataDosen = () => {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.03 }}
                         >
-                          <td className="dd-td-center dd-td-num">
-                            {(currentPage - 1) * PAGE_SIZE + idx + 1}
-                          </td>
+                          <td className="dd-td-center dd-td-num">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
+                          <td><div className="dd-dosen-nama">{d.nama}</div></td>
+                          <td>{d.nip || d.nidn || '-'}</td>
+                          <td>{prodiNameById(d.studyProgramId)}</td>
                           <td>
-                            <div className="dd-dosen-nama">{d.nama}</div>
+                            <div className="dd-jabatan-wrap">
+                              {d.isKetuaKK && <span className="dd-ketua-badge">Ketua KK</span>}
+                              {d.isKetuaProdi && <span className="dd-ketua-badge kaprodi">Kaprodi</span>}
+                              {d.isKepalaUrusanAkademik && <span className="dd-ketua-badge kaur" title={d.isKepalaUrusanAkademik}>Kepala Urusan Akademik</span>}
+                              {!d.isKetuaKK && !d.isKetuaProdi && !d.isKepalaUrusanAkademik && <span className="dd-jabatan-empty">-</span>}
+                            </div>
                           </td>
-                          <td>{d.nip}</td>
-                          {/* <td><span className="dd-prodi-empty">-</span></td> */}
                           <td>
                             <span className="dd-kk-badge">{kkNameById(d.researchGroupId)}</span>
-                            {d.isKetuaKK && <div className="dd-ketua-badge">Ketua KK</div>}
                           </td>
                           <td className="dd-td-center">
-                            <button className="dd-btn-edit" onClick={() => setEditingDosen(d)}>
-                              Edit
-                            </button>
+                            <button className="dd-btn-edit" onClick={() => setEditingDosen(d)}>Edit</button>
                           </td>
                         </motion.tr>
                       ))
@@ -418,23 +512,12 @@ const KelolaDataDosen = () => {
                   <span className="dd-page-info">
                     Menampilkan {Math.min((currentPage - 1) * PAGE_SIZE + 1, totalItems)}–{Math.min(currentPage * PAGE_SIZE, totalItems)} dari {totalItems} data
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <button className="dd-btn-page" disabled={currentPage === 1 || isLoadingData} onClick={() => setCurrentPage(p => p - 1)}>
-                      <ChevronLeft size={14} />
-                    </button>
+                  <div className="dd-pagination-wrap">
+                    <button className="dd-btn-page" disabled={currentPage === 1 || isLoadingData} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft size={14} /></button>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                      <button
-                        key={p}
-                        className={`dd-btn-page ${p === currentPage ? 'active' : ''}`}
-                        onClick={() => setCurrentPage(p)}
-                        disabled={isLoadingData}
-                      >
-                        {p}
-                      </button>
+                      <button key={p} className={`dd-btn-page ${p === currentPage ? 'active' : ''}`} onClick={() => setCurrentPage(p)} disabled={isLoadingData}>{p}</button>
                     ))}
-                    <button className="dd-btn-page" disabled={currentPage === totalPages || isLoadingData} onClick={() => setCurrentPage(p => p + 1)}>
-                      <ChevronRight size={14} />
-                    </button>
+                    <button className="dd-btn-page" disabled={currentPage === totalPages || isLoadingData} onClick={() => setCurrentPage(p => p + 1)}><ChevronRight size={14} /></button>
                   </div>
                 </div>
               )}
@@ -446,7 +529,7 @@ const KelolaDataDosen = () => {
       <AnimatePresence>
         {alert.show && (
           <motion.div
-            style={{ position: 'fixed', top: 24, right: 24, zIndex: 9999, maxWidth: 380 }}
+            className="dd-alert-wrapper"
             initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 300, opacity: 0 }}
@@ -461,6 +544,7 @@ const KelolaDataDosen = () => {
           <EditDosenModal
             dosen={editingDosen}
             researchGroups={researchGroups}
+            studyPrograms={studyPrograms}
             dosenList={dosenList}
             onClose={() => !isSaving && setEditingDosen(null)}
             onSave={handleSaveDosen}

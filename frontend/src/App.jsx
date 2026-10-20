@@ -16,6 +16,7 @@ import InputNilaiSidang from "./pages/dosen/InputNilaiSidang";
 import MahasiswaBimbingan from "./pages/dosen/MahasiswaBimbingan";
 import RegistrasiTATUP from "./pages/dosen/RegistrasiTATUP";
 import PenjadwalanSidang from "./pages/dosen/PenjadwalanSidang";
+import KelolaCLO from "./pages/dosen/KelolaCLO";
 import PengajuanSK from "./pages/mahasiswa/pengajuanSK";
 import PembaruanSK from "./pages/mahasiswa/pembaruanSK";
 import PermohonanSK from "./pages/admin/permohonanSK";
@@ -136,6 +137,16 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["DOSEN"]}>
                 <DashboardDosen />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* TAMBAHAN ROUTE KELOLA CLO (Hanya DOSEN / Kaprodi yang bisa akses) */}
+          <Route
+            path="/dosen/kelola-clo"
+            element={
+              <ProtectedRoute allowedRoles={["DOSEN"]}>
+                <KelolaCLO />
               </ProtectedRoute>
             }
           />

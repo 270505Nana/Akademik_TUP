@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, CheckCircle2, Circle, Upload, FileText, Download, Eye, Loader } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ALUR_STEPS } from '../../common/Skstatushelper';
-import { downloadEvidence, downloadFileFromUrl, getLecturers } from '../../../service/api';
+import { downloadEvidence, downloadFileFromUrl, getLecturers, downloadSK } from '../../../service/api';
+import '../../../style/css/mahasiswa/verifikasimodalsk.css'; 
 
 const VerifikasiModal = ({
   selectedPermohonan,
@@ -43,12 +44,43 @@ const VerifikasiModal = ({
   const prodiName = student?.studyProgram?.name || selectedPermohonan?.prodiName || '-';
 
   const isPerpanjangan = sktaRequest?.category === 'Perpanjangan SK' || selectedPermohonan?.category === 'Perpanjangan SK';
+  
+  const rawStatus = selectedPermohonan?.status || sktaRequest?.status;
+  const isSudahTerbit = rawStatus === 'SUDAH_TERBIT' || rawStatus === 'Sudah Terbit' || !!existingResponse?.sktaUploadPath;
 
-  const evidenceUploads = selectedPermohonan?.evidenceUploads?.length
-    ? selectedPermohonan.evidenceUploads
-    : sktaRequest?.evidenceDownloadUrl
-      ? [{ id: sktaRequest.id, name: 'Dokumen_Evidence.pdf', downloadUrl: sktaRequest.evidenceDownloadUrl }]
-      : (sktaRequest.sktaRequestUploads || []);
+  let evidenceUploads = [];
+  
+  if (selectedPermohonan?.evidenceUploads?.length) {
+    evidenceUploads = [...selectedPermohonan.evidenceUploads];
+  } else if (sktaRequest?.sktaRequestUploads?.length) {
+    evidenceUploads = [...sktaRequest.sktaRequestUploads];
+  }
+
+  if (sktaRequest?.evidenceDownloadUrl) {
+    evidenceUploads.push({
+      id: `evidence-${sktaRequest.id}`,
+      name: 'Dokumen_Evidence.pdf',
+      downloadUrl: sktaRequest.evidenceDownloadUrl
+    });
+  }
+
+  if (isSudahTerbit) {
+    evidenceUploads.push({
+      id: sktaRequest.id,
+      name: 'SKTA_Terbaru.pdf',
+      downloadUrl: sktaRequest.skFileUrl || null,
+      isFinalSK: true
+    });
+  } else if (isPerpanjangan) {
+    const oldSkUrl = sktaRequest.oldSkFileUrl || sktaRequest.skLamaUrl || sktaRequest.skFileUrl;
+    if (oldSkUrl) {
+      evidenceUploads.push({
+        id: `sk-lama-${sktaRequest.id}`,
+        name: 'SKTA_Sebelumnya.pdf',
+        downloadUrl: oldSkUrl
+      });
+    }
+  }
 
   const isExpired = !!((sktaRequest?.expDate || existingResponse?.expDate) && new Date(sktaRequest?.expDate || existingResponse?.expDate) < new Date());
 
@@ -61,11 +93,8 @@ const VerifikasiModal = ({
     setCatatan(existingResponse.message || '');
     setBatasPerbaikan(existingResponse.expDate ? existingResponse.expDate.split('T')[0] : '');
     setIsEdit(existingResponse.isEdit ? existingResponse.isEdit.split('T')[0] : '');
-    if (existingResponse.message) {
-      setActiveTab('reject');
-    } else {
-      setActiveTab('approve');
-    }
+    if (existingResponse.message) setActiveTab('reject');
+    else setActiveTab('approve');
   }, [existingResponse]);
 
   useEffect(() => {
@@ -117,7 +146,6 @@ const VerifikasiModal = ({
         setValidationError('Tanggal Kedaluwarsa (Exp Date) wajib diisi.');
         return;
       }
-      // Validasi upload file SK Final
       if (!existingResponse?.sktaUploadPath && !uploadedFile) {
         setValidationError('File SK Final wajib diunggah.');
         return;
@@ -137,6 +165,7 @@ const VerifikasiModal = ({
   };
 
   const fetchBlob = async (upload) => {
+    if (upload.isFinalSK && !upload.downloadUrl) return await downloadSK(upload.id);
     if (upload?.downloadUrl) return await downloadFileFromUrl(upload.downloadUrl);
     const uploadId = upload?.id;
     if (!uploadId) throw new Error(`Upload ID tidak ditemukan`);
@@ -186,83 +215,76 @@ const VerifikasiModal = ({
   };
 
   const InfoRow = ({ label, value }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
-      <span style={{ fontSize: 13, color: '#1E293B', fontWeight: 500, lineHeight: 1.4 }}>{value || '-'}</span>
+    <div className="vm-info-row">
+      <span className="vm-info-label">{label}</span>
+      <span className="vm-info-val">{value || '-'}</span>
     </div>
   );
 
   return (
     <>
-      <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+      <div className="vm-overlay">
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 16 }}
           animate={{ scale: 1,    opacity: 1, y: 0  }}
           exit={{    scale: 0.95, opacity: 0, y: 16 }}
           onClick={e => e.stopPropagation()}
-          style={{
-            background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '750px',
-            maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-          }}
+          className="vm-container"
         >
           {/* HEADER */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#111827' }}>
+          <div className="vm-header">
+            <div className="vm-header-left">
+              <h2 className="vm-title">
                 Verifikasi Permohonan SKTA - {studentName}
               </h2>
-              <span style={{ background: '#F1F5F9', padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, color: '#475569', border: '1px solid #E2E8F0' }}>
+              <span className="vm-badge-nim">
                 NIM {studentNim}
               </span>
               {isExpired && (
-                <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 9999, background: '#FEE2E2', color: '#B91C1C', border: '1.5px solid #FCA5A5', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <span className="vm-badge-expired">
                   Expired
                 </span>
               )}
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4 }}>
+            <button onClick={onClose} className="vm-close-btn">
               <X size={20} />
             </button>
           </div>
 
           {/* STEPPER */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 0', borderBottom: '1px solid #E5E7EB', background: '#F8FAFC' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', zIndex: 2 }} onClick={() => setStep(1)}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: step >= 1 ? '#10B981' : '#E5E7EB', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, border: step === 1 ? '3px solid #D1FAE5' : 'none', transition: 'all 0.2s' }}>
+          <div className="vm-stepper">
+            <div className="vm-step-item" onClick={() => setStep(1)}>
+              <div className={`vm-step-circle ${step >= 1 ? 'active-1' : 'inactive-1'}`} style={{ border: step === 1 ? '3px solid #D1FAE5' : 'none' }}>
                 {step > 1 ? <CheckCircle2 size={18} /> : '1'}
               </div>
-              <span style={{ fontSize: 12, fontWeight: step >= 1 ? 700 : 500, color: step >= 1 ? '#10B981' : '#6B7280' }}>Informasi & Evidence</span>
+              <span className="vm-step-label" style={{ fontWeight: step >= 1 ? 700 : 500, color: step >= 1 ? '#10B981' : '#6B7280' }}>Informasi & Evidence</span>
             </div>
-            <div style={{ width: 100, height: 2, background: step > 1 ? '#10B981' : '#E5E7EB', margin: '0 -15px', alignSelf: 'flex-start', marginTop: 15, zIndex: 1 }} />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', zIndex: 2 }} onClick={() => setStep(2)}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: step >= 2 ? '#E11D48' : '#E5E7EB', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, border: step === 2 ? '3px solid #FFE4E6' : 'none', transition: 'all 0.2s' }}>
+            <div className="vm-step-line" style={{ background: step > 1 ? '#10B981' : '#E5E7EB' }} />
+            <div className="vm-step-item" onClick={() => setStep(2)}>
+              <div className={`vm-step-circle ${step >= 2 ? 'active-2' : 'inactive-2'}`} style={{ border: step === 2 ? '3px solid #FFE4E6' : 'none' }}>
                 2
               </div>
-              <span style={{ fontSize: 12, fontWeight: step >= 2 ? 700 : 500, color: step >= 2 ? '#E11D48' : '#6B7280' }}>Periksa & Verifikasi</span>
+              <span className="vm-step-label" style={{ fontWeight: step >= 2 ? 700 : 500, color: step >= 2 ? '#E11D48' : '#6B7280' }}>Periksa & Verifikasi</span>
             </div>
           </div>
 
           {/* BODY CONTENT */}
-          <div className="scrollable" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          <div className="scrollable vm-body-content">
             
             {/* TAHAP 1: INFORMASI & EVIDENCE */}
             {step === 1 && (
               <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>
                 <div style={{ marginBottom: 20 }}>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: '#C0182A', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>
+                  <p className="vm-section-heading">
                     Informasi Tugas Akhir & Akademik
                   </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <div className="vm-info-grid">
                     <InfoRow label="Nama Lengkap" value={studentName} />
                     <InfoRow label="NIM" value={studentNim} />
-                    
                     <InfoRow label="Nomor HP" value={studentPhone} />
                     <InfoRow label="Program Studi" value={prodiName} />
-                    
                     <InfoRow label="Judul TA (Bahasa Indonesia)" value={sktaRequest?.judulProposalIndonesia || sktaRequest?.proposalTitleId} />
                     <InfoRow label="Judul TA (Bahasa Inggris)"  value={sktaRequest?.judulProposalInggris || sktaRequest?.proposalTitleEn} />
-                    
                     <InfoRow
                       label="Dosen Pembimbing 1"
                       value={sktaRequest?.dosenPembimbing1 ? formatDosen(sktaRequest.dosenPembimbing1) : dosen1 ? formatDosen(dosen1) : (sktaRequest?.dosenPembimbing1Id ? 'Memuat...' : '-')}
@@ -275,12 +297,12 @@ const VerifikasiModal = ({
                 </div>
 
                 <div>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: '#C0182A', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>
-                    Dokumen Evidence Mahasiswa
+                  <p className="vm-section-heading" style={{ marginBottom: 10 }}>
+                    Dokumen Evidence & SKTA
                   </p>
                   {evidenceUploads.length === 0 ? (
                     <div style={{ padding: '16px', backgroundColor: '#F9FAFB', borderRadius: '8px', border: '1px dashed #D1D5DB', textAlign: 'center' }}>
-                      <p style={{ fontSize: 13, color: '#6B7280', margin: 0 }}>Tidak ada dokumen evidence yang diunggah.</p>
+                      <p style={{ fontSize: 13, color: '#6B7280', margin: 0 }}>Tidak ada dokumen yang tersedia.</p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -291,27 +313,29 @@ const VerifikasiModal = ({
                         const filename  = upload.name || upload.filename || `File ${idx + 1}`;
 
                         return (
-                          <div key={uploadId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#F8FAFC' }}>
+                          <div key={uploadId} className="vm-file-card">
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                              <FileText size={20} color="#C0182A" style={{ flexShrink: 0 }} />
+                              <FileText size={20} color={filename.includes('SKTA') ? '#10B981' : '#C0182A'} style={{ flexShrink: 0 }} />
                               <div style={{ minWidth: 0 }}>
                                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{filename}</div>
                                 {errMsg && <small style={{ color: '#EF4444', fontSize: 11, display: 'block', marginTop: 2 }}>⚠ {errMsg}</small>}
                               </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                            <div className="vm-file-actions">
                               <button
                                 onClick={() => openPreview(upload)}
                                 disabled={Boolean(loadingPreviewId)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: '6px', fontSize: 12, fontWeight: 600, background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', cursor: loadingPreviewId ? 'not-allowed' : 'pointer', opacity: loadingPreviewId ? 0.6 : 1 }}
+                                className="vm-btn-preview"
+                                style={{ opacity: loadingPreviewId ? 0.6 : 1, cursor: loadingPreviewId ? 'not-allowed' : 'pointer' }}
                               >
-                                {isLoading ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Eye size={14} />} Preview
+                                {isLoading ? <Loader size={14} className="sk-spinner-inline" /> : <Eye size={14} />} Preview
                               </button>
                               <button
                                 onClick={() => handleDownloadEvidence(upload)}
                                 disabled={Boolean(loadingPreviewId)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: '6px', fontSize: 12, fontWeight: 600, background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0', cursor: loadingPreviewId ? 'not-allowed' : 'pointer', opacity: loadingPreviewId ? 0.6 : 1 }}
+                                className="vm-btn-download"
+                                style={{ opacity: loadingPreviewId ? 0.6 : 1, cursor: loadingPreviewId ? 'not-allowed' : 'pointer' }}
                               >
                                 <Download size={14} /> Unduh
                               </button>
@@ -330,13 +354,13 @@ const VerifikasiModal = ({
               <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }} className="dm-body" style={{ padding: 0 }}>
                 
                 {isPerpanjangan && (
-                  <div style={{ marginBottom: 16, padding: '12px 16px', background: '#F5F3FF', borderLeft: '4px solid #7C3AED', borderRadius: '8px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '18px' }}>ℹ️️</span>
+                  <div className="vm-alert-box purple">
+                    <span style={{ fontSize: '18px' }}>ℹ</span>
                     <div>
-                      <p style={{ margin: 0, fontSize: 13, color: '#5B21B6', fontWeight: 700 }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>
                         Pengajuan Perpanjangan SKTA
                       </p>
-                      <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#6D28D9', lineHeight: 1.4 }}>
+                      <p style={{ margin: '4px 0 0 0', fontSize: 12, lineHeight: 1.4 }}>
                         Mahasiswa ini meminta perpanjangan masa berlaku SK yang sebelumnya telah terbit/kedaluwarsa.
                       </p>
                     </div>
@@ -344,17 +368,19 @@ const VerifikasiModal = ({
                 )}
 
                 {!isReadOnly && (
-                  <div style={{ display: 'flex', borderBottom: '1px solid #E5E7EB', marginBottom: 16 }}>
+                  <div className="vm-tabs">
                     <button
                       type="button"
-                      style={{ flex: 1, padding: '10px 0', textAlign: 'center', fontWeight: 700, fontSize: 14, border: 'none', background: 'none', cursor: 'pointer', transition: 'all 0.15s ease', borderBottom: activeTab === 'approve' ? '3px solid #16A34A' : 'none', color: activeTab === 'approve' ? '#16A34A' : '#6B7280' }}
+                      className="vm-tab-btn"
+                      style={{ borderBottom: activeTab === 'approve' ? '3px solid #16A34A' : 'none', color: activeTab === 'approve' ? '#16A34A' : '#6B7280' }}
                       onClick={() => { setActiveTab('approve'); setValidationError(''); }}
                     >
                       Setujui (Approve)
                     </button>
                     <button
                       type="button"
-                      style={{ flex: 1, padding: '10px 0', textAlign: 'center', fontWeight: 700, fontSize: 14, border: 'none', background: 'none', cursor: 'pointer', transition: 'all 0.15s ease', borderBottom: activeTab === 'reject' ? '3px solid #DC2626' : 'none', color: activeTab === 'reject' ? '#DC2626' : '#6B7280' }}
+                      className="vm-tab-btn"
+                      style={{ borderBottom: activeTab === 'reject' ? '3px solid #DC2626' : 'none', color: activeTab === 'reject' ? '#DC2626' : '#6B7280' }}
                       onClick={() => { setActiveTab('reject'); setValidationError(''); }}
                     >
                       Tolak (Reject)
@@ -363,8 +389,8 @@ const VerifikasiModal = ({
                 )}
 
                 {validationError && (
-                  <div style={{ marginBottom: 16, padding: '12px 16px', background: '#FEF2F2', borderLeft: '4px solid #DC2626', borderRadius: '8px' }}>
-                    <p style={{ margin: 0, fontSize: 13, color: '#B91C1C', fontWeight: 500 }}>
+                  <div className="vm-alert-box red">
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>
                       {validationError}
                     </p>
                   </div>
@@ -480,25 +506,25 @@ const VerifikasiModal = ({
           </div>
 
           {/* FOOTER */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, padding: '14px 20px', borderTop: '1px solid #E5E7EB', background: '#fff' }}>
+          <div className="vm-footer">
             {step === 1 ? (
               <>
-                <button onClick={onClose} style={{ padding: '8px 24px', backgroundColor: '#F3F4F6', color: '#374151', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer' }}>Batal</button>
-                <button onClick={() => setStep(2)} style={{ padding: '8px 24px', backgroundColor: '#2563EB', color: '#fff', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer' }}>Lanjut: Verifikasi</button>
+                <button onClick={onClose} className="vm-btn-secondary">Batal</button>
+                <button onClick={() => setStep(2)} className="vm-btn-primary">Lanjut: Verifikasi</button>
               </>
             ) : (
               <>
-                <button onClick={() => setStep(1)} style={{ padding: '8px 24px', backgroundColor: '#F3F4F6', color: '#374151', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer' }}>Kembali</button>
+                <button onClick={() => setStep(1)} className="vm-btn-secondary">Kembali</button>
                 {!isReadOnly && (
                   <button
                     onClick={handleSubmit}
-                    style={{ padding: '8px 24px', backgroundColor: activeTab === 'reject' ? '#DC2626' : '#16A34A', color: 'white', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer' }}
+                    className={activeTab === 'reject' ? 'vm-btn-danger' : 'vm-btn-success'}
                   >
                     {activeTab === 'reject' ? 'Tolak Pengajuan' : 'Setujui & Kirim'}
                   </button>
                 )}
                 {isReadOnly && (
-                  <button onClick={onClose} style={{ padding: '8px 24px', backgroundColor: '#16A34A', color: 'white', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer' }}>Tutup</button>
+                  <button onClick={onClose} className="vm-btn-success">Tutup</button>
                 )}
               </>
             )}
@@ -507,8 +533,8 @@ const VerifikasiModal = ({
       </div>
 
       {selectedPreview && (
-        <div className="preview-overlay" onClick={closePreview} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
-          <motion.div className="preview-box" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} onClick={e => e.stopPropagation()} style={{ background: '#1a1a1a', borderRadius: 12, overflow: 'hidden', width: '90vw', height: '90vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="vm-preview-overlay" onClick={closePreview}>
+          <motion.div className="vm-preview-box" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#2a2a2a', borderBottom: '1px solid #3a3a3a', flexShrink: 0 }}>
               <h4 style={{ margin: 0, fontSize: 13, color: '#e5e7eb', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
                 {selectedPreview.name}
@@ -529,4 +555,4 @@ const VerifikasiModal = ({
   );
 };
 
-export default VerifikasiModal; 
+export default VerifikasiModal;
