@@ -1,17 +1,21 @@
-import express from 'express';
-
-const router = express.Router();
-
+import express from "express";
 import {
   createSkemaPenilai,
   getSkemaPenilais,
   getSkemaPenilaiById,
   updateSkemaPenilai,
   deleteSkemaPenilai,
-} from '../../controllers/skemaPenilaiController.js';
+} from "../../controllers/skemaPenilaiController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listSkemaPenilaiQuerySchema,
+  createSkemaPenilaiSchema,
+  updateSkemaPenilaiSchema,
+} from "../../schemas/skemaPenilaiSchema.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+const router = express.Router();
 
 /**
  * @swagger
@@ -39,6 +43,20 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *         description: Filter Skema Penilai by Study Program ID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [type, bobot, createdAt]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -49,7 +67,12 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, getSkemaPenilais);
+router.get(
+  "/",
+  verifyToken,
+  validate(listSkemaPenilaiQuerySchema, "query"),
+  getSkemaPenilais
+);
 
 /**
  * @swagger
@@ -88,8 +111,16 @@ router.get("/", verifyToken, getSkemaPenilais);
  *         description: Token not found
  *       403:
  *         description: Access denied (Admin only)
+ *       404:
+ *         description: Program Studi tidak ditemukan
  */
-router.post("/", verifyToken, isAdmin, createSkemaPenilai); 
+router.post(
+  "/",
+  verifyToken,
+  isAdmin,
+  validate(createSkemaPenilaiSchema),
+  createSkemaPenilai
+);
 
 /**
  * @swagger
@@ -109,8 +140,10 @@ router.post("/", verifyToken, isAdmin, createSkemaPenilai);
  *     responses:
  *       200:
  *         description: Skema Penilai data retrieved successfully
+ *       401:
+ *         description: Token not found
  *       404:
- *         description: Skema Penilai not found
+ *         description: Skema Penilai tidak ditemukan
  */
 router.get("/:id", verifyToken, getSkemaPenilaiById);
 
@@ -145,10 +178,22 @@ router.get("/:id", verifyToken, getSkemaPenilaiById);
  *     responses:
  *       200:
  *         description: Skema Penilai updated successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
  *       404:
- *         description: Skema Penilai not found
+ *         description: Skema Penilai tidak ditemukan
  */
-router.put("/:id", verifyToken, isAdmin, updateSkemaPenilai); 
+router.put(
+  "/:id",
+  verifyToken,
+  isAdmin,
+  validate(updateSkemaPenilaiSchema),
+  updateSkemaPenilai
+);
 
 /**
  * @swagger
@@ -167,9 +212,13 @@ router.put("/:id", verifyToken, isAdmin, updateSkemaPenilai);
  *     responses:
  *       200:
  *         description: Skema Penilai deleted successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
  *       404:
- *         description: Skema Penilai not found
+ *         description: Skema Penilai tidak ditemukan
  */
-router.delete("/:id", verifyToken, isAdmin, deleteSkemaPenilai); 
+router.delete("/:id", verifyToken, isAdmin, deleteSkemaPenilai);
 
 export default router;
