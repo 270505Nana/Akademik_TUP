@@ -1,7 +1,4 @@
 import express from "express";
-
-const router = express.Router();
-
 import {
   listTemplateUploads,
   createTemplateUpload,
@@ -13,10 +10,17 @@ import {
   togglePublishTemplate,
   toggleRequiredTemplate,
 } from "../../controllers/templateUploadController.js";
-
 import { verifyToken } from "../../middlewares/auth.js";
 import { upload } from "../../middlewares/upload.js";
 import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listTemplateUploadQuerySchema,
+  createTemplateUploadSchema,
+  updateTemplateUploadSchema,
+} from "../../schemas/templateUploadSchema.js";
+
+const router = express.Router();
 
 /**
  * @swagger
@@ -29,7 +33,7 @@ import { isAdmin } from "../../middlewares/authorize.js";
  * @swagger
  * /api/templates:
  *   get:
- *     summary: Get all template uploads (with filter and pagination)
+ *     summary: Get all template uploads (with filter, search, sort, and pagination)
  *     tags: [Template Upload]
  *     security:
  *       - bearerAuth: []
@@ -54,11 +58,24 @@ import { isAdmin } from "../../middlewares/authorize.js";
  *             - Yudisium - Evidence Wirausaha
  *         description: Filter by category
  *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search keyword by name or code
+ *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [newest, oldest]
- *         description: Sort templates by creation time (newest, oldest). Default sort is category & queue asc.
+ *           enum: [category, queue, name, createdAt, newest, oldest]
+ *           default: category
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -82,7 +99,12 @@ import { isAdmin } from "../../middlewares/authorize.js";
  *       500:
  *         description: Internal server error
  */
-router.get("/", verifyToken, listTemplateUploads);
+router.get(
+  "/",
+  verifyToken,
+  validate(listTemplateUploadQuerySchema, "query"),
+  listTemplateUploads
+);
 
 /**
  * @swagger
@@ -101,8 +123,6 @@ router.get("/", verifyToken, listTemplateUploads);
  *             required:
  *               - name
  *               - category
- *               - isPublish
- *               - isRequired
  *             properties:
  *               name:
  *                 type: string
@@ -112,6 +132,8 @@ router.get("/", verifyToken, listTemplateUploads);
  *                 enum:
  *                   - Permohonan SKTA
  *                   - Sidang - Berkas Wajib
+ *                   - Sidang - Berkas Tes Bahasa (Sudah)
+ *                   - Sidang - Berkas Tes Bahasa (Belum)
  *                   - Sidang - Evidence Non Sidang Publikasi Jurnal
  *                   - Sidang - Evidence Non Sidang Proceeding International
  *                   - Sidang - Evidence Non Sidang HKI
@@ -120,25 +142,27 @@ router.get("/", verifyToken, listTemplateUploads);
  *                   - Yudisium - Evidence Cumlaude Pameran
  *                   - Yudisium - Evidence Cumlaude Lomba
  *                   - Yudisium - Evidence Cumlaude HKI
+ *                   - Yudisium - Evidence Wirausaha
  *                 example: Sidang - Berkas Wajib
  *               isPublish:
  *                 type: boolean
+ *                 default: false
  *               isRequired:
  *                 type: boolean
- *                 example: true
+ *                 default: true
  *               templateFile:
  *                 type: string
  *                 format: binary
- *                 description: Template file (pdf/doc/docx)
+ *                 description: Template file (pdf/doc/docx/zip)
  *     responses:
  *       200:
  *         description: Template upload created successfully
+ *       400:
+ *         description: Validation error
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token
- *       422:
- *         description: Validation error
+ *         description: Access denied (Admin only)
  *       500:
  *         description: Internal server error
  */
@@ -147,8 +171,51 @@ router.post(
   verifyToken,
   isAdmin,
   upload("templates").single("templateFile"),
-  createTemplateUpload,
+  validate(createTemplateUploadSchema),
+  createTemplateUpload
 );
+
+/**
+ * @swagger
+ * /api/templates/download/{code}:
+ *   get:
+ *     summary: Download template
+ *     tags: [Template Upload]
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Template code
+ *     responses:
+ *       200:
+ *         description: File downloaded successfully
+ *       404:
+ *         description: Template tidak ditemukan atau file belum diunggah
+ */
+router.get("/download/:code", downloadTemplateUpload);
+
+/**
+ * @swagger
+ * /api/templates/preview/{code}:
+ *   get:
+ *     summary: Preview template upload by code
+ *     tags: [Template Upload]
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Template code
+ *     responses:
+ *       200:
+ *         description: Template upload preview retrieved successfully
+ *       404:
+ *         description: Template tidak ditemukan atau file belum diunggah
+ */
+router.get("/preview/:code", previewTemplateUpload);
 
 /**
  * @swagger
@@ -181,42 +248,6 @@ router.get("/:code", verifyToken, findTemplateUploadByCode);
 
 /**
  * @swagger
- * /api/templates/download/{code}:
- *   get:
- *     summary: Download template
- *     tags: [Template Upload]
- *     parameters:
- *       - in: path
- *         name: code
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: File downloaded successfully
- */
-router.get("/download/:code", downloadTemplateUpload);
-
-/**
- * @swagger
- * /api/templates/preview/{code}:
- *   get:
- *     summary: Preview template upload by code
- *     tags: [Template Upload]
- *     parameters:
- *       - in: path
- *         name: code
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Template upload preview retrieved successfully
- */
-router.get("/preview/:code", previewTemplateUpload);
-
-/**
- * @swagger
  * /api/templates/{id}:
  *   patch:
  *     summary: Update template upload by id
@@ -245,6 +276,8 @@ router.get("/preview/:code", previewTemplateUpload);
  *                 enum:
  *                   - Permohonan SKTA
  *                   - Sidang - Berkas Wajib
+ *                   - Sidang - Berkas Tes Bahasa (Sudah)
+ *                   - Sidang - Berkas Tes Bahasa (Belum)
  *                   - Sidang - Evidence Non Sidang Publikasi Jurnal
  *                   - Sidang - Evidence Non Sidang Proceeding International
  *                   - Sidang - Evidence Non Sidang HKI
@@ -253,12 +286,12 @@ router.get("/preview/:code", previewTemplateUpload);
  *                   - Yudisium - Evidence Cumlaude Pameran
  *                   - Yudisium - Evidence Cumlaude Lomba
  *                   - Yudisium - Evidence Cumlaude HKI
+ *                   - Yudisium - Evidence Wirausaha
  *                 example: Yudisium - Berkas Wajib
  *               isPublish:
  *                 type: boolean
  *               isRequired:
  *                 type: boolean
- *                 example: true
  *               queue:
  *                 type: integer
  *                 example: 1
@@ -266,18 +299,18 @@ router.get("/preview/:code", previewTemplateUpload);
  *               templateFile:
  *                 type: string
  *                 format: binary
- *                 description: Optional template file (pdf/doc/docx)
+ *                 description: Optional template file (pdf/doc/docx/zip)
  *     responses:
  *       200:
  *         description: Template upload updated successfully
+ *       400:
+ *         description: Validation error
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token
+ *         description: Access denied (Admin only)
  *       404:
  *         description: Template upload not found
- *       422:
- *         description: Validation error
  *       500:
  *         description: Internal server error
  */
@@ -286,7 +319,8 @@ router.patch(
   verifyToken,
   isAdmin,
   upload("templates").single("templateFile"),
-  updateTemplateUpload,
+  validate(updateTemplateUploadSchema),
+  updateTemplateUpload
 );
 
 /**
@@ -310,7 +344,7 @@ router.patch(
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token
+ *         description: Access denied (Admin only)
  *       404:
  *         description: Template upload not found
  *       500:
@@ -332,15 +366,22 @@ router.delete("/:id", verifyToken, isAdmin, deleteTemplateUpload);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Template upload ID
  *     responses:
  *       200:
  *         description: Template publish status toggled successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
+ *       404:
+ *         description: Template upload not found
  */
 router.patch(
   "/:id/toggle-publish",
   verifyToken,
   isAdmin,
-  togglePublishTemplate,
+  togglePublishTemplate
 );
 
 /**
@@ -357,15 +398,22 @@ router.patch(
  *         required: true
  *         schema:
  *           type: string
+ *         description: Template upload ID
  *     responses:
  *       200:
  *         description: Template required status toggled successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
+ *       404:
+ *         description: Template upload not found
  */
 router.patch(
   "/:id/toggle-required",
   verifyToken,
   isAdmin,
-  toggleRequiredTemplate,
+  toggleRequiredTemplate
 );
 
 export default router;
