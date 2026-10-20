@@ -9,3 +9,4 @@ export * from "./yudisiumMapper.js";
 export * from "./permohonanSktaMapper.js";
 export * from "./mahasiswaBimbinganMapper.js";
 export * from "./researchGroupMapper.js";
+export * from "./cloMapper.js";

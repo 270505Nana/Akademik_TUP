@@ -1,17 +1,21 @@
-import express from 'express';
-
-const router = express.Router();
-
+import express from "express";
 import {
   createCloProdi,
   getCloProdis,
   getCloProdiById,
   updateCloProdi,
   deleteCloProdi,
-} from '../../controllers/cloController.js';
+} from "../../controllers/cloController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listCloQuerySchema,
+  createCloSchema,
+  updateCloSchema,
+} from "../../schemas/cloSchema.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
+const router = express.Router();
 
 /**
  * @swagger
@@ -39,6 +43,20 @@ import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *         description: Filter CLO by Study Program ID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [name, createdAt]
+ *           default: name
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -49,7 +67,7 @@ import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token or access denied
  */
-router.get("/", verifyToken, getCloProdis);
+router.get("/", verifyToken, validate(listCloQuerySchema, "query"), getCloProdis);
 
 /**
  * @swagger
@@ -80,15 +98,25 @@ router.get("/", verifyToken, getCloProdis);
  *                 type: string
  *     responses:
  *       201:
- *         description: CLO created successfully
+ *         description: CLO created successfully (Admin / Ketua KK)
+ *       202:
+ *         description: Approval request submitted successfully (Ketua Prodi)
  *       400:
  *         description: Validation error
  *       401:
  *         description: Token not found
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
+ *       404:
+ *         description: Program Studi tidak ditemukan
  */
-router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createCloProdi); 
+router.post(
+  "/",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(createCloSchema),
+  createCloProdi
+);
 
 /**
  * @swagger
@@ -108,6 +136,10 @@ router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createCloProdi);
  *     responses:
  *       200:
  *         description: CLO data retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied
  *       404:
  *         description: CLO not found
  */
@@ -140,11 +172,27 @@ router.get("/:id", verifyToken, getCloProdiById);
  *                 type: string
  *     responses:
  *       200:
- *         description: CLO updated successfully
+ *         description: CLO updated successfully (Admin/Ketua KK) or existing request updated (Ketua Prodi)
+ *       202:
+ *         description: Approval request submitted successfully (Ketua Prodi)
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied
  *       404:
  *         description: CLO not found
+ *       409:
+ *         description: Pending approval request conflict
  */
-router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateCloProdi); 
+router.put(
+  "/:id",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(updateCloSchema),
+  updateCloProdi
+);
 
 /**
  * @swagger
@@ -162,10 +210,23 @@ router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateCloProdi);
  *           type: string
  *     responses:
  *       200:
- *         description: CLO deleted successfully
+ *         description: CLO deleted successfully (Admin/Ketua KK) or existing request updated to delete (Ketua Prodi)
+ *       202:
+ *         description: Delete approval request submitted successfully (Ketua Prodi)
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied
  *       404:
  *         description: CLO not found
+ *       409:
+ *         description: Pending approval request conflict
  */
-router.delete("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, deleteCloProdi); 
+router.delete(
+  "/:id",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  deleteCloProdi
+);
 
-export default router;
+export default router;
