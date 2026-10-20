@@ -1,17 +1,23 @@
-import express from 'express';
-const router = express.Router();
-
-import { listTranskripUploads,
+import express from "express";
+import {
+  listTranskripUploads,
   getTranskripUploadById,
   createTranskripUpload,
   updateTranskripUpload,
   deleteTranskripUpload,
-  downloadTranskripUpload, } from '../../controllers/transkripUploadController.js';
+  downloadTranskripUpload,
+} from "../../controllers/transkripUploadController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { upload } from "../../middlewares/upload.js";
+import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listTranskripQuerySchema,
+  createTranskripSchema,
+  updateTranskripSchema,
+} from "../../schemas/transkripSchema.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { upload } from '../../middlewares/upload.js';
-import { isAdmin } from '../../middlewares/authorize.js';
-
+const router = express.Router();
 
 /**
  * @swagger
@@ -24,11 +30,35 @@ import { isAdmin } from '../../middlewares/authorize.js';
  * @swagger
  * /api/transkrip:
  *   get:
- *     summary: Retrieve list of transkrip uploads (paginated)
+ *     summary: Retrieve list of transkrip uploads (paginated, filterable, sortable)
  *     tags: [Transkrip Upload]
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: mahasiswaId
+ *         schema:
+ *           type: string
+ *         description: Filter by Mahasiswa ID
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search keyword by file name, student name, or NIM
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, name]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -52,7 +82,45 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *       500:
  *         description: Internal server error
  */
-router.get("/", verifyToken, listTranskripUploads);
+router.get(
+  "/",
+  verifyToken,
+  validate(listTranskripQuerySchema, "query"),
+  listTranskripUploads
+);
+
+/**
+ * @swagger
+ * /api/transkrip/uploads/{id}/download:
+ *   get:
+ *     summary: Download a transkrip upload file by transkrip upload ID or Mahasiswa ID
+ *     tags: [Transkrip Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Transkrip upload ID or Mahasiswa ID (UUID)
+ *     responses:
+ *       200:
+ *         description: File downloaded successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied or invalid token
+ *       404:
+ *         description: Transkrip upload file not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+  "/uploads/:id/download",
+  verifyToken,
+  downloadTranskripUpload
+);
 
 /**
  * @swagger
@@ -114,6 +182,8 @@ router.get("/:id", verifyToken, getTranskripUploadById);
  *                 format: binary
  *                 description: PDF file containing the Transkrip
  *     responses:
+ *       200:
+ *         description: Transkrip updated successfully (existing replaced)
  *       201:
  *         description: Transkrip uploaded successfully
  *       400:
@@ -132,7 +202,8 @@ router.post(
   verifyToken,
   isAdmin,
   upload("transkrip").single("transkripFile"),
-  createTranskripUpload,
+  validate(createTranskripSchema),
+  createTranskripUpload
 );
 
 /**
@@ -187,7 +258,8 @@ router.patch(
   verifyToken,
   isAdmin,
   upload("transkrip").single("transkripFile"),
-  updateTranskripUpload,
+  validate(updateTranskripSchema),
+  updateTranskripUpload
 );
 
 /**
@@ -218,34 +290,5 @@ router.patch(
  *         description: Internal server error
  */
 router.delete("/:id", verifyToken, isAdmin, deleteTranskripUpload);
-
-/**
- * @swagger
- * /api/transkrip/uploads/{id}/download:
- *   get:
- *     summary: Download a transkrip upload file by transkrip upload ID or Mahasiswa ID
- *     tags: [Transkrip Upload]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Transkrip upload ID or Mahasiswa ID (UUID)
- *     responses:
- *       200:
- *         description: File downloaded successfully
- *       401:
- *         description: Token not found
- *       403:
- *         description: Access denied or invalid token
- *       404:
- *         description: Transkrip upload file not found
- *       500:
- *         description: Internal server error
- */
-router.get("/uploads/:id/download", verifyToken, downloadTranskripUpload);
 
 export default router;
