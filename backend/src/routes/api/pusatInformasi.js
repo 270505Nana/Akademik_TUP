@@ -10,6 +10,12 @@ import {
 } from "../../controllers/pusatInformasiController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listPusatInformasiQuerySchema,
+  createPusatInformasiSchema,
+  updatePusatInformasiSchema,
+} from "../../schemas/pusatInformasiSchema.js";
 
 const router = express.Router();
 
@@ -29,65 +35,6 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: Preview period and guidance documents retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 periodeSidang:
- *                   type: object
- *                   nullable: true
- *                   properties:
- *                     name:
- *                       type: string
- *                       example: Sidang Periode Ganjil 2026/2027
- *                     category:
- *                       type: string
- *                       example: pendaftaran sidang
- *                     period:
- *                       type: string
- *                       example: 2026/2027
- *                     startDate:
- *                       type: string
- *                       format: date-time
- *                       example: 2026-05-15T00:00:00.000Z
- *                     endDate:
- *                       type: string
- *                       format: date-time
- *                       example: 2026-06-15T00:00:00.000Z
- *                 periodeYudisium:
- *                   type: object
- *                   nullable: true
- *                   properties:
- *                     name:
- *                       type: string
- *                       example: Yudisium Periode Ganjil 2026/2027
- *                     category:
- *                       type: string
- *                       example: pendaftaran yudisium
- *                     period:
- *                       type: string
- *                       example: 2026/2027
- *                     startDate:
- *                       type: string
- *                       format: date-time
- *                       example: 2026-06-01T00:00:00.000Z
- *                     endDate:
- *                       type: string
- *                       format: date-time
- *                       example: 2026-07-01T00:00:00.000Z
- *                 dokumenPanduanTugasAkhir:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       category:
- *                         type: string
- *                         example: Panduan Tugas Akhir
- *                       data:
- *                         type: array
- *                         items:
- *                           type: object
  */
 router.get("/preview", getPusatInformasiPreview);
 
@@ -100,22 +47,6 @@ router.get("/preview", getPusatInformasiPreview);
  *     responses:
  *       200:
  *         description: Published pusat informasi list grouped by category retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       category:
- *                         type: string
- *                       data:
- *                         type: array
- *                         items:
- *                           type: object
  */
 router.get("/public", getPusatInformasiPublic);
 
@@ -142,30 +73,32 @@ router.get("/public", getPusatInformasiPublic);
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [newest, oldest]
- *         description: Sort pusat informasi by creation time (default newest)
+ *           enum: [createdAt, name, category, queue, newest, oldest]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
  *         description: Pusat informasi data retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                 pagination:
- *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
  *         description: Token not found
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listPusatInformasi);
+router.get(
+  "/",
+  verifyToken,
+  validate(listPusatInformasiQuerySchema, "query"),
+  listPusatInformasi
+);
 
 /**
  * @swagger
@@ -185,38 +118,6 @@ router.get("/", verifyToken, listPusatInformasi);
  *     responses:
  *       200:
  *         description: Pusat informasi detail retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     createdAt:
- *                       type: string
- *                     updatedAt:
- *                       type: string
- *                     category:
- *                       type: string
- *                     name:
- *                       type: string
- *                     description:
- *                       type: string
- *                     icon:
- *                       type: string
- *                     url:
- *                       type: string
- *                     isPublish:
- *                       type: boolean
- *                       nullable: true
- *                     showInPreview:
- *                       type: string
- *                       nullable: true
- *                     queue:
- *                       type: integer
  *       401:
  *         description: Token not found
  *       403:
@@ -262,11 +163,9 @@ router.get("/:id", verifyToken, getPusatInformasiById);
  *                 example: https://drive.google.com/example-file
  *               isPublish:
  *                 type: boolean
- *                 nullable: true
  *                 example: true
  *               showInPreview:
  *                 type: boolean
- *                 nullable: true
  *                 example: true
  *     responses:
  *       201:
@@ -278,7 +177,13 @@ router.get("/:id", verifyToken, getPusatInformasiById);
  *       403:
  *         description: Access denied (Admin only)
  */
-router.post("/", verifyToken, isAdmin, createPusatInformasi);
+router.post(
+  "/",
+  verifyToken,
+  isAdmin,
+  validate(createPusatInformasiSchema),
+  createPusatInformasi
+);
 
 /**
  * @swagger
@@ -314,10 +219,8 @@ router.post("/", verifyToken, isAdmin, createPusatInformasi);
  *                 type: string
  *               isPublish:
  *                 type: boolean
- *                 nullable: true
  *               showInPreview:
  *                 type: boolean
- *                 nullable: true
  *               queue:
  *                 type: integer
  *     responses:
@@ -332,7 +235,13 @@ router.post("/", verifyToken, isAdmin, createPusatInformasi);
  *       404:
  *         description: Pusat informasi not found
  */
-router.put("/:id", verifyToken, isAdmin, updatePusatInformasi);
+router.put(
+  "/:id",
+  verifyToken,
+  isAdmin,
+  validate(updatePusatInformasiSchema),
+  updatePusatInformasi
+);
 
 /**
  * @swagger

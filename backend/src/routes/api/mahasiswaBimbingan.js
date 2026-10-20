@@ -2,6 +2,8 @@ import express from "express";
 import { listMahasiswaBimbingan } from "../../controllers/mahasiswaBimbinganController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { isDosen } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import { listMahasiswaBimbinganQuerySchema } from "../../schemas/mahasiswaBimbinganSchema.js";
 
 const router = express.Router();
 
@@ -35,8 +37,16 @@ const router = express.Router();
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [newest, oldest, studyProgramAsc, studyProgramDesc, nameAsc, nameDesc, nimAsc, nimDesc]
- *         description: Sort option (newest for baru-lama, oldest for lama-baru, studyProgramAsc for nama prodi A-Z, studyProgramDesc for nama prodi Z-A, nameAsc, nameDesc, nimAsc, nimDesc)
+ *           enum: [newest, oldest, studyProgramAsc, studyProgramDesc, nameAsc, nameDesc, nimAsc, nimDesc, createdAt, name, nim, studyProgram]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -51,62 +61,6 @@ const router = express.Router();
  *                   type: array
  *                   items:
  *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                         format: uuid
- *                       createdAt:
- *                         type: string
- *                         format: date-time
- *                       updatedAt:
- *                         type: string
- *                         format: date-time
- *                       mahasiswa:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                           nim:
- *                             type: string
- *                           name:
- *                             type: string
- *                           email:
- *                             type: string
- *                           phone:
- *                             type: string
- *                           kelasAsal:
- *                             type: string
- *                           tahunAngkatan:
- *                             type: integer
- *                           sks:
- *                             type: integer
- *                           ipk:
- *                             type: number
- *                           tak:
- *                             type: integer
- *                           studyProgram:
- *                             type: object
- *                             properties:
- *                               id:
- *                                 type: string
- *                               name:
- *                                 type: string
- *                               isActive:
- *                                 type: boolean
- *                               facultyId:
- *                                 type: string
- *                       judulTugasAkhirIndonesia:
- *                         type: string
- *                         nullable: true
- *                       judulTugasAkhirInggris:
- *                         type: string
- *                         nullable: true
- *                       status:
- *                         type: string
- *                         enum: [SK Terbit, SK Belum Terbit, Dalam Proses, Mengirim Revisi, Kadaluarsa]
- *                       sktaDownloadUrl:
- *                         type: string
- *                         nullable: true
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
@@ -118,6 +72,12 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.get("/", verifyToken, isDosen, listMahasiswaBimbingan);
+router.get(
+  "/",
+  verifyToken,
+  isDosen,
+  validate(listMahasiswaBimbinganQuerySchema, "query"),
+  listMahasiswaBimbingan
+);
 
 export default router;

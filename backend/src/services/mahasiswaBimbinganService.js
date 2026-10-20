@@ -8,6 +8,7 @@ export const getMahasiswaBimbingan = async ({
   search,
   studyProgramId,
   sortBy,
+  sortOrder,
   skip,
   take,
 }) => {
@@ -69,7 +70,11 @@ export const getMahasiswaBimbingan = async ({
   }
 
   // 2. Filter Study Program
-  if (studyProgramId && typeof studyProgramId === "string" && studyProgramId.trim() !== "") {
+  if (
+    studyProgramId &&
+    typeof studyProgramId === "string" &&
+    studyProgramId.trim() !== ""
+  ) {
     where.AND.push({
       mahasiswa: {
         studyProgramId: studyProgramId.trim(),
@@ -77,13 +82,15 @@ export const getMahasiswaBimbingan = async ({
     });
   }
 
-  // 3. Sorting (Single unified sortBy parameter matching researchGroup, dosen, studyProgram)
-  const sortParam = (sortBy || "").toLowerCase().trim();
+  // 3. Sorting
+  const sortParam = (sortBy || "createdAt").toLowerCase().trim();
+  const orderDirection =
+    (sortOrder || "desc").toLowerCase() === "asc" ? "asc" : "desc";
   let orderBy = { createdAt: "desc" };
 
   if (
     sortParam === "studyprogramasc" ||
-    sortParam === "studyprogram" ||
+    (sortParam === "studyprogram" && orderDirection === "asc") ||
     sortParam === "a-z" ||
     sortParam === "prodi-asc"
   ) {
@@ -96,6 +103,7 @@ export const getMahasiswaBimbingan = async ({
     };
   } else if (
     sortParam === "studyprogramdesc" ||
+    (sortParam === "studyprogram" && orderDirection === "desc") ||
     sortParam === "z-a" ||
     sortParam === "prodi-desc"
   ) {
@@ -106,7 +114,10 @@ export const getMahasiswaBimbingan = async ({
         },
       },
     };
-  } else if (sortParam === "nameasc" || sortParam === "name") {
+  } else if (
+    sortParam === "nameasc" ||
+    (sortParam === "name" && orderDirection === "asc")
+  ) {
     orderBy = {
       mahasiswa: {
         user: {
@@ -114,7 +125,10 @@ export const getMahasiswaBimbingan = async ({
         },
       },
     };
-  } else if (sortParam === "namedesc") {
+  } else if (
+    sortParam === "namedesc" ||
+    (sortParam === "name" && orderDirection === "desc")
+  ) {
     orderBy = {
       mahasiswa: {
         user: {
@@ -122,21 +136,35 @@ export const getMahasiswaBimbingan = async ({
         },
       },
     };
-  } else if (sortParam === "nimasc" || sortParam === "nim") {
+  } else if (
+    sortParam === "nimasc" ||
+    (sortParam === "nim" && orderDirection === "asc")
+  ) {
     orderBy = {
       mahasiswa: {
         nim: "asc",
       },
     };
-  } else if (sortParam === "nimdesc") {
+  } else if (
+    sortParam === "nimdesc" ||
+    (sortParam === "nim" && orderDirection === "desc")
+  ) {
     orderBy = {
       mahasiswa: {
         nim: "desc",
       },
     };
-  } else if (sortParam === "oldest" || sortParam === "lama-baru") {
+  } else if (
+    sortParam === "oldest" ||
+    sortParam === "lama-baru" ||
+    (sortParam === "createdat" && orderDirection === "asc")
+  ) {
     orderBy = { createdAt: "asc" };
-  } else if (sortParam === "newest" || sortParam === "baru-lama") {
+  } else if (
+    sortParam === "newest" ||
+    sortParam === "baru-lama" ||
+    (sortParam === "createdat" && orderDirection === "desc")
+  ) {
     orderBy = { createdAt: "desc" };
   }
 
@@ -161,7 +189,7 @@ export const getMahasiswaBimbingan = async ({
               where: { deletedAt: null },
               orderBy: { createdAt: "desc" },
               take: 1,
-            }
+            },
           },
         },
       },

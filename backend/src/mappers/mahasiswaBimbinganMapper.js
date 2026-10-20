@@ -118,3 +118,12 @@ export const mapMahasiswaBimbinganToFrontend = (reg, req) => {
     sktaDownloadUrl,
   };
 };
+
+
+/**
+ * Mapping daftar pendaftaran sidang mahasiswa bimbingan
+ */
+export const mapMahasiswaBimbinganList = (list, req) => {
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => mapMahasiswaBimbinganToFrontend(item, req));
+};
