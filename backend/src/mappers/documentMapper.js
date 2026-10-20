@@ -15,6 +15,11 @@ export const mapSklUpload = (item, req) => {
   };
 };
 
+export const mapSklUploadList = (list, req) => {
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => mapSklUpload(item, req));
+};
+
 export const mapTranskripUpload = (item, req) => {
   if (!item) return null;
   return {
@@ -28,6 +33,11 @@ export const mapTranskripUpload = (item, req) => {
     mahasiswa: mapMahasiswa(item.mahasiswa),
     downloadUrl: `${req.protocol}://${req.get("host")}/api/transkrip/uploads/${item.id}/download`,
   };
+};
+
+export const mapTranskripUploadList = (list, req) => {
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => mapTranskripUpload(item, req));
 };
 
 export const mapDokumenPanduanTugasAkhir = (item) => {
@@ -48,4 +58,3 @@ export const mapDokumenPanduanTugasAkhir = (item) => {
 };
 
 export const mapPusatInformasi = mapDokumenPanduanTugasAkhir;
-

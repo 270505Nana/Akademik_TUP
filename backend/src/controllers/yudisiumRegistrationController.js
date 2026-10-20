@@ -17,7 +17,7 @@ import {
   deleteFile,
   serveDownload,
 } from "../services/storageService.js";
-import { mapYudisiumRegistrationToFrontend } from "../mappers/index.js";
+import { mapYudisiumRegistrationToFrontend } from "../mappers/yudisiumMapper.js";
 import {
   yudisiumInclude,
   getRequiredSlugsFromDb,

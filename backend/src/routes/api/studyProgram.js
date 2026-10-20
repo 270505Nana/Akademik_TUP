@@ -18,7 +18,7 @@ import {
   listStudyProgramQuerySchema,
   createStudyProgramSchema,
   updateStudyProgramSchema,
-} from "../../schemas/index.js";
+} from "../../schemas/studyProgramSchema.js";
 
 /**
  * @swagger

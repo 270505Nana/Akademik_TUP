@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import * as authService from "../services/authService.js";
-import { mapUser } from "../mappers/index.js";
+import { mapUser } from "../mappers/userMapper.js";
 
 // Register
 export const register = asyncHandler(async (req, res) => {

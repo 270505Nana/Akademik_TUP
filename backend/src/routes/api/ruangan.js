@@ -15,7 +15,7 @@ import {
   createRuanganSchema,
   updateRuanganSchema,
   listRuanganQuerySchema,
-} from "../../schemas/index.js";
+} from "../../schemas/ruanganSchema.js";
 
 /**
  * @swagger

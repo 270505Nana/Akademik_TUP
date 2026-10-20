@@ -18,7 +18,7 @@ import {
   listFacultyQuerySchema,
   createFacultySchema,
   updateFacultySchema,
-} from "../../schemas/index.js";
+} from "../../schemas/facultySchema.js";
 
 /**
  * @swagger

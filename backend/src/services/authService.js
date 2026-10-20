@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
-import { ROLES, EMAIL_DOMAINS } from "../constants/index.js";
+import { ROLES, EMAIL_DOMAINS } from "../constants/roles.js";
 
 export const registerUser = async ({ email, password, phone }) => {
   // Cek duplikasi email

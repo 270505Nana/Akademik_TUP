@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import * as facultyService from "../services/facultyService.js";
-import { mapFaculty } from "../mappers/index.js";
+import { mapFaculty } from "../mappers/facultyMapper.js";
 import {
   getPaginationParams,
   formatPaginationResponse,

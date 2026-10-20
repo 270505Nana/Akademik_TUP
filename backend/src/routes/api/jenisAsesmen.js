@@ -1,17 +1,21 @@
-import express from 'express';
-
-const router = express.Router();
-
+import express from "express";
 import {
   createJenisAsesmen,
   getJenisAsesmens,
   getJenisAsesmenById,
   updateJenisAsesmen,
   deleteJenisAsesmen,
-} from '../../controllers/jenisAsesmenController.js';
+} from "../../controllers/jenisAsesmenController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listJenisAsesmenQuerySchema,
+  createJenisAsesmenSchema,
+  updateJenisAsesmenSchema,
+} from "../../schemas/jenisAsesmenSchema.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
+const router = express.Router();
 
 /**
  * @swagger
@@ -39,6 +43,20 @@ import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *         description: Filter Jenis Asesmen by CLO Prodi ID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [content, bobot, createdAt]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -49,7 +67,12 @@ import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token or access denied
  */
-router.get("/", verifyToken, getJenisAsesmens);
+router.get(
+  "/",
+  verifyToken,
+  validate(listJenisAsesmenQuerySchema, "query"),
+  getJenisAsesmens
+);
 
 /**
  * @swagger
@@ -81,15 +104,25 @@ router.get("/", verifyToken, getJenisAsesmens);
  *                 type: string
  *     responses:
  *       201:
- *         description: Jenis Asesmen created successfully
+ *         description: Jenis Asesmen created successfully (Admin / Ketua KK)
+ *       202:
+ *         description: Approval request submitted successfully (Ketua Prodi)
  *       400:
  *         description: Validation error
  *       401:
  *         description: Token not found
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
+ *       404:
+ *         description: CLO tidak ditemukan
  */
-router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createJenisAsesmen); 
+router.post(
+  "/",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(createJenisAsesmenSchema),
+  createJenisAsesmen
+);
 
 /**
  * @swagger
@@ -109,8 +142,12 @@ router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createJenisAsesmen);
  *     responses:
  *       200:
  *         description: Jenis Asesmen data retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied
  *       404:
- *         description: Jenis Asesmen not found
+ *         description: Jenis Asesmen tidak ditemukan
  */
 router.get("/:id", verifyToken, getJenisAsesmenById);
 
@@ -144,11 +181,27 @@ router.get("/:id", verifyToken, getJenisAsesmenById);
  *                 example: 0.2
  *     responses:
  *       200:
- *         description: Jenis Asesmen updated successfully
+ *         description: Jenis Asesmen updated successfully (Admin/Ketua KK) or existing request updated (Ketua Prodi)
+ *       202:
+ *         description: Approval request submitted successfully (Ketua Prodi)
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied
  *       404:
- *         description: Jenis Asesmen not found
+ *         description: Jenis Asesmen tidak ditemukan
+ *       409:
+ *         description: Pending approval request conflict
  */
-router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateJenisAsesmen); 
+router.put(
+  "/:id",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(updateJenisAsesmenSchema),
+  updateJenisAsesmen
+);
 
 /**
  * @swagger
@@ -166,10 +219,23 @@ router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateJenisAsesmen
  *           type: string
  *     responses:
  *       200:
- *         description: Jenis Asesmen deleted successfully
+ *         description: Jenis Asesmen deleted successfully (Admin/Ketua KK) or existing request updated to delete (Ketua Prodi)
+ *       202:
+ *         description: Delete approval request submitted successfully (Ketua Prodi)
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied
  *       404:
- *         description: Jenis Asesmen not found
+ *         description: Jenis Asesmen tidak ditemukan
+ *       409:
+ *         description: Pending approval request conflict
  */
-router.delete("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, deleteJenisAsesmen); 
+router.delete(
+  "/:id",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  deleteJenisAsesmen
+);
 
-export default router;
+export default router;

@@ -1,7 +1,4 @@
 import express from "express";
-
-const router = express.Router();
-
 import {
   listApprovalRequests,
   findApprovalRequestById,
@@ -9,9 +6,15 @@ import {
   rejectApprovalRequest,
   cancelApprovalRequest,
 } from "../../controllers/approvalRequestController.js";
-
 import { verifyToken } from "../../middlewares/auth.js";
 import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listApprovalRequestQuerySchema,
+  rejectApprovalRequestSchema,
+} from "../../schemas/approvalRequestSchema.js";
+
+const router = express.Router();
 
 /**
  * @swagger
@@ -73,7 +76,13 @@ import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
  *       403:
  *         description: Access denied
  */
-router.get("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, listApprovalRequests);
+router.get(
+  "/",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(listApprovalRequestQuerySchema, "query"),
+  listApprovalRequests
+);
 
 /**
  * @swagger
@@ -100,7 +109,12 @@ router.get("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, listApprovalRequests)
  *       404:
  *         description: Approval request not found
  */
-router.get("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, findApprovalRequestById);
+router.get(
+  "/:id",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  findApprovalRequestById
+);
 
 /**
  * @swagger
@@ -129,7 +143,12 @@ router.get("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, findApprovalReques
  *       404:
  *         description: Approval request not found
  */
-router.patch("/:id/approve", verifyToken, isAdminOrKetuaKKOrKetuaProdi, approveApprovalRequest);
+router.patch(
+  "/:id/approve",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  approveApprovalRequest
+);
 
 /**
  * @swagger
@@ -170,7 +189,13 @@ router.patch("/:id/approve", verifyToken, isAdminOrKetuaKKOrKetuaProdi, approveA
  *       404:
  *         description: Approval request not found
  */
-router.patch("/:id/reject", verifyToken, isAdminOrKetuaKKOrKetuaProdi, rejectApprovalRequest);
+router.patch(
+  "/:id/reject",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(rejectApprovalRequestSchema),
+  rejectApprovalRequest
+);
 
 /**
  * @swagger
@@ -199,6 +224,11 @@ router.patch("/:id/reject", verifyToken, isAdminOrKetuaKKOrKetuaProdi, rejectApp
  *       404:
  *         description: Approval request not found
  */
-router.patch("/:id/cancel", verifyToken, isAdminOrKetuaKKOrKetuaProdi, cancelApprovalRequest);
+router.patch(
+  "/:id/cancel",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  cancelApprovalRequest
+);
 
 export default router;

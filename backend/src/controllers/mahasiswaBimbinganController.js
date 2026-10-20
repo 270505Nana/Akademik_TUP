@@ -4,14 +4,14 @@ import {
   formatPaginationResponse,
 } from "../utils/paginationHelper.js";
 import * as mahasiswaBimbinganService from "../services/mahasiswaBimbinganService.js";
-import { mapMahasiswaBimbinganToFrontend } from "../mappers/index.js";
+import { mapMahasiswaBimbinganList } from "../mappers/mahasiswaBimbinganMapper.js";
 
 /**
  * Mendapatkan daftar sidang registration mahasiswa bimbingan dosen yang sedang login (paginated)
  */
 export const listMahasiswaBimbingan = asyncHandler(async (req, res) => {
   const paginationParams = getPaginationParams(req.query);
-  const { search, studyProgramId, sortBy } = req.query;
+  const { search, studyProgramId, sortBy, sortOrder } = req.query;
 
   const { total, registrations } =
     await mahasiswaBimbinganService.getMahasiswaBimbingan({
@@ -19,12 +19,11 @@ export const listMahasiswaBimbingan = asyncHandler(async (req, res) => {
       search,
       studyProgramId,
       sortBy,
+      sortOrder,
       ...paginationParams,
     });
 
-  const data = registrations.map((item) =>
-    mapMahasiswaBimbinganToFrontend(item, req),
-  );
+  const data = mapMahasiswaBimbinganList(registrations, req);
 
   res.json(formatPaginationResponse(data, total, paginationParams));
 });

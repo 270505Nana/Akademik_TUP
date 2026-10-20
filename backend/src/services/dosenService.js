@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { ROLES } from "../constants/index.js";
+import { ROLES } from "../constants/roles.js";
 import { uploadFile, deleteFile } from "./storageService.js";
 
 export const getDosens = async ({

@@ -16,7 +16,7 @@ import {
   deleteFile,
   serveDownload,
 } from "../services/storageService.js";
-import { mapSidangRegistrationToFrontend } from "../mappers/index.js";
+import { mapSidangRegistrationToFrontend } from "../mappers/sidangMapper.js";
 import {
   sidangInclude,
   getRequiredSlugsFromDb,
