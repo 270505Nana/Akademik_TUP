@@ -4,7 +4,7 @@ import {
   formatPaginationResponse,
 } from "../utils/paginationHelper.js";
 import * as mahasiswaBimbinganService from "../services/mahasiswaBimbinganService.js";
-import { mapMahasiswaBimbinganToFrontend } from "../mappers/index.js";
+import { mapMahasiswaBimbinganToFrontend } from "../mappers/mahasiswaBimbinganMapper.js";
 
 /**
  * Mendapatkan daftar sidang registration mahasiswa bimbingan dosen yang sedang login (paginated)

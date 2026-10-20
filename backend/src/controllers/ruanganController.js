@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import * as ruanganService from "../services/ruanganService.js";
-import { mapRuangan } from "../mappers/index.js";
+import { mapRuangan } from "../mappers/ruanganMapper.js";
 
 export const createRuangan = asyncHandler(async (req, res) => {
   const ruangan = await ruanganService.createRuangan(req.body);

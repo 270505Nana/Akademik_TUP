@@ -3,7 +3,7 @@ import {
   getPaginationParams,
   formatPaginationResponse,
 } from "../utils/paginationHelper.js";
-import { mapAdmin } from "../mappers/index.js";
+import { mapAdmin } from "../mappers/userMapper.js";
 import {
   getAdminPaginated,
   getAdminByIdOrUserId,

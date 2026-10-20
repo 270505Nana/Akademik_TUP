@@ -3,7 +3,7 @@ import {
   getPaginationParams,
   formatPaginationResponse,
 } from "../utils/paginationHelper.js";
-import { mapPenjadwalanSidangToFrontend } from "../mappers/index.js";
+import { mapPenjadwalanSidangToFrontend } from "../mappers/penjadwalanMapper.js";
 import * as penjadwalanSidangService from "../services/penjadwalanSidangService.js";
 
 // Penjadwalan Sidang List

@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import * as dosenService from "../services/dosenService.js";
-import { mapDosen } from "../mappers/index.js";
+import { mapDosen } from "../mappers/userMapper.js";
 import {
   getPaginationParams,
   formatPaginationResponse,

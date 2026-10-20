@@ -1,4 +1,4 @@
-import { NON_SIDANG_CATEGORY_MAP } from "../constants/index.js";
+import { NON_SIDANG_CATEGORY_MAP } from "../constants/documentCategories.js";
 
 /**
  * Helper untuk menghitung persentase progres pengisian form pendaftaran sidang

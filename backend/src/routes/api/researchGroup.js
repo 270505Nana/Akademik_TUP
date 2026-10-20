@@ -18,7 +18,7 @@ import {
   listResearchGroupQuerySchema,
   createResearchGroupSchema,
   updateResearchGroupSchema,
-} from "../../schemas/index.js";
+} from "../../schemas/researchGroupSchema.js";
 
 /**
  * @swagger

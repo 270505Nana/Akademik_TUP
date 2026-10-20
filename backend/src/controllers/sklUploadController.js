@@ -12,7 +12,7 @@ import {
   deleteFile,
   serveDownload,
 } from "../services/storageService.js";
-import { mapSklUpload } from "../mappers/index.js";
+import { mapSklUpload } from "../mappers/documentMapper.js";
 
 const sklInclude = {
   mahasiswa: {

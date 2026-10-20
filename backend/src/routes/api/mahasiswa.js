@@ -10,7 +10,7 @@ import { validate } from "../../middlewares/validate.js";
 import {
   upsertMahasiswaSchema,
   listMahasiswaQuerySchema,
-} from "../../schemas/index.js";
+} from "../../schemas/mahasiswaSchema.js";
 
 const router = express.Router();
 

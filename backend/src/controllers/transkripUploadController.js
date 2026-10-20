@@ -12,7 +12,7 @@ import {
   deleteFile,
   serveDownload,
 } from "../services/storageService.js";
-import { mapTranskripUpload } from "../mappers/index.js";
+import { mapTranskripUpload } from "../mappers/documentMapper.js";
 
 const transkripInclude = {
   mahasiswa: {

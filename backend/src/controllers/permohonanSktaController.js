@@ -6,7 +6,7 @@ import {
 } from "../utils/paginationHelper.js";
 import { sendValidationError } from "../utils/validationHelper.js";
 import { serveDownload, getFileStream } from "../services/storageService.js";
-import { mapPermohonanToFrontend } from "../mappers/index.js";
+import { mapPermohonanToFrontend } from "../mappers/permohonanSktaMapper.js";
 import * as permohonanSktaService from "../services/permohonanSktaService.js";
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];

@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import * as researchGroupService from "../services/researchGroupService.js";
-import { mapResearchGroup } from "../mappers/index.js";
+import { mapResearchGroup } from "../mappers/researchGroupMapper.js";
 import {
   getPaginationParams,
   formatPaginationResponse,

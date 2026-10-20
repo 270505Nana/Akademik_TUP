@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.js";
 import { deleteFile } from "./storageService.js";
-import { DOCUMENT_CATEGORIES, CUMLAUDE_CATEGORY_MAP } from "../constants/index.js";
+import { DOCUMENT_CATEGORIES, CUMLAUDE_CATEGORY_MAP } from "../constants/documentCategories.js";
 
 export const yudisiumInclude = {
   mahasiswa: {
