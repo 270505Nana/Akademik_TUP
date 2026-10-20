@@ -1,13 +1,19 @@
-import express from 'express';
+import express from "express";
 import {
   createSkemaPerhitungan,
   getSkemaPerhitungans,
   getSkemaPerhitunganById,
   updateSkemaPerhitungan,
   deleteSkemaPerhitungan,
-} from '../../controllers/skemaPerhitunganController.js';
-import { verifyToken } from '../../middlewares/auth.js';
-import { isAdminOrKetuaKKOrKetuaProdi } from '../../middlewares/authorize.js';
+} from "../../controllers/skemaPerhitunganController.js";
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listSkemaPerhitunganQuerySchema,
+  createSkemaSchema,
+  updateSkemaSchema,
+} from "../../schemas/skemaPerhitunganSchema.js";
 
 const router = express.Router();
 
@@ -37,13 +43,36 @@ const router = express.Router();
  *         schema:
  *           type: string
  *         description: Filter by CLO ID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [bobotRataRataPembimbing, bobotRataRataPenguji, createdAt]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
  *       200:
  *         description: Data retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied
  */
-router.get("/", verifyToken, getSkemaPerhitungans);
+router.get(
+  "/",
+  verifyToken,
+  validate(listSkemaPerhitunganQuerySchema, "query"),
+  getSkemaPerhitungans
+);
 
 /**
  * @swagger
@@ -63,6 +92,7 @@ router.get("/", verifyToken, getSkemaPerhitungans);
  *               - bobotRataRataPembimbing
  *               - bobotRataRataPenguji
  *               - studyProgramId
+ *               - cloProdiId
  *             properties:
  *               bobotRataRataPembimbing:
  *                 type: number
@@ -79,11 +109,27 @@ router.get("/", verifyToken, getSkemaPerhitungans);
  *                 description: "ID CLO yang akan diatur bobot perhitungannya"
  *     responses:
  *       201:
- *         description: Created successfully
+ *         description: Skema Perhitungan Nilai berhasil dibuat
+ *       202:
+ *         description: Permohonan penambahan Skema Perhitungan berhasil diajukan dan sedang menunggu persetujuan
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi)
+ *       404:
+ *         description: CLO tidak ditemukan pada Program Studi ini
+ *       409:
+ *         description: Skema perhitungan untuk CLO ini sudah ada
  */
-router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createSkemaPerhitungan);
+router.post(
+  "/",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(createSkemaSchema),
+  createSkemaPerhitungan
+);
 
 /**
  * @swagger
@@ -99,9 +145,16 @@ router.post("/", verifyToken, isAdminOrKetuaKKOrKetuaProdi, createSkemaPerhitung
  *         required: true
  *         schema:
  *           type: string
+ *         description: Skema Perhitungan UUID
  *     responses:
  *       200:
  *         description: Data retrieved successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Skema Perhitungan Nilai tidak ditemukan
  */
 router.get("/:id", verifyToken, getSkemaPerhitunganById);
 
@@ -119,6 +172,7 @@ router.get("/:id", verifyToken, getSkemaPerhitunganById);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Skema Perhitungan UUID
  *     requestBody:
  *       required: true
  *       content:
@@ -134,11 +188,25 @@ router.get("/:id", verifyToken, getSkemaPerhitunganById);
  *                 format: float
  *     responses:
  *       200:
- *         description: Updated successfully
+ *         description: Skema Perhitungan Nilai berhasil diperbarui / Permohonan berhasil diajukan
+ *       400:
+ *         description: Validation error / Total kombinasi bobot harus 1
+ *       401:
+ *         description: Token not found
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi)
+ *       404:
+ *         description: Skema Perhitungan Nilai tidak ditemukan
+ *       409:
+ *         description: Data sedang dalam proses permohonan persetujuan oleh pengguna lain
  */
-router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateSkemaPerhitungan);
+router.put(
+  "/:id",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  validate(updateSkemaSchema),
+  updateSkemaPerhitungan
+);
 
 /**
  * @swagger
@@ -154,12 +222,24 @@ router.put("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, updateSkemaPerhitu
  *         required: true
  *         schema:
  *           type: string
+ *         description: Skema Perhitungan UUID
  *     responses:
  *       200:
- *         description: Deleted successfully
+ *         description: Skema Perhitungan Nilai berhasil dihapus / Permohonan berhasil diajukan
+ *       401:
+ *         description: Token not found
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi)
+ *       404:
+ *         description: Skema Perhitungan Nilai tidak ditemukan
+ *       409:
+ *         description: Data sedang dalam proses permohonan persetujuan oleh pengguna lain
  */
-router.delete("/:id", verifyToken, isAdminOrKetuaKKOrKetuaProdi, deleteSkemaPerhitungan);
+router.delete(
+  "/:id",
+  verifyToken,
+  isAdminOrKetuaKKOrKetuaProdi,
+  deleteSkemaPerhitungan
+);
 
 export default router;

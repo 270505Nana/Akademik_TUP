@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { getPaginationParams, formatPaginationResponse } from "../utils/paginationHelper.js";
+import { checkActivePendingRequest } from "./approvalService.js";
 
 const skemaModel = prisma.skemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi;
 
@@ -77,7 +78,7 @@ export const createSkemaPerhitungan = async (data, access) => {
 
 export const getSkemaPerhitungans = async (query, access) => {
     const paginationParams = getPaginationParams(query);
-    const { studyProgramId, cloProdiId } = query;
+    const { studyProgramId, cloProdiId, sortBy, sortOrder } = query;
 
     const where = { deletedAt: null };
     if (access.isRestrictedKaprodi) {
@@ -99,6 +100,18 @@ export const getSkemaPerhitungans = async (query, access) => {
     }
 
     if (cloProdiId) where.cloProdiId = cloProdiId;
+
+    const orderDirection = (sortOrder || "asc").toLowerCase() === "desc" ? "desc" : "asc";
+    const sortField = (sortBy || "createdAt").trim();
+
+    let orderBy = { createdAt: orderDirection };
+    if (sortField === "bobotRataRataPembimbing") {
+        orderBy = { bobotRataRataPembimbing: orderDirection };
+    } else if (sortField === "bobotRataRataPenguji") {
+        orderBy = { bobotRataRataPenguji: orderDirection };
+    } else if (sortField === "createdAt") {
+        orderBy = { createdAt: orderDirection };
+    }
     
     const [total, skemaList] = await Promise.all([
         skemaModel.count({ where }),
@@ -107,7 +120,7 @@ export const getSkemaPerhitungans = async (query, access) => {
             skip: paginationParams.skip,
             take: paginationParams.take,
             include: { studyProgram: true, cloProdi: true },
-            orderBy: { createdAt: "asc" },
+            orderBy,
         }),
     ]);
     

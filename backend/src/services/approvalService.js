@@ -67,6 +67,26 @@ export const applyChangeRequest = async (changeRequest) => {
     }
   }
 
+  if (entityType === "SKEMA_PERHITUNGAN") {
+    if (action === "CREATE") {
+      return await prisma.skemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi.create({
+        data: payload,
+      });
+    }
+    if (action === "UPDATE") {
+      return await prisma.skemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi.update({
+        where: { id: targetId },
+        data: payload,
+      });
+    }
+    if (action === "DELETE") {
+      return await prisma.skemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi.update({
+        where: { id: targetId },
+        data: { deletedAt: new Date() },
+      });
+    }
+  }
+
   throw new Error(
     `EntityType '${entityType}' tidak didukung untuk penerapan persetujuan.`
   );
