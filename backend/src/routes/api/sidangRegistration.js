@@ -1,7 +1,16 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
-import { verifyToken } from '../../middlewares/auth.js';
-import { upload } from '../../middlewares/upload.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { isMahasiswa, isAdmin } from "../../middlewares/authorize.js";
+import { upload } from "../../middlewares/upload.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listSidangQuerySchema,
+  saveSidangDraftSchema,
+  submitSidangSchema,
+  approveSidangSchema,
+  rejectSidangSchema,
+} from "../../schemas/sidangSchema.js";
 import {
   listSidangRegistrations,
   getSidangRegistrationById,
@@ -15,8 +24,7 @@ import {
   approveSidangRegistration,
   rejectSidangRegistration,
   toggleLockSidangRegistration,
-} from '../../controllers/sidangRegistrationController.js';
-import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
+} from "../../controllers/sidangRegistrationController.js";
 
 /**
  * @swagger
@@ -72,7 +80,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *           enum: [newest, oldest, nameAsc, nameDesc, nimAsc, nimDesc, ipkAsc, ipkDesc, sksAsc, sksDesc, takAsc, takDesc, tglSidangAsc, tglSidangDesc, submittedAtAsc, submittedAtDesc, updatedAtAsc, updatedAtDesc]
- *         description: Sort option (newest for baru-lama, oldest for lama-baru, nameAsc/nameDesc, nimAsc/nimDesc, ipkAsc/ipkDesc, sksAsc/sksDesc, takAsc/takDesc, tglSidangAsc/tglSidangDesc, submittedAtAsc/submittedAtDesc, updatedAtAsc/updatedAtDesc)
+ *         description: Sort option
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -94,7 +102,12 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listSidangRegistrations);
+router.get(
+  "/",
+  verifyToken,
+  validate(listSidangQuerySchema, "query"),
+  listSidangRegistrations,
+);
 
 /**
  * @swagger
@@ -218,6 +231,7 @@ router.post(
   "/",
   verifyToken,
   isMahasiswa,
+  validate(saveSidangDraftSchema),
   saveSidangRegistration,
 );
 
@@ -235,6 +249,18 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - id
+ *               - programType
+ *               - sks
+ *               - ipk
+ *               - tak
+ *               - sktaExpDate
+ *               - thesisTitleId
+ *               - thesisTitleEn
+ *               - mahasiswaId
+ *               - dosenPembimbing1Id
+ *               - dosenPembimbing2Id
  *             properties:
  *               id:
  *                 type: string
@@ -285,6 +311,7 @@ router.post(
   "/submit",
   verifyToken,
   isMahasiswa,
+  validate(submitSidangSchema),
   submitSidangRegistration,
 );
 
@@ -477,7 +504,13 @@ router.get(
  *       404:
  *         description: Registration, admin or period not found
  */
-router.put("/:id/approve", verifyToken, isAdmin, approveSidangRegistration);
+router.put(
+  "/:id/approve",
+  verifyToken,
+  isAdmin,
+  validate(approveSidangSchema),
+  approveSidangRegistration,
+);
 
 /**
  * @swagger
@@ -526,7 +559,13 @@ router.put("/:id/approve", verifyToken, isAdmin, approveSidangRegistration);
  *       404:
  *         description: Registration or admin not found
  */
-router.put("/:id/reject", verifyToken, isAdmin, rejectSidangRegistration);
+router.put(
+  "/:id/reject",
+  verifyToken,
+  isAdmin,
+  validate(rejectSidangSchema),
+  rejectSidangRegistration,
+);
 
 /**
  * @swagger
@@ -562,6 +601,11 @@ router.put("/:id/reject", verifyToken, isAdmin, rejectSidangRegistration);
  *       404:
  *         description: Sidang registration not found
  */
-router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistration);
+router.patch(
+  "/:id/toggle-lock",
+  verifyToken,
+  isAdmin,
+  toggleLockSidangRegistration,
+);
 
 export default router;
