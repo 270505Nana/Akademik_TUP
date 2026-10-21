@@ -1,12 +1,20 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
-import { verifyToken } from '../../middlewares/auth.js';
-import { listYudisiumPeriods,
+import { verifyToken } from "../../middlewares/auth.js";
+import { isAdmin } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listPeriodQuerySchema,
+  createPeriodSchema,
+  updatePeriodSchema,
+} from "../../schemas/periodSchema.js";
+import {
+  listYudisiumPeriods,
   getYudisiumPeriodById,
   createYudisiumPeriod,
   updateYudisiumPeriod,
-  deleteYudisiumPeriod, } from '../../controllers/yudisiumPeriodController.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+  deleteYudisiumPeriod,
+} from "../../controllers/yudisiumPeriodController.js";
 
 /**
  * @swagger
@@ -25,11 +33,30 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Keyword pencarian berdasarkan nama periode atau period
+ *       - in: query
  *         name: category
  *         schema:
  *           type: string
  *           enum: [pendaftaran, pelaksanaan]
  *         description: Filter periods by category (pendaftaran / pelaksanaan)
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [startDate, endDate, createdAt, name, period]
+ *           default: startDate
+ *         description: Field untuk pengurutan
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Arah pengurutan (asc / desc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -51,7 +78,12 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listYudisiumPeriods);
+router.get(
+  "/",
+  verifyToken,
+  validate(listPeriodQuerySchema, "query"),
+  listYudisiumPeriods,
+);
 
 /**
  * @swagger
@@ -139,6 +171,7 @@ router.post(
   "/",
   verifyToken,
   isAdmin,
+  validate(createPeriodSchema),
   createYudisiumPeriod,
 );
 
@@ -202,6 +235,7 @@ router.put(
   "/:id",
   verifyToken,
   isAdmin,
+  validate(updatePeriodSchema),
   updateYudisiumPeriod,
 );
 
