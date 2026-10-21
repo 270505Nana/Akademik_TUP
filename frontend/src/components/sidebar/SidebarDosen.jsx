@@ -14,7 +14,6 @@ import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import './sidebar.css';
 
-// Sidebar untuk role Dosen
 const SidebarDosen = ({ isOpen, onClose }) => {
   const location  = useLocation();
   const navigate  = useNavigate();
@@ -44,7 +43,6 @@ const SidebarDosen = ({ isOpen, onClose }) => {
     setExpandedMenus(prev => ({ ...prev, [label]: !prev[label] }));
   };
 
-  // Menu "Penjadwalan Sidang" hanya ditampilkan jika dosen adalah Ketua KK
   const sidangItems = [
     { label: 'Jadwal & Nilai Sidang', icon: <Calendar className="nav-icon" />, path: '/dosen/jadwal-nilai-sidang' },
     ...(isKetuaKK ? [{ label: 'Penjadwalan Sidang', icon: <ClipboardList className="nav-icon" />, path: '/dosen/penjadwalan-sidang' }] : []),
@@ -57,9 +55,9 @@ const SidebarDosen = ({ isOpen, onClose }) => {
         { label: 'Beranda', icon: <Home className="nav-icon" />, path: '/dosen/dashboard' },
       ],
     },
-    // Menu "Kelola CLO" hanya ditampilkan jika dosen adalah Kaprodi
-    ...(isKaprodi ? [{
-      label: 'Manajemen Prodi',
+    // Menu "Kelola CLO" ditampilkan jika dosen adalah Kaprodi ATAU Ketua KK
+    ...(isKaprodi || isKetuaKK ? [{
+      label: isKaprodi ? 'Manajemen Prodi' : 'Manajemen Kurikulum',
       items: [
         { label: 'Kelola CLO', icon: <FileText className="nav-icon" />, path: '/dosen/kelola-clo' },
       ],
@@ -180,25 +178,16 @@ const SidebarDosen = ({ isOpen, onClose }) => {
         <div className="sidebar-user">
           <div className="avatar">
             {fotoProfil ? (
-              <img
-                src={fotoProfil}
-                alt={namaDisplay}
-                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-              />
-            ) : (
-              avatarChar
-            )}
+              <img src={fotoProfil} alt={namaDisplay} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            ) : avatarChar}
           </div>
           <div className="user-info">
             <div className="user-name" title={namaDisplay}>{namaDisplay}</div>
             <div className="user-role">{roleDisplay}</div>
           </div>
-          <button className="logout-btn" onClick={handleLogout} title="Keluar dari sistem">
-            <LogOut size={16} />
-          </button>
+          <button className="logout-btn" onClick={handleLogout} title="Keluar dari sistem"><LogOut size={16} /></button>
         </div>
       </aside>
-
       <div id="sidebar-overlay" className={isOpen ? 'show' : ''} onClick={onClose} />
     </>
   );
