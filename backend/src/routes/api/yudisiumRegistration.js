@@ -1,7 +1,17 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
-import { verifyToken } from '../../middlewares/auth.js';
-import { upload } from '../../middlewares/upload.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { isMahasiswa, isAdmin } from "../../middlewares/authorize.js";
+import { upload } from "../../middlewares/upload.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listYudisiumQuerySchema,
+  exportYudisiumQuerySchema,
+  saveYudisiumDraftSchema,
+  submitYudisiumSchema,
+  approveYudisiumSchema,
+  rejectYudisiumSchema,
+} from "../../schemas/yudisiumSchema.js";
 import {
   listYudisiumRegistrations,
   getYudisiumRegistrationById,
@@ -15,8 +25,7 @@ import {
   approveYudisiumRegistration,
   rejectYudisiumRegistration,
   exportYudisium,
-} from '../../controllers/yudisiumRegistrationController.js';
-import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
+} from "../../controllers/yudisiumRegistrationController.js";
 
 /**
  * @swagger
@@ -78,7 +87,7 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         schema:
  *           type: string
  *           enum: [newest, oldest, nameAsc, nameDesc, nimAsc, nimDesc, ipkAsc, ipkDesc, takAsc, takDesc, tglSidangAsc, tglSidangDesc, submittedAtAsc, submittedAtDesc, updatedAtAsc, updatedAtDesc]
- *         description: Sort option (newest for baru-lama, oldest for lama-baru, nameAsc/nameDesc, nimAsc/nimDesc, ipkAsc/ipkDesc, takAsc/takDesc, tglSidangAsc/tglSidangDesc, submittedAtAsc/submittedAtDesc, updatedAtAsc/updatedAtDesc)
+ *         description: Sort option
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -100,13 +109,18 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listYudisiumRegistrations);
+router.get(
+  "/",
+  verifyToken,
+  validate(listYudisiumQuerySchema, "query"),
+  listYudisiumRegistrations,
+);
 
 /**
  * @swagger
  * /api/yudisium-registrations/export:
  *   get:
- *     summary: Export data pendaftar yudisium 
+ *     summary: Export data pendaftar yudisium
  *     tags: [Yudisium Registration]
  *     security:
  *       - bearerAuth: []
@@ -124,7 +138,13 @@ router.get("/", verifyToken, listYudisiumRegistrations);
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  */
-router.get("/export", verifyToken, isAdmin, exportYudisium);
+router.get(
+  "/export",
+  verifyToken,
+  isAdmin,
+  validate(exportYudisiumQuerySchema, "query"),
+  exportYudisium,
+);
 
 /**
  * @swagger
@@ -230,7 +250,7 @@ router.get(
  *                 example: Publikasi Jurnal
  *               evidenCumlaude:
  *                 type: string
- *                 description: Masukan nama jurnal/conference pubilkasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional [jika lebih dari satu, pisahkan dengan ENTER]
+ *                 description: Masukan nama jurnal/conference publikasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional
  *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
  *               berminatWirausaha:
  *                 type: boolean
@@ -272,6 +292,7 @@ router.post(
   "/",
   verifyToken,
   isMahasiswa,
+  validate(saveYudisiumDraftSchema),
   saveYudisiumRegistration,
 );
 
@@ -330,7 +351,7 @@ router.post(
  *                 example: Publikasi Jurnal
  *               evidenCumlaude:
  *                 type: string
- *                 description: Masukan nama jurnal/conference pubilkasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional [jika lebih dari satu, pisahkan dengan ENTER]
+ *                 description: Masukan nama jurnal/conference publikasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional
  *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
  *               berminatWirausaha:
  *                 type: boolean
@@ -372,6 +393,7 @@ router.post(
   "/submit",
   verifyToken,
   isMahasiswa,
+  validate(submitYudisiumSchema),
   submitYudisiumRegistration,
 );
 
@@ -570,7 +592,13 @@ router.get(
  *       404:
  *         description: Registration, admin or period not found
  */
-router.put("/:id/approve", verifyToken, isAdmin, approveYudisiumRegistration);
+router.put(
+  "/:id/approve",
+  verifyToken,
+  isAdmin,
+  validate(approveYudisiumSchema),
+  approveYudisiumRegistration,
+);
 
 /**
  * @swagger
@@ -618,6 +646,12 @@ router.put("/:id/approve", verifyToken, isAdmin, approveYudisiumRegistration);
  *       404:
  *         description: Registration or admin not found
  */
-router.put("/:id/reject", verifyToken, isAdmin, rejectYudisiumRegistration);
+router.put(
+  "/:id/reject",
+  verifyToken,
+  isAdmin,
+  validate(rejectYudisiumSchema),
+  rejectYudisiumRegistration,
+);
 
 export default router;
