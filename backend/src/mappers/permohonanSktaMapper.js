@@ -93,3 +93,12 @@ export const mapPermohonanToFrontend = (item, req) => {
       : null,
   };
 };
+
+
+/**
+ * Mapping daftar permohonan SKTA
+ */
+export const mapPermohonanList = (list, req) => {
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => mapPermohonanToFrontend(item, req));
+};

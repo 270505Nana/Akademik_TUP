@@ -6,7 +6,10 @@ import {
 } from "../utils/paginationHelper.js";
 import { sendValidationError } from "../utils/validationHelper.js";
 import { serveDownload, getFileStream } from "../services/storageService.js";
-import { mapPermohonanToFrontend } from "../mappers/permohonanSktaMapper.js";
+import {
+  mapPermohonanToFrontend,
+  mapPermohonanList,
+} from "../mappers/permohonanSktaMapper.js";
 import * as permohonanSktaService from "../services/permohonanSktaService.js";
 
 const getUploadedFile = (files, fieldName) => files?.[fieldName]?.[0];
@@ -20,10 +23,9 @@ const buildDownloadUrl = (req, berkasId) => {
  * [Route] Mendapatkan Semua Permohonan SKTA
  */
 const listPermohonanSkta = asyncHandler(async (req, res) => {
-  const paginationParams = getPaginationParams(req.query);
-  const { total, data } =
-    await permohonanSktaService.getPermohonanSktas(paginationParams);
-  const enriched = data.map((item) => mapPermohonanToFrontend(item, req));
+  const { total, data, paginationParams } =
+    await permohonanSktaService.getPermohonanSktas(req.query);
+  const enriched = mapPermohonanList(data, req);
   res.json(formatPaginationResponse(enriched, total, paginationParams));
 });
 

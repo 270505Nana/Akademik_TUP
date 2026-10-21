@@ -25,6 +25,7 @@ import { upload } from '../../middlewares/upload.js';
 import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
 import { validate } from '../../middlewares/validate.js';
 import {
+  listPermohonanSktaQuerySchema,
   savePermohonanSktaDraftSchema,
   submitPermohonanSktaSchema,
   updatePermohonanSktaSchema,
@@ -49,6 +50,40 @@ import {
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: mahasiswaId
+ *         schema:
+ *           type: string
+ *         description: Filter by Mahasiswa ID (UUID)
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: string
+ *         description: Filter by Study Program ID
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by Kategori Permohonan SKTA
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search keyword across student name, NIM, and proposal titles
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, updatedAt, expDate, judulProposalIndonesia, category]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -72,7 +107,12 @@ import {
  *       500:
  *         description: Internal server error
  */
-router.get("/", verifyToken, listPermohonanSkta);
+router.get(
+  "/",
+  verifyToken,
+  validate(listPermohonanSktaQuerySchema, "query"),
+  listPermohonanSkta
+);
 
 /**
  * @swagger

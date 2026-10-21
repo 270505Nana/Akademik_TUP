@@ -210,3 +210,46 @@ export const exportSktaZipSchema = z.object({
     }).optional()
   ),
 });
+
+
+/**
+ * Schema untuk Query Parameters Daftar Permohonan SKTA (GET /api/permohonan-skta)
+ */
+export const listPermohonanSktaQuerySchema = z.object({
+  mahasiswaId: optionalUuid("ID Mahasiswa tidak valid"),
+  studyProgramId: optionalTrimmedString(),
+  category: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.enum(sktaCategories, {
+      error: "Kategori permohonan SKTA tidak valid",
+    }).optional()
+  ),
+  search: optionalTrimmedString(),
+  sortBy: z
+    .enum(["createdAt", "updatedAt", "expDate", "judulProposalIndonesia", "category"], {
+      error:
+        "sortBy harus salah satu dari: createdAt, updatedAt, expDate, judulProposalIndonesia, category",
+    })
+    .optional()
+    .default("createdAt"),
+  sortOrder: z
+    .enum(["asc", "desc"], {
+      error: "sortOrder harus salah satu dari: asc, desc",
+    })
+    .optional()
+    .default("desc"),
+  page: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.number().int().min(1).optional()
+  ),
+  limit: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z
+      .union([
+        z.literal("all"),
+        z.literal("-1"),
+        z.coerce.number().int().min(1).max(100),
+      ])
+      .optional()
+  ),
+});
