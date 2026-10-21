@@ -440,3 +440,62 @@
 .clo-empty-text {
   font-size: 13px;
 }
+
+/* ==========================================================
+   PERBAIKAN (revisi)
+   ========================================================== */
+
+/* overflow pada parent membuat position:sticky topbar tidak berfungsi.
+   Scroll horizontal sudah ditangani .clo-table-wrap */
+.clo-main { overflow-x: clip; }
+.clo-page-wrapper { overflow-x: visible; }
+
+/* Lebar kolom baru (5 kolom, Bobot digabung ke Jenis Asesmen) */
+.col-no { width: 5%; text-align: center; }
+.col-clo { width: 22%; }
+.col-sub { width: 30%; }
+.col-asesmen { width: 33%; }
+.col-aksi { width: 10%; text-align: center; }
+
+.clo-table td { vertical-align: top; }
+.clo-no { font-weight: 600; color: #64748b; }
+
+/* Filter bar (menggantikan inline style) */
+.clo-filter-bar { flex-wrap: wrap; }
+.clo-search-wrap { min-width: 240px; }
+.clo-prodi-filter { display: flex; align-items: center; gap: 8px; }
+.clo-select {
+  padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1;
+  font-size: 13.5px; color: #1e293b; background: #fff; outline: none;
+}
+.clo-select:focus { border-color: #c0182a; }
+
+.clo-prodi-tag {
+  display: inline-block; margin-top: 6px; padding: 2px 6px; border-radius: 4px;
+  font-size: 11px; color: #64748b; background: #f1f5f9;
+}
+
+/* Sub CLO & asesmen: dua daftar independen */
+.clo-list-item { padding: 0 0 10px; margin-bottom: 10px; border-bottom: 1px dashed #e2e8f0; }
+.clo-list-item:last-child { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
+.clo-dash { color: #9ca3af; font-style: italic; }
+
+.clo-asm-item {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 0 0 8px; margin-bottom: 8px; border-bottom: 1px dashed #e2e8f0; color: #1e293b;
+}
+.clo-asm-bobot { font-weight: 700; color: #c0182a; white-space: nowrap; }
+.clo-asm-total {
+  display: flex; justify-content: flex-end; gap: 6px;
+  font-size: 12px; color: #64748b; padding-top: 2px;
+}
+
+/* Aksi */
+.clo-aksi-wrap { display: flex; gap: 8px; align-items: center; justify-content: center; }
+.clo-btn-edit-text {
+  background: none; border: none; padding: 4px 6px; cursor: pointer;
+  color: #c0182a; font-size: 13px; font-weight: 600;
+}
+.clo-btn-edit-text:hover { text-decoration: underline; }
+.clo-btn-delete { background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; display: inline-flex; }
+.clo-btn-delete:hover { color: #b91c1c; }

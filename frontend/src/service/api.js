@@ -211,16 +211,15 @@ export const updateDosenKK = async (dosenId, { nip, name, researchGroupId, kodeD
 };
 
 // ------------------------------------------- RESEARCH GROUPS (CRUD) -------------------------------------------
-export const createResearchGroup = async (name) => {
-  const response = await api.post('/api/research-groups', { name });
+export const createResearchGroup = async (payload) => {
+  const response = await api.post('/api/research-groups', payload);
   return response.data?.data ?? response.data;
 };
 
-export const updateResearchGroup = async (id, name) => {
-  const response = await api.put(`/api/research-groups/${id}`, { name });
+export const updateResearchGroup = async (id, payload) => {
+  const response = await api.put(`/api/research-groups/${id}`, payload);
   return response.data?.data ?? response.data;
 };
-
 export const deleteResearchGroup = async (id) => {
   const response = await api.delete(`/api/research-groups/${id}`);
   return response.data;
@@ -589,8 +588,17 @@ export const getLecturers = async (params = { limit: "all", sortBy: "a-z" }) =>
 // Gunakan limit=all agar seluruh data dikembalikan (tanpa batas paginasi default 10)
 export const getFaculties = async () =>
   api.get("/api/faculties", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
-export const getStudyPrograms = async () =>
-  api.get("/api/study-programs", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
+// export const getStudyPrograms = async () =>
+//   api.get("/api/study-programs", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
+
+export const getStudyPrograms = async (params = {}) => {
+  const safeParams = { ...params };
+  if (safeParams.limit === 'all' || safeParams.limit > 100) safeParams.limit = 100;
+  
+  const response = await api.get("/api/study-programs", { params: safeParams });
+  return response.data?.data ?? response.data;
+};
+
 export const getStudyProgramById = async (id) =>
   api.get(`/api/study-programs/${id}`).then((r) => r.data?.data ?? r.data);
 
@@ -946,8 +954,16 @@ export const deleteRuangan = async (id) => {
 
 // ------------------------------------------- MANAJEMEN CLO -------------------------------------------
 
+// export const getCLOs = async (params = {}) => {
+//   const response = await api.get('/api/clo', { params });
+//   return response.data?.data ?? response.data;
+// };
+
 export const getCLOs = async (params = {}) => {
-  const response = await api.get('/api/clo', { params });
+  const safeParams = { ...params };
+  if (safeParams.limit === 'all' || safeParams.limit > 100) safeParams.limit = 100;
+  
+  const response = await api.get('/api/clo', { params: safeParams });
   return response.data?.data ?? response.data;
 };
 
@@ -979,6 +995,27 @@ export const createSubCLO = async (payload) => {
 export const createJenisAsesmen = async (payload) => {
   const response = await api.post('/api/jenis-asesmen', payload);
   return response.data?.data ?? response.data;
+};
+
+// ----------------- APPROVAL REQUESTS (CLO) -----------------
+export const getApprovalRequests = async (params) => {
+  const response = await api.get('/api/approval-requests', { params });
+  return response.data?.data ?? response.data;
+};
+
+export const approveRequest = async (id) => {
+  const response = await api.patch(`/api/approval-requests/${id}/approve`);
+  return response.data;
+};
+
+export const rejectRequest = async (id, rejectionNote) => {
+  const response = await api.patch(`/api/approval-requests/${id}/reject`, { rejectionNote });
+  return response.data;
+};
+
+export const cancelRequest = async (id) => {
+  const response = await api.patch(`/api/approval-requests/${id}/cancel`);
+  return response.data;
 };
 
 export default api; 
