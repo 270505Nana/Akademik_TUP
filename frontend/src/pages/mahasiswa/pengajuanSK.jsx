@@ -356,9 +356,27 @@ const PengajuanSK = () => {
 
       try {
         const latestSk = await getSKTARequest(mahasiswaId);
-        const allReq = await getAllSktaRequests({ mahasiswaId, limit: 100 });
+        const rawAllReq = await getAllSktaRequests({ mahasiswaId: mahasiswaId, studentId: mahasiswaId, limit: 100 });
         
-        if (!latestSk && (!allReq || allReq.length === 0)) {
+        const allReq = (rawAllReq || []).filter(req => 
+          String(req.mahasiswaId) === String(mahasiswaId) ||
+          String(req.studentId) === String(mahasiswaId) ||
+          String(req.mahasiswa?.id) === String(mahasiswaId) ||
+          String(req.student?.id) === String(mahasiswaId)
+        );
+
+        let safeLatestSk = latestSk;
+        if (
+          latestSk && 
+          String(latestSk.mahasiswaId) !== String(mahasiswaId) &&
+          String(latestSk.studentId) !== String(mahasiswaId) &&
+          String(latestSk.mahasiswa?.id) !== String(mahasiswaId) &&
+          String(latestSk.student?.id) !== String(mahasiswaId)
+        ) {
+          safeLatestSk = null;
+        }
+
+        if (!safeLatestSk && allReq.length === 0) {
           setPermohonan(null);
           setSubmissionMode('create-baru');
           setSkStatus(null);
@@ -366,7 +384,7 @@ const PengajuanSK = () => {
           return;
         }
 
-        const sortedReq = (allReq || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const sortedReq = allReq.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         const activePembaruan = sortedReq.find(req => 
           !isMainPageCategory(req) && 
           [STATUS_SK.DRAFT, STATUS_SK.DALAM_PROSES, STATUS_SK.BELUM_TERBIT].includes(determineSkStatus(req))
@@ -374,7 +392,7 @@ const PengajuanSK = () => {
 
         setOngoingPembaruan(activePembaruan);
 
-        let displaySk = latestSk || sortedReq[0];
+        let displaySk = safeLatestSk || sortedReq[0];
 
         if (displaySk && activePembaruan && displaySk.id === activePembaruan.id) {
           const latestPublishedSk = sortedReq.find(req => determineSkStatus(req) === STATUS_SK.SUDAH_TERBIT);
