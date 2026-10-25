@@ -3,6 +3,7 @@ import { Check, UploadCloud, FileText, AlertTriangle, ChevronRight, Info, Downlo
 import { useYudisiumContext } from "../../../context/YudisiumFormContext";
 import { SECTIONS } from "./yudisiumDocument";
 import api, { uploadYudisiumRegistrationFile, downloadFileFromUrl } from "../../../service/api";
+import CustomAlert from "../../common/CustomAlert";
 
 const PreviewModal = ({ doc, onClose }) => {
   const [blobUrl, setBlobUrl] = useState(null);
@@ -52,8 +53,8 @@ const PreviewModal = ({ doc, onClose }) => {
   const isPdf = doc.fileName?.toLowerCase().endsWith('.pdf') || doc.fileUrl?.toLowerCase().includes('.pdf') || doc.file?.type === 'application/pdf';
 
   return (
-    <div 
-      style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 9999, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} 
+    <div
+      style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 9999, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={onClose}
     >
       <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 850, height: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
@@ -66,7 +67,7 @@ const PreviewModal = ({ doc, onClose }) => {
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', display: 'flex', alignItems: 'center', padding: 4, flexShrink: 0 }}><X size={22} /></button>
         </div>
-        
+
         <div style={{ flex: 1, background: '#F8FAFC', overflow: 'auto', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           {isLoading ? (
             <div style={{ textAlign: 'center', color: '#64748B' }}>
@@ -75,22 +76,22 @@ const PreviewModal = ({ doc, onClose }) => {
             </div>
           ) : error ? (
             <div style={{ color: '#DC2626', fontWeight: 600, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-               <AlertTriangle size={32} />
-               <span>{error}</span>
+              <AlertTriangle size={32} />
+              <span>{error}</span>
             </div>
           ) : blobUrl ? (
-             isPdf ? (
+            isPdf ? (
               <iframe src={blobUrl} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} title="Preview Dokumen" />
             ) : (
               <img src={blobUrl} alt="Preview Dokumen" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block', padding: 16 }} />
             )
           ) : null}
         </div>
-        
+
         <div style={{ padding: '16px 24px', borderTop: '1px solid #E2E8F0', background: '#FAFAFA', display: 'flex', justifyContent: 'flex-end' }}>
-          <a 
-            href={blobUrl || doc.fileUrl} 
-            download={doc.fileName || 'dokumen_yudisium'} 
+          <a
+            href={blobUrl || doc.fileUrl}
+            download={doc.fileName || 'dokumen_yudisium'}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: '1px solid #E2E8F0', background: '#fff', color: '#374151', textDecoration: 'none', transition: '0.2s', cursor: 'pointer' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = '#F1F5F9'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
@@ -134,7 +135,20 @@ const TemplatePreviewModal = ({ blobUrl, title, mimeType, onClose, onDownload, i
   );
 };
 
-const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onUpload, onDropFile, onSave, isUploading, onPreview, isEditMode, showTemplateBox = true }) => {
+const DocUploadPanel = ({
+  sectionTitle,
+  documents,
+  activeDocId,
+  onSetActive,
+  onUpload,
+  onDropFile,
+  onSave,
+  isUploading,
+  onPreview,
+  isEditMode,
+  showTemplateBox = true,
+  panelAlert,
+}) => {
   const activeDoc = documents.find((d) => d.id === activeDocId) || documents[0];
   const [isDragging, setIsDragging] = useState(false);
 
@@ -144,7 +158,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
   if (!activeDoc) return null;
 
   const isRejected = isEditMode && activeDoc.isValid === false;
-  const hasNewFileToUpload = !!activeDoc.file; 
+  const hasNewFileToUpload = !!activeDoc.file;
   const isReadOnly = isEditMode && activeDoc.fileUrl && !isRejected && !hasNewFileToUpload && activeDoc.isValid !== null;
 
   const hasLocalUploadError = activeDoc.error && !activeDoc.error.toLowerCase().includes("ditolak");
@@ -184,21 +198,21 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
   const handleDownloadTemplate = async () => {
     const templateCode = activeDoc?.slug;
     if (!templateCode || templateState.isDownloading) return;
-    
+
     setTemplateState(prev => ({ ...prev, isDownloading: true, error: null }));
     try {
       const res = await api.get(`/api/templates/download/${templateCode}`, { responseType: 'blob' });
       const url = URL.createObjectURL(res.data);
       const a = document.createElement('a');
       a.href = url;
-      
+
       let filename = `Template_${activeDoc.name}.pdf`;
       const disposition = res.headers?.["content-disposition"];
       if (disposition && disposition.includes("filename=")) {
-         const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-         if (match && match[1]) filename = match[1].replace(/['"]/g, "").trim();
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) filename = match[1].replace(/['"]/g, "").trim();
       }
-      
+
       a.download = filename;
       document.body.appendChild(a);
       a.click();
@@ -245,6 +259,13 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
           </div>
 
           <div>
+            {/* Alert hasil simpan dokumen */}
+            {panelAlert && panelAlert.section === activeDoc.section && (
+              <div style={{ marginBottom: "1.25rem" }}>
+                <CustomAlert type={panelAlert.type} message={panelAlert.msg} />
+              </div>
+            )}
+
             {showTemplateBox && (
               <div style={{ border: "1px solid #E2E8F0", borderRadius: "12px", padding: "1.5rem", marginBottom: "2rem", background: "#fff" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
@@ -291,10 +312,10 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
             ) : (
               <>
                 <h4 style={{ fontWeight: 700, marginBottom: "1rem", fontSize: '1rem' }}>Pilih file atau Tarik ke sini</h4>
-                <div 
+                <div
                   style={{ padding: "2rem 1rem", border: isDragging ? "2px dashed #c0182a" : "2px dashed #cbd5e1", borderRadius: "10px", textAlign: "center", cursor: "pointer", background: isDragging ? "#fff1f2" : "#f8fafc", transition: "0.2s", maxWidth: "600px" }}
-                  onMouseEnter={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#c0182a" }}
-                  onMouseLeave={(e) => { if(!isDragging) e.currentTarget.style.borderColor = "#cbd5e1" }}
+                  onMouseEnter={(e) => { if (!isDragging) e.currentTarget.style.borderColor = "#c0182a" }}
+                  onMouseLeave={(e) => { if (!isDragging) e.currentTarget.style.borderColor = "#cbd5e1" }}
                   onClick={() => onUpload(activeDoc.id)}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -317,7 +338,7 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
                 <h4 style={{ fontWeight: 700, marginBottom: "0.75rem", fontSize: '0.95rem' }}>
                   {isReadOnly ? "File yang Disetujui" : isRejected && !activeDoc.file ? "File Sebelumnya (Ditolak)" : "File Terpilih"}
                 </h4>
-                
+
                 {(!hasLocalUploadError && (activeDoc.fileUrl || activeDoc.fileName)) ? (
                   <div className="file-card" style={{ padding: "1rem", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", overflow: "hidden", gap: "1rem", border: "1px solid #E2E8F0", borderRadius: "10px", background: "#fff" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "1rem", flex: 1, minWidth: 0 }}>
@@ -333,33 +354,23 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="action-buttons-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                      <button 
-                        onClick={() => onPreview(activeDoc)} 
+                      <button
+                        onClick={() => onPreview(activeDoc)}
                         style={{ padding: "5px 10px", fontSize: "11px", fontWeight: 700, background: "#EFF6FF", color: "#1D4ED8", border: "none", borderRadius: "6px", cursor: "pointer", transition: "0.2s" }}
                         onMouseEnter={(e) => e.currentTarget.style.background = "#DBEAFE"}
                         onMouseLeave={(e) => e.currentTarget.style.background = "#EFF6FF"}
                       >
                         Lihat Preview
                       </button>
-                      
+
                       {activeDoc.isValid === true ? (
-                         <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#DCFCE7", color: "#15803D", fontWeight: 700, borderRadius: "6px", border: "1px solid #BBF7D0" }}>
-                           Valid
-                         </div>
-                      ) : isRejected && !activeDoc.file ? (
-                         <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#FEF2F2", color: "#DC2626", fontWeight: 700, borderRadius: "6px", border: "1px solid #FECACA" }}>
-                           Ditolak
-                         </div>
+                        <div className="status-badge">Valid</div>
                       ) : activeDoc.status === "completed" ? (
-                         <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#F0FDF4", color: "#15803D", fontWeight: 700, borderRadius: "6px", border: "1px solid #BBF7D0" }}>
-                           Tersimpan
-                         </div>
+                        <div className="status-badge">Tersimpan</div>
                       ) : (
-                         <div className="status-badge" style={{ padding: "5px 10px", fontSize: "11px", background: "#F1F5F9", color: "#475569", fontWeight: 700, borderRadius: "6px", border: "1px solid #E2E8F0" }}>
-                           Siap Upload
-                         </div>
+                        <div className="status-badge">Siap Upload</div>
                       )}
                     </div>
                   </div>
@@ -393,13 +404,13 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
         </div>
       </div>
 
-      <TemplatePreviewModal 
-        blobUrl={templateModal.blobUrl} 
-        title={templateModal.title} 
-        mimeType={templateModal.mimeType} 
-        onClose={handleCloseTemplateModal} 
-        onDownload={handleDownloadTemplate} 
-        isDownloading={templateState.isDownloading} 
+      <TemplatePreviewModal
+        blobUrl={templateModal.blobUrl}
+        title={templateModal.title}
+        mimeType={templateModal.mimeType}
+        onClose={handleCloseTemplateModal}
+        onDownload={handleDownloadTemplate}
+        isDownloading={templateState.isDownloading}
       />
     </div>
   );
@@ -408,12 +419,26 @@ const DocUploadPanel = ({ sectionTitle, documents, activeDocId, onSetActive, onU
 export default function Step2Yudisium({ registrationId, studentInfo, setFormAlert }) {
   const { state, dispatch } = useYudisiumContext();
   const { data, documents, activeDocIds } = state;
-  
+
   const fileInputRef = useRef(null);
   const uploadTargetIdRef = useRef(null);
   const fileMapRef = useRef({});
   const [isUploading, setIsUploading] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
+
+  // State alert lokal di dalam panel kanan (seperti Step2Sidang.jsx)
+  const [panelAlert, setPanelAlert] = useState(null); // { section, type, msg }
+  const alertTimerRef = useRef(null);
+
+  const showPanelAlert = (section, type, msg) => {
+    clearTimeout(alertTimerRef.current);
+    setPanelAlert({ section, type, msg });
+    if (type === "success") {
+      alertTimerRef.current = setTimeout(() => setPanelAlert(null), 4000);
+    }
+  };
+
+  useEffect(() => () => clearTimeout(alertTimerRef.current), []);
 
   const isEditMode = !!data.isEdit;
 
@@ -422,7 +447,8 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
 
   const processFile = (file, targetId) => {
     if (!file || !targetId) return;
-    setFormAlert(null); 
+    if (typeof setFormAlert === "function") setFormAlert(null);
+    setPanelAlert(null);
 
     if (file.size > 3 * 1024 * 1024) {
       dispatch({ type: "SET_DOCUMENT_ERROR", docId: targetId, error: "Ukuran file maksimal 3MB." });
@@ -444,7 +470,7 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
 
   const handleFileChange = (e) => {
     processFile(e.target.files[0], uploadTargetIdRef.current);
-    e.target.value = ""; 
+    e.target.value = "";
     uploadTargetIdRef.current = null;
   };
 
@@ -459,25 +485,23 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
   };
 
   const handleSaveDoc = async (docId) => {
-    setFormAlert(null);
+    if (typeof setFormAlert === "function") setFormAlert(null);
     const doc = documents.find((d) => d.id === docId);
     const file = fileMapRef.current[docId];
 
     if (!doc?.fileUrl || !file) {
-      setFormAlert({ type: "warning", title: "Peringatan", msg: "Silahkan pilih file terlebih dahulu sebelum menyimpan." });
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      showPanelAlert(doc?.section, "warning", "Silahkan pilih file terlebih dahulu sebelum menyimpan.");
       return;
     }
 
     if (!registrationId) {
-      setFormAlert({ type: "error", title: "Error", msg: "ID Registrasi tidak ditemukan. Silakan kembali ke Step 1 dan klik Simpan." });
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      showPanelAlert(doc.section, "error", "Data pendaftaran yudisium belum tersedia.");
       return;
     }
 
     const safeNim = studentInfo?.nim || "0000000000";
     const extension = file.name.split('.').pop();
-    
+
     let sectionName = "Evidence";
     if (doc.section === SECTIONS.WAJIB) sectionName = "KelengkapanDokYudisium";
     else if (doc.section === SECTIONS.JURNAL) sectionName = "EvidenceJurnal";
@@ -492,18 +516,25 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
     try {
       setIsUploading(true);
       await uploadYudisiumRegistrationFile(registrationId, {
-        file: renamedFile,       
-        slug: doc.slug, 
-        name: formattedFileName,  
+        file: renamedFile,
+        slug: doc.slug,
+        name: formattedFileName,
       });
-      dispatch({ type: "COMPLETE_DOCUMENT", docId });
-      
-      setFormAlert({ type: "success", title: "Berhasil", msg: `File "${formattedFileName}" berhasil diunggah.` });
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      const nowIso = new Date().toISOString();
+      const docName = doc.name || formattedFileName;
+      dispatch({ type: "COMPLETE_DOCUMENT", docId, docName, uploadedAt: nowIso });
+
+      showPanelAlert(doc.section, "success", `File "${doc.fileName || formattedFileName}" berhasil diunggah.`);
+
+      // Otomatis pindah ke berkas berikutnya dalam section yang sama
+      const sectionDocs = documents.filter((d) => d.section === doc.section);
+      const currentIndex = sectionDocs.findIndex((d) => d.id === docId);
+      if (currentIndex !== -1 && currentIndex < sectionDocs.length - 1) {
+        handleSetActive(doc.section, sectionDocs[currentIndex + 1].id);
+      }
     } catch (error) {
       console.error("Gagal upload dokumen:", error);
-      setFormAlert({ type: "error", title: "Gagal Mengunggah", msg: "Gagal mengunggah dokumen. Silakan coba lagi." });
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      showPanelAlert(doc.section, "error", "Gagal mengunggah dokumen. Silakan coba lagi.");
     } finally {
       setIsUploading(false);
     }
@@ -523,17 +554,21 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
       <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
-      
+
       <div className="info-banner" style={{ marginBottom: "2rem" }}>
-        <div className="banner-icon-container"><Info color="#d69e2e" size={24} /></div>
+        <div className="banner-icon-container">
+          <Info color="#d69e2e" size={24} />
+        </div>
         <div className="banner-content">
           <h4>Pemberitahuan Unggah Dokumen</h4>
-          <p>Kamu dapat <strong>menyicil</strong> unggahan dokumen satu per satu. Klik "Simpan Dokumen" pada setiap file yang kamu pilih.</p>
+          <p>
+            Mahasiswa dapat mengunggah dokumen <strong> secara bertahap.</strong> Pastikan untuk mengeklik tombol “Simpan Dokumen” pada setiap dokumen yang diunggah agar dokumen tersimpan dengan baik.
+          </p>
         </div>
       </div>
 
       {wajibDocs.length > 0 && (
-        <DocUploadPanel 
+        <DocUploadPanel
           sectionTitle={SECTIONS.WAJIB}
           documents={wajibDocs}
           activeDocId={activeDocIds[SECTIONS.WAJIB]}
@@ -545,11 +580,12 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
           onPreview={(doc) => setPreviewDoc(doc)}
           isEditMode={isEditMode}
           showTemplateBox={true}
+          panelAlert={panelAlert}
         />
       )}
 
       {showJurnal && (
-        <DocUploadPanel 
+        <DocUploadPanel
           sectionTitle={SECTIONS.JURNAL}
           documents={getSectionDocs(SECTIONS.JURNAL)}
           activeDocId={activeDocIds[SECTIONS.JURNAL]}
@@ -561,72 +597,61 @@ export default function Step2Yudisium({ registrationId, studentInfo, setFormAler
           onPreview={(doc) => setPreviewDoc(doc)}
           isEditMode={isEditMode}
           showTemplateBox={true}
+          panelAlert={panelAlert}
         />
       )}
 
       {showPameran && (
-         <DocUploadPanel 
-           sectionTitle={SECTIONS.PAMERAN}
-           documents={getSectionDocs(SECTIONS.PAMERAN)}
-           activeDocId={activeDocIds[SECTIONS.PAMERAN]}
-           onSetActive={(id) => handleSetActive(SECTIONS.PAMERAN, id)}
-           onUpload={handleManualUpload}
-           onDropFile={handleDropFile}
-           onSave={handleSaveDoc}
-           isUploading={isUploading}
-           onPreview={(doc) => setPreviewDoc(doc)}
-           isEditMode={isEditMode}
-           showTemplateBox={true}
-         />
+        <DocUploadPanel
+          sectionTitle={SECTIONS.PAMERAN}
+          documents={getSectionDocs(SECTIONS.PAMERAN)}
+          activeDocId={activeDocIds[SECTIONS.PAMERAN]}
+          onSetActive={(id) => handleSetActive(SECTIONS.PAMERAN, id)}
+          onUpload={handleManualUpload}
+          onDropFile={handleDropFile}
+          onSave={handleSaveDoc}
+          isUploading={isUploading}
+          onPreview={(doc) => setPreviewDoc(doc)}
+          isEditMode={isEditMode}
+          showTemplateBox={true}
+          panelAlert={panelAlert}
+        />
       )}
 
       {showLomba && (
-         <DocUploadPanel 
-           sectionTitle={SECTIONS.LOMBA}
-           documents={getSectionDocs(SECTIONS.LOMBA)}
-           activeDocId={activeDocIds[SECTIONS.LOMBA]}
-           onSetActive={(id) => handleSetActive(SECTIONS.LOMBA, id)}
-           onUpload={handleManualUpload}
-           onDropFile={handleDropFile}
-           onSave={handleSaveDoc}
-           isUploading={isUploading}
-           onPreview={(doc) => setPreviewDoc(doc)}
-           isEditMode={isEditMode}
-           showTemplateBox={true}
-         />
+        <DocUploadPanel
+          sectionTitle={SECTIONS.LOMBA}
+          documents={getSectionDocs(SECTIONS.LOMBA)}
+          activeDocId={activeDocIds[SECTIONS.LOMBA]}
+          onSetActive={(id) => handleSetActive(SECTIONS.LOMBA, id)}
+          onUpload={handleManualUpload}
+          onDropFile={handleDropFile}
+          onSave={handleSaveDoc}
+          isUploading={isUploading}
+          onPreview={(doc) => setPreviewDoc(doc)}
+          isEditMode={isEditMode}
+          showTemplateBox={true}
+          panelAlert={panelAlert}
+        />
       )}
 
       {showHki && (
-         <DocUploadPanel 
-           sectionTitle={SECTIONS.HKI}
-           documents={getSectionDocs(SECTIONS.HKI)}
-           activeDocId={activeDocIds[SECTIONS.HKI]}
-           onSetActive={(id) => handleSetActive(SECTIONS.HKI, id)}
-           onUpload={handleManualUpload}
-           onDropFile={handleDropFile}
-           onSave={handleSaveDoc}
-           isUploading={isUploading}
-           onPreview={(doc) => setPreviewDoc(doc)}
-           isEditMode={isEditMode}
-           showTemplateBox={true}
-         />
+        <DocUploadPanel
+          sectionTitle={SECTIONS.HKI}
+          documents={getSectionDocs(SECTIONS.HKI)}
+          activeDocId={activeDocIds[SECTIONS.HKI]}
+          onSetActive={(id) => handleSetActive(SECTIONS.HKI, id)}
+          onUpload={handleManualUpload}
+          onDropFile={handleDropFile}
+          onSave={handleSaveDoc}
+          isUploading={isUploading}
+          onPreview={(doc) => setPreviewDoc(doc)}
+          isEditMode={isEditMode}
+          showTemplateBox={true}
+          panelAlert={panelAlert}
+        />
       )}
 
-      {data.minatWirausaha === "Ya" && (
-         <DocUploadPanel 
-           sectionTitle={SECTIONS.WIRAUSAHA}
-           documents={getSectionDocs(SECTIONS.WIRAUSAHA)}
-           activeDocId={activeDocIds[SECTIONS.WIRAUSAHA]}
-           onSetActive={(id) => handleSetActive(SECTIONS.WIRAUSAHA, id)}
-           onUpload={handleManualUpload}
-           onDropFile={handleDropFile}
-           onSave={handleSaveDoc}
-           isUploading={isUploading}
-           onPreview={(doc) => setPreviewDoc(doc)}
-           isEditMode={isEditMode}
-           showTemplateBox={true}
-         />
-      )}
 
       <style>{`
         .doc-management-container {

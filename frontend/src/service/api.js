@@ -166,14 +166,7 @@ export const getPenjadwalanSidang = async (params = {}) => {
 
 export const getPengujiOptions = async (params = {}) => {
   try {
-    const queryParams = {
-      pagination: 'false',
-      limit: 'all',
-      sortBy: 'nameAsc',
-      ...params,
-    };
-    const response = await api.get('/api/dosen', { params: queryParams });
-    const list = response.data?.data ?? response.data;
+    const list = await getAllLecturers({ sortBy: 'name', ...params });
     return Array.isArray(list) ? list : [];
   } catch (err) {
     console.error('Error fetching penguji options:', err);
@@ -583,9 +576,32 @@ export const toggleLockJadwalAdmin = async (id) => {
 
 
 // ------------------------------------------- ETC-------------------------------------------
-export const getLecturers = async (params = { limit: "all", sortBy: "a-z" }) =>
-  api.get("/api/dosen", { params }).then((r) => r.data?.data ?? r.data);
-// Gunakan limit=all agar seluruh data dikembalikan (tanpa batas paginasi default 10)
+export const getLecturers = async (params = { limit: 100, sortBy: "name" }) => {
+  const safeParams = { ...params };
+  if (safeParams.limit === "all" || safeParams.limit > 100) safeParams.limit = 100;
+  if (safeParams.sortBy === "a-z") safeParams.sortBy = "name";
+  return api.get("/api/dosen", { params: safeParams }).then((r) => r.data?.data ?? r.data);
+};
+
+export const getAllLecturers = async (params = { sortBy: "name" }) => {
+  const firstRes = await api.get("/api/dosen", { params: { ...params, limit: 100, page: 1 } });
+  const firstData = firstRes.data?.data ?? (Array.isArray(firstRes.data) ? firstRes.data : []);
+  const pagination = firstRes.data?.pagination;
+
+  if (pagination && pagination.totalPages > 1) {
+    const pagePromises = [];
+    for (let p = 2; p <= pagination.totalPages; p++) {
+      pagePromises.push(
+        api.get("/api/dosen", { params: { ...params, limit: 100, page: p } })
+          .then((r) => r.data?.data ?? (Array.isArray(r.data) ? r.data : []))
+      );
+    }
+    const otherPages = await Promise.all(pagePromises);
+    return [firstData, ...otherPages].flat();
+  }
+
+  return firstData;
+};
 export const getFaculties = async () =>
   api.get("/api/faculties", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
 // export const getStudyPrograms = async () =>
