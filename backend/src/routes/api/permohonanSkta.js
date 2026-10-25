@@ -22,7 +22,7 @@ import {
 
 import { verifyToken } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
-import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
+import { authorize } from '../../middlewares/authorize.js';
 import { validate } from '../../middlewares/validate.js';
 import {
   listPermohonanSktaQuerySchema,
@@ -179,7 +179,7 @@ router.get(
 router.get(
   "/export-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(exportSktaZipSchema, "query"),
   exportSktaZip
 );
@@ -239,7 +239,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   validate(savePermohonanSktaDraftSchema),
   createPermohonanSkta
@@ -310,7 +310,7 @@ router.post(
 router.post(
   "/submit",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   validate(submitPermohonanSktaSchema),
   submitPermohonanSkta
@@ -426,7 +426,7 @@ router.get("/:id", verifyToken, getPermohonanSktaById);
 router.put(
   "/:id",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   validate(updatePermohonanSktaSchema),
   updatePermohonanSkta
@@ -522,7 +522,7 @@ router.get("/:id/download/evidence", verifyToken, downloadEvidence);
 router.put(
   "/:id/approve",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("skta").fields([{ name: "skta", maxCount: 1 }]),
   validate(approvePermohonanSktaSchema),
   approvePermohonanSkta
@@ -577,7 +577,7 @@ router.put(
 router.put(
   "/:id/reject",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(rejectPermohonanSktaSchema),
   rejectPermohonanSkta
 );
@@ -638,14 +638,14 @@ router.put(
 router.get(
   "/:id/generate/dokumen-validasi-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   generateDokumenValidasiSkta
 );
 
 router.post(
   "/:id/generate/dokumen-validasi-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("berkas-mahasiswa").fields([
     { name: "dokumenFile", maxCount: 1 },
     { name: "file", maxCount: 1 },
@@ -709,14 +709,14 @@ router.post(
 router.get(
   "/:id/generate/formulir-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   generateFormulirSkta
 );
 
 router.post(
   "/:id/generate/formulir-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("berkas-mahasiswa").fields([
     { name: "dokumenFile", maxCount: 1 },
     { name: "file", maxCount: 1 },

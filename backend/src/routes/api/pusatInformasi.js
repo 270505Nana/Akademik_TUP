@@ -9,7 +9,7 @@ import {
   deletePusatInformasi,
 } from "../../controllers/pusatInformasiController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listPusatInformasiQuerySchema,
@@ -180,7 +180,7 @@ router.get("/:id", verifyToken, getPusatInformasiById);
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(createPusatInformasiSchema),
   createPusatInformasi
 );
@@ -238,7 +238,7 @@ router.post(
 router.put(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(updatePusatInformasiSchema),
   updatePusatInformasi
 );
@@ -268,6 +268,6 @@ router.put(
  *       404:
  *         description: Pusat informasi not found
  */
-router.delete("/:id", verifyToken, isAdmin, deletePusatInformasi);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deletePusatInformasi);
 
 export default router;

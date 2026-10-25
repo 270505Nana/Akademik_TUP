@@ -12,7 +12,7 @@ import {
 } from "../../controllers/studyProgramController.js";
 
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listStudyProgramQuerySchema,
@@ -137,7 +137,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(createStudyProgramSchema),
   createStudyProgram,
 );
@@ -212,7 +212,7 @@ router.get("/:id", verifyToken, findStudyProgramById);
 router.put(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(updateStudyProgramSchema),
   updateStudyProgram,
 );
@@ -242,7 +242,7 @@ router.put(
  *       404:
  *         description: Study program not found
  */
-router.delete("/:id", verifyToken, isAdmin, deleteStudyProgram);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteStudyProgram);
 
 /**
  * @swagger
@@ -272,7 +272,7 @@ router.delete("/:id", verifyToken, isAdmin, deleteStudyProgram);
 router.patch(
   "/:id/toggle-active",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   toggleStudyProgramActive,
 );
 

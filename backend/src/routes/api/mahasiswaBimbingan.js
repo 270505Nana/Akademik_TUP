@@ -1,7 +1,7 @@
 import express from "express";
 import { listMahasiswaBimbingan } from "../../controllers/mahasiswaBimbinganController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isDosen } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import { listMahasiswaBimbinganQuerySchema } from "../../schemas/mahasiswaBimbinganSchema.js";
 
@@ -75,7 +75,7 @@ const router = express.Router();
 router.get(
   "/",
   verifyToken,
-  isDosen,
+  authorize("DOSEN"),
   validate(listMahasiswaBimbinganQuerySchema, "query"),
   listMahasiswaBimbingan
 );

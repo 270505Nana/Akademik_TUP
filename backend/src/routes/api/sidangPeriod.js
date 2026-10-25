@@ -1,7 +1,7 @@
 import express from "express";
 const router = express.Router();
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listPeriodQuerySchema,
@@ -170,7 +170,7 @@ router.get("/:id", verifyToken, getSidangPeriodById);
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(createPeriodSchema),
   createSidangPeriod,
 );
@@ -234,7 +234,7 @@ router.post(
 router.put(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(updatePeriodSchema),
   updateSidangPeriod,
 );
@@ -264,6 +264,6 @@ router.put(
  *       403:
  *         description: Invalid token
  */
-router.delete("/:id", verifyToken, isAdmin, deleteSidangPeriod);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteSidangPeriod);
 
 export default router;

@@ -60,11 +60,11 @@ export const getPenjadwalanSidangList = async ({
   } else {
     const activePeriod =
       (await prisma.sidangPeriod.findFirst({
-        where: { isOpen: true, deletedAt: null },
+        where: { isOpen: true, category: "pendaftaran", deletedAt: null },
         orderBy: { updatedAt: "desc" },
       })) ||
       (await prisma.sidangPeriod.findFirst({
-        where: { deletedAt: null },
+        where: { category: "pendaftaran", deletedAt: null },
         orderBy: { endDate: "desc" },
       }));
 
@@ -76,6 +76,9 @@ export const getPenjadwalanSidangList = async ({
   const where = {
     isDraft: false,
     deletedAt: null,
+    // --- dokumentasi saja kalau di sini juga bisa ada data ini ---
+    // sidangPeriodId = targetPeriodId
+    // dosenPembimbing1
   };
 
   if (targetPeriodId) {
@@ -100,6 +103,8 @@ export const getPenjadwalanSidangList = async ({
       deletedAt: null,
     };
   }
+
+  console.log("where.dosenPembimbing1", where.dosenPembimbing1);
 
   const [total, registrations] = await Promise.all([
     prisma.sidangRegistration.count({ where }),
@@ -215,7 +220,9 @@ export const batchSetPengujiSidang = async (items) => {
   const registrationMap = new Map(registrations.map((reg) => [reg.id, reg]));
   for (const id of registrationIds) {
     if (!registrationMap.has(id)) {
-      const error = new Error(`Pendaftaran sidang dengan ID ${id} tidak ditemukan`);
+      const error = new Error(
+        `Pendaftaran sidang dengan ID ${id} tidak ditemukan`,
+      );
       error.statusCode = 404;
       throw error;
     }
@@ -252,7 +259,9 @@ export const batchSetPengujiSidang = async (items) => {
   const dosenMap = new Map(dosens.map((d) => [d.id, d]));
   for (const dosenId of allDosenIds) {
     if (!dosenMap.has(dosenId)) {
-      const error = new Error(`Dosen penguji dengan ID ${dosenId} tidak ditemukan`);
+      const error = new Error(
+        `Dosen penguji dengan ID ${dosenId} tidak ditemukan`,
+      );
       error.statusCode = 404;
       throw error;
     }
@@ -393,7 +402,9 @@ export const batchSetJadwalSidang = async (items) => {
   const registrationMap = new Map(registrations.map((reg) => [reg.id, reg]));
   for (const id of registrationIds) {
     if (!registrationMap.has(id)) {
-      const error = new Error(`Pendaftaran sidang dengan ID ${id} tidak ditemukan`);
+      const error = new Error(
+        `Pendaftaran sidang dengan ID ${id} tidak ditemukan`,
+      );
       error.statusCode = 404;
       throw error;
     }
@@ -410,7 +421,9 @@ export const batchSetJadwalSidang = async (items) => {
   const ruanganMap = new Map(ruanganList.map((r) => [r.id, r]));
   for (const ruanganId of allRuanganIds) {
     if (!ruanganMap.has(ruanganId)) {
-      const error = new Error(`Ruangan sidang dengan ID ${ruanganId} tidak ditemukan`);
+      const error = new Error(
+        `Ruangan sidang dengan ID ${ruanganId} tidak ditemukan`,
+      );
       error.statusCode = 404;
       throw error;
     }
@@ -658,7 +671,6 @@ export const setPengujiJadwalSidang = async ({
   });
 };
 
-
 /**
  * Tandai info penjadwalan sidang telah dibaca oleh mahasiswa
  * Bersifat satu arah: hanya mengubah isInfoPenjadwalanReaded menjadi true.
@@ -726,6 +738,3 @@ export const togglePublishSidangPeriod = async (sidangPeriodId) => {
     },
   });
 };
-
-
-

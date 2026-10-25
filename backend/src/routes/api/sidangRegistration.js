@@ -1,7 +1,7 @@
 import express from "express";
 const router = express.Router();
 import { verifyToken } from "../../middlewares/auth.js";
-import { isMahasiswa, isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { upload } from "../../middlewares/upload.js";
 import { validate } from "../../middlewares/validate.js";
 import {
@@ -230,7 +230,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   validate(saveSidangDraftSchema),
   saveSidangRegistration,
 );
@@ -310,7 +310,7 @@ router.post(
 router.post(
   "/submit",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   validate(submitSidangSchema),
   submitSidangRegistration,
 );
@@ -342,7 +342,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAdmin, deleteSidangRegistration);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteSidangRegistration);
 
 /**
  * @swagger
@@ -395,7 +395,7 @@ router.delete("/:id", verifyToken, isAdmin, deleteSidangRegistration);
 router.post(
   "/:id/uploads",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("sidang-requirements").single("file"),
   uploadSidangRegistrationFile,
 );
@@ -507,7 +507,7 @@ router.get(
 router.put(
   "/:id/approve",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(approveSidangSchema),
   approveSidangRegistration,
 );
@@ -562,7 +562,7 @@ router.put(
 router.put(
   "/:id/reject",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(rejectSidangSchema),
   rejectSidangRegistration,
 );
@@ -604,7 +604,7 @@ router.put(
 router.patch(
   "/:id/toggle-lock",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   toggleLockSidangRegistration,
 );
 

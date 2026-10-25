@@ -7,7 +7,7 @@ import {
   cancelApprovalRequest,
 } from "../../controllers/approvalRequestController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listApprovalRequestQuerySchema,
@@ -79,7 +79,7 @@ const router = express.Router();
 router.get(
   "/",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(listApprovalRequestQuerySchema, "query"),
   listApprovalRequests
 );
@@ -112,7 +112,7 @@ router.get(
 router.get(
   "/:id",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   findApprovalRequestById
 );
 
@@ -146,7 +146,7 @@ router.get(
 router.patch(
   "/:id/approve",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   approveApprovalRequest
 );
 
@@ -192,7 +192,7 @@ router.patch(
 router.patch(
   "/:id/reject",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(rejectApprovalRequestSchema),
   rejectApprovalRequest
 );
@@ -227,7 +227,7 @@ router.patch(
 router.patch(
   "/:id/cancel",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   cancelApprovalRequest
 );
 

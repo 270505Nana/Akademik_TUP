@@ -12,7 +12,7 @@ import {
 } from "../../controllers/facultyController.js";
 
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listFacultyQuerySchema,
@@ -126,7 +126,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(createFacultySchema),
   createFaculty,
 );
@@ -199,7 +199,7 @@ router.get("/:id", verifyToken, findFacultyById);
 router.put(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(updateFacultySchema),
   updateFaculty,
 );
@@ -229,7 +229,7 @@ router.put(
  *       404:
  *         description: Faculty not found
  */
-router.delete("/:id", verifyToken, isAdmin, deleteFaculty);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteFaculty);
 
 /**
  * @swagger
@@ -259,7 +259,7 @@ router.delete("/:id", verifyToken, isAdmin, deleteFaculty);
 router.patch(
   "/:id/toggle-active",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   toggleFacultyActive,
 );
 

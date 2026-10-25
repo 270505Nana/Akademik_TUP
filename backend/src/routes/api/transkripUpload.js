@@ -9,7 +9,7 @@ import {
 } from "../../controllers/transkripUploadController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { upload } from "../../middlewares/upload.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listTranskripQuerySchema,
@@ -200,7 +200,7 @@ router.get("/:id", verifyToken, getTranskripUploadById);
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("transkrip").single("transkripFile"),
   validate(createTranskripSchema),
   createTranskripUpload
@@ -256,7 +256,7 @@ router.post(
 router.patch(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("transkrip").single("transkripFile"),
   validate(updateTranskripSchema),
   updateTranskripUpload
@@ -289,6 +289,6 @@ router.patch(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAdmin, deleteTranskripUpload);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteTranskripUpload);
 
 export default router;

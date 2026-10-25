@@ -7,7 +7,7 @@ import {
   deleteJenisAsesmen,
 } from "../../controllers/jenisAsesmenController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listJenisAsesmenQuerySchema,
@@ -119,7 +119,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(createJenisAsesmenSchema),
   createJenisAsesmen
 );
@@ -198,7 +198,7 @@ router.get("/:id", verifyToken, getJenisAsesmenById);
 router.put(
   "/:id",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(updateJenisAsesmenSchema),
   updateJenisAsesmen
 );
@@ -234,7 +234,7 @@ router.put(
 router.delete(
   "/:id",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   deleteJenisAsesmen
 );
 

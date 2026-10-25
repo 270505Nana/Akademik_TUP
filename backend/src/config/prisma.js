@@ -14,7 +14,9 @@ const basePrisma = new PrismaClient({
   adapter,
   log:
     process.env.NODE_ENV === "development"
-      ? ["query", "info", "warn", "error"]
+      ? process.env.DEBUG_PRISMA === "true"
+        ? ["query", "info", "warn", "error"]
+        : ["info", "warn", "error"]
       : ["error"],
   omit: {
     user: {

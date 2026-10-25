@@ -1,7 +1,7 @@
 import express from "express";
 const router = express.Router();
 import { verifyToken } from "../../middlewares/auth.js";
-import { isMahasiswa, isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { upload } from "../../middlewares/upload.js";
 import { validate } from "../../middlewares/validate.js";
 import {
@@ -141,7 +141,7 @@ router.get(
 router.get(
   "/export",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(exportYudisiumQuerySchema, "query"),
   exportYudisium,
 );
@@ -291,7 +291,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   validate(saveYudisiumDraftSchema),
   saveYudisiumRegistration,
 );
@@ -392,7 +392,7 @@ router.post(
 router.post(
   "/submit",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   validate(submitYudisiumSchema),
   submitYudisiumRegistration,
 );
@@ -424,7 +424,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAdmin, deleteYudisiumRegistration);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteYudisiumRegistration);
 
 /**
  * @swagger
@@ -479,7 +479,7 @@ router.delete("/:id", verifyToken, isAdmin, deleteYudisiumRegistration);
 router.post(
   "/:id/uploads",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("yudisium-requirements").single("file"),
   uploadYudisiumRegistrationFile,
 );
@@ -595,7 +595,7 @@ router.get(
 router.put(
   "/:id/approve",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(approveYudisiumSchema),
   approveYudisiumRegistration,
 );
@@ -649,7 +649,7 @@ router.put(
 router.put(
   "/:id/reject",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(rejectYudisiumSchema),
   rejectYudisiumRegistration,
 );
