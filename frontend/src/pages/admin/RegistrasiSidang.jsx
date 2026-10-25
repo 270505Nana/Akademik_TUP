@@ -275,8 +275,8 @@ const RegistrasiSidang = () => {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const list    = await getAllSidangRegistrations();
-      const allList = list ?? [];
+      const res    = await getAllSidangRegistrations();
+      const allList = Array.isArray(res) ? res : (res?.data ?? []);
 
       const visible = allList.filter((r) => {
         // Tampilkan jika tidak draft (dalam proses, revisi diperbarui, siap sidang, dll.)
