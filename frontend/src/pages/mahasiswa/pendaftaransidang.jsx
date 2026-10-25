@@ -1,30 +1,30 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Check, CheckCircle2, AlertTriangle, Clock, Menu, Loader, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../../components/mahasiswa/sidang/sidang.css";
-import logoSimta from "../../assets/logo-simta.png";
-import logoTelkom from "../../assets/logo-telkom.png";
 import { useSidangContext, SidangFormProvider } from "../../context/SidangFormContext";
 import { useAuth } from "../../context/AuthContext";
 import { useStudent } from "../../context/StudentContext";
 import Step1 from "../../components/mahasiswa/sidang/Step1Sidang";
 import Step2 from "../../components/mahasiswa/sidang/Step2Sidang";
 import CustomAlert from "../../components/common/CustomAlert";
+import SidebarMahasiswa from "../../components/sidebar/SidebarMahasiswa";
 
 import {
   getLecturers,
+  getAllLecturers,
   getSidangRegistrationByStudentId,
   getSktaResponseUploadByStudentId,
   saveSidangRegistration,
   submitSidangRegistration,
   getTemplatesByCategory,
 } from "../../service/api";
-import { STATUS_SIDANG, SIDANG_STATUS_CONFIG } from "../../components/admin/sidang/Sidangstatushelper";
 import {
   SECTIONS,
   NON_SIDANG_SLUGS,
   DYNAMIC_SECTION_CATEGORY_MAP,
 } from "../../requirement/sidangDocument";
+import { getLatestCompletedDocName } from "../../utils/documentHelper";
 
 const STEP1_REQUIRED = [
   { key: "programType", label: "Program (Reguler / Alih Jenjang)" },
@@ -120,6 +120,34 @@ function validateStep2(data, documents) {
   return null;
 }
 
+const Stepper = ({ step }) => {
+  const items = [
+    { no: 1, label: "Data Diri Mahasiswa" },
+    { no: 2, label: "Persyaratan Berkas" },
+  ];
+  return (
+    <div className="sidang-stepper">
+      {items.map((it, i) => {
+        const isActive = step === it.no;
+        const isDone = step > it.no;
+        return (
+          <React.Fragment key={it.no}>
+            <div className={`sidang-step-item ${isActive ? "active" : ""} ${isDone ? "done" : ""}`}>
+              <span className="sidang-step-circle">
+                {isDone ? <Check size={12} strokeWidth={3} /> : it.no}
+              </span>
+              <span className="sidang-step-label">{it.label}</span>
+            </div>
+            {i < items.length - 1 && (
+              <div className={`sidang-step-line ${isDone ? "done" : ""}`} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+};
+
 function PendaftaranSidangContent() {
   const navigate = useNavigate();
   const { state, dispatch } = useSidangContext();
@@ -127,11 +155,16 @@ function PendaftaranSidangContent() {
   const { student } = useStudent();
   const { step, data, documents } = state;
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [skta, setSkta] = useState(false);
   const [isSktaChecking, setIsSktaChecking] = useState(true);
   const [isRegistrationLoading, setIsRegistrationLoading] = useState(false);
   const [isSavingStep1, setIsSavingStep1] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const isDirty = Boolean(state.isDirty);
+  const [draftSavedBanner, setDraftSavedBanner] = useState(null);
   const [lecturers, setLecturers] = useState([]);
   const [isLecturersLoading, setIsLecturersLoading] = useState(true);
   const [isTemplatesLoading, setIsTemplatesLoading] = useState(true);
@@ -139,12 +172,16 @@ function PendaftaranSidangContent() {
   const [registrationMeta, setRegistrationMeta] = useState(null);
   const [sidangAdminResponse, setSidangAdminResponse] = useState(null);
   const [formAlert, setFormAlert] = useState(null);
-  const [autosaveStatus, setAutosaveStatus] = useState("idle"); 
 
-  const isHydrating = useRef(true);
-  const lastSavedPayload = useRef(null);
-  const latestRequestId = useRef(0);
   const serverUploadsRef = useRef([]);
+
+  const handleToggleSidebar = () => {
+    if (window.innerWidth < 992) {
+      setSidebarOpen((prev) => !prev);
+    } else {
+      setSidebarCollapsed((prev) => !prev);
+    }
+  };
 
   const mahasiswaId = student?.mahasiswaId || profile?.id || user?.id;
   const isStep1Locked = Boolean(registrationMeta?.submittedAt);
@@ -155,8 +192,6 @@ function PendaftaranSidangContent() {
   const revisionDueDateText = sidangAdminResponse?.isEdit
     ? new Date(sidangAdminResponse.isEdit).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
     : null;
-
-  const revisiCfg = SIDANG_STATUS_CONFIG[STATUS_SIDANG.PERLU_REVISI];
 
   const studentInfo = {
     nama: student?.namaLengkap || profile?.name || user?.username || "-",
@@ -221,6 +256,7 @@ function PendaftaranSidangContent() {
         setRegistrationId(savedId);
         dispatch({ type: "SET_REGISTRATION_ID", id: savedId });
       }
+      localStorage.removeItem("sidang_form_draft");
       setStep(2);
     } catch (e) {
       const serverErrors = e.response?.data?.errors;
@@ -234,6 +270,42 @@ function PendaftaranSidangContent() {
     }
   };
 
+  const handleSaveDraft = async () => {
+    setFormAlert(null);
+    if (!mahasiswaId) {
+      setFormAlert({ type: "error", title: "Gagal Menyimpan", msg: "Data mahasiswa tidak ditemukan. Silakan refresh halaman." });
+      return;
+    }
+
+    try {
+      setIsSavingDraft(true);
+      const result = await saveSidangRegistration(buildSavePayload());
+      const savedId = result?.data?.id ?? result?.id ?? null;
+      if (savedId && !registrationId) {
+        setRegistrationId(savedId);
+        dispatch({ type: "SET_REGISTRATION_ID", id: savedId });
+      }
+      localStorage.removeItem("sidang_form_draft");
+
+      const latestName = getLatestCompletedDocName(documents, state.lastUploadedDocName);
+
+      setDraftSavedBanner({ lastDocName: latestName });
+      setFormAlert(null);
+      dispatch({ type: "SET_IS_DIRTY", value: false });
+      dispatch({ type: "SET_STEP", value: 1 });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      const serverErrors = e.response?.data?.errors;
+      const msg = Array.isArray(serverErrors) && serverErrors.length > 0
+        ? serverErrors.map((err) => err.message).join(", ")
+        : (e.response?.data?.message || "Gagal menyimpan draft pendaftaran sidang. Silakan coba lagi.");
+      setFormAlert({ type: "error", title: "Gagal Menyimpan", msg });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setFormAlert(null);
     const error = validateStep2(data, documents);
@@ -244,7 +316,7 @@ function PendaftaranSidangContent() {
     }
 
     if (!registrationId) {
-      setFormAlert({ type: "error", msg: "ID pendaftaran tidak ditemukan. Silakan kembali ke Step 1 dan klik 'Simpan & Lanjutkan' terlebih dahulu." });
+      setFormAlert({ type: "error", msg: "ID pendaftaran tidak ditemukan. Silakan kembali ke Step 1 dan klik 'Lanjutkan' terlebih dahulu." });
       return;
     }
 
@@ -252,13 +324,21 @@ function PendaftaranSidangContent() {
       setIsSubmitting(true);
       await submitSidangRegistration({ id: registrationId, ...buildSavePayload() });
       localStorage.removeItem("sidang_form_draft");
-      navigate("/mahasiswa/dashboard");
+      setDraftSavedBanner(null);
+      dispatch({ type: "SET_IS_DIRTY", value: false });
+      dispatch({ type: "SET_STEP", value: 1 });
+      setFormAlert({
+        type: "success",
+        msg: "Pendaftaran sidang berhasil dikirim dan sedang menunggu proses verifikasi oleh tim akademik.",
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      await initRegistration(mahasiswaId);
     } catch (error) {
       const serverErrors = error.response?.data?.errors;
       const msg = Array.isArray(serverErrors) && serverErrors.length > 0
         ? serverErrors.map((err) => err.message).join(", ")
         : (error.response?.data?.message || "Gagal submit pendaftaran sidang. Silakan coba lagi.");
-      setFormAlert({ type: "error", msg });
+      setFormAlert({ type: "error", title: "Gagal Submit", msg });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
@@ -302,27 +382,81 @@ function PendaftaranSidangContent() {
 
   const initRegistration = async (id) => {
     setIsRegistrationLoading(true);
-    isHydrating.current = true;
     try {
       const response = await getSidangRegistrationByStudentId(id);
       const existing = response?.data ?? response;
 
+      // Cek apakah draft di localStorage valid dan memang milik mahasiswa yang sedang login
+      const localDraftRaw = localStorage.getItem("sidang_form_draft");
+      let validLocalDraft = null;
+      if (localDraftRaw) {
+        try {
+          const parsed = JSON.parse(localDraftRaw);
+          const draftMhsId = parsed?.data?.mahasiswaId || parsed?.mahasiswaId;
+          if (draftMhsId && String(draftMhsId) === String(id)) {
+            validLocalDraft = parsed;
+          } else {
+            localStorage.removeItem("sidang_form_draft");
+          }
+        } catch (err) {
+          localStorage.removeItem("sidang_form_draft");
+        }
+      }
+
       if (!existing) {
         const created = await saveSidangRegistration({ mahasiswaId: id });
-        const newId = created?.data?.id ?? created?.id ?? null;
+        const newRecord = created?.data ?? created ?? null;
+        const newId = newRecord?.id ?? null;
         if (newId) {
           setRegistrationId(newId);
           dispatch({ type: "SET_REGISTRATION_ID", id: newId });
         }
-        applyRegistrationToForm(created?.data ?? created);
-        setRegistrationMeta(created?.data ?? created ?? null);
+
+        if (validLocalDraft) {
+          dispatch({ type: "RESTORE_DRAFT", payload: validLocalDraft });
+          if (newId) {
+            dispatch({ type: "SET_REGISTRATION_ID", id: newId });
+          }
+        } else if (newRecord) {
+          applyRegistrationToForm(newRecord);
+        }
+
+        setRegistrationMeta(newRecord);
         return;
       }
 
       setRegistrationId(existing.id);
       dispatch({ type: "SET_REGISTRATION_ID", id: existing.id });
-      applyRegistrationToForm(existing);
       setRegistrationMeta(existing);
+      setSidangAdminResponse(existing);
+
+      const isSubmittedOrRevision = Boolean(
+        existing.submittedAt || (existing.isEdit && existing.message)
+      );
+
+      const isStep1SavedInApi = Boolean(
+        existing.program ||
+        existing.skemaSidang ||
+        existing.judulTugasAkhirIndonesia ||
+        existing.sks ||
+        existing.ipk
+      );
+
+      if (isSubmittedOrRevision) {
+        // Bila sudah submit atau revisi aktif (isEdit), data API dipakai penuh dan localStorage dibersihkan
+        localStorage.removeItem("sidang_form_draft");
+        applyRegistrationToForm(existing);
+      } else if (isStep1SavedInApi) {
+        // Jika data API menunjukkan Step 1 sudah pernah disimpan ke server, utamakan data API
+        localStorage.removeItem("sidang_form_draft");
+        applyRegistrationToForm(existing);
+      } else if (validLocalDraft) {
+        // Bila draft murni dan Step 1 belum tersimpan di server tapi ada draft lokal milik mahasiswa ini
+        dispatch({ type: "RESTORE_DRAFT", payload: validLocalDraft });
+        dispatch({ type: "SET_REGISTRATION_ID", id: existing.id });
+      } else {
+        applyRegistrationToForm(existing);
+      }
 
       const serverUploads = Array.isArray(existing.sidangRegistrationUploads)
         ? existing.sidangRegistrationUploads
@@ -331,12 +465,11 @@ function PendaftaranSidangContent() {
       if (serverUploads.length > 0) {
         dispatch({ type: "RESTORE_SERVER_DOCUMENTS", uploads: serverUploads });
       }
-
-      setSidangAdminResponse(existing);
     } catch (e) {
       setFormAlert({ type: "warning", msg: "Gagal memuat data pendaftaran tersimpan. Form dimulai dari awal." });
     } finally {
       setIsRegistrationLoading(false);
+      dispatch({ type: "SET_IS_DIRTY", value: false });
     }
   };
 
@@ -364,7 +497,7 @@ function PendaftaranSidangContent() {
   useEffect(() => {
     let isMounted = true;
     setIsLecturersLoading(true);
-    getLecturers({ limit: "all", sortBy: "a-z" })
+    getAllLecturers({ sortBy: "name" })
       .then((data) => {
         if (isMounted) {
           const list = Array.isArray(data) ? data : (data?.data || []);
@@ -433,220 +566,270 @@ function PendaftaranSidangContent() {
     };
   }, [dispatch]);
 
-  useEffect(() => {
-    if (isStep1Locked || !mahasiswaId) return;
+  const isStep2Complete = () => validateStep2(data, documents) === null;
 
-    if (isHydrating.current) {
-      isHydrating.current = false;
-      const initialPayload = {
-        ...(registrationId ? { id: registrationId } : {}),
-        mahasiswaId: String(mahasiswaId),
-        programType: data.programType || undefined,
-        sidangScheme: data.sidangScheme || undefined,
-        jalurNonSidang:
-          data.sidangScheme === "Non Sidang" && Array.isArray(data.jalurNonSidang)
-            ? data.jalurNonSidang
-            : [],
-        lulusTesBahasa:
-          data.testBahasaPersyaratan === "Sudah"
-            ? true
-            : data.testBahasaPersyaratan === "Belum"
-              ? false
-              : undefined,
-        testBahasaPersyaratan: data.testBahasaPersyaratan || undefined,
-        sks: data.sks !== "" && data.sks !== null && data.sks !== undefined ? Number(data.sks) : undefined,
-        ipk: data.ipk !== "" && data.ipk !== null && data.ipk !== undefined ? Number(data.ipk) : undefined,
-        tak: data.tak !== "" && data.tak !== null && data.tak !== undefined ? Number(data.tak) : undefined,
-        sktaExpDate: data.sktaExpDate || undefined,
-        thesisTitleId: data.thesisTitleId || undefined,
-        thesisTitleEn: data.thesisTitleEn || undefined,
-        dosenPembimbing1Id: data.dosenPembimbing1Id ? String(data.dosenPembimbing1Id) : undefined,
-        dosenPembimbing2Id: data.dosenPembimbing2Id ? String(data.dosenPembimbing2Id) : undefined,
-      };
-      lastSavedPayload.current = JSON.stringify(initialPayload);
-      return;
+  const renderStatusBanner = () => {
+    if (!registrationId) return null;
+
+    if (registrationMeta?.sidangPeriodId) {
+      return (
+        <div className="info-banner" style={{ marginBottom: "24px", background: "#F0FDF4", borderColor: "#BBF7D0" }}>
+          <div className="banner-icon-container" style={{ background: "#DCFCE7" }}>
+            <CheckCircle2 color="#16A34A" size={24} />
+          </div>
+          <div className="banner-content">
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <h4 style={{ color: "#166534", margin: 0, fontSize: "16px", fontWeight: 800 }}>Pendaftaran Sidang Disetujui</h4>
+              <span style={{ background: "#DCFCE7", color: "#166534", fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "4px" }}>DISETUJUI</span>
+            </div>
+            <p style={{ color: "#15803D", margin: 0, fontSize: "13px" }}>Selamat! Pendaftaran sidang telah diverifikasi dan disetujui oleh admin akademik.</p>
+          </div>
+        </div>
+      );
     }
 
-    const hasData = Boolean(
-      data.programType ||
-      data.sidangScheme ||
-      (data.sidangScheme === "Non Sidang" && Array.isArray(data.jalurNonSidang) && data.jalurNonSidang.length > 0) ||
-      data.testBahasaPersyaratan ||
-      (data.sks !== "" && data.sks !== null && data.sks !== undefined) ||
-      (data.ipk !== "" && data.ipk !== null && data.ipk !== undefined) ||
-      (data.tak !== "" && data.tak !== null && data.tak !== undefined) ||
-      data.sktaExpDate ||
-      data.thesisTitleId ||
-      data.thesisTitleEn ||
-      data.dosenPembimbing1Id ||
-      data.dosenPembimbing2Id
-    );
-
-    if (!hasData) return;
-
-    const payload = {
-      ...(registrationId ? { id: registrationId } : {}),
-      mahasiswaId: String(mahasiswaId),
-      programType: data.programType || undefined,
-      sidangScheme: data.sidangScheme || undefined,
-      jalurNonSidang:
-        data.sidangScheme === "Non Sidang" && Array.isArray(data.jalurNonSidang)
-          ? data.jalurNonSidang
-          : [],
-      lulusTesBahasa:
-        data.testBahasaPersyaratan === "Sudah"
-          ? true
-          : data.testBahasaPersyaratan === "Belum"
-            ? false
-            : undefined,
-      testBahasaPersyaratan: data.testBahasaPersyaratan || undefined,
-      sks: data.sks !== "" && data.sks !== null && data.sks !== undefined ? Number(data.sks) : undefined,
-      ipk: data.ipk !== "" && data.ipk !== null && data.ipk !== undefined ? Number(data.ipk) : undefined,
-      tak: data.tak !== "" && data.tak !== null && data.tak !== undefined ? Number(data.tak) : undefined,
-      sktaExpDate: data.sktaExpDate || undefined,
-      thesisTitleId: data.thesisTitleId ? data.thesisTitleId.trim() : undefined,
-      thesisTitleEn: data.thesisTitleEn ? data.thesisTitleEn.trim() : undefined,
-      dosenPembimbing1Id: data.dosenPembimbing1Id ? String(data.dosenPembimbing1Id) : undefined,
-      dosenPembimbing2Id: data.dosenPembimbing2Id ? String(data.dosenPembimbing2Id) : undefined,
-    };
-
-    const payloadString = JSON.stringify(payload);
-    if (lastSavedPayload.current === payloadString) return;
-
-    const timer = setTimeout(async () => {
-      const currentReqId = ++latestRequestId.current;
-      setAutosaveStatus("saving");
-      try {
-        const result = await saveSidangRegistration(payload);
-        if (currentReqId !== latestRequestId.current) return;
-        const savedId = result?.data?.id ?? result?.id ?? null;
-        if (savedId && !registrationId) {
-          setRegistrationId(savedId);
-          dispatch({ type: "SET_REGISTRATION_ID", id: savedId });
-        }
-        lastSavedPayload.current = payloadString;
-        setAutosaveStatus("saved");
-      } catch (err) {
-        if (currentReqId !== latestRequestId.current) return;
-        console.error("Autosave draft sidang gagal:", err);
-        setAutosaveStatus("error");
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [
-    data.programType,
-    data.sidangScheme,
-    data.jalurNonSidang,
-    data.testBahasaPersyaratan,
-    data.sks,
-    data.ipk,
-    data.tak,
-    data.sktaExpDate,
-    data.thesisTitleId,
-    data.thesisTitleEn,
-    data.dosenPembimbing1Id,
-    data.dosenPembimbing2Id,
-    mahasiswaId,
-    registrationId,
-    isStep1Locked,
-  ]);
-
-  return (
-    <div className="page-wrapper">
-      <div className="top-header-nav">
-        <button className="btn-back-square" onClick={() => navigate("/mahasiswa/dashboard")}>
-          <ArrowLeft size={18} />
-          <span>Kembali</span>
-        </button>
-        <div className="header-logos">
-          <img src={logoSimta} alt="SIMTA Logo" className="simta-brand-logo" referrerPolicy="no-referrer" />
-          <div className="logo-divider"></div>
-          <img src={logoTelkom} alt="Telkom Logo" className="telkom-brand-logo" referrerPolicy="no-referrer" />
-        </div>
-      </div>
-
-      <div className="simta-container">
-        {isSktaChecking || isRegistrationLoading ? (
-          <div className="skta-warning">
-            <h2 className="skta-warning-title">Memuat Data Pendaftaran</h2>
-            <p className="skta-warning-text">Sistem sedang memeriksa status SKTA dan data pendaftaran sidang.</p>
+    if (isRevisionActive) {
+      return (
+      <div className="info-banner" style={{ marginBottom: "24px", background: "#FFFBEB", borderColor: "#FDE68A", display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>          <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: "1 1 320px", minWidth: 0 }}>
+          <div className="banner-icon-container" style={{ background: "#FEF3C7", flexShrink: 0 }}>
+            <AlertTriangle color="#D97706" size={24} />
           </div>
-        ) : skta ? (
-          <>
-            {isRevisionActive && (
-              <div style={{ padding: "16px 24px 0", marginBottom: 16 }}>
-                <div style={{
-                  padding: "16px 20px", borderRadius: 12, background: revisiCfg.badgeBg,
-                  border: `1.5px solid ${revisiCfg.borderColor}`, display: "flex", flexDirection: "column", gap: 8,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 12px", borderRadius: 9999, background: "#fff", color: revisiCfg.badgeColor, border: `1.5px solid ${revisiCfg.borderColor}` }}>
-                      {revisiCfg.label}
-                    </span>
-                    {revisionDueDateText && (
-                      <span style={{ fontSize: 12, fontWeight: 700, color: revisiCfg.badgeColor }}>
-                        Batas waktu perbaikan: {revisionDueDateText}
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ margin: 0, fontSize: 13, color: revisiCfg.badgeColor, lineHeight: 1.6 }}>
-                    <strong>Catatan dari Admin:</strong> {sidangAdminResponse.message}
-                  </p>
+          <div className="banner-content">
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+              <h4 style={{ color: "#92400E", margin: 0, fontSize: "16px", fontWeight: 800 }}>Dokumen Pendaftaran Perlu Diperbaiki</h4>
+              <span style={{ background: "#FEF3C7", color: "#92400E", fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "4px" }}>PERLU PERBAIKAN</span>
+            </div>
+            <p style={{ color: "#B45309", margin: 0, marginBottom: "12px", fontSize: "13px" }}>
+              Tim akademik memberikan catatan: <strong>"{sidangAdminResponse?.message}"</strong>. Silakan lakukan perbaikan pada data atau dokumen yang diminta, kemudian kirim ulang pengajuan sebelum batas waktu berikut.
+            </p>
+            {revisionDueDateText && (
+              <div style={{ background: "#fff", padding: "10px 16px", borderRadius: "8px", border: "1px solid #FDE68A", display: "inline-block" }}>
+                <div style={{ fontSize: "12px", color: "#92400E" }}>
+                  <strong>Batas Waktu Perbaikan:</strong> {revisionDueDateText}
                 </div>
               </div>
             )}
+          </div>
+        </div>
+          <a
+            className="contact-person-badge"
+            href="https://wa.me/6285117001281"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: "#C0182A",
+              color: "#fff",
+              padding: "10px 16px",
+              borderRadius: "8px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "12px",
+              fontWeight: 700,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              alignSelf: "flex-end",
 
-            {formAlert && (
-              <div style={{ padding: "16px 24px 0" }}>
-                <CustomAlert type={formAlert.type} message={formAlert.msg} />
+            }}
+          >
+            <Mail size={15} />
+            <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP</span>
+          </a>
+        </div>
+      );
+    }
+
+    if (registrationMeta?.submittedAt) {
+      return (
+        <div className="info-banner" style={{ marginBottom: "24px", background: "#EFF6FF", borderColor: "#BFDBFE", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: "1 1 320px", minWidth: 0 }}>
+            <div className="banner-icon-container" style={{ background: "#DBEAFE", flexShrink: 0 }}>
+              <Clock color="#2563EB" size={24} />
+            </div>
+            <div className="banner-content">
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <h4 style={{ color: "#1E3A8A", margin: 0, fontSize: "16px", fontWeight: 800 }}>Pendaftaran Sedang Diproses</h4>
+                <span style={{ background: "#DBEAFE", color: "#1E40AF", fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "4px" }}>MENUNGGU VERIFIKASI</span>
+              </div>
+              <p style={{ color: "#1D4ED8", margin: 0, fontSize: "13px" }}>Pendaftaran sidang telah berhasil dikirim dan sedang menunggu proses verifikasi oleh admin akademik. Mohon pantau halaman ini secara berkala.</p>
+            </div>
+          </div>
+          <a
+            className="contact-person-badge"
+            href="https://wa.me/6285117001281"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: "#C0182A",
+              color: "#fff",
+              padding: "10px 16px",
+              borderRadius: "8px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "12px",
+              fontWeight: 700,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            <Mail size={15} />
+            <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP</span>
+          </a>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <div className={`flex min-h-screen ${sidebarCollapsed ? 'sidebar-hidden' : ''}`} style={{ background: "#F4F6FB" }}>
+      <SidebarMahasiswa isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <div id="sidang-main" className="flex-1 relative">
+        <header className="sidang-topbar">
+          <button className="sidang-topbar-toggle" onClick={handleToggleSidebar} aria-label="Toggle Menu">
+            <Menu size={20} color="#fff" />
+          </button>
+          <div className="sidang-topbar-brand">Registrasi Sidang</div>
+        </header>
+
+        <div className="page-wrapper sidang-wrapper">
+          {!isSktaChecking && !isRegistrationLoading && skta && <Stepper step={step} />}
+          <div
+            className={`simta-container ${isSktaChecking || isRegistrationLoading || !skta ? "sidang-loading-wrap" : ""
+              }`}
+          >
+            {isSktaChecking || isRegistrationLoading ? (
+              <div className="skta-warning sidang-loading-card">
+                <Loader
+                  size={40}
+                  color="#C0182A"
+                  style={{ animation: "spin 1s linear infinite", marginBottom: "20px" }}
+                />
+                <h2 className="skta-warning-title" style={{ fontSize: "22px", fontWeight: 800, color: "#1E293B", margin: "0 0 10px" }}>
+                  Memuat Data Pendaftaran
+                </h2>
+                <p className="skta-warning-text" style={{ fontSize: "15px", color: "#64748B", margin: 0, lineHeight: 1.6 }}>
+                  Sistem sedang memeriksa status SKTA dan data pendaftaran sidang.
+                </p>
+              </div>
+            ) : skta ? (
+              <>
+                {formAlert && (
+                  <div style={{ marginBottom: "1.25rem" }}>
+                    <CustomAlert type={formAlert.type} title={formAlert.title} message={formAlert.msg} />
+                  </div>
+                )}
+
+                <main>
+
+                  {renderStatusBanner()}
+                  {step === 1 ? (
+                    <Step1
+                      studentInfo={studentInfo}
+                      lecturers={lecturers}
+                      loadingLecturers={isLecturersLoading}
+                      readOnly={isStep1Locked && !isRevisionActive}
+                      draftBanner={draftSavedBanner}
+                      onCloseDraftBanner={() => setDraftSavedBanner(null)}
+                      isRevisionActive={isRevisionActive}
+
+                    />
+                  ) : (
+                    <Step2
+                      registrationId={registrationId}
+                      isTemplatesLoading={isTemplatesLoading}
+                      readOnly={isStep1Locked && !isRevisionActive}
+                      studentInfo={studentInfo}
+                    />
+                  )}
+                </main>
+
+                <footer className="footer-nav">
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button className="btn-pagination" onClick={() => setStep(1)} disabled={step === 1}><ChevronLeft size={16} color="#334155" strokeWidth={2.5} /></button>
+                    <div className={`page-num ${step === 1 ? "active" : ""}`} onClick={() => setStep(1)}>1</div>
+                    <div className={`page-num ${step === 2 ? "active" : ""}`} onClick={() => setStep(2)}>2</div>
+                    <button className="btn-pagination" onClick={() => setStep(2)} disabled={step === 2}><ChevronRight size={16} strokeWidth={2.5} /></button>
+                  </div>
+
+                  {step === 1 ? (
+                    isStep1Locked && !isRevisionActive ? (
+                      <button className="btn-primary" onClick={() => setStep(2)} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        Lanjut ke Dokumen <ChevronRight size={16} />
+                      </button>
+                    ) : (
+                      <button className="btn-primary" onClick={handleSaveStep1} disabled={isSavingStep1}>
+                        {isSavingStep1 ? "Menyimpan..." : "Lanjutkan"}
+                      </button>
+                    )
+                  ) : (
+                    (!isStep1Locked || isRevisionActive) && (
+                      isStep2Complete() ? (
+                        <button className="btn-primary" onClick={handleSubmit} disabled={isSubmitting || !registrationId}>
+                          {isSubmitting ? "Mengirim..." : "Submit Pendaftaran"}
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-primary"
+                          onClick={handleSaveDraft}
+                          disabled={isSavingDraft || !registrationId || !isDirty}
+                          style={{
+                            background: "#F59E0B",
+                            color: "#fff",
+                            border: "none",
+                            opacity: (isSavingDraft || !registrationId || !isDirty) ? 0.5 : 1,
+                            cursor: (isSavingDraft || !registrationId || !isDirty) ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          {isSavingDraft ? "Menyimpan..." : "Simpan Draft"}
+                        </button>
+                      )
+                    )
+                  )}
+                </footer>
+              </>
+            ) : (
+              <div className="skta-warning sidang-warning-card">
+                <div className="sidang-icon-circle-warning">
+                  <AlertTriangle size={28} color="#D97706" />
+                </div>
+                <h2 className="skta-warning-title" style={{ fontSize: "18px", fontWeight: 800, color: "#92400E", margin: "0 0 8px" }}>
+                  Pendaftaran Sidang Belum Tersedia
+                </h2>
+                <p className="skta-warning-text" style={{ fontSize: "14px", color: "#B45309", margin: "0 0 24px", lineHeight: 1.6, maxWidth: "460px" }}>
+                  SKTA belum diterbitkan. Silakan menunggu hingga SKTA diterbitkan sebelum melakukan pendaftaran sidang.
+                </p>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => navigate("/mahasiswa/dashboard")}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "10px 24px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    borderRadius: "8px",
+                    background: "#C0182A",
+                    color: "#fff",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "background 0.2s",
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                  <span>Kembali ke Dashboard</span>
+                </button>
               </div>
             )}
-
-            <main>
-              {step === 1 ? (
-                <Step1
-                  studentInfo={studentInfo}
-                  lecturers={lecturers}
-                  loadingLecturers={isLecturersLoading}
-                  autosaveStatus={autosaveStatus}
-                  readOnly={isStep1Locked && !isRevisionActive}
-                  schemeLocked={isRevisionActive}
-                />
-              ) : (
-                <Step2
-                  registrationId={registrationId}
-                  isTemplatesLoading={isTemplatesLoading}
-                  readOnly={isStep1Locked && !isRevisionActive}
-                />
-              )}
-            </main>
-
-            <footer className="footer-nav">
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <button className="btn-pagination" onClick={() => setStep(1)} disabled={step === 1}><ChevronLeft size={16} /></button>
-                <div className={`page-num ${step === 1 ? "active" : ""}`} onClick={() => setStep(1)}>1</div>
-                <div className={`page-num ${step === 2 ? "active" : ""}`} onClick={() => setStep(2)}>2</div>
-                <button className="btn-pagination" onClick={() => setStep(2)} disabled={step === 2}><ChevronRight size={16} /></button>
-              </div>
-
-              {step === 1 ? (
-                <button className="btn-primary" onClick={handleSaveStep1} disabled={isSavingStep1}>
-                  {isSavingStep1 ? "Menyimpan..." : "Simpan & Lanjutkan"}
-                </button>
-              ) : (
-                <button className="btn-primary" onClick={handleSubmit} disabled={isSubmitting || !registrationId}>
-                  {isSubmitting ? "Mengirim..." : "Submit Pendaftaran"}
-                </button>
-              )}
-            </footer>
-          </>
-        ) : (
-          <div className="skta-warning">
-            <h2 className="skta-warning-title">Pendaftaran Sidang Belum Tersedia</h2>
-            <p className="skta-warning-text">SKTA kamu belum diterbitkan. Silakan tunggu hingga SKTA terbit sebelum mendaftar sidang.</p>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

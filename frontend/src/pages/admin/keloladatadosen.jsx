@@ -15,7 +15,6 @@ const PAGE_SIZE = 10;
 
 const KAUR_OPTIONS = [
   { value: 'Kepala Urusan Akademik Fakultas Informatika', label: 'Kepala Urusan Akademik Fakultas Informatika' },
-
 ];
 
 const ToggleSwitch = ({ checked, onChange, disabled }) => (
@@ -30,19 +29,17 @@ const ToggleSwitch = ({ checked, onChange, disabled }) => (
 );
 
 const EditDosenModal = ({ dosen, researchGroups, studyPrograms, dosenList, onClose, onSave, isSaving }) => {
-  // State KK
+
   const [isKetuaKK, setIsKetuaKK] = useState(dosen.isKetuaKK);
   const [researchGroupId, setResearchGroupId] = useState(dosen.researchGroupId);
   const [warningKK, setWarningKK] = useState(null);
 
-  // State Prodi & Kaprodi
   const [isKetuaProdi, setIsKetuaProdi] = useState(dosen.isKetuaProdi);
   const [studyProgramId, setStudyProgramId] = useState(dosen.studyProgramId);
   const [warningProdi, setWarningProdi] = useState(null);
 
   const [isKepalaUrusanAkademik, setIsKepalaUrusanAkademik] = useState(dosen.isKepalaUrusanAkademik ?? '');
 
-  // Validasi 1 KK = 1 Ketua
   const currentKetuaKK = useMemo(() => {
     return dosenList.find(d =>
       d.id !== dosen.id &&
@@ -370,23 +367,25 @@ const KelolaDataDosen = () => {
     }
   };
 
-  const handleRenameKK = async (groupId, newName) => {
+  const handleUpdateKK = async (groupId, payload) => {
     try {
-      const updated = await updateResearchGroup(groupId, newName);
-      setResearchGroups(prev => prev.map(g => g.id === groupId ? { ...g, name: updated.name } : g));
-      showAlert('success', 'Berhasil', 'Nama kelompok keahlian berhasil diperbarui.');
+      const updated = await updateResearchGroup(groupId, payload);
+      setResearchGroups(prev => prev.map(g => g.id === groupId ? { ...g, ...updated } : g));
+      showAlert('success', 'Berhasil', 'Kelompok keahlian berhasil diperbarui.');
     } catch (err) {
-      showAlert('error', 'Gagal Memperbarui', 'Terjadi kesalahan saat memperbarui nama KK.');
+      showAlert('error', 'Gagal Memperbarui', 'Terjadi kesalahan saat memperbarui KK.');
+      throw err;
     }
   };
 
-  const handleCreateKK = async (name) => {
+  const handleCreateKK = async (payload) => {
     try {
-      const created = await createResearchGroup(name);
+      const created = await createResearchGroup(payload);
       setResearchGroups(prev => [...prev, created]);
       showAlert('success', 'Berhasil', 'Kelompok keahlian baru berhasil ditambahkan.');
     } catch (err) {
       showAlert('error', 'Gagal Membuat KK', 'Terjadi kesalahan saat membuat KK baru.');
+      throw err; 
     }
   };
 
@@ -557,8 +556,9 @@ const KelolaDataDosen = () => {
         {showKelolaKK && (
           <KelolaKKModal
             researchGroups={researchGroups}
+            studyPrograms={studyPrograms}
             onClose={() => setShowKelolaKK(false)}
-            onRename={handleRenameKK}
+            onUpdate={handleUpdateKK}
             onCreate={handleCreateKK}
             onDelete={handleDeleteKK}
           />

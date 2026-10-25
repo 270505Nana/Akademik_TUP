@@ -25,6 +25,7 @@ const generateDocuments = () => {
 
 export const initialFormState = {
   step: 1,
+  isDirty: false,
   data: {
     registrationId: null,
     program: "",
@@ -37,6 +38,7 @@ export const initialFormState = {
     evidenCumlaude: "",
     sidangDate: "-", 
     minatWirausaha: "", 
+    tglSidang: "",
     dosenWaliId: "-", 
     dosenPembimbing1Id: "",
     dosenPembimbing2Id: "",
@@ -57,12 +59,15 @@ export const initialFormState = {
     [SECTIONS.HKI]: `${SECTIONS.HKI}-1`,
     [SECTIONS.WIRAUSAHA]: `${SECTIONS.WIRAUSAHA}-1`,
   },
+  lastUploadedDocName: "",
 };
 
 export function formReducer(state, action) {
   switch (action.type) {
+    case "SET_IS_DIRTY":
+      return { ...state, isDirty: Boolean(action.value) };
     case "UPDATE_FIELD":
-      return { ...state, data: { ...state.data, [action.field]: action.value } };
+      return { ...state, isDirty: true, data: { ...state.data, [action.field]: action.value } };
     case "SET_STEP":
       return { ...state, step: action.value };
     case "SET_ACTIVE_DOC":
@@ -84,6 +89,7 @@ export function formReducer(state, action) {
         skemaCumlaude: draft.skemaCumlaude ? draft.skemaCumlaude.split(", ") : [],
         evidenCumlaude: draft.evidenCumlaude || "",
         minatWirausaha: draft.berminatWirausaha ? "Ya" : "Tidak",
+        tglSidang: draft.tglSidang ? new Date(draft.tglSidang).toISOString().split("T")[0] : "",
         dosenPembimbing1Id: draft.dosenPembimbing1Id || "",
         dosenPembimbing2Id: draft.dosenPembimbing2Id || "",
         yudisiumRegistrationPeriodId: draft.yudisiumRegistrationPeriodId || "",
@@ -139,6 +145,7 @@ export function formReducer(state, action) {
             fileUrl: uploaded.downloadUrl || uploaded.previewUrl || uploaded.url, 
             fileName: uploaded.name || uploaded.filename || "Dokumen Terunggah",
             isValid: uploaded.isValid,
+            uploadedAt: uploaded.updatedAt || uploaded.createdAt || null,
             error: isRejected ? "Berkas ditolak. Silakan unggah dokumen yang baru." : null
           };
         }
@@ -153,7 +160,7 @@ export function formReducer(state, action) {
          newActiveDocIds[SECTIONS.WAJIB] = wajibAfter[0].id;
       }
 
-      return { ...state, step: 1, data: newData, documents: updatedDocs, activeDocIds: newActiveDocIds };
+      return { ...state, isDirty: false, step: 1, data: newData, documents: updatedDocs, activeDocIds: newActiveDocIds };
     }
 
     case "SET_DYNAMIC_DOCUMENTS": {
@@ -202,6 +209,7 @@ export function formReducer(state, action) {
             error: isRejected ? "Berkas ditolak. Silakan unggah dokumen yang baru." : (existingDoc ? existingDoc.error : null),
             status: uploaded ? (isRejected ? "" : "completed") : (existingDoc ? existingDoc.status : ""),
             isValid: uploaded ? uploaded.isValid : (existingDoc ? existingDoc.isValid : null),
+            uploadedAt: uploaded ? (uploaded.updatedAt || uploaded.createdAt || null) : (existingDoc ? existingDoc.uploadedAt : null),
           });
         }
       });
@@ -239,25 +247,33 @@ export function formReducer(state, action) {
           isValid: null
         } : doc
       );
-      return { ...state, documents: updatedDocs };
+      return { ...state, isDirty: true, documents: updatedDocs };
     }
     case "SET_DOCUMENT_ERROR": {
       const updatedDocs = state.documents.map((doc) =>
         doc.id === action.docId ? { ...doc, error: action.error, file: null, fileUrl: null } : doc
       );
-      return { ...state, documents: updatedDocs };
+      return { ...state, isDirty: true, documents: updatedDocs };
     }
     case "COMPLETE_DOCUMENT": {
+      const targetDoc = state.documents.find((doc) => doc.id === action.docId);
+      const docName = action.docName || targetDoc?.name || "";
+      const uploadTime = action.uploadedAt || new Date().toISOString();
       const updatedDocs = state.documents.map((doc) =>
-        doc.id === action.docId ? { ...doc, status: "completed" } : doc
+        doc.id === action.docId ? { ...doc, status: "completed", uploadedAt: uploadTime } : doc
       );
-      return { ...state, documents: updatedDocs };
+      return {
+        ...state,
+        isDirty: true,
+        documents: updatedDocs,
+        lastUploadedDocName: docName || state.lastUploadedDocName || "",
+      };
     }
     case "CLEAR_DOCUMENT_STATUS": {
       const updatedDocs = state.documents.map((doc) =>
         doc.id === action.docId ? { ...doc, status: "" } : doc
       );
-      return { ...state, documents: updatedDocs };
+      return { ...state, isDirty: true, documents: updatedDocs };
     }
     case "RESTORE_DRAFT": {
       const restoredDocs = action.payload.documents ? action.payload.documents.map(doc => ({
@@ -266,7 +282,7 @@ export function formReducer(state, action) {
         fileUrl: doc.status === 'completed' ? doc.fileUrl : null 
       })) : generateDocuments();
 
-      return { ...action.payload, documents: restoredDocs };
+      return { ...action.payload, isDirty: false, documents: restoredDocs };
     }
     default:
       return state;

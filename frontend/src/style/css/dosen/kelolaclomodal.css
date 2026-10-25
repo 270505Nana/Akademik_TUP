@@ -246,3 +246,56 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ==========================================================
+   PERBAIKAN (revisi)
+   ========================================================== */
+.clo-badge-success { color: #16a34a; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.clo-section-title-wrap { display: flex; align-items: center; gap: 8px; }
+.clo-hint-lock { font-size: 11px; color: #ef4444; }
+
+.clo-btn-master {
+  align-self: flex-start; padding: 8px 16px; background: #2563eb; color: #fff;
+  border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;
+}
+.clo-btn-master:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Baris yang sudah tersimpan di server (read-only) */
+.clo-dynamic-row.is-saved { background: #f1f5f9; }
+.clo-dynamic-row.is-saved input { background: #f1f5f9; color: #64748b; cursor: default; }
+
+.clo-total-bobot { font-size: 12.5px; color: #64748b; text-align: right; }
+.clo-hint { margin: 0; font-size: 12px; color: #64748b; }
+
+.clo-form-error {
+  padding: 10px 14px; border-radius: 8px; font-size: 13px;
+  background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+}
+
+/* Footer tetap terlihat saat form panjang */
+.clo-modal-footer { position: sticky; bottom: 0; margin: 0 -24px -24px; }
+
+
+/* ==========================================================
+   PERBAIKAN 2: dropdown CLO + modal Tambah CLO terpisah
+   ========================================================== */
+.clo-modal-overlay--top { z-index: 10000; }
+
+.clo-label-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.clo-label-row label { font-size: 13px; font-weight: 600; color: #475569; }
+
+.clo-btn-tambah-clo {
+  display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px;
+  background: #c0182a; color: #fff; border: none; border-radius: 6px;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+}
+.clo-btn-tambah-clo:hover { background: #a01423; }
+
+.clo-warning {
+  padding: 10px 14px; border-radius: 8px; font-size: 12.5px; line-height: 1.5;
+  background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+}
+.clo-desc-readonly {
+  padding: 10px 14px; border-radius: 8px; font-size: 13.5px; line-height: 1.5;
+  background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; min-height: 42px;
+}

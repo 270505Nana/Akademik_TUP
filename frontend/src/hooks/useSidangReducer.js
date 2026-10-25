@@ -52,6 +52,7 @@ Object.keys(SECTIONS).forEach((key) => {
 
 export const initialFormState = {
   step: 1,
+  isDirty: false,
   data: {
     id: null,
     mahasiswaId: null,
@@ -72,10 +73,13 @@ export const initialFormState = {
   },
   documents: generateDocuments(),
   activeDocIds: initialActiveDocIds,
+  lastUploadedDocName: "",
 };
 
 export function formReducer(state, action) {
   switch (action.type) {
+    case "SET_IS_DIRTY":
+      return { ...state, isDirty: Boolean(action.value) };
     case "SET_REGISTRATION_ID":
       return {
         ...state,
@@ -95,6 +99,7 @@ export function formReducer(state, action) {
     case "UPDATE_FIELD":
       return {
         ...state,
+        isDirty: true,
         data: {
           ...state.data,
           [action.field]: action.value,
@@ -105,6 +110,7 @@ export function formReducer(state, action) {
     case "SET_INITIAL_DATA":
       return {
         ...state,
+        isDirty: false,
         data: {
           ...state.data,
           ...action.payload,
@@ -166,7 +172,7 @@ export function formReducer(state, action) {
 
         return doc;
       });
-      return { ...state, documents: uploadedDocs };
+      return { ...state, isDirty: true, documents: uploadedDocs };
     }
     case "SET_DOCUMENT_ERROR": {
       const errorDocs = state.documents.map((doc) =>
@@ -174,7 +180,7 @@ export function formReducer(state, action) {
           ? { ...doc, error: action.error, fileUrl: null, status: "pending" }
           : doc,
       );
-      return { ...state, documents: errorDocs };
+      return { ...state, isDirty: true, documents: errorDocs };
     }
     case "CLEAR_DOCUMENT_STATUS": {
       const clearedDocs = state.documents.map((doc) =>
@@ -189,13 +195,23 @@ export function formReducer(state, action) {
             }
           : doc,
       );
-      return { ...state, documents: clearedDocs };
+      return { ...state, isDirty: true, documents: clearedDocs };
     }
     case "COMPLETE_DOCUMENT": {
+      const targetDoc = state.documents.find((doc) => doc.id === action.docId);
+      const docName = action.docName || targetDoc?.name || "";
+      const uploadTime = action.uploadedAt || new Date().toISOString();
       const completedDocs = state.documents.map((doc) =>
-        doc.id === action.docId ? { ...doc, status: "completed", isValid: null } : doc,
+        doc.id === action.docId
+          ? { ...doc, status: "completed", isValid: null, uploadedAt: uploadTime }
+          : doc,
       );
-      return { ...state, documents: completedDocs };
+      return {
+        ...state,
+        isDirty: true,
+        documents: completedDocs,
+        lastUploadedDocName: docName || state.lastUploadedDocName || "",
+      };
     }
     case "RESTORE_SERVER_DOCUMENTS": {
       // Sinkronkan status dokumen dari data sidangRegistrationUploads 
@@ -214,10 +230,11 @@ export function formReducer(state, action) {
           fileName: serverDoc.name || serverDoc.filename || doc.fileName,
           downloadUrl: serverDoc.downloadUrl || null,
           uploadId: serverDoc.id ?? null,
+          uploadedAt: serverDoc.updatedAt || serverDoc.createdAt || doc.uploadedAt || null,
           error: null,
         };
       });
-      return { ...state, documents: merged };
+      return { ...state, isDirty: false, documents: merged };
     }
     case "SET_SECTION_TEMPLATES": {
       const { section, templates } = action.payload || {};
@@ -272,7 +289,10 @@ export function formReducer(state, action) {
       };
     }
     case "RESTORE_DRAFT":
-      return action.payload;
+      return {
+        ...action.payload,
+        isDirty: false,
+      };
     default:
       return state;
   }
