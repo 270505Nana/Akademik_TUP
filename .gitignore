@@ -145,3 +145,5 @@ vite.config.ts.timestamp-*
 
 *-old*
 docs
+!backend/docs/
+!backend/docs/test-case/
