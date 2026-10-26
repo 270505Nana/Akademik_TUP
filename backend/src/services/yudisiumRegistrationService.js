@@ -201,13 +201,21 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
   }
 
   // 2. Filter by Study Program ID
-  if (studyProgramId && typeof studyProgramId === "string" && studyProgramId.trim() !== "") {
+  if (
+    studyProgramId &&
+    typeof studyProgramId === "string" &&
+    studyProgramId.trim() !== ""
+  ) {
     where.mahasiswa = where.mahasiswa || {};
     where.mahasiswa.studyProgramId = studyProgramId.trim();
   }
 
   // 3. Filter by Skema Sidang
-  if (skemaSidang && typeof skemaSidang === "string" && skemaSidang.trim() !== "") {
+  if (
+    skemaSidang &&
+    typeof skemaSidang === "string" &&
+    skemaSidang.trim() !== ""
+  ) {
     where.skemaSidang = {
       equals: skemaSidang.trim(),
       mode: "insensitive",
@@ -215,7 +223,11 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
   }
 
   // 4. Filter by Pengajuan Cumlaude
-  if (pengajuanCumlaude && typeof pengajuanCumlaude === "string" && pengajuanCumlaude.trim() !== "") {
+  if (
+    pengajuanCumlaude &&
+    typeof pengajuanCumlaude === "string" &&
+    pengajuanCumlaude.trim() !== ""
+  ) {
     const pengajuan = pengajuanCumlaude.trim();
     where.AND = where.AND || [];
     where.AND.push({
@@ -241,7 +253,11 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
   }
 
   // 5. Filter by Skema Cumlaude
-  if (skemaCumlaude && typeof skemaCumlaude === "string" && skemaCumlaude.trim() !== "") {
+  if (
+    skemaCumlaude &&
+    typeof skemaCumlaude === "string" &&
+    skemaCumlaude.trim() !== ""
+  ) {
     const skema = skemaCumlaude.trim();
     where.AND = where.AND || [];
     where.AND.push({
@@ -253,10 +269,7 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
           },
         },
         {
-          OR: [
-            { skemaCumlaudeFinal: null },
-            { skemaCumlaudeFinal: "" },
-          ],
+          OR: [{ skemaCumlaudeFinal: null }, { skemaCumlaudeFinal: "" }],
           skemaCumlaude: {
             equals: skema,
             mode: "insensitive",
@@ -302,9 +315,17 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
     orderBy = { submittedAt: "asc" };
   } else if (sortParam === "submittedatdesc") {
     orderBy = { submittedAt: "desc" };
-  } else if (sortParam === "oldest" || sortParam === "createdatasc" || sortParam === "lama-baru") {
+  } else if (
+    sortParam === "oldest" ||
+    sortParam === "createdatasc" ||
+    sortParam === "lama-baru"
+  ) {
     orderBy = { createdAt: "asc" };
-  } else if (sortParam === "newest" || sortParam === "createdatdesc" || sortParam === "baru-lama") {
+  } else if (
+    sortParam === "newest" ||
+    sortParam === "createdatdesc" ||
+    sortParam === "baru-lama"
+  ) {
     orderBy = { createdAt: "desc" };
   } else if (sortParam === "updatedatasc") {
     orderBy = { updatedAt: "asc" };
@@ -324,7 +345,7 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
   ]);
 
   const data = yudisiumRegistrations.map((reg) =>
-    mapYudisiumRegistrationToFrontend(reg, req)
+    mapYudisiumRegistrationToFrontend(reg, req),
   );
 
   return formatPaginationResponse(data, total, paginationParams);
@@ -351,7 +372,10 @@ export const getYudisiumRegistrationById = async (id, req) => {
 /**
  * Mengambil detail pendaftaran yudisium berdasarkan ID Mahasiswa
  */
-export const getYudisiumRegistrationByMahasiswaId = async (mahasiswaId, req) => {
+export const getYudisiumRegistrationByMahasiswaId = async (
+  mahasiswaId,
+  req,
+) => {
   const yudisiumRegistration = await prisma.yudisiumRegistration.findFirst({
     where: { mahasiswaId },
     include: yudisiumInclude,
@@ -403,9 +427,7 @@ export const saveYudisiumRegistration = async (body, req) => {
       : body.jalurYudisium;
 
   let skemaCumlaude =
-    body.skemaCumlaude !== undefined
-      ? body.skemaCumlaude
-      : body.cumlaudeScheme;
+    body.skemaCumlaude !== undefined ? body.skemaCumlaude : body.cumlaudeScheme;
   if (skemaCumlaude === undefined && body.skemaTambahan !== undefined) {
     skemaCumlaude = Array.isArray(body.skemaTambahan)
       ? body.skemaTambahan.join(", ")
@@ -563,7 +585,9 @@ export const saveYudisiumRegistration = async (body, req) => {
     } else {
       const targetPeriodId = upsertData.yudisiumRegistrationPeriodId;
       if (!targetPeriodId) {
-        const error = new Error("Tidak ada periode pendaftaran yudisium yang aktif saat ini.");
+        const error = new Error(
+          "Tidak ada periode pendaftaran yudisium yang aktif saat ini.",
+        );
         error.statusCode = 400;
         throw error;
       }
@@ -577,7 +601,9 @@ export const saveYudisiumRegistration = async (body, req) => {
       });
 
       if (existingInPeriod) {
-        const error = new Error("Mahasiswa sudah terdaftar pada periode pendaftaran yudisium ini.");
+        const error = new Error(
+          "Mahasiswa sudah terdaftar pada periode pendaftaran yudisium ini.",
+        );
         error.statusCode = 400;
         throw error;
       }
@@ -590,7 +616,9 @@ export const saveYudisiumRegistration = async (body, req) => {
   } else {
     const targetPeriodId = upsertData.yudisiumRegistrationPeriodId;
     if (!targetPeriodId) {
-      const error = new Error("Tidak ada periode pendaftaran yudisium yang aktif saat ini.");
+      const error = new Error(
+        "Tidak ada periode pendaftaran yudisium yang aktif saat ini.",
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -638,9 +666,7 @@ export const submitYudisiumRegistration = async (body, req) => {
       : body.jalurYudisium;
 
   let skemaCumlaude =
-    body.skemaCumlaude !== undefined
-      ? body.skemaCumlaude
-      : body.cumlaudeScheme;
+    body.skemaCumlaude !== undefined ? body.skemaCumlaude : body.cumlaudeScheme;
   if (skemaCumlaude === undefined && body.skemaTambahan !== undefined) {
     skemaCumlaude = Array.isArray(body.skemaTambahan)
       ? body.skemaTambahan.join(", ")
@@ -656,6 +682,7 @@ export const submitYudisiumRegistration = async (body, req) => {
         ? body.eviden_cumlaude
         : body.evidenList;
 
+  // NOOTE: kita sebenarnya sudah tidak mengurus berkas berminat wirausaha tapi untuk backward kompatibilitas fitur ini belum dihapus dari backend
   const parsedBerminatWirausaha = parseBoolean(body.berminatWirausaha);
   const finalDosenWaliId = dosenWaliId !== undefined ? dosenWaliId : doswalId;
 
@@ -728,13 +755,17 @@ export const submitYudisiumRegistration = async (body, req) => {
       where: { id: periodIdToCheck },
     });
     if (!period || !period.isOpen) {
-      const error = new Error("Periode pendaftaran yudisium ini sudah ditutup.");
+      const error = new Error(
+        "Periode pendaftaran yudisium ini sudah ditutup.",
+      );
       error.statusCode = 400;
       throw error;
     }
     updateData.yudisiumRegistrationPeriodId = periodIdToCheck;
   } else {
-    const error = new Error("Tidak ada periode pendaftaran yudisium yang aktif saat ini.");
+    const error = new Error(
+      "Tidak ada periode pendaftaran yudisium yang aktif saat ini.",
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -751,11 +782,13 @@ export const submitYudisiumRegistration = async (body, req) => {
   ];
 
   const missingFields = requiredFields.filter(
-    (field) => mergedData[field] === null || mergedData[field] === undefined
+    (field) => mergedData[field] === null || mergedData[field] === undefined,
   );
 
   if (missingFields.length > 0) {
-    const error = new Error(`Tidak dapat submit. Field wajib belum lengkap: ${missingFields.join(", ")}`);
+    const error = new Error(
+      `Tidak dapat submit. Field wajib belum lengkap: ${missingFields.join(", ")}`,
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -783,7 +816,7 @@ export const submitYudisiumRegistration = async (body, req) => {
   // 3. Yudisium - Evidence Cumlaude
   if (mergedData.skemaCumlaude) {
     const cumlaudeSlugs = await getCumlaudeSlugsFromDb(
-      mergedData.skemaCumlaude
+      mergedData.skemaCumlaude,
     );
     for (const slug of cumlaudeSlugs) {
       if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
@@ -791,14 +824,16 @@ export const submitYudisiumRegistration = async (body, req) => {
   }
 
   if (missingFiles.length > 0) {
-    const error = new Error(`Tidak dapat submit. Berkas wajib belum lengkap: ${missingFiles.join(", ")}`);
+    const error = new Error(
+      `Tidak dapat submit. Berkas wajib belum lengkap: ${missingFiles.join(", ")}`,
+    );
     error.statusCode = 400;
     throw error;
   }
 
   if (mergedData.berminatWirausaha === false) {
     const wirausahaSlugs = await getSlugsByCategory(
-      "Yudisium - Evidence Wirausaha"
+      "Yudisium - Evidence Wirausaha",
     );
     await deleteUploadsByCategory(id, wirausahaSlugs);
   }
@@ -869,9 +904,10 @@ export const submitYudisiumRegistration = async (body, req) => {
  * Menghapus pendaftaran yudisium (soft delete)
  */
 export const deleteYudisiumRegistration = async (id) => {
-  const yudisiumRegistrationExists = await prisma.yudisiumRegistration.findUnique({
-    where: { id },
-  });
+  const yudisiumRegistrationExists =
+    await prisma.yudisiumRegistration.findUnique({
+      where: { id },
+    });
 
   if (!yudisiumRegistrationExists) {
     const error = new Error("Pendaftaran yudisium tidak ditemukan");
@@ -1042,7 +1078,7 @@ export const approveYudisiumRegistration = async (
     pengajuanCumlaudeFinal,
     skemaCumlaudeFinal,
   },
-  req
+  req,
 ) => {
   const registration = await prisma.yudisiumRegistration.findUnique({
     where: { id },
@@ -1099,12 +1135,13 @@ export const approveYudisiumRegistration = async (
       : null;
 
   const finalSkemaCumlaude =
-    typeof skemaCumlaudeFinal === "string" &&
-    skemaCumlaudeFinal.trim() !== ""
+    typeof skemaCumlaudeFinal === "string" && skemaCumlaudeFinal.trim() !== ""
       ? skemaCumlaudeFinal.trim()
       : null;
 
-  const hasCumlaudeFinal = Boolean(finalPengajuanCumlaude && finalSkemaCumlaude);
+  const hasCumlaudeFinal = Boolean(
+    finalPengajuanCumlaude && finalSkemaCumlaude,
+  );
   const status = hasCumlaudeFinal
     ? "Hasil Sidang Ditetapkan"
     : "Menunggu Sidang Yudisium";
@@ -1131,7 +1168,7 @@ export const approveYudisiumRegistration = async (
  */
 export const rejectYudisiumRegistration = async (
   { adminId, message, isEdit, yudisiumRegistrationUploadIds, id },
-  req
+  req,
 ) => {
   const registration = await prisma.yudisiumRegistration.findUnique({
     where: { id },
@@ -1262,7 +1299,9 @@ export const exportYudisiumWorkbook = async ({ yudisiumPeriodId } = {}) => {
   ];
 
   yudisiumList.forEach((yudisium) => {
-    let tglAkad = "", blnAkad = "", thnAkad = "";
+    let tglAkad = "",
+      blnAkad = "",
+      thnAkad = "";
     if (yudisium.tglSidang) {
       const d = new Date(yudisium.tglSidang);
       tglAkad = d.getDate();
@@ -1270,7 +1309,9 @@ export const exportYudisiumWorkbook = async ({ yudisiumPeriodId } = {}) => {
       thnAkad = d.getFullYear();
     }
 
-    let tglTa = "", blnTa = "", thnTa = "";
+    let tglTa = "",
+      blnTa = "",
+      thnTa = "";
     const sidangTA = yudisium.mahasiswa?.sidangRegistrations?.[0];
     if (sidangTA?.tglSidang) {
       const d = new Date(sidangTA.tglSidang);
@@ -1279,7 +1320,10 @@ export const exportYudisiumWorkbook = async ({ yudisiumPeriodId } = {}) => {
       thnTa = d.getFullYear();
     }
 
-    const kodeDosenWali = yudisium.mahasiswa?.dosenWali?.kodeDosen || yudisium.dosenWali?.kodeDosen || "";
+    const kodeDosenWali =
+      yudisium.mahasiswa?.dosenWali?.kodeDosen ||
+      yudisium.dosenWali?.kodeDosen ||
+      "";
 
     worksheet.addRow({
       nim: yudisium.mahasiswa?.nim || "",
