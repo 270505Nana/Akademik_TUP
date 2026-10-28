@@ -79,8 +79,9 @@ import {
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [newest, oldest, nameAsc, nameDesc, nimAsc, nimDesc, ipkAsc, ipkDesc, sksAsc, sksDesc, takAsc, takDesc, tglSidangAsc, tglSidangDesc, submittedAtAsc, submittedAtDesc, updatedAtAsc, updatedAtDesc]
- *         description: Sort option
+ *           enum: [newest, oldest]
+ *           default: newest
+ *         description: Sort option (newest atau oldest)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:

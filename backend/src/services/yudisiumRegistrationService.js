@@ -291,7 +291,13 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
   const sortParam = (sortBy || "").toLowerCase().trim();
   let orderBy = { createdAt: "desc" };
 
-  if (sortParam === "nameasc" || sortParam === "a-z") {
+  if (sortParam === "oldest") {
+    orderBy = { createdAt: "asc" };
+  } else {
+    orderBy = { createdAt: "desc" };
+  }
+
+  if (false) {
     orderBy = { mahasiswa: { user: { name: "asc" } } };
   } else if (sortParam === "namedesc" || sortParam === "z-a") {
     orderBy = { mahasiswa: { user: { name: "desc" } } };
