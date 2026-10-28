@@ -55,7 +55,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #f1f5f9; /* Light grey background */
+  background: #f1f5f9;
+  /* Light grey background */
   border: none;
   padding: 0.8rem 1.4rem;
   border-radius: 10px;
@@ -97,7 +98,8 @@ body {
 .simta-container {
   background: white;
   border-radius: 16px;
-  border: 1px solid #fee2e2; /* Faint reddish border */
+  border: 1px solid #fee2e2;
+  /* Faint reddish border */
   padding: 3rem 2.5rem;
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
 }
@@ -744,7 +746,7 @@ body {
     align-items: stretch;
   }
 
-  .footer-nav > div:first-child {
+  .footer-nav>div:first-child {
     justify-content: center;
   }
 
@@ -802,3 +804,673 @@ body {
     align-self: flex-end;
   }
 }
+
+/* ── Scoped Redesign Registrasi Sidang ───────────────────────── */
+#sidang-main {
+  margin-left: var(--sidebar-width, 240px);
+  width: calc(100% - var(--sidebar-width, 240px));
+  transition: margin-left 0.3s ease, width 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.sidebar-hidden aside,
+.sidebar-hidden #sidebar,
+.sidebar-hidden .sidebar-mahasiswa {
+  transform: translateX(-100%) !important;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-hidden #sidang-main {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+@media (max-width: 991.98px) {
+  #sidang-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+.sidang-topbar {
+  background: #C0182A;
+  height: 64px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #E9EDF5;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.sidang-topbar-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.22s cubic-bezier(.4, 0, .2, 1);
+  flex-shrink: 0;
+}
+
+.sidang-topbar-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.sidang-topbar-brand {
+  font-weight: 700;
+  font-size: 15px;
+  color: #ffffff;
+  margin-left: 8px;
+  letter-spacing: 0.2px;
+}
+
+@media (max-width: 576px) {
+  .sidang-topbar {
+    padding: 0 16px;
+  }
+}
+
+.sidang-wrapper {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .sidang-wrapper {
+    padding: 1rem 0.75rem;
+  }
+}
+
+/* ── Layar Loading & Warning Registrasi Sidang ───────────────── */
+#sidang-main .skta-warning.sidang-loading-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  padding: 48px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+#sidang-main .sidang-wrapper .simta-container.sidang-loading-wrap {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#sidang-main .skta-warning.sidang-warning-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 650px;
+  width: 100%;
+  margin: 0 auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+#sidang-main .sidang-icon-circle-loading {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #FEF2F2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+#sidang-main .sidang-icon-circle-warning {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+#sidang-main .sidang-skeleton-wrap {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+#sidang-main .sidang-skeleton-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: #E2E8F0;
+  animation: pulseShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseShimmer {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Scoped Form Styling Step 1 Registrasi Sidang ────────────── */
+#sidang-main .sidang-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 0.75rem;
+}
+
+#sidang-main .sidang-section-head h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+
+#sidang-main .sidang-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  #sidang-main .sidang-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+#sidang-main .sidang-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#sidang-main .sidang-input-group label {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14.4px;
+  color: #374151;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+#sidang-main .sidang-input-field {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 15.6px;
+  color: #1E293B;
+  outline: none;
+  min-height: 42px;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+#sidang-main .sidang-input-field:focus {
+  border-color: #C0182A;
+  box-shadow: 0 0 0 3px rgba(192, 24, 42, 0.08);
+}
+
+#sidang-main .sidang-static-field {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #64748B;
+  font-size: 0.95rem;
+  font-weight: 500;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+#sidang-main .sidang-textarea-field {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 14px;
+  line-height: 1.5;
+  resize: vertical;
+  border-radius: 8px;
+  background: #F4F4F5;
+  border: 1px solid #E4E4E7;
+  font-size: 15.6px;
+  color: #1E293B;
+  outline: none;
+  box-sizing: border-box;
+  font-family: monospace;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+#sidang-main .sidang-textarea-field:focus {
+  background: #fff;
+  border-color: #C0182A;
+  box-shadow: 0 0 0 3px rgba(192, 24, 42, 0.08);
+}
+
+/* ── Scoped Step 2 Styling Registrasi Sidang ─────────────────── */
+#sidang-main .doc-management-container {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+  margin-top: 1.5rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  #sidang-main .doc-management-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+#sidang-main .sidang-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 991.98px) {
+  #sidang-main .sidang-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  #sidang-main .sidang-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 992px) {
+  #sidang-main .sidang-wrapper {
+    zoom: 0.8;
+    max-width: none;
+    width: auto;
+    margin: 0;
+    padding: 2rem 2.5rem;
+  }
+}
+
+/* Perapian kartu utama */
+#sidang-main .sidang-wrapper .simta-container {
+  padding: 2rem 2.25rem;
+  border-radius: 16px;
+}
+
+/* Banner info: tombol contact tidak menimpa teks */
+#sidang-main .info-banner {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 100%;
+  margin-bottom: 1.5rem;
+  padding: 16px 20px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 10px;
+
+}
+
+#sidang-main .info-banner .banner-content {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+#sidang-main .contact-person-badge {
+  position: static;
+  margin-top: 12px;
+  max-width: 100%;
+  white-space: normal;
+}
+
+@media (max-width: 991.98px) {
+  #sidang-main .sidang-wrapper {
+    padding: 1.25rem 1rem;
+  }
+
+  #sidang-main .sidang-wrapper .simta-container {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  #sidang-main .sidang-wrapper {
+    padding: 0.75rem 0.5rem;
+  }
+
+  #sidang-main .sidang-wrapper .simta-container {
+    padding: 1rem 0.85rem;
+  }
+
+  #sidang-main .contact-person-badge {
+    width: 100%;
+    justify-content: center;
+  }
+
+  #sidang-main .footer-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  #sidang-main .footer-nav .btn-primary {
+    width: 100%;
+  }
+}
+
+#sidang-main {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+#sidang-main .sidang-wrapper,
+#sidang-main .simta-container {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+
+/* ── Stepper Registrasi Sidang ──── */
+#sidang-main .sidang-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  margin: 2.75rem auto 1.75rem;
+  padding: 0;
+  border-bottom: none;
+}
+
+
+#sidang-main .sidang-step-item {
+  position: relative;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  font-weight: 600;
+  font-size: 1.15rem;
+}
+
+#sidang-main .sidang-step-label {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+#sidang-main .sidang-step-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #64748B;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#sidang-main .sidang-step-item.active {
+  color: #C0182A;
+  font-weight: 800;
+}
+
+#sidang-main .sidang-step-item.active .sidang-step-circle {
+  background: #C0182A;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(192, 24, 42, 0.12);
+}
+
+#sidang-main .sidang-step-item.done {
+  color: #C0182A;
+}
+
+#sidang-main .sidang-step-item.done .sidang-step-circle {
+  background: #C0182A;
+  color: #fff;
+}
+
+/* garis penghubung, tebal supaya jelas */
+#sidang-main .sidang-step-line {
+  flex: 0 0 200px;
+  width: 200px;
+  height: 4px;
+  margin: 0 8px;
+  border-radius: 999px;
+  background: #CBD5E1;
+}
+
+#sidang-main .sidang-step-line.done {
+  background: #C0182A;
+}
+
+@media (max-width: 575.98px) {
+  #sidang-main .sidang-step-item {
+    font-size: 0.85rem;
+  }
+
+  #sidang-main .sidang-step-line {
+    flex-basis: 90px;
+    width: 90px;
+  }
+}
+
+/* ── Label & Field Styling (Mengikuti Yudisium) ───── */
+#sidang-main .input-group label,
+#sidang-main .sidang-input-group label,
+#sidang-main .form-label,
+#sidang-main label {
+  text-transform: none;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14.4px;
+  color: #374151;
+  letter-spacing: normal;
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* ── Input & dropdown abu-abu ───── */
+#sidang-main .sidang-input-field,
+#sidang-main .sidang-textarea-field {
+  background: #F4F4F5;
+  border: 1px solid #E4E4E7;
+  color: #1E293B;
+  font-family: inherit;
+  font-size: 15.6px;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+#sidang-main .sidang-input-field::placeholder {
+  color: #71717A;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+#sidang-main .sidang-textarea-field {
+  font-size: 15.6px;
+  font-family: monospace;
+}
+
+#sidang-main .sidang-textarea-field::placeholder {
+  color: #71717A;
+  font-size: 15px;
+  font-family: monospace;
+}
+
+#sidang-main select.sidang-input-field option[value=""],
+#sidang-main select.sidang-input-field option:first-child {
+  color: #71717A;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+#sidang-main .sidang-input-field:hover:not(:disabled):not(:read-only),
+#sidang-main .sidang-textarea-field:hover:not(:disabled):not(:read-only),
+#sidang-main select.sidang-input-field:hover:not(:disabled):not(:read-only) {
+  border-color: #C0182A;
+  box-shadow: none;
+}
+
+#sidang-main .sidang-static-field:hover,
+#sidang-main .sidang-input-field:disabled:hover,
+#sidang-main .sidang-input-field:read-only:hover,
+#sidang-main .sidang-textarea-field:disabled:hover,
+#sidang-main .sidang-textarea-field:read-only:hover {
+  border-color: #E2E8F0 !important;
+  box-shadow: none !important;
+}
+
+#sidang-main .sidang-input-field:focus,
+#sidang-main .sidang-textarea-field:focus {
+  background: #fff;
+  border-color: #C0182A;
+  box-shadow: 0 0 0 3px rgba(192, 24, 42, 0.08);
+}
+
+
+#sidang-main select.sidang-input-field {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+#sidang-main select.sidang-input-field:focus {
+  background-color: #fff;
+}
+
+#sidang-main .sidang-textarea-field {
+  min-height: 64px;
+  padding: 10px 14px;
+  line-height: 1.5;
+  resize: vertical;
+  border-radius: 8px;
+  background: #F4F4F5;
+  border: 1px solid #E4E4E7;
+  font-size: 15.6px;
+  font-family: monospace;
+}
+
+#sidang-main .btn-pagination {
+  color: #334155;
+  border-color: #CBD5E1;
+  background: #fff;
+}
+
+#sidang-main .btn-pagination:hover:not(:disabled) {
+  border-color: #C0182A;
+  color: #C0182A;
+}
+
+#sidang-main .btn-pagination:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#sidang-main .btn-pagination svg {
+  stroke: currentColor;
+}
+
+/* ── Animasi spinner (dipakai Loader di Step 1 & Step 2) ─────── */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Step 2 Sidang: layout panel berkas ──────────────────────── */
+@media (min-width: 992px) {
+  .doc-management-container {
+    align-items: stretch !important;
+  }
+
+  .doc-sidebar {
+    contain: size;
+    align-self: stretch !important;
+    min-height: 320px;
+    max-height: none !important;
+    overflow-y: auto !important;
+    padding-right: 4px;
+  }
+}
+
+@media (max-width: 576px) {
+  .file-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .file-card .action-buttons-wrap {
+    width: 100% !important;
+    justify-content: flex-end !important;
+    border-top: 1px solid #E2E8F0;
+    padding-top: 12px;
+  }
+
+  .doc-panel-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+
+  .panel-header-icon {
+    display: none;
+  }
+}
+

@@ -1,5 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, GraduationCap, Info, Mail, Phone, User, Loader, AlertCircle } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  GraduationCap,
+  Info,
+  Mail,
+  Phone,
+  User,
+  Loader,
+  AlertCircle,
+  BookOpen,
+  Hash,
+  CheckCircle2,
+  Calendar,
+  X,
+} from "lucide-react";
 import { useSidangContext } from "../../../context/SidangFormContext";
 import CustomAlert from "../../common/CustomAlert";
 
@@ -48,8 +63,64 @@ const formatDateID = (value) => {
   if (Number.isNaN(d.getTime())) return "-";
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 };
+
 const StaticValue = ({ children }) => (
-  <div className="static-field">{children ?? "-"}</div>
+  <div className="sidang-static-field">{children ?? "-"}</div>
+);
+
+const InfoCard = ({ label, value, icon: Icon }) => (
+  <div
+    style={{
+      background: "#F3F4F6",
+      border: "1px solid #E5E7EB",
+      borderRadius: "10px",
+      padding: "14px 16px",
+      display: "flex",
+      alignItems: "flex-start",
+      gap: "12px",
+      cursor: "not-allowed",
+    }}
+  >
+    <div
+      style={{
+        width: "36px",
+        height: "36px",
+        borderRadius: "8px",
+        background: "#FEF2F2",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <Icon size={18} color="#C0182A" />
+    </div>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div
+        style={{
+          fontSize: "10px",
+          fontWeight: 700,
+          color: "#94A3B8",
+          textTransform: "uppercase",
+          letterSpacing: "0.6px",
+          marginBottom: "4px",
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: "13px",
+          fontWeight: 600,
+          color: "#6B7280",
+          lineHeight: "1.4",
+          wordBreak: "break-word",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  </div>
 );
 
 const LecturerDropdown = ({ lecturers = [], value, onChange, placeholder, excludeId, loading = false }) => {
@@ -89,7 +160,7 @@ const LecturerDropdown = ({ lecturers = [], value, onChange, placeholder, exclud
         type="button"
         disabled={loading}
         onClick={() => !loading && setOpen((o) => !o)}
-        className="input-field"
+        className="sidang-input-field"
         style={{
           width: "100%",
           textAlign: "left",
@@ -97,59 +168,77 @@ const LecturerDropdown = ({ lecturers = [], value, onChange, placeholder, exclud
           alignItems: "center",
           justifyContent: "space-between",
           gap: 8,
-          background: loading ? "#F8FAFC" : "#fff",
           cursor: loading ? "not-allowed" : "pointer",
           opacity: loading ? 0.75 : 1,
         }}
       >
-        <span style={{
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          color: selected && !loading ? "inherit" : "#94A3B8",
-          display: "inline-flex", alignItems: "center", gap: 6,
-        }}>
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            color: selected && !loading ? "#1E293B" : "#71717A",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: "15px",
+          }}
+        >
           {loading && <Loader size={14} style={{ animation: "spin 1s linear infinite", flexShrink: 0 }} />}
           {displayText}
         </span>
-        <ChevronDown size={16} style={{ flexShrink: 0, color: "#94A3B8" }} />
+        <ChevronDown
+          size={16}
+          style={{
+            flexShrink: 0,
+            color: "#94A3B8",
+            transform: open ? "rotate(180deg)" : "none",
+            transition: "0.2s",
+          }}
+        />
       </button>
 
       {open && !loading && (
         <div
           style={{
             position: "absolute",
-            top: "calc(100% + 6px)",
+            top: "calc(100% + 4px)",
             left: 0,
             right: 0,
             zIndex: 50,
             background: "#fff",
             border: "1px solid #E2E8F0",
-            borderRadius: 10,
-            boxShadow: "0 12px 28px rgba(15,23,42,0.14)",
+            borderRadius: 8,
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
             overflow: "hidden",
+            maxHeight: "260px",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          <div style={{ padding: 8, borderBottom: "1px solid #F1F5F9" }}>
+          <div style={{ padding: "8px 10px", borderBottom: "1px solid #E2E8F0", background: "#F8FAFC" }}>
             <input
               type="text"
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari nama / kode dosen..."
+              placeholder="Cari nama atau kode dosen..."
               style={{
                 width: "100%",
-                padding: "8px 10px",
-                border: "1px solid #E2E8F0",
-                borderRadius: 8,
+                padding: "6px 10px",
+                border: "1px solid #CBD5E1",
+                borderRadius: 6,
                 fontSize: 13,
                 outline: "none",
                 boxSizing: "border-box",
+                background: "#fff",
               }}
             />
           </div>
-          <div style={{ maxHeight: 260, overflowY: "auto" }}>
+          <div style={{ overflowY: "auto", flex: 1, padding: "4px 0" }}>
             {filtered.length === 0 ? (
-              <div style={{ padding: "14px 12px", fontSize: 13, color: "#9CA3AF", textAlign: "center" }}>
-                Dosen tidak ditemukan.
+              <div style={{ padding: "14px 12px", fontSize: 13, color: "#94A3B8", textAlign: "center", fontStyle: "italic" }}>
+                Dosen tidak ditemukan
               </div>
             ) : (
               filtered.map((lect) => {
@@ -167,15 +256,15 @@ const LecturerDropdown = ({ lecturers = [], value, onChange, placeholder, exclud
                       cursor: "pointer",
                       fontSize: 13,
                       fontWeight: isSelected ? 700 : 500,
-                      background: isSelected ? "#FEF2F2" : "#fff",
-                      color: isSelected ? "#C0182A" : "#1E293B",
-                      borderBottom: "1px solid #F8FAFC",
+                      background: isSelected ? "#FEF2F2" : "transparent",
+                      color: isSelected ? "#C0182A" : "#334155",
+                      transition: "background 0.15s",
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = "#F8FAFC";
+                      if (!isSelected) e.currentTarget.style.background = "#F1F5F9";
                     }}
                     onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = "#fff";
+                      if (!isSelected) e.currentTarget.style.background = "transparent";
                     }}
                   >
                     {formatLecturerShort(lect)}
@@ -194,9 +283,10 @@ export default function Step1({
   studentInfo = {},
   lecturers = [],
   loadingLecturers = false,
-  autosaveStatus = "idle",
   readOnly = false,
-  schemeLocked = false,
+  draftBanner = null,
+  onCloseDraftBanner,
+  isRevisionActive = false,
 }) {
   const { state, dispatch } = useSidangContext();
   const { data } = state;
@@ -221,7 +311,7 @@ export default function Step1({
   ];
 
   const toggleJalurNonSidang = (option) => {
-    if (readOnly || schemeLocked) return;
+    if (readOnly) return;
     const current = data.jalurNonSidang || [];
     const next = current.includes(option)
       ? current.filter((i) => i !== option)
@@ -237,8 +327,6 @@ export default function Step1({
   );
   const pembimbing1Group = getResearchGroupName(pembimbing1);
 
-  const isSchemeLocked = schemeLocked;
-
   const handleTakChange = (value) => {
     if (readOnly) return;
     updateField("tak", value);
@@ -253,7 +341,7 @@ export default function Step1({
 
     if (numVal < min) {
       setTakAlert(
-        `Maaf TAK Belum Memenuhi Minimum (${min} poin untuk program ${data.programType || "Reguler"}), silahkan input ulang`,
+        `Maaf TAK Belum Memenuhi Minimum poin untuk program ${data.programType || "Reguler"}`,
       );
     }
   };
@@ -266,7 +354,7 @@ export default function Step1({
       const min = TAK_MINIMUM[p] ?? TAK_MINIMUM.Reguler;
       if (!Number.isNaN(numVal) && numVal < min) {
         setTakAlert(
-          `Maaf TAK Belum Memenuhi Minimum (${min} poin untuk program ${p}), silahkan input ulang`,
+          `Maaf TAK Belum Memenuhi Minimum poin untuk program ${p}, silahkan input ulang`,
         );
       } else {
         setTakAlert(null);
@@ -276,223 +364,364 @@ export default function Step1({
 
   return (
     <div className="step-content">
-      {readOnly && (
-        <div className="info-banner" style={{ background: "#F0FDF4", borderColor: "#BBF7D0" }}>
-          <div className="banner-icon-container" style={{ background: "#DCFCE7" }}>
-            <Check color="#16A34A" size={24} />
+      {/* Banner draft berhasil tersimpan */}
+      {!readOnly && draftBanner && (
+        <div
+          className="info-banner"
+          style={{
+            background: "#F0FDF4",
+            border: "1px solid #BBF7D0",
+            borderRadius: "12px",
+            padding: "16px 20px",
+            marginBottom: "24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              flex: "1 1 320px",
+              minWidth: 0,
+            }}
+          >
+            <div
+              className="banner-icon-container"
+              style={{
+                width: "40px",
+                height: "40px",
+                background: "#DCFCE7",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <CheckCircle2 color="#16A34A" size={20} />
+            </div>
+            <div className="banner-content">
+              <h4 style={{ margin: "0 0 4px", color: "#166534", fontWeight: 800, fontSize: "15px" }}>
+                Draft Berhasil Tersimpan
+              </h4>
+              <p style={{ margin: 0, fontSize: "13px", color: "#15803D", lineHeight: 1.5 }}>
+                {draftBanner.lastDocName ? (
+                  <>
+                    Dokumen terakhir yang diupload adalah <strong>{draftBanner.lastDocName}</strong>. Silakan lanjutkan pendaftaran Anda.
+                  </>
+                ) : (
+                  "Belum ada dokumen yang diupload. Silakan lanjutkan pendaftaran Anda."
+                )}
+              </p>
+            </div>
           </div>
-          <div className="banner-content">
-            <h4 style={{ color: "#166534" }}>Data Sudah Terkunci</h4>
-            <p>
-              Data diri & akademik di tahap ini tidak bisa diubah lagi karena
-              pendaftaran sidang sudah di submit. Jika ada kesalahan
-              data, silakan hubungi admin akademik.
-            </p>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+            <a
+              className="contact-person-badge"
+              href="https://wa.me/6285117001281"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: "#C0182A",
+                color: "#fff",
+                padding: "10px 16px",
+                borderRadius: "8px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "12px",
+                fontWeight: 700,
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              <Mail size={15} />
+              <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP</span>
+            </a>
+            {onCloseDraftBanner && (
+              <button
+                type="button"
+                onClick={onCloseDraftBanner}
+                aria-label="Tutup banner draft"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#166534",
+                  cursor: "pointer",
+                  padding: "6px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "6px",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(22, 101, 52, 0.12)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      <div className="info-banner">
-        <div className="banner-icon-container">
-          <Info color="#d69e2e" size={24} />
-        </div>
-        <div className="banner-content">
-          <h4>Pendaftaran Sidang Telkom University Purwokerto</h4>
-          <p>
-            Sebelum melengkapi data pendaftaran sidang, silahkan pelajari dan
-            pahami informasi terkait pendaftaran sidang pada tautan :{" "}
-            <a href="https://tel-u.ac.id/panduansidangtup">
-              https://tel-u.ac.id/panduansidangtup
-            </a>
-          </p>
-          <p>
-            <strong>Harap Baca Dengan Teliti</strong>
-          </p>
-        </div>
+      {/* Banner informasi panduan dan helpdesk */}
+      {!readOnly && !draftBanner && !isRevisionActive && (
         <div
-          className="contact-person-badge"
-          onClick={() => window.open("https://wa.me/6285117001281", "_blank")}
+          className="info-banner"
+          style={{
+            background: "#FFFBEB",
+            border: "1px solid #FDE68A",
+            borderRadius: "12px",
+            padding: "16px 20px",
+            marginBottom: "24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
         >
-          <Mail size={16} />
-          <span>
-            Contact Person : Helpdesk Layanan Sidang-Yudisium TUP
-          </span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              flex: "1 1 320px",
+              minWidth: 0,
+            }}
+          >
+            <div
+              className="banner-icon-container"
+              style={{
+                width: "40px",
+                height: "40px",
+                background: "#FEF3C7",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Info color="#D97706" size={20} />
+            </div>
+            <div className="banner-content">
+              <h4 style={{ margin: "0 0 4px", color: "#92400E", fontWeight: 800, fontSize: "15px" }}>
+                Informasi Mahasiswa
+              </h4>
+              <p style={{ margin: 0, fontSize: "13px", color: "#B45309", lineHeight: 1.5 }}>
+                Pastikan data diri kamu di bawah ini sudah sesuai sebelum melanjutkan pendaftaran sidang.
+              </p>
+            </div>
+          </div>
+
+          <a
+            className="contact-person-badge"
+            href="https://wa.me/6285117001281"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: "#C0182A",
+              color: "#fff",
+              padding: "10px 16px",
+              borderRadius: "8px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "12px",
+              fontWeight: 700,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            <Mail size={15} />
+            <span>Contact Person : Helpdesk Layanan Sidang-Yudisium TUP</span>
+          </a>
         </div>
-      </div>
+      )}
 
-      <div className="step-title-container">
-        <div className="step-label">Step 1</div>
-        <h2 className="step-main-title">
-          Pendaftaran Sidang Telkom University Purwokerto
-        </h2>
-      </div>
+      {/* Section 1: Data Identitas Mahasiswa */}
+      <section className="form-section" style={{ marginBottom: "2.5rem" }}>
+        <div className="sidang-section-head">
+          <h3>Data Mahasiswa</h3>
+        </div>
 
-      <section className="form-section">
-        <h3 className="section-head">Identitas & Program Studi</h3>
-        <div className="form-grid">
-          <div className="input-group">
-            <label>Nama</label>
-            <div className="input-with-icon">
-              <User className="input-icon" size={18} />
-              <div className="static-field">{studentInfo.nama || "-"}</div>
+        <div className="sidang-info-grid">
+          <InfoCard label="Nama Lengkap" icon={User} value={studentInfo.nama || "-"} />
+          <InfoCard label="NIM (Nomor Induk Mahasiswa)" icon={Hash} value={studentInfo.nim || "-"} />
+          <InfoCard label="Program Studi" icon={GraduationCap} value={studentInfo.prodi || "-"} />
+          <InfoCard label="No. Handphone" icon={Phone} value={studentInfo.phone || "-"} />
+          <InfoCard
+            label="Dosen Wali"
+            icon={User}
+            value={`${studentInfo.dosenWaliKode || "-"} - ${studentInfo.dosenWaliNama || "-"}`}
+          />
+          <InfoCard label="NIP Dosen Wali" icon={User} value={studentInfo.dosenWaliNip || "-"} />
+        </div>
+      </section>
+
+      {/* Section 2: Data Akademik & Program */}
+      <section className="form-section" style={{ marginBottom: "2.5rem" }}>
+        <div className="sidang-section-head">
+          <h3>Data Akademik &amp; Program</h3>
+        </div>
+
+        <div className="sidang-form-grid">
+          {/* Program Selector */}
+          <div className="sidang-input-group" style={{ gridColumn: "1 / -1" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+              <label style={{ margin: 0 }}>Program <span style={{ color: "red" }}>*</span></label>
+              <span style={{ fontSize: 12, color: "#94A3B8", fontStyle: "italic" }}>
+                Alih jenjang hanya untuk yang ekstensi D3 ke S1 TT
+              </span>
             </div>
-            <span className="helper-text">
-              Nama terverifikasi oleh sistem secara otomatis.
-            </span>
-          </div>
-
-          <div className="input-group">
-            <label>NIM (NOMOR INDUK MAHASISWA) *</label>
-            <div className="input-with-icon">
-              <div className="static-field">{studentInfo.nim || "-"}</div>
-            </div>
-            <span className="helper-text">
-              NIM terverifikasi oleh sistem secara otomatis.
-            </span>
-          </div>
-
-          <div className="input-group">
-            <label>Program Studi</label>
-            <div className="input-with-icon">
-              <GraduationCap className="input-icon" size={18} />
-              <div className="static-field">{studentInfo.prodi || "-"}</div>
-            </div>
-            <span className="helper-text">
-              Program Studi terverifikasi oleh sistem secara otomatis.
-            </span>
-          </div>
-
-          <div className="input-group">
-            <label>No. HP</label>
-            <div className="input-with-icon">
-              <Phone className="input-icon" size={18} />
-              <div className="static-field">{studentInfo.phone || "-"}</div>
-            </div>
-            <span className="helper-text">
-              No. HP terverifikasi oleh sistem secara otomatis.
-            </span>
-          </div>
-
-          <div className="input-group">
-            <label>Program</label>
             {readOnly ? (
               <StaticValue>{data.programType || "-"}</StaticValue>
             ) : (
-              <div className="program-selector">
-                {programs.map((p) => (
-                  <div
-                    key={p}
-                    className={`program-card ${data.programType === p ? "active" : ""}`}
-                    onClick={() => handleProgramTypeChange(p)}
-                  >
-                    <div className="checkbox-visual">
-                      {data.programType === p && (
-                        <span className="checkbox-dot" />
-                      )}
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                {programs.map((p) => {
+                  const isActive = data.programType === p;
+                  return (
+                    <div
+                      key={p}
+                      onClick={() => handleProgramTypeChange(p)}
+                      style={{
+                        flex: "1 1 180px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "12px 16px",
+                        border: `1.5px solid ${isActive ? "#C0182A" : "#E2E8F0"}`,
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        background: isActive ? "#FFF5F5" : "#F4F4F5",
+                        fontWeight: 600,
+                        fontSize: "14px",
+                        color: isActive ? "#C0182A" : "#1E293B",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          borderRadius: "4px",
+                          border: `1.5px solid ${isActive ? "#C0182A" : "#CBD5E1"}`,
+                          background: isActive ? "#C0182A" : "#fff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {isActive && <Check size={12} color="#fff" strokeWidth={3} />}
+                      </div>
+                      <span>{p}</span>
                     </div>
-                    <span>{p}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
-          <div className="input-group">
-            <label>Jumlah Total SKS Lulus</label>
+          {/* SKS Lulus */}
+          <div className="sidang-input-group">
+            <label>Jumlah Total SKS Lulus <span style={{ color: "red" }}>*</span></label>
             {readOnly ? (
               <StaticValue>{data.sks || "-"}</StaticValue>
             ) : (
-              <div className="input-with-icon">
-                <input
-                  type="number"
-                  className="input-field"
-                  placeholder="0"
-                  value={data.sks}
-                  onChange={(e) => updateField("sks", e.target.value)}
-                />
-              </div>
+              <input
+                type="number"
+                className="sidang-input-field"
+                placeholder="0"
+                value={data.sks}
+                onChange={(e) => updateField("sks", e.target.value)}
+              />
             )}
           </div>
 
-          <div className="input-group">
-            <label>Nilai IPK Sebelum Sidang</label>
+          {/* Nilai IPK Sebelum Sidang */}
+          <div className="sidang-input-group">
+            <label>Nilai IPK Sebelum Sidang <span style={{ color: "red" }}>*</span></label>
             {readOnly ? (
               <StaticValue>{data.ipk || "-"}</StaticValue>
             ) : (
-              <div className="input-with-icon">
-                <input
-                  type="number"
-                  step="0.01"
-                  className="input-field"
-                  placeholder="0.00"
-                  value={data.ipk}
-                  onChange={(e) => updateField("ipk", e.target.value)}
-                />
-              </div>
+              <input
+                type="number"
+                step="0.01"
+                className="sidang-input-field"
+                placeholder="0.00"
+                value={data.ipk}
+                onChange={(e) => updateField("ipk", e.target.value)}
+              />
             )}
           </div>
 
-          {/*  TAK  validasi minimum  */}
-          <div className="input-group">
-            <label>TAK</label>
+          {/* TAK dengan Validasi */}
+          <div className="sidang-input-group">
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+              <label style={{ margin: 0 }}>TAK <span style={{ color: "red" }}>*</span></label>
+              {!readOnly && (
+                <span style={{ fontSize: "12px", color: "#94A3B8", fontStyle: "italic" }}>
+                  Poin minimum untuk TAK Mahasiswa Reguler: 60, Alih Jenjang: 25, Diploma: 45
+                </span>
+              )}
+            </div>
             {readOnly ? (
               <StaticValue>{data.tak || "-"}</StaticValue>
             ) : (
-              <div className="input-with-icon">
-                <input
-                  type="number"
-                  className="input-field"
-                  placeholder="0"
-                  value={data.tak}
-                  onChange={(e) => handleTakChange(e.target.value)}
-                />
-              </div>
-            )}
-            {!readOnly && (
-              <span className="helper-text">
-                Poin minimum untuk TAK Mahasiswa Reguler : 60, Alih Jenjang : 25,
-                Diploma : 45
-              </span>
+              <input
+                type="number"
+                className="sidang-input-field"
+                style={takAlert ? { borderColor: "#ef4444" } : undefined}
+                placeholder="0"
+                value={data.tak}
+                onChange={(e) => handleTakChange(e.target.value)}
+              />
             )}
             {takAlert && !readOnly && (
-              <div style={{ marginTop: "8px" }}>
-                <CustomAlert type="warning" message={takAlert} />
-              </div>
+              <p style={{ fontSize: "12px", color: "#ef4444", marginTop: "6px", fontWeight: 500 }}>
+                ⚠️ {takAlert}
+              </p>
             )}
           </div>
 
-          <div className="input-group">
-            <label>Tanggal Batas Akhir SKTA</label>
+          {/* Tanggal Batas Akhir SKTA */}
+          <div className="sidang-input-group">
+            <label>Tanggal Batas Akhir SKTA <span style={{ color: "red" }}>*</span></label>
             {readOnly ? (
               <StaticValue>{formatDateID(data.sktaExpDate)}</StaticValue>
             ) : (
-              <div className="input-with-icon">
-                <input
-                  type="date"
-                  className="input-field"
-                  value={data.sktaExpDate}
-                  onChange={(e) => updateField("sktaExpDate", e.target.value)}
-                />
-              </div>
+              <input
+                type="date"
+                className="sidang-input-field"
+                value={data.sktaExpDate}
+                onChange={(e) => updateField("sktaExpDate", e.target.value)}
+              />
             )}
           </div>
         </div>
       </section>
 
+      {/* Section 3: Informasi Tugas Akhir & Pembimbing */}
       <section className="form-section">
-        <h3 className="section-head">Informasi Tugas Akhir</h3>
-        <div className="form-grid">
-          <div className="input-group">
-            <label>Kode Dosen Wali</label>
-            <div className="input-with-icon">
-              <div className="static-field">
-                {studentInfo.dosenWaliKode || "-"}
-              </div>
-            </div>
-            <span className="helper-text">Terverifikasi oleh sistem secara otomatis.</span>
-          </div>
-          <div className="input-group">
-            <label>Dosen Pembimbing 1</label>
+        <div className="sidang-section-head">
+          <h3>Informasi Tugas Akhir &amp; Pembimbing</h3>
+        </div>
+
+        <div className="sidang-form-grid">
+          {/* Dosen Pembimbing 1 */}
+          <div className="sidang-input-group">
+            <label>Dosen Pembimbing 1 <span style={{ color: "red" }}>*</span></label>
             {readOnly ? (
               <StaticValue>{formatLecturer(pembimbing1)}</StaticValue>
             ) : (
@@ -506,17 +735,10 @@ export default function Step1({
               />
             )}
           </div>
-          <div className="input-group">
-            <label>Nama Dosen Wali</label>
-            <div className="input-with-icon">
-              <div className="static-field">
-                {studentInfo.dosenWaliNama || "-"}
-              </div>
-            </div>
-            <span className="helper-text">Terverifikasi oleh sistem secara otomatis.</span>
-          </div>
-          <div className="input-group">
-            <label>Dosen Pembimbing 2</label>
+
+          {/* Dosen Pembimbing 2 */}
+          <div className="sidang-input-group">
+            <label>Dosen Pembimbing 2 </label>
             {readOnly ? (
               <StaticValue>{formatLecturer(pembimbing2)}</StaticValue>
             ) : (
@@ -530,22 +752,13 @@ export default function Step1({
               />
             )}
           </div>
-          <div className="input-group">
-            <label>NIP Dosen Wali</label>
-            <div className="input-with-icon">
-              <div className="static-field">
-                {studentInfo.dosenWaliNip || "-"}
-              </div>
-            </div>
-            <span className="helper-text">Terverifikasi oleh sistem secara otomatis.</span>
-          </div>
         </div>
 
         {/* Kelompok Keilmuan — otomatis mengikuti KK Dosen Pembimbing 1 */}
-        <div className="input-group" style={{ marginTop: "2rem" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-            <label style={{ margin: 0 }}>Kelompok Keilmuan</label>
-            <span style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>
+        <div className="sidang-input-group" style={{ marginTop: "1.75rem" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+            <label style={{ margin: 0 }}>Kelompok Keilmuan </label>
+            <span style={{ fontSize: 12, color: "#94A3B8", fontStyle: "italic" }}>
               Otomatis diambil dari KK Dosen Pembimbing 1
             </span>
           </div>
@@ -558,26 +771,41 @@ export default function Step1({
                 <div
                   key={item.id}
                   style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    padding: "10px 14px", borderRadius: 8,
-                    border: `1.5px solid ${isSelected ? "#C0182A" : "#E5E7EB"}`,
-                    background: isSelected ? "#FEF2F2" : "#F9FAFB",
-                    cursor: "default", transition: "all 0.15s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    border: `1.5px solid ${isSelected ? "#C0182A" : "#E2E8F0"}`,
+                    background: isSelected ? "#FEF2F2" : "#F8FAFC",
+                    cursor: "default",
+                    transition: "all 0.15s ease",
                   }}
                 >
-                  <div style={{
-                    width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
-                    border: `2px solid ${isSelected ? "#C0182A" : "#D1D5DB"}`,
-                    background: isSelected ? "#C0182A" : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
+                  <div
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                      border: `2px solid ${isSelected ? "#C0182A" : "#CBD5E1"}`,
+                      background: isSelected ? "#C0182A" : "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
                     {isSelected && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />}
                   </div>
-                  <span style={{
-                    fontSize: 11, fontWeight: isSelected ? 700 : 500,
-                    color: isSelected ? "#B91C1C" : "#6B7280",
-                    lineHeight: 1.4, userSelect: "none",
-                  }}>
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: isSelected ? 700 : 500,
+                      color: isSelected ? "#B91C1C" : "#64748B",
+                      lineHeight: 1.4,
+                      userSelect: "none",
+                    }}
+                  >
                     {item.label}
                   </span>
                 </div>
@@ -585,75 +813,78 @@ export default function Step1({
             })}
           </div>
           {!pembimbing1 && (
-            <p style={{ fontSize: 11, color: "#9CA3AF", marginTop: 10, fontStyle: "italic" }}>
+            <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 8, fontStyle: "italic" }}>
               Pilih Dosen Pembimbing 1 terlebih dahulu untuk menentukan kelompok keilmuan.
             </p>
           )}
         </div>
 
-        <div className="input-group" style={{ marginTop: "2rem" }}>
-          <label>Skema Sidang</label>
-          {isSchemeLocked ? (
+        {/* Skema Sidang */}
+        <div className="sidang-input-group" style={{ marginTop: "1.75rem" }}>
+          <label>Skema Sidang <span style={{ color: "red" }}>*</span></label>
+          {readOnly ? (
             <StaticValue>{data.sidangScheme || "-"}</StaticValue>
           ) : (
-            <div className="input-with-icon">
-              <select
-                className="input-field"
-                value={data.sidangScheme}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  updateField("sidangScheme", val);
-                  if (val !== "Non Sidang") {
-                    updateField("jalurNonSidang", []);
-                  }
-                }}
-              >
-                <option value="">Pilih Skema Sidang</option>
-                {skemas.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              className="sidang-input-field"
+              style={!data.sidangScheme ? { color: "#71717A" } : undefined}
+              value={data.sidangScheme}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateField("sidangScheme", val);
+                if (val !== "Non Sidang") {
+                  updateField("jalurNonSidang", []);
+                }
+              }}
+            >
+              <option value="" style={{ color: "#71717A" }}>-- Pilih Skema Sidang --</option>
+              {skemas.map((s) => (
+                <option key={s} value={s} style={{ color: "#1E293B" }}>
+                  {s}
+                </option>
+              ))}
+            </select>
           )}
         </div>
 
+        {/* Jalur Non Sidang jika skema Non Sidang dipilih */}
         {data.sidangScheme === "Non Sidang" && (
           <div
-            className="input-group"
+            className="sidang-input-group"
             style={{
-              marginTop: "2rem",
-              padding: "1.5rem",
-              background: "#f8fafc",
-              borderRadius: "12px",
-              border: "1px solid var(--border-grey)",
+              marginTop: "1.75rem",
+              padding: "1.25rem",
+              background: "#F8FAFC",
+              borderRadius: "10px",
+              border: "1px solid #E2E8F0",
             }}
           >
-            <label style={{ color: "var(--primary-red)" }}>
-              Jalur Non Sidang *
-            </label>
-            <span className="helper-text">
+            <label style={{ color: "#C0182A" }}>Jalur Non Sidang *</label>
+            <span style={{ fontSize: "11.5px", color: "#64748B" }}>
               Pilih opsi publikasi yang sesuai
             </span>
 
-            {isSchemeLocked ? (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "1rem" }}>
+            {readOnly ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.75rem" }}>
                 {(data.jalurNonSidang || []).length > 0 ? (
                   data.jalurNonSidang.map((option) => (
                     <span
                       key={option}
                       style={{
-                        fontSize: "0.8rem", fontWeight: 700, padding: "4px 12px",
-                        borderRadius: 9999, background: "#F0FDF4",
-                        border: "1.5px solid #BBF7D0", color: "#166534",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        padding: "4px 12px",
+                        borderRadius: 9999,
+                        background: "#F0FDF4",
+                        border: "1.5px solid #BBF7D0",
+                        color: "#166534",
                       }}
                     >
                       {option}
                     </span>
                   ))
                 ) : (
-                  <span style={{ fontSize: "0.85rem", color: "var(--text-grey)", fontStyle: "italic" }}>
+                  <span style={{ fontSize: "0.85rem", color: "#94A3B8", fontStyle: "italic" }}>
                     Tidak ada jalur non sidang dipilih.
                   </span>
                 )}
@@ -662,66 +893,104 @@ export default function Step1({
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  gap: "1rem",
-                  marginTop: "1rem",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                  marginTop: "0.75rem",
                 }}
               >
-                {jalurNonSidangOptions.map((option) => (
-                  <div
-                    key={option}
-                    className={`program-card ${data.jalurNonSidang?.includes(option) ? "active" : ""}`}
-                    onClick={() => toggleJalurNonSidang(option)}
-                    style={{ padding: "0.5rem 1rem" }}
-                  >
-                    <div className="checkbox-visual">
-                      {data.jalurNonSidang?.includes(option) && (
-                        <Check color="white" size={14} strokeWidth={3} />
-                      )}
+                {jalurNonSidangOptions.map((option) => {
+                  const isChecked = data.jalurNonSidang?.includes(option);
+                  return (
+                    <div
+                      key={option}
+                      onClick={() => toggleJalurNonSidang(option)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: `1.5px solid ${isChecked ? "#C0182A" : "#CBD5E1"}`,
+                        background: isChecked ? "#FFF5F5" : "#fff",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          borderRadius: "4px",
+                          border: `1.5px solid ${isChecked ? "#C0182A" : "#CBD5E1"}`,
+                          background: isChecked ? "#C0182A" : "#fff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {isChecked && <Check color="white" size={12} strokeWidth={3} />}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: isChecked ? 700 : 500,
+                          color: isChecked ? "#C0182A" : "#1E293B",
+                        }}
+                      >
+                        {option}
+                      </span>
                     </div>
-                    <span style={{ fontSize: "0.85rem" }}>{option}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         )}
 
-        <div className="input-group" style={{ marginTop: "2rem" }}>
-          <label>Judul Tugas Akhir (Bahasa Indonesia) *</label>
+        {/* Judul Tugas Akhir Bahasa Indonesia */}
+        <div className="sidang-input-group" style={{ marginTop: "1.75rem" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+            <label style={{ margin: 0 }}>Judul Tugas Akhir (Bahasa Indonesia) <span style={{ color: "red" }}>*</span></label>
+            {!readOnly && (
+              <span style={{ fontSize: "12px", color: "#94A3B8", fontStyle: "italic" }}>
+                Pastikan judul sesuai dengan yang tertera di SK TA terakhir.
+              </span>
+            )}
+          </div>
           {readOnly ? (
             <StaticValue>{data.thesisTitleId || "-"}</StaticValue>
           ) : (
-            <>
             <textarea
-              className="textarea-field"
+              className="sidang-textarea-field"
+              rows={2}
               placeholder="Masukan Judul Tugas Akhir (Bahasa Indonesia)"
               value={data.thesisTitleId}
               onChange={(e) => updateField("thesisTitleId", e.target.value)}
-            ></textarea>
-            <span className="helper-text">
-                Pastikan judul sesuai dengan yang tertera di SK TA terakhir.
-              </span>
-            </>
+            />
           )}
         </div>
 
-        <div className="input-group" style={{ marginTop: "2rem" }}>
-          <label>Judul Tugas Akhir (Bahasa Inggris) *</label>
+        {/* Judul Tugas Akhir Bahasa Inggris */}
+        <div className="sidang-input-group" style={{ marginTop: "1.75rem" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+            <label style={{ margin: 0 }}>Judul Tugas Akhir (Bahasa Inggris) <span style={{ color: "red" }}>*</span></label>
+            {!readOnly && (
+              <span style={{ fontSize: "12px", color: "#94A3B8", fontStyle: "italic" }}>
+                Pastikan judul sesuai dengan yang tertera di SK TA terakhir.
+              </span>
+            )}
+          </div>
           {readOnly ? (
             <StaticValue>{data.thesisTitleEn || "-"}</StaticValue>
           ) : (
-            <>
-              <textarea
-                className="textarea-field"
-                placeholder="Masukan Judul Tugas Akhir (Bahasa Inggris)"
-                value={data.thesisTitleEn}
-                onChange={(e) => updateField("thesisTitleEn", e.target.value)}
-              ></textarea>
-              <span className="helper-text">
-                Pastikan judul sesuai dengan yang tertera di SK TA terakhir.
-              </span>
-            </>
+            <textarea
+              className="sidang-textarea-field"
+              rows={2}
+              placeholder="Masukan Judul Tugas Akhir (Bahasa Inggris)"
+              value={data.thesisTitleEn}
+              onChange={(e) => updateField("thesisTitleEn", e.target.value)}
+            />
           )}
         </div>
       </section>
