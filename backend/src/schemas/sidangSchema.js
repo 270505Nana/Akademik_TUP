@@ -94,8 +94,8 @@ export const saveSidangDraftSchema = z.object({
   thesisTitleEn: z.string({ invalid_type_error: "Judul TA (EN) harus berupa string" }).trim().optional().nullable(),
   judulTugasAkhirIndonesia: z.string({ invalid_type_error: "Judul TA (ID) harus berupa string" }).trim().optional().nullable(),
   judulTugasAkhirInggris: z.string({ invalid_type_error: "Judul TA (EN) harus berupa string" }).trim().optional().nullable(),
-  dosenPembimbing1Id: z.string().uuid("ID Dosen Pembimbing 1 tidak valid").optional().nullable(),
-  dosenPembimbing2Id: z.string().uuid("ID Dosen Pembimbing 2 tidak valid").optional().nullable(),
+  dosenPembimbing1Id: z.string({ invalid_type_error: "ID Dosen Pembimbing 1 harus berupa string" }).trim().min(1).optional().nullable(),
+  dosenPembimbing2Id: z.string({ invalid_type_error: "ID Dosen Pembimbing 2 harus berupa string" }).trim().min(1).optional().nullable(),
 });
 
 /**
