@@ -67,3 +67,21 @@ export const listDosenQuerySchema = z.object({
     z.coerce.number().int().min(1).max(100).optional()
   ),
 });
+
+/**
+ * Schema untuk Query Parameters Opsi Dosen / Dropdown (GET /api/dosen/options)
+ */
+export const dosenOptionsQuerySchema = z.object({
+  search: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string().optional()
+  ),
+  studyProgramId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string().optional()
+  ),
+  researchGroupId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string().optional()
+  ),
+});

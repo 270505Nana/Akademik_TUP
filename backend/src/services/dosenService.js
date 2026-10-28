@@ -394,3 +394,40 @@ export const getDosenDashboardData = async (userId) => {
     jadwalSidang,
   };
 };
+
+
+export const getDosenOptions = async ({
+  search,
+  studyProgramId,
+  researchGroupId,
+} = {}) => {
+  const where = { deletedAt: null };
+
+  const searchTerm = (search || "").trim();
+  if (searchTerm) {
+    where.OR = [
+      { name: { contains: searchTerm, mode: "insensitive" } },
+      { kodeDosen: { contains: searchTerm, mode: "insensitive" } },
+    ];
+  }
+
+  if (studyProgramId) {
+    where.studyProgramId = studyProgramId.trim();
+  }
+
+  if (researchGroupId) {
+    where.researchGroupId = researchGroupId.trim();
+  }
+
+  return await prisma.dosen.findMany({
+    where,
+    select: {
+      id: true,
+      kodeDosen: true,
+      name: true,
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+};

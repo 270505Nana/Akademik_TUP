@@ -7,6 +7,7 @@ import {
   uploadSignature,
   deleteSignature,
   getDosenDashboard,
+  getDosenOptions,
 } from "../../controllers/dosenController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { authorize } from "../../middlewares/authorize.js";
@@ -15,6 +16,7 @@ import { validate } from "../../middlewares/validate.js";
 import {
   upsertDosenSchema,
   listDosenQuerySchema,
+  dosenOptionsQuerySchema,
 } from "../../schemas/dosenSchema.js";
 
 const router = express.Router();
@@ -86,6 +88,69 @@ const router = express.Router();
  *         description: Invalid token
  */
 router.get("/", verifyToken, validate(listDosenQuerySchema, "query"), listDosens);
+
+/**
+ * @swagger
+ * /api/dosen/options:
+ *   get:
+ *     summary: Get ringkasan opsi dosen untuk dropdown / selector (id, kodeDosen, name)
+ *     tags: [Dosen]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Keyword pencarian berdasarkan nama dosen atau kode dosen
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: string
+ *         description: Filter opsi dosen berdasarkan Study Program ID
+ *       - in: query
+ *         name: researchGroupId
+ *         schema:
+ *           type: string
+ *         description: Filter opsi dosen berdasarkan Research Group ID
+ *     responses:
+ *       200:
+ *         description: Daftar opsi dosen berhasil diambil
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Daftar opsi dosen berhasil diambil
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+ *                       kodeDosen:
+ *                         type: string
+ *                         example: JDO
+ *                       name:
+ *                         type: string
+ *                         example: Dr. John Doe, M.T.
+ *       400:
+ *         description: Validation error pada query parameters
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
+ */
+router.get(
+  "/options",
+  verifyToken,
+  validate(dosenOptionsQuerySchema, "query"),
+  getDosenOptions,
+);
 
 /**
  * @swagger

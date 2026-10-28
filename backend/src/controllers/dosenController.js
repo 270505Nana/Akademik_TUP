@@ -75,3 +75,19 @@ export const getDosenDashboard = asyncHandler(async (req, res) => {
     data,
   });
 });
+
+
+// Opsi Dosen untuk Dropdown
+export const getDosenOptions = asyncHandler(async (req, res) => {
+  const { search, studyProgramId, researchGroupId } = req.query;
+  const data = await dosenService.getDosenOptions({
+    search,
+    studyProgramId,
+    researchGroupId,
+  });
+
+  res.json({
+    message: "Daftar opsi dosen berhasil diambil",
+    data,
+  });
+});
