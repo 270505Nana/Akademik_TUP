@@ -2,6 +2,7 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import prisma from "../config/prisma.js";
 import { uploadFile, deleteFile } from "./storageService.js";
+import { getPaginationParams } from "../utils/paginationHelper.js";
 
 export const permohonanSktaInclude = {
   mahasiswa: {
@@ -117,9 +118,12 @@ export const resolveAdmin = async (adminId, currentUser) => {
 };
 
 /**
- * Mengambil daftar permohonan SKTA dengan paginasi
+ * Mengambil daftar permohonan SKTA dengan paginasi, filter, dan sorting
  */
-export const getPermohonanSktas = async ({ skip, take }, customWhere = {}) => {
+export const getPermohonanSktas = async (query = {}, customWhere = {}) => {
+  const paginationParams = getPaginationParams(query);
+  const { mahasiswaId, studyProgramId, category, search, sortBy, sortOrder } = query;
+
   const where = {
     deletedAt: null,
     OR: [
@@ -136,20 +140,52 @@ export const getPermohonanSktas = async ({ skip, take }, customWhere = {}) => {
     ...customWhere,
   };
 
+  if (mahasiswaId) {
+    where.mahasiswaId = mahasiswaId;
+  }
+
+  if (category) {
+    where.category = category;
+  }
+
+  if (studyProgramId) {
+    where.mahasiswa = {
+      ...(where.mahasiswa || {}),
+      studyProgramId,
+    };
+  }
+
+  if (search && typeof search === "string" && search.trim() !== "") {
+    const searchTerm = search.trim();
+    where.AND = [
+      ...(where.AND || []),
+      {
+        OR: [
+          { judulProposalIndonesia: { contains: searchTerm, mode: "insensitive" } },
+          { judulProposalInggris: { contains: searchTerm, mode: "insensitive" } },
+          { mahasiswa: { name: { contains: searchTerm, mode: "insensitive" } } },
+          { mahasiswa: { nim: { contains: searchTerm, mode: "insensitive" } } },
+        ],
+      },
+    ];
+  }
+
+  const sortField = (sortBy || "createdAt").trim();
+  const sortDir = (sortOrder || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+  const orderBy = { [sortField]: sortDir };
+
   const [total, data] = await Promise.all([
     prisma.permohonanSkta.count({ where }),
     prisma.permohonanSkta.findMany({
       where,
-      skip,
-      take,
+      skip: query.skip !== undefined ? query.skip : paginationParams.skip,
+      take: query.take !== undefined ? query.take : paginationParams.take,
       include: permohonanSktaInclude,
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy,
     }),
   ]);
 
-  return { total, data };
+  return { total, data, paginationParams };
 };
 
 /**

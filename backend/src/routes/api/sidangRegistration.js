@@ -1,7 +1,16 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
-import { verifyToken } from '../../middlewares/auth.js';
-import { upload } from '../../middlewares/upload.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { authorize } from "../../middlewares/authorize.js";
+import { upload } from "../../middlewares/upload.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listSidangQuerySchema,
+  saveSidangDraftSchema,
+  submitSidangSchema,
+  approveSidangSchema,
+  rejectSidangSchema,
+} from "../../schemas/sidangSchema.js";
 import {
   listSidangRegistrations,
   getSidangRegistrationById,
@@ -15,8 +24,7 @@ import {
   approveSidangRegistration,
   rejectSidangRegistration,
   toggleLockSidangRegistration,
-} from '../../controllers/sidangRegistrationController.js';
-import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
+} from "../../controllers/sidangRegistrationController.js";
 
 /**
  * @swagger
@@ -71,8 +79,9 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [newest, oldest, nameAsc, nameDesc, nimAsc, nimDesc, ipkAsc, ipkDesc, sksAsc, sksDesc, takAsc, takDesc, tglSidangAsc, tglSidangDesc, submittedAtAsc, submittedAtDesc, updatedAtAsc, updatedAtDesc]
- *         description: Sort option (newest for baru-lama, oldest for lama-baru, nameAsc/nameDesc, nimAsc/nimDesc, ipkAsc/ipkDesc, sksAsc/sksDesc, takAsc/takDesc, tglSidangAsc/tglSidangDesc, submittedAtAsc/submittedAtDesc, updatedAtAsc/updatedAtDesc)
+ *           enum: [newest, oldest]
+ *           default: newest
+ *         description: Sort option (newest atau oldest)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -94,7 +103,12 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listSidangRegistrations);
+router.get(
+  "/",
+  verifyToken,
+  validate(listSidangQuerySchema, "query"),
+  listSidangRegistrations,
+);
 
 /**
  * @swagger
@@ -217,7 +231,8 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
+  validate(saveSidangDraftSchema),
   saveSidangRegistration,
 );
 
@@ -235,6 +250,18 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - id
+ *               - programType
+ *               - sks
+ *               - ipk
+ *               - tak
+ *               - sktaExpDate
+ *               - thesisTitleId
+ *               - thesisTitleEn
+ *               - mahasiswaId
+ *               - dosenPembimbing1Id
+ *               - dosenPembimbing2Id
  *             properties:
  *               id:
  *                 type: string
@@ -284,7 +311,8 @@ router.post(
 router.post(
   "/submit",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
+  validate(submitSidangSchema),
   submitSidangRegistration,
 );
 
@@ -315,7 +343,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAdmin, deleteSidangRegistration);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteSidangRegistration);
 
 /**
  * @swagger
@@ -368,7 +396,7 @@ router.delete("/:id", verifyToken, isAdmin, deleteSidangRegistration);
 router.post(
   "/:id/uploads",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("sidang-requirements").single("file"),
   uploadSidangRegistrationFile,
 );
@@ -477,7 +505,13 @@ router.get(
  *       404:
  *         description: Registration, admin or period not found
  */
-router.put("/:id/approve", verifyToken, isAdmin, approveSidangRegistration);
+router.put(
+  "/:id/approve",
+  verifyToken,
+  authorize("ADMIN"),
+  validate(approveSidangSchema),
+  approveSidangRegistration,
+);
 
 /**
  * @swagger
@@ -526,7 +560,13 @@ router.put("/:id/approve", verifyToken, isAdmin, approveSidangRegistration);
  *       404:
  *         description: Registration or admin not found
  */
-router.put("/:id/reject", verifyToken, isAdmin, rejectSidangRegistration);
+router.put(
+  "/:id/reject",
+  verifyToken,
+  authorize("ADMIN"),
+  validate(rejectSidangSchema),
+  rejectSidangRegistration,
+);
 
 /**
  * @swagger
@@ -562,6 +602,11 @@ router.put("/:id/reject", verifyToken, isAdmin, rejectSidangRegistration);
  *       404:
  *         description: Sidang registration not found
  */
-router.patch("/:id/toggle-lock", verifyToken, isAdmin, toggleLockSidangRegistration);
+router.patch(
+  "/:id/toggle-lock",
+  verifyToken,
+  authorize("ADMIN"),
+  toggleLockSidangRegistration,
+);
 
 export default router;

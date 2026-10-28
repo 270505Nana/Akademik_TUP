@@ -1,174 +1,75 @@
 import prisma from "../config/prisma.js";
 
-const authorize = (...allowedRoles) => {
-  return (req, res, next) => {
+// Mapping nama sub-role ke field model Dosen
+const SUB_ROLE_MAP = {
+  KETUAKK: "isKetuaKK",
+  KAPRODI: "isKetuaProdi",
+  KEPALAURUSANAKADEMIK: "isKepalaUrusanAkademik",
+};
+
+/**
+ * Middleware otorisasi dinamis berbasis role & sub-role
+ * @param  {...string} allowedRoles - Contoh: "ADMIN", "MAHASISWA", "DOSEN", "DOSEN_KAPRODI", "DOSEN_KETUAKK", "DOSEN_KEPALAURUSANAKADEMIK"
+ */
+export const authorize = (...allowedRoles) => {
+  const normalizedAllowedRoles = allowedRoles.map((role) =>
+    role.toUpperCase().trim()
+  );
+
+  return async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: "Token not found" });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({
-        message: "Access denied",
-      });
+    const userRole = req.user.role?.toUpperCase();
+
+    // 1. Cek kecocokan role dasar langsung (misal: "ADMIN", "MAHASISWA", "DOSEN")
+    if (normalizedAllowedRoles.includes(userRole)) {
+      return next();
     }
 
-    next();
+    // 2. Jika user adalah DOSEN dan ada aturan sub-role (misal: "DOSEN_KETUAKK")
+    if (userRole === "DOSEN") {
+      const allowedSubRoles = normalizedAllowedRoles
+        .filter((role) => role.startsWith("DOSEN_"))
+        .map((role) => role.split("_")[1]);
+
+      if (allowedSubRoles.length > 0) {
+        try {
+          const dosen =
+            req.dosen ||
+            (await prisma.dosen.findUnique({
+              where: { userId: req.user.id },
+            }));
+
+          if (dosen && !dosen.deletedAt) {
+            req.dosen = dosen; // Simpan ke req.dosen untuk digunakan controller/helper selanjutnya
+
+            const isAuthorized = allowedSubRoles.some((subRole) => {
+              const fieldName = SUB_ROLE_MAP[subRole];
+              return fieldName && Boolean(dosen[fieldName]);
+            });
+
+            if (isAuthorized) {
+              return next();
+            }
+          }
+        } catch (error) {
+          return next(error);
+        }
+      }
+    }
+
+    return res.status(403).json({
+      message: "Access denied. Anda tidak memiliki hak akses untuk endpoint ini.",
+    });
   };
 };
 
-const isMahasiswa = authorize("MAHASISWA");
-const isDosen = authorize("DOSEN");
-const isAdmin = authorize("ADMIN");
-
-const isKetuaKK = async (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Token not found" });
-  }
-
-  if (req.user.role !== "DOSEN") {
-    return res.status(403).json({
-      message:
-        "Access denied. Hanya dosen dengan status Ketua KK yang dapat mengakses.",
-    });
-  }
-
-  try {
-    const dosen = await prisma.dosen.findUnique({
-      where: { userId: req.user.id },
-    });
-
-    if (!dosen || !dosen.isKetuaKK || dosen.deletedAt) {
-      return res.status(403).json({
-        message:
-          "Access denied. Hanya dosen dengan status Ketua KK yang dapat mengakses.",
-      });
-    }
-
-    req.dosen = dosen;
-    next();
-  } catch (error) {
-    return next(error);
-  }
-};
-
-const isKetuaProdi = async (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Token not found" });
-  }
-
-  if (req.user.role !== "DOSEN") {
-    return res.status(403).json({
-      message:
-        "Access denied. Hanya dosen dengan status Ketua Prodi yang dapat mengakses.",
-    });
-  }
-
-  try {
-    const dosen = await prisma.dosen.findUnique({
-      where: { userId: req.user.id },
-    });
-
-    if (!dosen || !dosen.isKetuaProdi || dosen.deletedAt) {
-      return res.status(403).json({
-        message:
-          "Access denied. Hanya dosen dengan status Ketua Prodi yang dapat mengakses.",
-      });
-    }
-
-    req.dosen = dosen;
-    next();
-  } catch (error) {
-    return next(error);
-  }
-};
-
-const isKepalaUrusanAkademik = async (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Token not found" });
-  }
-
-  if (req.user.role !== "DOSEN") {
-    return res.status(403).json({
-      message:
-        "Access denied. Hanya dosen dengan status Kepala Urusan Akademik yang dapat mengakses.",
-    });
-  }
-
-  try {
-    const dosen = await prisma.dosen.findUnique({
-      where: { userId: req.user.id },
-    });
-
-    if (!dosen || !dosen.isKepalaUrusanAkademik || dosen.deletedAt) {
-      return res.status(403).json({
-        message:
-          "Access denied. Hanya dosen dengan status Kepala Urusan Akademik yang dapat mengakses.",
-      });
-    }
-
-    req.dosen = dosen;
-    next();
-  } catch (error) {
-    return next(error);
-  }
-};
-
-const isAdminOrDosen = async (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Token not found" });
-  }
-
-  if (req.user.role === "ADMIN") {
-    return next();
-  }
-
-  if (req.user.role === "DOSEN") {
-    return next();
-  }
-
-  return res.status(403).json({
-    message: "Access denied. Hanya admin dan dosen yang dapat mengakses.",
-  });
-};
-
-const isAdminOrKetuaKKOrKetuaProdi = async (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Token not found" });
-  }
-
-  if (req.user.role === "ADMIN") {
-    return next();
-  }
-
-  if (req.user.role === "DOSEN") {
-    try {
-      const dosen =
-        req.dosen ||
-        (await prisma.dosen.findUnique({
-          where: { userId: req.user.id },
-        }));
-
-      if (dosen && !dosen.deletedAt && (dosen.isKetuaKK || dosen.isKetuaProdi)) {
-        req.dosen = dosen;
-        return next();
-      }
-
-      return res.status(403).json({
-        message:
-          "Access denied. Hanya Admin, Ketua KK, atau Ketua Prodi yang dapat mengakses.",
-      });
-    } catch (error) {
-      return next(error);
-    }
-  }
-
-  return res.status(403).json({
-    message:
-      "Access denied. Hanya Admin, Ketua KK, atau Ketua Prodi yang dapat mengakses.",
-  });
-};
-
-const getAcademicAccessContext = async (req) => {
+/**
+ * Helper konteks kurikulum / OBE untuk controller
+ */
+export const getAcademicAccessContext = async (req) => {
   if (req.user?.role === "ADMIN") {
     return {
       isFullAccess: true,
@@ -194,7 +95,6 @@ const getAcademicAccessContext = async (req) => {
       const isKetuaKK = Boolean(dosen.isKetuaKK);
       const isKetuaProdi = Boolean(dosen.isKetuaProdi);
 
-      // Jika bukan Ketua KK dan bukan Ketua Prodi
       if (!isKetuaKK && !isKetuaProdi) {
         return {
           isFullAccess: false,
@@ -219,7 +119,6 @@ const getAcademicAccessContext = async (req) => {
         kkStudyProgramIds = mappings.map((m) => m.studyProgramId);
       }
 
-      // Jika Dosen merangkap sebagai Ketua KK dan Ketua Prodi
       if (isKetuaKK && isKetuaProdi) {
         const combined = new Set(kkStudyProgramIds);
         if (dosen.studyProgramId) {
@@ -235,7 +134,6 @@ const getAcademicAccessContext = async (req) => {
         };
       }
 
-      // Jika Ketua KK
       if (isKetuaKK) {
         return {
           isFullAccess: false,
@@ -247,14 +145,15 @@ const getAcademicAccessContext = async (req) => {
         };
       }
 
-      // Jika Ketua Prodi
       if (isKetuaProdi) {
         return {
           isFullAccess: false,
           isRestrictedKaprodi: true,
           isRestrictedKetuaKK: false,
           studyProgramId: dosen.studyProgramId || null,
-          allowedStudyProgramIds: dosen.studyProgramId ? [dosen.studyProgramId] : [],
+          allowedStudyProgramIds: dosen.studyProgramId
+            ? [dosen.studyProgramId]
+            : [],
           dosen,
         };
       }
@@ -269,17 +168,4 @@ const getAcademicAccessContext = async (req) => {
     allowedStudyProgramIds: [],
     dosen: null,
   };
-};
-
-export {
-  authorize,
-  isMahasiswa,
-  isDosen,
-  isAdmin,
-  isKetuaKK,
-  isAdminOrDosen,
-  isKetuaProdi,
-  isKepalaUrusanAkademik,
-  isAdminOrKetuaKKOrKetuaProdi,
-  getAcademicAccessContext,
 };

@@ -7,7 +7,7 @@ import {
   deleteSubcloProdi,
 } from "../../controllers/subCloController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listSubcloQuerySchema,
@@ -118,7 +118,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(createSubcloSchema),
   createSubcloProdi
 );
@@ -194,7 +194,7 @@ router.get("/:id", verifyToken, getSubcloProdiById);
 router.put(
   "/:id",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(updateSubcloSchema),
   updateSubcloProdi
 );
@@ -230,7 +230,7 @@ router.put(
 router.delete(
   "/:id",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   deleteSubcloProdi
 );
 

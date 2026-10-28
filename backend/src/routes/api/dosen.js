@@ -9,7 +9,7 @@ import {
   getDosenDashboard,
 } from "../../controllers/dosenController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdmin, isDosen } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { upload } from "../../middlewares/upload.js";
 import { validate } from "../../middlewares/validate.js";
 import {
@@ -138,7 +138,7 @@ router.get("/dashboard", verifyToken, getDosenDashboard);
 router.post(
   "/signature",
   verifyToken,
-  isDosen,
+  authorize("DOSEN"),
   upload("signatures").single("signatureFile"),
   uploadSignature,
 );
@@ -163,7 +163,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.delete("/signature", verifyToken, isDosen, deleteSignature);
+router.delete("/signature", verifyToken, authorize("DOSEN"), deleteSignature);
 
 /**
  * @swagger
@@ -233,7 +233,7 @@ router.delete("/signature", verifyToken, isDosen, deleteSignature);
 router.put(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(upsertDosenSchema),
   upsertDosen,
 );
@@ -294,6 +294,6 @@ router.get("/:id", verifyToken, findDosenById);
  *       500:
  *         description: Internal server error
  */
-router.patch("/:id/toggle-ketua-kk", verifyToken, isAdmin, toggleKetuaKK);
+router.patch("/:id/toggle-ketua-kk", verifyToken, authorize("ADMIN"), toggleKetuaKK);
 
 export default router;

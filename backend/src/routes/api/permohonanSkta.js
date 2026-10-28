@@ -22,9 +22,10 @@ import {
 
 import { verifyToken } from '../../middlewares/auth.js';
 import { upload } from '../../middlewares/upload.js';
-import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
+import { authorize } from '../../middlewares/authorize.js';
 import { validate } from '../../middlewares/validate.js';
 import {
+  listPermohonanSktaQuerySchema,
   savePermohonanSktaDraftSchema,
   submitPermohonanSktaSchema,
   updatePermohonanSktaSchema,
@@ -49,6 +50,40 @@ import {
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: mahasiswaId
+ *         schema:
+ *           type: string
+ *         description: Filter by Mahasiswa ID (UUID)
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: string
+ *         description: Filter by Study Program ID
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by Kategori Permohonan SKTA
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search keyword across student name, NIM, and proposal titles
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, updatedAt, expDate, judulProposalIndonesia, category]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort direction
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -72,7 +107,12 @@ import {
  *       500:
  *         description: Internal server error
  */
-router.get("/", verifyToken, listPermohonanSkta);
+router.get(
+  "/",
+  verifyToken,
+  validate(listPermohonanSktaQuerySchema, "query"),
+  listPermohonanSkta
+);
 
 /**
  * @swagger
@@ -139,7 +179,7 @@ router.get("/", verifyToken, listPermohonanSkta);
 router.get(
   "/export-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(exportSktaZipSchema, "query"),
   exportSktaZip
 );
@@ -199,7 +239,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   validate(savePermohonanSktaDraftSchema),
   createPermohonanSkta
@@ -270,7 +310,7 @@ router.post(
 router.post(
   "/submit",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   validate(submitPermohonanSktaSchema),
   submitPermohonanSkta
@@ -386,7 +426,7 @@ router.get("/:id", verifyToken, getPermohonanSktaById);
 router.put(
   "/:id",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   validate(updatePermohonanSktaSchema),
   updatePermohonanSkta
@@ -482,7 +522,7 @@ router.get("/:id/download/evidence", verifyToken, downloadEvidence);
 router.put(
   "/:id/approve",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("skta").fields([{ name: "skta", maxCount: 1 }]),
   validate(approvePermohonanSktaSchema),
   approvePermohonanSkta
@@ -537,7 +577,7 @@ router.put(
 router.put(
   "/:id/reject",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(rejectPermohonanSktaSchema),
   rejectPermohonanSkta
 );
@@ -598,14 +638,14 @@ router.put(
 router.get(
   "/:id/generate/dokumen-validasi-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   generateDokumenValidasiSkta
 );
 
 router.post(
   "/:id/generate/dokumen-validasi-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("berkas-mahasiswa").fields([
     { name: "dokumenFile", maxCount: 1 },
     { name: "file", maxCount: 1 },
@@ -669,14 +709,14 @@ router.post(
 router.get(
   "/:id/generate/formulir-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   generateFormulirSkta
 );
 
 router.post(
   "/:id/generate/formulir-skta",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("berkas-mahasiswa").fields([
     { name: "dokumenFile", maxCount: 1 },
     { name: "file", maxCount: 1 },

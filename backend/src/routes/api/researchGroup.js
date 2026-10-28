@@ -12,7 +12,7 @@ import {
 } from "../../controllers/researchGroupController.js";
 
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listResearchGroupQuerySchema,
@@ -136,7 +136,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(createResearchGroupSchema),
   createResearchGroup,
 );
@@ -214,7 +214,7 @@ router.get("/:id", verifyToken, findResearchGroupById);
 router.put(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(updateResearchGroupSchema),
   updateResearchGroup,
 );
@@ -244,7 +244,7 @@ router.put(
  *       404:
  *         description: Research group not found
  */
-router.delete("/:id", verifyToken, isAdmin, deleteResearchGroup);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteResearchGroup);
 
 /**
  * @swagger
@@ -274,7 +274,7 @@ router.delete("/:id", verifyToken, isAdmin, deleteResearchGroup);
 router.patch(
   "/:id/toggle-active",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   toggleResearchGroupActive,
 );
 

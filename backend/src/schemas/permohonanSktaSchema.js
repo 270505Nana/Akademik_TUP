@@ -37,6 +37,12 @@ const optionalUuid = (invalidMsg = "Format UUID tidak valid") =>
 /**
  * Helper untuk field UUID wajib
  */
+const requiredTrimmedString = (emptyMsg) =>
+  z
+    .string({ error: emptyMsg })
+    .trim()
+    .min(1, emptyMsg);
+
 const requiredUuid = (emptyMsg, invalidMsg = "Format UUID tidak valid") =>
   z
     .string({ error: emptyMsg })
@@ -64,8 +70,8 @@ export const savePermohonanSktaDraftSchema = z
       .default("Permohonan Baru"),
     judulProposalIndonesia: optionalTrimmedString(),
     judulProposalInggris: optionalTrimmedString(),
-    dosenPembimbing1Id: optionalUuid("ID Dosen Pembimbing 1 tidak valid"),
-    dosenPembimbing2Id: optionalUuid("ID Dosen Pembimbing 2 tidak valid"),
+    dosenPembimbing1Id: optionalTrimmedString(),
+    dosenPembimbing2Id: optionalTrimmedString(),
     researchGroupId: optionalUuid("ID Kelompok Riset tidak valid"),
   })
   .refine((data) => data.id || data.mahasiswaId, {
@@ -98,11 +104,11 @@ export const submitPermohonanSktaSchema = z.object({
     .string({ error: "Judul proposal (Inggris) wajib diisi" })
     .trim()
     .min(1, "Judul proposal (Inggris) wajib diisi"),
-  dosenPembimbing1Id: requiredUuid(
+  dosenPembimbing1Id: requiredTrimmedString(
     "Dosen Pembimbing 1 wajib diisi",
     "ID Dosen Pembimbing 1 tidak valid"
   ),
-  dosenPembimbing2Id: requiredUuid(
+  dosenPembimbing2Id: requiredTrimmedString(
     "Dosen Pembimbing 2 wajib diisi",
     "ID Dosen Pembimbing 2 tidak valid"
   ),
@@ -116,8 +122,8 @@ export const submitPermohonanSktaSchema = z.object({
 export const updatePermohonanSktaSchema = z.object({
   judulProposalIndonesia: optionalTrimmedString(),
   judulProposalInggris: optionalTrimmedString(),
-  dosenPembimbing1Id: optionalUuid("ID Dosen Pembimbing 1 tidak valid"),
-  dosenPembimbing2Id: optionalUuid("ID Dosen Pembimbing 2 tidak valid"),
+  dosenPembimbing1Id: optionalTrimmedString(),
+  dosenPembimbing2Id: optionalTrimmedString(),
   researchGroupId: optionalUuid("ID Kelompok Riset tidak valid"),
 });
 
@@ -208,5 +214,48 @@ export const exportSktaZipSchema = z.object({
     z.enum(sktaCategories, {
       error: "Kategori permohonan SKTA tidak valid",
     }).optional()
+  ),
+});
+
+
+/**
+ * Schema untuk Query Parameters Daftar Permohonan SKTA (GET /api/permohonan-skta)
+ */
+export const listPermohonanSktaQuerySchema = z.object({
+  mahasiswaId: optionalUuid("ID Mahasiswa tidak valid"),
+  studyProgramId: optionalTrimmedString(),
+  category: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.enum(sktaCategories, {
+      error: "Kategori permohonan SKTA tidak valid",
+    }).optional()
+  ),
+  search: optionalTrimmedString(),
+  sortBy: z
+    .enum(["createdAt", "updatedAt", "expDate", "judulProposalIndonesia", "category"], {
+      error:
+        "sortBy harus salah satu dari: createdAt, updatedAt, expDate, judulProposalIndonesia, category",
+    })
+    .optional()
+    .default("createdAt"),
+  sortOrder: z
+    .enum(["asc", "desc"], {
+      error: "sortOrder harus salah satu dari: asc, desc",
+    })
+    .optional()
+    .default("desc"),
+  page: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.number().int().min(1).optional()
+  ),
+  limit: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z
+      .union([
+        z.literal("all"),
+        z.literal("-1"),
+        z.coerce.number().int().min(1).max(100),
+      ])
+      .optional()
   ),
 });

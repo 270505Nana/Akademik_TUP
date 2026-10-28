@@ -1,12 +1,20 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
-import { verifyToken } from '../../middlewares/auth.js';
-import { listSidangPeriods,
+import { verifyToken } from "../../middlewares/auth.js";
+import { authorize } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listPeriodQuerySchema,
+  createPeriodSchema,
+  updatePeriodSchema,
+} from "../../schemas/periodSchema.js";
+import {
+  listSidangPeriods,
   getSidangPeriodById,
   createSidangPeriod,
   updateSidangPeriod,
-  deleteSidangPeriod, } from '../../controllers/sidangPeriodController.js';
-import { isAdmin } from '../../middlewares/authorize.js';
+  deleteSidangPeriod,
+} from "../../controllers/sidangPeriodController.js";
 
 /**
  * @swagger
@@ -25,11 +33,30 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Keyword pencarian berdasarkan nama periode atau period
+ *       - in: query
  *         name: category
  *         schema:
  *           type: string
  *           enum: [pendaftaran, pelaksanaan]
  *         description: Filter periods by category (pendaftaran / pelaksanaan)
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [startDate, endDate, createdAt, name, period]
+ *           default: startDate
+ *         description: Field untuk pengurutan
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Arah pengurutan (asc / desc)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -51,7 +78,12 @@ import { isAdmin } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listSidangPeriods);
+router.get(
+  "/",
+  verifyToken,
+  validate(listPeriodQuerySchema, "query"),
+  listSidangPeriods,
+);
 
 /**
  * @swagger
@@ -138,7 +170,8 @@ router.get("/:id", verifyToken, getSidangPeriodById);
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
+  validate(createPeriodSchema),
   createSidangPeriod,
 );
 
@@ -201,7 +234,8 @@ router.post(
 router.put(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
+  validate(updatePeriodSchema),
   updateSidangPeriod,
 );
 
@@ -230,6 +264,6 @@ router.put(
  *       403:
  *         description: Invalid token
  */
-router.delete("/:id", verifyToken, isAdmin, deleteSidangPeriod);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteSidangPeriod);
 
 export default router;

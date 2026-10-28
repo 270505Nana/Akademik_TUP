@@ -7,7 +7,7 @@ import {
   deleteSkemaPenilai,
 } from "../../controllers/skemaPenilaiController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listSkemaPenilaiQuerySchema,
@@ -117,7 +117,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(createSkemaPenilaiSchema),
   createSkemaPenilai
 );
@@ -190,7 +190,7 @@ router.get("/:id", verifyToken, getSkemaPenilaiById);
 router.put(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(updateSkemaPenilaiSchema),
   updateSkemaPenilai
 );
@@ -219,6 +219,6 @@ router.put(
  *       404:
  *         description: Skema Penilai tidak ditemukan
  */
-router.delete("/:id", verifyToken, isAdmin, deleteSkemaPenilai);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteSkemaPenilai);
 
 export default router;

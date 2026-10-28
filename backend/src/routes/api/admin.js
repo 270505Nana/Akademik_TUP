@@ -6,7 +6,7 @@ import {
   getAdminDashboard,
 } from "../../controllers/adminController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import { upsertAdminSchema } from "../../schemas/adminSchema.js";
 
@@ -49,7 +49,7 @@ const router = express.Router();
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, isAdmin, listAdmins);
+router.get("/", verifyToken, authorize("ADMIN"), listAdmins);
 
 /**
  * @swagger
@@ -63,7 +63,7 @@ router.get("/", verifyToken, isAdmin, listAdmins);
  *       200:
  *         description: Berhasil mengambil data dashboard admin
  */
-router.get("/dashboard", verifyToken, isAdmin, getAdminDashboard);
+router.get("/dashboard", verifyToken, authorize("ADMIN"), getAdminDashboard);
 
 /**
  * @swagger
@@ -105,7 +105,7 @@ router.get("/dashboard", verifyToken, isAdmin, getAdminDashboard);
  *       500:
  *         description: Internal server error
  */
-router.put("/:id", verifyToken, isAdmin, validate(upsertAdminSchema), upsertAdmin);
+router.put("/:id", verifyToken, authorize("ADMIN"), validate(upsertAdminSchema), upsertAdmin);
 
 /**
  * @swagger
@@ -134,6 +134,6 @@ router.put("/:id", verifyToken, isAdmin, validate(upsertAdminSchema), upsertAdmi
  *       500:
  *         description: Internal server error
  */
-router.get("/:id", verifyToken, isAdmin, findAdminById);
+router.get("/:id", verifyToken, authorize("ADMIN"), findAdminById);
 
 export default router;

@@ -9,7 +9,7 @@ import {
 } from "../../controllers/sklUploadController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { upload } from "../../middlewares/upload.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listSklQuerySchema,
@@ -191,7 +191,7 @@ router.get("/:id", verifyToken, getSklUploadById);
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("skl").single("sklFile"),
   validate(createSklSchema),
   createSklUpload
@@ -247,7 +247,7 @@ router.post(
 router.patch(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("skl").single("sklFile"),
   validate(updateSklSchema),
   updateSklUpload
@@ -280,6 +280,6 @@ router.patch(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAdmin, deleteSklUpload);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteSklUpload);
 
 export default router;

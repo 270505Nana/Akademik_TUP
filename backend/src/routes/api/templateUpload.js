@@ -12,7 +12,7 @@ import {
 } from "../../controllers/templateUploadController.js";
 import { verifyToken } from "../../middlewares/auth.js";
 import { upload } from "../../middlewares/upload.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listTemplateUploadQuerySchema,
@@ -169,7 +169,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("templates").single("templateFile"),
   validate(createTemplateUploadSchema),
   createTemplateUpload
@@ -317,7 +317,7 @@ router.get("/:code", verifyToken, findTemplateUploadByCode);
 router.patch(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   upload("templates").single("templateFile"),
   validate(updateTemplateUploadSchema),
   updateTemplateUpload
@@ -350,7 +350,7 @@ router.patch(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAdmin, deleteTemplateUpload);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteTemplateUpload);
 
 /**
  * @swagger
@@ -380,7 +380,7 @@ router.delete("/:id", verifyToken, isAdmin, deleteTemplateUpload);
 router.patch(
   "/:id/toggle-publish",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   togglePublishTemplate
 );
 
@@ -412,7 +412,7 @@ router.patch(
 router.patch(
   "/:id/toggle-required",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   toggleRequiredTemplate
 );
 

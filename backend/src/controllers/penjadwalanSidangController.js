@@ -18,9 +18,7 @@ const listPenjadwalanSidang = asyncHandler(async (req, res) => {
       ...paginationParams,
     });
 
-  const data = registrations.map((reg) =>
-    mapPenjadwalanSidangToFrontend(reg),
-  );
+  const data = registrations.map((reg) => mapPenjadwalanSidangToFrontend(reg));
 
   res.json(formatPaginationResponse(data, total, paginationParams));
 });
@@ -98,10 +96,7 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
     "Content-Type",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   );
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="${filename}"`,
-  );
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   await workbook.xlsx.write(res);
   res.end();
 });
@@ -185,6 +180,3 @@ export {
   toggleReadInfoPenjadwalan,
   togglePublishSidangPeriod,
 };
-
-
-

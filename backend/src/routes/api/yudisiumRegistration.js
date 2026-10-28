@@ -1,7 +1,17 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
-import { verifyToken } from '../../middlewares/auth.js';
-import { upload } from '../../middlewares/upload.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { authorize } from "../../middlewares/authorize.js";
+import { upload } from "../../middlewares/upload.js";
+import { validate } from "../../middlewares/validate.js";
+import {
+  listYudisiumQuerySchema,
+  exportYudisiumQuerySchema,
+  saveYudisiumDraftSchema,
+  submitYudisiumSchema,
+  approveYudisiumSchema,
+  rejectYudisiumSchema,
+} from "../../schemas/yudisiumSchema.js";
 import {
   listYudisiumRegistrations,
   getYudisiumRegistrationById,
@@ -15,8 +25,7 @@ import {
   approveYudisiumRegistration,
   rejectYudisiumRegistration,
   exportYudisium,
-} from '../../controllers/yudisiumRegistrationController.js';
-import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
+} from "../../controllers/yudisiumRegistrationController.js";
 
 /**
  * @swagger
@@ -77,8 +86,9 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [newest, oldest, nameAsc, nameDesc, nimAsc, nimDesc, ipkAsc, ipkDesc, takAsc, takDesc, tglSidangAsc, tglSidangDesc, submittedAtAsc, submittedAtDesc, updatedAtAsc, updatedAtDesc]
- *         description: Sort option (newest for baru-lama, oldest for lama-baru, nameAsc/nameDesc, nimAsc/nimDesc, ipkAsc/ipkDesc, takAsc/takDesc, tglSidangAsc/tglSidangDesc, submittedAtAsc/submittedAtDesc, updatedAtAsc/updatedAtDesc)
+ *           enum: [newest, oldest]
+ *           default: newest
+ *         description: Sort option (newest atau oldest)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -100,13 +110,18 @@ import { isMahasiswa, isAdmin } from '../../middlewares/authorize.js';
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, listYudisiumRegistrations);
+router.get(
+  "/",
+  verifyToken,
+  validate(listYudisiumQuerySchema, "query"),
+  listYudisiumRegistrations,
+);
 
 /**
  * @swagger
  * /api/yudisium-registrations/export:
  *   get:
- *     summary: Export data pendaftar yudisium 
+ *     summary: Export data pendaftar yudisium
  *     tags: [Yudisium Registration]
  *     security:
  *       - bearerAuth: []
@@ -124,7 +139,13 @@ router.get("/", verifyToken, listYudisiumRegistrations);
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  */
-router.get("/export", verifyToken, isAdmin, exportYudisium);
+router.get(
+  "/export",
+  verifyToken,
+  authorize("ADMIN"),
+  validate(exportYudisiumQuerySchema, "query"),
+  exportYudisium,
+);
 
 /**
  * @swagger
@@ -230,7 +251,7 @@ router.get(
  *                 example: Publikasi Jurnal
  *               evidenCumlaude:
  *                 type: string
- *                 description: Masukan nama jurnal/conference pubilkasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional [jika lebih dari satu, pisahkan dengan ENTER]
+ *                 description: Masukan nama jurnal/conference publikasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional
  *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
  *               berminatWirausaha:
  *                 type: boolean
@@ -271,7 +292,8 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
+  validate(saveYudisiumDraftSchema),
   saveYudisiumRegistration,
 );
 
@@ -330,7 +352,7 @@ router.post(
  *                 example: Publikasi Jurnal
  *               evidenCumlaude:
  *                 type: string
- *                 description: Masukan nama jurnal/conference pubilkasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional [jika lebih dari satu, pisahkan dengan ENTER]
+ *                 description: Masukan nama jurnal/conference publikasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional
  *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
  *               berminatWirausaha:
  *                 type: boolean
@@ -371,7 +393,8 @@ router.post(
 router.post(
   "/submit",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
+  validate(submitYudisiumSchema),
   submitYudisiumRegistration,
 );
 
@@ -402,7 +425,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, isAdmin, deleteYudisiumRegistration);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteYudisiumRegistration);
 
 /**
  * @swagger
@@ -457,7 +480,7 @@ router.delete("/:id", verifyToken, isAdmin, deleteYudisiumRegistration);
 router.post(
   "/:id/uploads",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   upload("yudisium-requirements").single("file"),
   uploadYudisiumRegistrationFile,
 );
@@ -570,7 +593,13 @@ router.get(
  *       404:
  *         description: Registration, admin or period not found
  */
-router.put("/:id/approve", verifyToken, isAdmin, approveYudisiumRegistration);
+router.put(
+  "/:id/approve",
+  verifyToken,
+  authorize("ADMIN"),
+  validate(approveYudisiumSchema),
+  approveYudisiumRegistration,
+);
 
 /**
  * @swagger
@@ -618,6 +647,12 @@ router.put("/:id/approve", verifyToken, isAdmin, approveYudisiumRegistration);
  *       404:
  *         description: Registration or admin not found
  */
-router.put("/:id/reject", verifyToken, isAdmin, rejectYudisiumRegistration);
+router.put(
+  "/:id/reject",
+  verifyToken,
+  authorize("ADMIN"),
+  validate(rejectYudisiumSchema),
+  rejectYudisiumRegistration,
+);
 
 export default router;

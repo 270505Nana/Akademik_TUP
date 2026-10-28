@@ -7,7 +7,7 @@ import {
   deleteCloProdi,
 } from "../../controllers/cloController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listCloQuerySchema,
@@ -113,7 +113,7 @@ router.get("/", verifyToken, validate(listCloQuerySchema, "query"), getCloProdis
 router.post(
   "/",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(createCloSchema),
   createCloProdi
 );
@@ -189,7 +189,7 @@ router.get("/:id", verifyToken, getCloProdiById);
 router.put(
   "/:id",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(updateCloSchema),
   updateCloProdi
 );
@@ -225,7 +225,7 @@ router.put(
 router.delete(
   "/:id",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   deleteCloProdi
 );
 

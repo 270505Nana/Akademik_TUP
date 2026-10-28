@@ -9,7 +9,7 @@ import {
 } from "../../controllers/ruanganController.js";
 
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdmin } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   createRuanganSchema,
@@ -60,7 +60,7 @@ import {
 router.post(
   "/",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(createRuanganSchema),
   createRuangan,
 );
@@ -177,7 +177,7 @@ router.get("/:id", verifyToken, getRuanganById);
 router.put(
   "/:id",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(updateRuanganSchema),
   updateRuangan,
 );
@@ -203,6 +203,6 @@ router.put(
  *       404:
  *         description: Data ruangan tidak ditemukan
  */
-router.delete("/:id", verifyToken, isAdmin, deleteRuangan);
+router.delete("/:id", verifyToken, authorize("ADMIN"), deleteRuangan);
 
 export default router;

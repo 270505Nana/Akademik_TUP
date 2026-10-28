@@ -6,7 +6,7 @@ import {
   tutupSidang,
 } from "../../controllers/penilaianTugasAkhirController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { authorize, isAdminOrDosen } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   savePenilaianTugasAkhirSchema,
@@ -165,7 +165,7 @@ const router = express.Router();
 router.get(
   "/sidang-registration/:sidangRegistrationId/all",
   verifyToken,
-  isAdminOrDosen,
+  authorize("ADMIN", "DOSEN"),
   getAllPenilaianBySidangRegistrationId,
 );
 

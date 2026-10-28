@@ -1,11 +1,6 @@
 import express from "express";
 import { verifyToken } from "../../middlewares/auth.js";
-import {
-  isKetuaKK,
-  isAdmin,
-  isAdminOrDosen,
-  isMahasiswa,
-} from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   setPengujiSidangSchema,
@@ -101,9 +96,9 @@ const router = express.Router();
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Hanya admin dan dosen yang dapat mengakses)
+ *         description: Access denied (Hanya Admin dan Dosen Ketua KK yang dapat mengakses)
  */
-router.get("/", verifyToken, isAdminOrDosen, listPenjadwalanSidang);
+router.get("/", verifyToken, authorize("ADMIN", "DOSEN_KETUAKK"), listPenjadwalanSidang);
 
 /**
  * @swagger
@@ -142,7 +137,7 @@ router.get("/", verifyToken, isAdminOrDosen, listPenjadwalanSidang);
 router.patch(
   "/:id/toggle-lock",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   toggleLockSidangRegistration,
 );
 
@@ -184,7 +179,7 @@ router.patch(
 router.patch(
   "/period/:sidangPeriodId/toggle-publish",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   togglePublishSidangPeriod,
 );
 
@@ -229,7 +224,7 @@ router.patch(
 router.patch(
   "/:id/toggle-read-info-penjadwalan",
   verifyToken,
-  isMahasiswa,
+  authorize("MAHASISWA"),
   toggleReadInfoPenjadwalan,
 );
 
@@ -253,9 +248,9 @@ router.patch(
  *       401:
  *         description: Token not found
  *       403:
- *         description: Access denied (Hanya admin dan dosen yang dapat mengakses)
+ *         description: Access denied (Hanya Admin dan Dosen Ketua KK yang dapat mengakses)
  */
-router.get("/export", verifyToken, isAdminOrDosen, exportJadwalSidang);
+router.get("/export", verifyToken, authorize("ADMIN", "DOSEN_KETUAKK"), exportJadwalSidang);
 
 /**
  * @swagger
@@ -313,7 +308,7 @@ router.get("/export", verifyToken, isAdminOrDosen, exportJadwalSidang);
 router.put(
   "/set-penguji/batch",
   verifyToken,
-  isKetuaKK,
+  authorize("DOSEN_KETUAKK"),
   validate(batchSetPengujiSidangSchema),
   batchSetPengujiSidang,
 );
@@ -375,7 +370,7 @@ router.put(
 router.put(
   "/set-jadwal/batch",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(batchSetJadwalSidangSchema),
   batchSetJadwalSidang,
 );
@@ -435,7 +430,7 @@ router.put(
 router.put(
   "/:id/set-penguji",
   verifyToken,
-  isKetuaKK,
+  authorize("DOSEN_KETUAKK"),
   validate(setPengujiSidangSchema),
   setPengujiSidang,
 );
@@ -496,7 +491,7 @@ router.put(
 router.put(
   "/:id/set-jadwal",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(setJadwalSidangSchema),
   setJadwalSidang,
 );
@@ -565,7 +560,7 @@ router.put(
 router.put(
   "/:id/set-penguji-jadwal",
   verifyToken,
-  isAdmin,
+  authorize("ADMIN"),
   validate(setPengujiJadwalSidangSchema),
   setPengujiJadwalSidang,
 );

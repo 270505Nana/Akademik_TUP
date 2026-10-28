@@ -7,7 +7,7 @@ import {
   deleteSkemaPerhitungan,
 } from "../../controllers/skemaPerhitunganController.js";
 import { verifyToken } from "../../middlewares/auth.js";
-import { isAdminOrKetuaKKOrKetuaProdi } from "../../middlewares/authorize.js";
+import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import {
   listSkemaPerhitunganQuerySchema,
@@ -126,7 +126,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(createSkemaSchema),
   createSkemaPerhitungan
 );
@@ -203,7 +203,7 @@ router.get("/:id", verifyToken, getSkemaPerhitunganById);
 router.put(
   "/:id",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(updateSkemaSchema),
   updateSkemaPerhitungan
 );
@@ -238,7 +238,7 @@ router.put(
 router.delete(
   "/:id",
   verifyToken,
-  isAdminOrKetuaKKOrKetuaProdi,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   deleteSkemaPerhitungan
 );
 
