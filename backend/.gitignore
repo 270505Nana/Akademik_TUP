@@ -31,3 +31,5 @@ Thumbs.db
 *.sw?
 
 uploads/
+docs/
+tests/
