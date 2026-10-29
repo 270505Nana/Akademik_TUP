@@ -1,5 +1,5 @@
 /* ==========================================================
-   KELOLA CLO - TEMA MAHASISWA BIMBINGAN (CLEAN & MODERN)
+   KELOLA CLO - ULTRA COMPACT (80% NATIVE SCALE) & CLEAN
    ========================================================== */
 
 .clo-root {
@@ -11,7 +11,7 @@
 .clo-main {
   flex: 1;
   min-width: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
   display: flex;
   flex-direction: column;
   margin-left: 240px;
@@ -23,38 +23,42 @@
 }
 
 @media (max-width: 991.98px) {
-  .clo-main { margin-left: 0 !important; }
-  .clo-mobile-bar { display: flex !important; }
+  .clo-main {
+    margin-left: 0 !important;
+  }
+  .clo-mobile-bar {
+    display: flex !important;
+  }
 }
 
 .clo-page-wrapper {
   flex: 1;
   min-width: 0;
   width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
 }
 
-/* MOBILE BAR */
+/* BAR NAVIGATION */
 .clo-mobile-bar {
   display: none;
-  height: 60px;
+  height: 48px;
   background: #C0182A;
   align-items: center;
-  padding: 0 16px;
-  gap: 14px;
+  padding: 0 12px;
+  gap: 10px;
   position: sticky;
   top: 0;
   z-index: 1001;
 }
 
 .clo-mobile-btn {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   color: #fff;
   cursor: pointer;
@@ -63,46 +67,45 @@
 .clo-mobile-title {
   font-weight: 800;
   color: #fff;
-  font-size: 16px;
+  font-size: 14px;
   letter-spacing: 1px;
 }
 
-/* TOPBAR DESKTOP */
 .clo-topbar {
-  height: 70px;
+  height: 50px;
   background: #C0182A;
   display: flex;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 16px;
   color: #fff;
   position: sticky;
   top: 0;
   z-index: 1000;
-  gap: 16px;
+  gap: 12px;
 }
 
 .clo-topbar-toggle {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   color: #fff;
 }
 
 .clo-topbar h1 {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   margin: 0;
 }
 
 /* KONTEN UTAMA */
 .clo-content {
-  padding: 24px;
+  padding: 16px;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -110,21 +113,22 @@
 }
 
 @media (max-width: 640px) {
-  .clo-content { padding: 16px; }
+  .clo-content {
+    padding: 12px;
+  }
 }
 
-/* HEADER HALAMAN */
 .clo-page-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .clo-page-title {
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 800;
   color: #111827;
   margin: 0;
@@ -133,12 +137,12 @@
 .clo-btn-add {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  border-radius: 6px;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 4px;
   background: #C0182A;
   color: #fff;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   border: none;
   cursor: pointer;
@@ -150,56 +154,106 @@
   background: #A01423;
 }
 
-/* KOTAK KONTEN (CARD) - TEMA MAHASISWA BIMBINGAN */
+/* TAB NAVIGATION */
+.clo-tab-wrap {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.clo-tab-btn {
+  padding: 6px 12px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.clo-tab-btn.active {
+  background: #C0182A;
+  color: #fff;
+}
+
+/* KOTAK KONTEN (CARD) */
 .clo-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   overflow: hidden;
 }
 
-/* FILTER & PENCARIAN */
+/* FILTER BAR */
 .clo-filter-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
   background: #ffffff;
 }
 
 .clo-search-wrap {
   position: relative;
   flex: 1;
+  min-width: 200px;
 }
 
 .clo-search-icon {
   position: absolute;
-  left: 14px;
+  left: 10px;
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
+  width: 14px;
+  height: 14px;
   pointer-events: none;
 }
 
 .clo-search-input {
   width: 100%;
-  padding: 9px 14px 9px 38px;
+  padding: 6px 10px 6px 28px;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: 4px;
+  font-size: 11px;
   color: #1e293b;
   outline: none;
   background: #ffffff;
   box-sizing: border-box;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s;
 }
 
 .clo-search-input:focus {
   border-color: #c0182a;
 }
 
-/* TABEL THEME MAHASISWA BIMBINGAN */
+.clo-prodi-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clo-select {
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  font-size: 11px;
+  color: #1e293b;
+  background: #fff;
+  outline: none;
+}
+
+.clo-select:focus {
+  border-color: #c0182a;
+}
+
+/* TABEL COMPACT */
 .clo-table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -209,36 +263,31 @@
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  min-width: 900px;
-  font-size: 13px;
+  min-width: 850px;
+  font-size: 11px;
   text-align: left;
 }
 
-/* LEBAR KOLOM */
-.col-no { width: 5%; text-align: center; }
-.col-clo { width: 18%; }
-.col-sub { width: 32%; }
-.col-asesmen { width: 22%; }
-.col-bobot { width: 8%; text-align: center; }
-.col-status { width: 9%; text-align: center; }
-.col-aksi { width: 6%; text-align: center; }
+.col-no { width: 4%; text-align: center; }
+.col-clo { width: 22%; }
+.col-sub { width: 31%; }
+.col-asesmen { width: 33%; }
+.col-aksi { width: 10%; text-align: center; }
 
-/* HEADER TABEL */
 .clo-table th {
   background-color: #f8fafc;
   color: #64748b;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 12px 16px;
+  letter-spacing: 0.3px;
+  padding: 8px 10px;
   border-top: 1px solid #f1f5f9;
-  border-bottom: 1px solid #e2e8f0; /* Garis tipis bersih standar */
+  border-bottom: 1px solid #e2e8f0;
 }
 
-/* BARIS KONTEN TABEL */
 .clo-table tbody tr {
-  border-bottom: 1px solid #e2e8f0; /* Garis tipis bersih standar */
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .clo-table tbody tr:last-child {
@@ -246,168 +295,291 @@
 }
 
 .clo-table td {
-  padding: 14px 16px;
-  font-size: 13px;
+  padding: 8px 10px;
+  font-size: 11px;
   color: #1e293b;
-  vertical-align: middle; /* Middle alignment standar */
+  vertical-align: top;
 }
 
 .clo-table tbody tr:hover {
   background-color: #f8fafc;
 }
 
+/* TEKS TABEL & TAGS */
+.clo-no {
+  font-weight: 600;
+  color: #64748b;
+}
+
 .clo-text-bold {
   font-weight: 600;
   color: #0f172a;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  font-size: 11.5px;
 }
 
 .clo-text-muted {
-  font-size: 12px;
+  font-size: 10.5px;
   color: #64748b;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
-/* SUB-GROUP BORDER LURUS & RAPI */
-.col-sub-group {
-  padding: 0 !important;
-  vertical-align: top !important;
+.clo-parent-hint {
+  font-size: 10px;
+  color: #64748b;
+  font-style: italic;
+  display: block;
 }
 
-.clo-sub-row-item {
-  display: flex;
-  align-items: stretch;
-  width: 100%;
-  border-bottom: 1px solid #e2e8f0; /* Mempertahankan garis tipis lurus */
+.clo-prodi-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #1e293b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 4px 6px;
+  border-radius: 4px;
+  display: inline-block;
 }
 
-.clo-sub-row-item:last-child {
+.clo-badge-pending {
+  font-size: 9.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 700;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.clo-badge-action {
+  font-size: 9.5px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 600;
+}
+
+.clo-action-wrap {
+  margin-top: 3px;
+}
+
+/* SUB ITEM (APPROVED TAB) */
+.clo-list-item {
+  padding: 0 0 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.clo-list-item:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
   border-bottom: none;
-}
-
-/* Sel Sub CLO */
-.col-sub-cell {
-  flex: 32;
-  padding: 14px 16px;
-  border-right: 1px solid #f1f5f9; /* Border pembatas vertikal sangat soft */
-  box-sizing: border-box;
-}
-
-/* Sel Asesmen */
-.col-asesmen-cell {
-  flex: 22;
-  padding: 14px 16px;
-  border-right: 1px solid #f1f5f9;
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-}
-
-/* Sel Bobot */
-.col-bobot-cell {
-  flex: 8;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
 }
 
 .clo-sub-title {
   font-weight: 600;
   color: #1e293b;
-  font-size: 12.5px;
+  font-size: 11px;
 }
 
 .clo-sub-desc {
   color: #64748b;
-  font-size: 12px;
-  margin-top: 4px;
-  line-height: 1.4;
+  font-size: 10.5px;
+  margin-top: 2px;
+  line-height: 1.2;
 }
 
-/* BADGE STATUS */
-.clo-status-badge {
-  display: inline-flex;
-  padding: 5px 12px;
-  border-radius: 999px;
+.clo-dash {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 10.5px;
+}
+
+.clo-asm-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 0 5px;
+  margin-bottom: 5px;
+  border-bottom: 1px dashed #e2e8f0;
+  color: #1e293b;
   font-size: 11px;
+}
+
+.clo-asm-bobot {
+  font-weight: 700;
+  color: #c0182a;
+  white-space: nowrap;
+}
+
+.clo-asm-total {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 10.5px;
+  color: #64748b;
+  padding-top: 2px;
+}
+
+/* CHILD CARD (PENDING TAB) */
+.clo-child-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 6px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.clo-child-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.clo-child-content {
+  flex: 1;
+}
+
+.clo-child-actions {
+  margin-left: 6px;
+}
+
+.clo-child-asm-title {
+  font-size: 11px;
+  color: #334155;
   font-weight: 600;
-  letter-spacing: 0.3px;
 }
 
-.clo-status-badge.active {
-  background-color: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+.clo-child-asm-bobot {
+  margin: 3px 0;
 }
 
-.clo-status-badge.review {
-  background-color: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-}
-
-/* TOMBOL AKSI (ICON PENCIL) */
-.col-aksi {
-  vertical-align: middle !important;
-}
-
-.clo-btn-icon {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
+/* TOMBOL AKSI (EDIT/DELETE NORMAL) */
+.clo-aksi-wrap {
+  display: flex;
+  gap: 4px;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+}
+
+.clo-btn-edit-text {
+  background: none;
+  border: none;
+  padding: 2px 4px;
   cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.clo-btn-icon:hover {
-  background: #f8fafc;
   color: #c0182a;
-  border-color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 600;
 }
 
-/* PAGINATION FOOTER - TEMA MAHASISWA BIMBINGAN */
+.clo-btn-edit-text:hover {
+  text-decoration: underline;
+}
+
+.clo-btn-delete {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+}
+
+.clo-btn-delete:hover {
+  color: #b91c1c;
+}
+
+/* ACTION BUTTONS (APPROVAL/REJECT/CANCEL) */
+.clo-action-btn-group {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.clo-action-btn-group.compact {
+  gap: 4px;
+}
+
+.clo-btn-action {
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s;
+}
+
+.clo-btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.clo-btn-action.normal {
+  padding: 4px 8px;
+  border-radius: 4px;
+  gap: 4px;
+  font-size: 10.5px;
+}
+
+.clo-btn-action.compact {
+  padding: 3px;
+  border-radius: 4px;
+}
+
+.clo-btn-action.accept {
+  background: #16a34a;
+  color: #fff;
+}
+
+.clo-btn-action.reject {
+  background: #dc2626;
+  color: #fff;
+}
+
+.clo-btn-action.cancel {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+/* PAGINATION FOOTER */
 .clo-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 8px 14px;
   border-top: 1px solid #e2e8f0;
   background: #ffffff;
 }
 
 .clo-page-info {
-  font-size: 12.5px;
+  font-size: 10.5px;
   color: #64748b;
 }
 
 .clo-pagination-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .clo-btn-page {
-  min-width: 32px;
-  height: 32px;
+  min-width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 4px;
   background: #ffffff;
   color: #475569;
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s;
 }
 
 .clo-btn-page:hover:not(:disabled) {
@@ -432,70 +604,141 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 56px 20px;
+  gap: 8px;
+  padding: 30px 14px;
   color: #64748b;
 }
 
 .clo-empty-text {
-  font-size: 13px;
+  font-size: 11px;
 }
 
-/* ==========================================================
-   PERBAIKAN (revisi)
-   ========================================================== */
-
-/* overflow pada parent membuat position:sticky topbar tidak berfungsi.
-   Scroll horizontal sudah ditangani .clo-table-wrap */
-.clo-main { overflow-x: clip; }
-.clo-page-wrapper { overflow-x: visible; }
-
-/* Lebar kolom baru (5 kolom, Bobot digabung ke Jenis Asesmen) */
-.col-no { width: 5%; text-align: center; }
-.col-clo { width: 22%; }
-.col-sub { width: 30%; }
-.col-asesmen { width: 33%; }
-.col-aksi { width: 10%; text-align: center; }
-
-.clo-table td { vertical-align: top; }
-.clo-no { font-weight: 600; color: #64748b; }
-
-/* Filter bar (menggantikan inline style) */
-.clo-filter-bar { flex-wrap: wrap; }
-.clo-search-wrap { min-width: 240px; }
-.clo-prodi-filter { display: flex; align-items: center; gap: 8px; }
-.clo-select {
-  padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1;
-  font-size: 13.5px; color: #1e293b; background: #fff; outline: none;
-}
-.clo-select:focus { border-color: #c0182a; }
-
-.clo-prodi-tag {
-  display: inline-block; margin-top: 6px; padding: 2px 6px; border-radius: 4px;
-  font-size: 11px; color: #64748b; background: #f1f5f9;
+/* MODAL STYLES (Dipindahkan dari Inline) */
+.clo-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
 }
 
-/* Sub CLO & asesmen: dua daftar independen */
-.clo-list-item { padding: 0 0 10px; margin-bottom: 10px; border-bottom: 1px dashed #e2e8f0; }
-.clo-list-item:last-child { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
-.clo-dash { color: #9ca3af; font-style: italic; }
-
-.clo-asm-item {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
-  padding: 0 0 8px; margin-bottom: 8px; border-bottom: 1px dashed #e2e8f0; color: #1e293b;
-}
-.clo-asm-bobot { font-weight: 700; color: #c0182a; white-space: nowrap; }
-.clo-asm-total {
-  display: flex; justify-content: flex-end; gap: 6px;
-  font-size: 12px; color: #64748b; padding-top: 2px;
+.clo-modal-box {
+  background-color: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
 }
 
-/* Aksi */
-.clo-aksi-wrap { display: flex; gap: 8px; align-items: center; justify-content: center; }
-.clo-btn-edit-text {
-  background: none; border: none; padding: 4px 6px; cursor: pointer;
-  color: #c0182a; font-size: 13px; font-weight: 600;
+.clo-modal-box.large {
+  max-width: 450px;
 }
-.clo-btn-edit-text:hover { text-decoration: underline; }
-.clo-btn-delete { background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; display: inline-flex; }
-.clo-btn-delete:hover { color: #b91c1c; }
+
+.clo-modal-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.clo-modal-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clo-modal-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.clo-modal-body {
+  padding: 16px 20px;
+  font-size: 12.5px;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.clo-modal-footer {
+  padding: 12px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.clo-btn-modal-cancel {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 11.5px;
+}
+
+.clo-btn-modal-confirm {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  background: #16a34a;
+  color: #fff;
+  font-weight: 600;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.clo-btn-modal-danger {
+  background: #dc2626;
+}
+
+.clo-form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+.clo-form-req {
+  color: red;
+}
+
+.clo-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.clo-form-note {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+/* ALERT STYLES (Dipindahkan dari Inline) */
+.clo-alert-wrapper {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 99999;
+  width: 280px;
+}

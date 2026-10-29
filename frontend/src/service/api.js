@@ -1002,15 +1002,48 @@ export const deleteCLO = async (id) => {
   const response = await api.delete(`/api/clo/${id}`);
   return response.data;
 };
+// ----------------- SUB CLO -----------------
+export const getSubCLOs = async (params) => {
+  const response = await api.get('/api/subclo', { params });
+  return response.data?.data ?? response.data;
+};
 
 export const createSubCLO = async (payload) => {
+  // Payload: { name, description, cloProdiId }
   const response = await api.post('/api/subclo', payload);
+  return response.data;
+};
+
+export const updateSubCLO = async (id, payload) => {
+  const response = await api.put(`/api/subclo/${id}`, payload);
+  return response.data;
+};
+
+export const deleteSubCLO = async (id) => {
+  const response = await api.delete(`/api/subclo/${id}`);
+  return response.data;
+};
+
+// ----------------- JENIS ASESMEN -----------------
+export const getJenisAsesmen = async (params) => {
+  const response = await api.get('/api/jenis-asesmen', { params });
   return response.data?.data ?? response.data;
 };
 
 export const createJenisAsesmen = async (payload) => {
+  // Payload: { content, bobot, cloProdiId }
   const response = await api.post('/api/jenis-asesmen', payload);
-  return response.data?.data ?? response.data;
+  return response.data;
+};
+
+export const updateJenisAsesmen = async (id, payload) => {
+  const response = await api.put(`/api/jenis-asesmen/${id}`, payload);
+  return response.data;
+};
+
+export const deleteJenisAsesmen = async (id) => {
+  const response = await api.delete(`/api/jenis-asesmen/${id}`);
+  return response.data;
 };
 
 // ----------------- APPROVAL REQUESTS (CLO) -----------------
