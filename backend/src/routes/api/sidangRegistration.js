@@ -10,6 +10,7 @@ import {
   submitSidangSchema,
   approveSidangSchema,
   rejectSidangSchema,
+  cekKelompokCapstoneQuerySchema,
 } from "../../schemas/sidangSchema.js";
 import {
   listSidangRegistrations,
@@ -24,6 +25,7 @@ import {
   approveSidangRegistration,
   rejectSidangRegistration,
   toggleLockSidangRegistration,
+  cekKelompokCapstone,
 } from "../../controllers/sidangRegistrationController.js";
 
 /**
@@ -108,6 +110,58 @@ router.get(
   verifyToken,
   validate(listSidangQuerySchema, "query"),
   listSidangRegistrations,
+);
+
+/**
+ * @swagger
+ * /api/sidang-registrations/cek-kelompok-capstone:
+ *   get:
+ *     summary: Cek anggota kelompok capstone berdasarkan judul tugas akhir pada periode pendaftaran aktif
+ *     tags: [Sidang Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: judul
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Judul tugas akhir Capstone yang dicari (Bahasa Indonesia atau Inggris).
+ *         example: Rancang Bangun Sistem Monitoring IoT
+ *     responses:
+ *       200:
+ *         description: Data kelompok capstone berhasil diambil
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Data kelompok capstone berhasil diambil
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                         example: N**** D**** M******
+ *                       nim:
+ *                         type: string
+ *                         example: "*******019"
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token
+ */
+router.get(
+  "/cek-kelompok-capstone",
+  verifyToken,
+  validate(cekKelompokCapstoneQuerySchema, "query"),
+  cekKelompokCapstone,
 );
 
 /**

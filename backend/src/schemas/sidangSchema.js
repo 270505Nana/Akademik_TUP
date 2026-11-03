@@ -220,3 +220,13 @@ export const rejectSidangSchema = z.object({
     .optional()
     .nullable(),
 });
+
+/**
+ * Schema untuk Query Parameter Cek Kelompok Capstone (GET /api/sidang-registrations/cek-kelompok-capstone)
+ */
+export const cekKelompokCapstoneQuerySchema = z.object({
+  judul: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string({ error: "Parameter judul wajib diisi" }).min(1, "Parameter judul wajib diisi")
+  ),
+});

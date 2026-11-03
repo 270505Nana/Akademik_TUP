@@ -181,3 +181,17 @@ export const toggleLockSidangRegistration = asyncHandler(async (req, res) => {
     data: result.data,
   });
 });
+
+
+/**
+ * Cek Anggota Kelompok Capstone berdasarkan Judul pada Periode Pendaftaran Aktif
+ * GET /api/sidang-registrations/cek-kelompok-capstone?judul=...
+ */
+export const cekKelompokCapstone = asyncHandler(async (req, res) => {
+  const { judul } = req.query;
+  const data = await sidangRegistrationService.cekKelompokCapstone({ judul });
+  res.json({
+    message: "Data kelompok capstone berhasil diambil",
+    data,
+  });
+});

@@ -1196,3 +1196,141 @@ export const toggleLockSidangRegistration = async (id, req) => {
     data: mapSidangRegistrationToFrontend(updatedRegistration, req),
   };
 };
+
+
+/**
+ * Helper untuk menyensor nama mahasiswa:
+ * Setiap kata disensor kecuali huruf pertama tiap kata.
+ * Contoh: "Nizar Daffa Maulana" -> "N**** D**** M******"
+ */
+export const maskMahasiswaName = (name) => {
+  if (!name || typeof name !== "string") return "";
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word) => {
+      if (word.length <= 1) return word;
+      return word[0] + "*".repeat(word.length - 1);
+    })
+    .join(" ");
+};
+
+/**
+ * Helper untuk menyensor NIM mahasiswa:
+ * Disensor kecuali 3 digit terakhir.
+ * Contoh: "1202200019" -> "*******019"
+ */
+export const maskMahasiswaNim = (nim) => {
+  if (!nim || typeof nim !== "string") return "";
+  const trimmed = nim.trim();
+  if (trimmed.length <= 3) {
+    return "*".repeat(trimmed.length);
+  }
+  return "*".repeat(trimmed.length - 3) + trimmed.slice(-3);
+};
+
+/**
+ * Cek anggota kelompok Capstone berdasarkan judul tugas akhir pada periode pendaftaran aktif
+ * GET /api/sidang-registrations/cek-kelompok-capstone?judul=...
+ */
+export const cekKelompokCapstone = async ({ judul }) => {
+  if (!judul || typeof judul !== "string" || judul.trim() === "") {
+    const error = new Error("Parameter judul wajib diisi");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const trimmedJudul = judul.trim();
+
+  // Cari periode pendaftaran yang sedang aktif (isOpen: true)
+  const activePeriod = await prisma.sidangPeriod.findFirst({
+    where: {
+      category: "pendaftaran",
+      isOpen: true,
+      deletedAt: null,
+    },
+  });
+
+  if (!activePeriod) {
+    return [];
+  }
+
+  // Base where condition: dalam periode pendaftaran aktif, skema Capstone, dan belum dihapus
+  const baseWhere = {
+    deletedAt: null,
+    sidangRegistrationPeriodId: activePeriod.id,
+    OR: [
+      {
+        skemaSidangFinal: {
+          equals: "Capstone",
+          mode: "insensitive",
+        },
+      },
+      {
+        OR: [{ skemaSidangFinal: null }, { skemaSidangFinal: "" }],
+        skemaSidang: {
+          equals: "Capstone",
+          mode: "insensitive",
+        },
+      },
+    ],
+  };
+
+  // Prioritas 1: Cari pendaftaran dengan judulTugasAkhirIndonesia
+  let registrations = await prisma.sidangRegistration.findMany({
+    where: {
+      ...baseWhere,
+      judulTugasAkhirIndonesia: {
+        equals: trimmedJudul,
+        mode: "insensitive",
+      },
+    },
+    include: {
+      mahasiswa: {
+        include: {
+          user: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  // Prioritas 2: Jika tidak ditemukan, fallback cari dengan judulTugasAkhirInggris
+  if (!registrations || registrations.length === 0) {
+    registrations = await prisma.sidangRegistration.findMany({
+      where: {
+        ...baseWhere,
+        judulTugasAkhirInggris: {
+          equals: trimmedJudul,
+          mode: "insensitive",
+        },
+      },
+      include: {
+        mahasiswa: {
+          include: {
+            user: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+  }
+
+  // Map & sensor data mahasiswa
+  const result = (registrations || [])
+    .filter((reg) => reg.mahasiswa)
+    .map((reg) => {
+      const rawName = reg.mahasiswa.name || reg.mahasiswa.user?.name || "";
+      const rawNim = reg.mahasiswa.nim || "";
+      return {
+        name: maskMahasiswaName(rawName),
+        nim: maskMahasiswaNim(rawNim),
+      };
+    });
+
+  return result;
+};
