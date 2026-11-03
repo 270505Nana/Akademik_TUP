@@ -179,6 +179,7 @@ export const setPengujiSidang = async ({
       tglSidang: registration.tglSidang,
       dosenIds: [dosenPenguji1Id, dosenPenguji2Id],
       isCapstone: isCapstoneScheme(registration),
+      targetRegistration: registration,
     });
 
     if (conflictMessage) {
@@ -273,6 +274,7 @@ export const batchSetPengujiSidang = async (items) => {
       const reg = registrationMap.get(item.id);
       return {
         ...item,
+        registration: reg,
         isCapstone: isCapstoneScheme(reg),
         tglSidang: reg.tglSidang,
         mahasiswaName: reg.mahasiswa?.name || "Mahasiswa",
@@ -291,10 +293,12 @@ export const batchSetPengujiSidang = async (items) => {
   // 2. Validasi bentrok dengan data lain di database
   for (const item of scheduledItems) {
     const conflictMessage = await checkJadwalConflict({
+      registrationId: item.id,
       excludeRegistrationIds: registrationIds,
       tglSidang: item.tglSidang,
       dosenIds: [item.dosenPenguji1Id, item.dosenPenguji2Id],
       isCapstone: item.isCapstone,
+      targetRegistration: item.registration,
     });
 
     if (conflictMessage) {
@@ -361,6 +365,7 @@ export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
     ruanganSidangId,
     dosenIds: involvedDosenIds,
     isCapstone: isCapstoneScheme(registration),
+    targetRegistration: registration,
   });
 
   if (conflictMessage) {
@@ -434,6 +439,7 @@ export const batchSetJadwalSidang = async (items) => {
     const reg = registrationMap.get(item.id);
     return {
       ...item,
+      registration: reg,
       isCapstone: isCapstoneScheme(reg),
       mahasiswaName: reg.mahasiswa?.name || "Mahasiswa",
       involvedDosenIds: [
@@ -456,11 +462,13 @@ export const batchSetJadwalSidang = async (items) => {
   // 2. Validasi bentrok dengan jadwal lain di database
   for (const item of itemsWithMeta) {
     const conflictMessage = await checkJadwalConflict({
+      registrationId: item.id,
       excludeRegistrationIds: registrationIds,
       tglSidang: item.tglSidang,
       ruanganSidangId: item.ruanganSidangId,
       dosenIds: item.involvedDosenIds,
       isCapstone: item.isCapstone,
+      targetRegistration: item.registration,
     });
 
     if (conflictMessage) {
@@ -650,6 +658,7 @@ export const setPengujiJadwalSidang = async ({
     ruanganSidangId,
     dosenIds: involvedDosenIds,
     isCapstone: isCapstoneScheme(registration),
+    targetRegistration: registration,
   });
 
   if (conflictMessage) {
