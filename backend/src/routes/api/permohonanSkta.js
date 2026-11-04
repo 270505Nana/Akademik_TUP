@@ -737,6 +737,8 @@ router.post(
  *   get:
  *     summary: Download generated Dokumen Validasi SKTA file
  *     tags: [Permohonan SKTA]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: berkasId
@@ -746,7 +748,13 @@ router.post(
  *     responses:
  *       200:
  *         description: File downloaded successfully
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Invalid token atau Akses ditolak
+ *       404:
+ *         description: File dokumen tidak ditemukan
  */
-router.get("/download/validasi/:berkasId", downloadValidasi);
+router.get("/download/validasi/:berkasId", verifyToken, downloadValidasi);
 
 export default router;

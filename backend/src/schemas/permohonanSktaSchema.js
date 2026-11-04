@@ -77,7 +77,19 @@ export const savePermohonanSktaDraftSchema = z
   .refine((data) => data.id || data.mahasiswaId, {
     message: "mahasiswaId atau id permohonan wajib diisi untuk menyimpan draft",
     path: ["mahasiswaId"],
-  });
+  })
+  .refine(
+    (data) => {
+      if (data.dosenPembimbing1Id && data.dosenPembimbing2Id) {
+        return data.dosenPembimbing1Id !== data.dosenPembimbing2Id;
+      }
+      return true;
+    },
+    {
+      message: "Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama",
+      path: ["dosenPembimbing2Id"],
+    }
+  );
 
 /**
  * Schema untuk Submit Permohonan SKTA (POST /api/permohonan-skta/submit)
@@ -113,19 +125,39 @@ export const submitPermohonanSktaSchema = z.object({
     "ID Dosen Pembimbing 2 tidak valid"
   ),
   researchGroupId: optionalUuid("ID Kelompok Riset tidak valid"),
-});
+})
+  .refine(
+    (data) => data.dosenPembimbing1Id !== data.dosenPembimbing2Id,
+    {
+      message: "Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama",
+      path: ["dosenPembimbing2Id"],
+    }
+  );
 
 /**
  * Schema untuk Update Permohonan SKTA (PUT /api/permohonan-skta/:id)
  * Digunakan untuk mahasiswa memperbarui isian judul atau pembimbing saat masa revisi/edit.
  */
-export const updatePermohonanSktaSchema = z.object({
-  judulProposalIndonesia: optionalTrimmedString(),
-  judulProposalInggris: optionalTrimmedString(),
-  dosenPembimbing1Id: optionalTrimmedString(),
-  dosenPembimbing2Id: optionalTrimmedString(),
-  researchGroupId: optionalUuid("ID Kelompok Riset tidak valid"),
-});
+export const updatePermohonanSktaSchema = z
+  .object({
+    judulProposalIndonesia: optionalTrimmedString(),
+    judulProposalInggris: optionalTrimmedString(),
+    dosenPembimbing1Id: optionalTrimmedString(),
+    dosenPembimbing2Id: optionalTrimmedString(),
+    researchGroupId: optionalUuid("ID Kelompok Riset tidak valid"),
+  })
+  .refine(
+    (data) => {
+      if (data.dosenPembimbing1Id && data.dosenPembimbing2Id) {
+        return data.dosenPembimbing1Id !== data.dosenPembimbing2Id;
+      }
+      return true;
+    },
+    {
+      message: "Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama",
+      path: ["dosenPembimbing2Id"],
+    }
+  );
 
 /**
  * Schema untuk Approve Permohonan SKTA (PUT /api/permohonan-skta/:id/approve)

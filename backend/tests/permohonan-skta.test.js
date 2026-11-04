@@ -4,7 +4,8 @@ import request from "supertest";
 import jwt from "jsonwebtoken";
 import app from "../src/app.js";
 import prisma from "../src/config/prisma.js";
-import { listPermohonanSktaQuerySchema } from "../src/schemas/permohonanSktaSchema.js";
+import { listPermohonanSktaQuerySchema, submitPermohonanSktaSchema, savePermohonanSktaDraftSchema } from "../src/schemas/permohonanSktaSchema.js";
+import { calculatePermohonanStatus } from "../src/mappers/permohonanSktaMapper.js";
 import * as permohonanSktaService from "../src/services/permohonanSktaService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "akademiktup";
@@ -77,6 +78,19 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
           startDate: "2020-01-01",
         })
       ).toThrowError("Rentang tanggal createdAt maksimal 6 bulan");
+    });
+
+    it("menolak submit jika dosenPembimbing1Id dan dosenPembimbing2Id bernilai sama", () => {
+      expect(() =>
+        submitPermohonanSktaSchema.parse({
+          id: "11111111-1111-1111-1111-111111111111",
+          mahasiswaId: "22222222-2222-2222-2222-222222222222",
+          judulProposalIndonesia: "Judul",
+          judulProposalInggris: "Title",
+          dosenPembimbing1Id: "dosen-1",
+          dosenPembimbing2Id: "dosen-1",
+        })
+      ).toThrowError(/Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama/i);
     });
   });
 
@@ -209,6 +223,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
       expect(result).toBeDefined();
       expect(result.id).toBe("skta-other");
     });
+  });
 
   // ===============================================================
   // SEKSI 3: Integration Testing HTTP Endpoint (GET /api/permohonan-skta)
@@ -422,6 +437,147 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
       expect(res.status).toBe(200);
       expect(res.body.data.id).toBe("skta-any");
     });
+  });
+
+  // ===============================================================
+  // SEKSI 4: Unit Testing Mapper & Status Calculation
+  // ===============================================================
+  describe("Mapper: calculatePermohonanStatus", () => {
+    it("menghasilkan 'Draft' untuk permohonan baru yang belum disubmit", () => {
+      expect(calculatePermohonanStatus({ isDraft: true })).toBe("Draft");
+    });
+
+    it("menghasilkan 'Perlu Revisi' jika isDraft true dan memiliki izin edit aktif", () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 3);
+      expect(
+        calculatePermohonanStatus({ isDraft: true, isEdit: futureDate })
+      ).toBe("Perlu Revisi");
+    });
+
+    it("menghasilkan 'Menunggu Persetujuan' jika isDraft false dan belum ada SKTA", () => {
+      expect(
+        calculatePermohonanStatus({ isDraft: false, sktaUploadPath: null })
+      ).toBe("Menunggu Persetujuan");
+    });
+
+    it("menghasilkan 'Disetujui' jika sudah ada file sktaUploadPath", () => {
+      expect(
+        calculatePermohonanStatus({
+          isDraft: false,
+          sktaUploadPath: "/uploads/skta.pdf",
+        })
+      ).toBe("Disetujui");
+    });
+
+    it("menghasilkan 'Ditolak' jika ditolak tanpa izin edit aktif", () => {
+      expect(
+        calculatePermohonanStatus({
+          isDraft: false,
+          wasRejectedBefore: true,
+          isEdit: null,
+        })
+      ).toBe("Ditolak");
+    });
+  });
+
+  // ===============================================================
+  // SEKSI 5: Validasi File MIME & Soft Delete Checks
+  // ===============================================================
+  describe("Service: MIME & Soft Delete Checks", () => {
+    it("validateEvidenceFile menolak MIME type yang tidak diizinkan", () => {
+      expect(() =>
+        permohonanSktaService.validateEvidenceFile({
+          mimetype: "application/x-executable",
+        })
+      ).toThrowError(/Tipe file evidence tidak valid/i);
+    });
+
+    it("validateSktaFile menolak MIME type non-PDF", () => {
+      expect(() =>
+        permohonanSktaService.validateSktaFile({
+          mimetype: "image/png",
+        })
+      ).toThrowError(/Tipe file SKTA tidak valid/i);
+    });
+
+    it("getPermohonanSktaById mengabaikan permohonan yang sudah di-soft-delete", async () => {
+      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue(null);
+      const result = await permohonanSktaService.getPermohonanSktaById("deleted-id", adminToken);
+      expect(result).toBeNull();
+    });
+  });
+
+  // ===============================================================
+  // SEKSI 6: IDOR Protection on Endpoints
+  // ===============================================================
+  describe("HTTP Integration: IDOR & Security Access Control", () => {
+    const studentToken = jwt.sign(
+      { id: "student-user-1", role: "MAHASISWA", email: "student1@test.ac.id" },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    it("TC-SKTA-SEC-001: Mahasiswa ditolak (403) melihat detail permohonan SKTA milik mahasiswa lain via GET /:id", async () => {
+      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue({
+        id: "skta-other-user",
+        mahasiswaId: "other-mhs-uuid",
+        isDraft: false,
+      });
+      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
+        id: "student-mhs-1",
+        userId: "student-user-1",
+      });
+
+      const res = await request(app)
+        .get("/api/permohonan-skta/skta-other-user")
+        .set("Authorization", `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toMatch(/Akses ditolak/i);
+    });
+
+    it("TC-SKTA-SEC-002: Mahasiswa ditolak (403) mengunduh file SKTA milik mahasiswa lain", async () => {
+      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue({
+        id: "skta-other-user",
+        mahasiswaId: "other-mhs-uuid",
+        sktaUploadPath: "some/path.pdf",
+      });
+      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
+        id: "student-mhs-1",
+        userId: "student-user-1",
+      });
+
+      const res = await request(app)
+        .get("/api/permohonan-skta/skta-other-user/download/skta")
+        .set("Authorization", `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toMatch(/Akses ditolak/i);
+    });
+
+    it("TC-SKTA-SEC-003: Mahasiswa ditolak (403) mengunduh file evidence milik mahasiswa lain", async () => {
+      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue({
+        id: "skta-other-user",
+        mahasiswaId: "other-mhs-uuid",
+        evidenceUploadPath: "some/evidence.pdf",
+      });
+      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
+        id: "student-mhs-1",
+        userId: "student-user-1",
+      });
+
+      const res = await request(app)
+        .get("/api/permohonan-skta/skta-other-user/download/evidence")
+        .set("Authorization", `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toMatch(/Akses ditolak/i);
+    });
+
+    it("TC-SKTA-SEC-004: GET /download/validasi/:berkasId menolak request tanpa token (401)", async () => {
+      const res = await request(app).get("/api/permohonan-skta/download/validasi/some-berkas-id");
+      expect(res.status).toBe(401);
     });
   });
 });

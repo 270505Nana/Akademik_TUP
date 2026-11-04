@@ -1,8 +1,36 @@
+/**
+ * Menghitung status terpadu permohonan SKTA untuk kebutuhan frontend
+ */
+export const calculatePermohonanStatus = (item) => {
+  if (!item) return null;
+  if (item.isDraft) {
+    if (item.isEdit && new Date(item.isEdit) > new Date()) {
+      return "Perlu Revisi";
+    }
+    if (item.wasRejectedBefore) {
+      return "Perlu Revisi";
+    }
+    return "Draft";
+  }
+
+  if (item.sktaUploadPath) {
+    return "Disetujui";
+  }
+
+  if (item.wasRejectedBefore && (!item.isEdit || new Date(item.isEdit) <= new Date())) {
+    return "Ditolak";
+  }
+
+  return "Menunggu Persetujuan";
+};
+
 export const mapPermohonanToFrontend = (item, req) => {
   if (!item) return null;
   return {
     id: item.id,
     createdAt: item.createdAt,
+    status: calculatePermohonanStatus(item),
+    isDraft: item.isDraft ?? false,
     category: item.category,
     mahasiswaId: item.mahasiswaId,
     judulProposalIndonesia: item.judulProposalIndonesia,
