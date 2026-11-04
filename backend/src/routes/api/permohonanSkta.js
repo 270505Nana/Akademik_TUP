@@ -71,19 +71,26 @@ import {
  *           type: string
  *         description: Search keyword across student name, NIM, and proposal titles
  *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: "2026-01-01"
+ *         description: Filter tanggal mulai pembuatan (createdAt). Rentang maksimal 6 bulan. Jika tidak diisi, default mengambil 6 bulan terakhir.
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: "2026-06-30"
+ *         description: Filter tanggal akhir pembuatan (createdAt). Rentang maksimal 6 bulan.
+ *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [createdAt, updatedAt, expDate, judulProposalIndonesia, category]
- *           default: createdAt
- *         description: Sort field
- *       - in: query
- *         name: sortOrder
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *           default: desc
- *         description: Sort direction
+ *           enum: [newest, oldest]
+ *           default: newest
+ *         description: Sort option (newest atau oldest berdasarkan createdAt)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -346,14 +353,14 @@ router.post(
  *         required: false
  *         schema:
  *           type: string
- *         description: Mahasiswa ID or User ID (UUID). If omitted, falls back to current login user.
+ *         description: Mahasiswa ID or User ID (UUID). Jika role MAHASISWA, hanya dapat mengakses data miliknya sendiri.
  *     responses:
  *       200:
  *         description: Latest Permohonan SKTA data retrieved successfully
  *       401:
  *         description: Token not found
  *       403:
- *         description: Invalid token
+ *         description: Invalid token atau Akses ditolak (Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri)
  *       404:
  *         description: Permohonan SKTA data not found
  */

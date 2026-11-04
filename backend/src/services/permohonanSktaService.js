@@ -122,7 +122,15 @@ export const resolveAdmin = async (adminId, currentUser) => {
  */
 export const getPermohonanSktas = async (query = {}, customWhere = {}) => {
   const paginationParams = getPaginationParams(query);
-  const { mahasiswaId, studyProgramId, category, search, sortBy, sortOrder } = query;
+  const {
+    mahasiswaId,
+    studyProgramId,
+    category,
+    search,
+    sortBy,
+    startDate,
+    endDate,
+  } = query;
 
   const where = {
     deletedAt: null,
@@ -139,6 +147,29 @@ export const getPermohonanSktas = async (query = {}, customWhere = {}) => {
     ],
     ...customWhere,
   };
+
+  // Filter rentang createdAt (maksimal 6 bulan, default 6 bulan terakhir jika tidak ada filter)
+  if (customWhere.createdAt) {
+    where.createdAt = customWhere.createdAt;
+  } else if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) {
+      where.createdAt.gte = new Date(startDate);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      if (typeof endDate === "string" && !endDate.includes("T")) {
+        end.setHours(23, 59, 59, 999);
+      }
+      where.createdAt.lte = end;
+    }
+  } else {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    where.createdAt = {
+      gte: sixMonthsAgo,
+    };
+  }
 
   if (mahasiswaId) {
     where.mahasiswaId = mahasiswaId;
@@ -170,9 +201,10 @@ export const getPermohonanSktas = async (query = {}, customWhere = {}) => {
     ];
   }
 
-  const sortField = (sortBy || "createdAt").trim();
-  const sortDir = (sortOrder || "desc").toLowerCase() === "asc" ? "asc" : "desc";
-  const orderBy = { [sortField]: sortDir };
+  // Sorting: newest (desc) atau oldest (asc) berdasarkan createdAt sesuai standar /api/sidang-registrations
+  const sortParam = (sortBy || "").toLowerCase().trim();
+  const orderBy =
+    sortParam === "oldest" ? { createdAt: "asc" } : { createdAt: "desc" };
 
   const [total, data] = await Promise.all([
     prisma.permohonanSkta.count({ where }),
@@ -201,14 +233,45 @@ export const getPermohonanSktaById = async (id) => {
 /**
  * Mengambil permohonan SKTA terbaru berdasarkan ID Mahasiswa atau User ID
  */
-export const getLatestPermohonanByMahasiswaId = async (idOrUserId) => {
+export const getLatestPermohonanByMahasiswaId = async (
+  idOrUserId,
+  currentUser
+) => {
   if (!idOrUserId) return null;
 
-  let resolvedMahasiswaId = idOrUserId;
+  const normalizedId = String(idOrUserId).trim();
+
+  // Authorization Check: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri
+  if (currentUser?.role?.toUpperCase() === "MAHASISWA") {
+    let isOwner = normalizedId === currentUser.id;
+    if (!isOwner) {
+      const studentRecord = await prisma.mahasiswa.findFirst({
+        where: {
+          userId: currentUser.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      if (studentRecord && studentRecord.id === normalizedId) {
+        isOwner = true;
+      }
+    }
+
+    if (!isOwner) {
+      const error = new Error(
+        "Akses ditolak: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+
+  let resolvedMahasiswaId = normalizedId;
 
   const student = await prisma.mahasiswa.findFirst({
     where: {
-      OR: [{ id: idOrUserId }, { userId: idOrUserId }],
+      OR: [{ id: normalizedId }, { userId: normalizedId }],
       deletedAt: null,
     },
   });
@@ -221,7 +284,7 @@ export const getLatestPermohonanByMahasiswaId = async (idOrUserId) => {
     where: {
       OR: [
         { mahasiswaId: resolvedMahasiswaId },
-        { mahasiswa: { userId: idOrUserId } },
+        { mahasiswa: { userId: normalizedId } },
       ],
       deletedAt: null,
     },

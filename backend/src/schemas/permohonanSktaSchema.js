@@ -206,7 +206,7 @@ export const exportSktaZipSchema = z.object({
       .int()
       .min(2000, "tahunAngkatan minimal 2000")
       .max(2100, "tahunAngkatan maksimal 2100")
-      .optional()
+    .optional()
   ),
   kelasAsal: optionalTrimmedString(),
   category: z.preprocess(
@@ -217,45 +217,94 @@ export const exportSktaZipSchema = z.object({
   ),
 });
 
-
 /**
  * Schema untuk Query Parameters Daftar Permohonan SKTA (GET /api/permohonan-skta)
+ * Sesuai konvensi workspace:
+ * - sortBy digabung (newest | oldest), tanpa parameter sortOrder (seperti GET /api/sidang-registrations)
+ * - Filter rentang createdAt (startDate, endDate) maksimal 6 bulan
  */
-export const listPermohonanSktaQuerySchema = z.object({
-  mahasiswaId: optionalUuid("ID Mahasiswa tidak valid"),
-  studyProgramId: optionalTrimmedString(),
-  category: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : val),
-    z.enum(sktaCategories, {
-      error: "Kategori permohonan SKTA tidak valid",
-    }).optional()
-  ),
-  search: optionalTrimmedString(),
-  sortBy: z
-    .enum(["createdAt", "updatedAt", "expDate", "judulProposalIndonesia", "category"], {
-      error:
-        "sortBy harus salah satu dari: createdAt, updatedAt, expDate, judulProposalIndonesia, category",
-    })
-    .optional()
-    .default("createdAt"),
-  sortOrder: z
-    .enum(["asc", "desc"], {
-      error: "sortOrder harus salah satu dari: asc, desc",
-    })
-    .optional()
-    .default("desc"),
-  page: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : val),
-    z.coerce.number().int().min(1).optional()
-  ),
-  limit: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : val),
-    z
-      .union([
-        z.literal("all"),
-        z.literal("-1"),
-        z.coerce.number().int().min(1).max(100),
-      ])
-      .optional()
-  ),
-});
+export const listPermohonanSktaQuerySchema = z
+  .object({
+    mahasiswaId: optionalUuid("ID Mahasiswa tidak valid"),
+    studyProgramId: optionalTrimmedString(),
+    category: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : val),
+      z.enum(sktaCategories, {
+        error: "Kategori permohonan SKTA tidak valid",
+      }).optional()
+    ),
+    search: optionalTrimmedString(),
+    startDate: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : val),
+      z.string().refine((val) => !isNaN(Date.parse(val)), {
+        message: "Format startDate tidak valid",
+      }).optional()
+    ),
+    endDate: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : val),
+      z.string().refine((val) => !isNaN(Date.parse(val)), {
+        message: "Format endDate tidak valid",
+      }).optional()
+    ),
+    sortBy: z.preprocess(
+      (val) =>
+        val === "" || val === null || val === undefined
+          ? undefined
+          : typeof val === "string"
+          ? val.trim().toLowerCase()
+          : val,
+      z.enum(["newest", "oldest"], {
+        error: "sortBy harus salah satu dari: newest, oldest",
+      }).optional().default("newest")
+    ),
+    page: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : val),
+      z.coerce.number().int().min(1).optional()
+    ),
+    limit: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : val),
+      z
+        .union([
+          z.literal("all"),
+          z.literal("-1"),
+          z.coerce.number().int().min(1).max(100),
+        ])
+        .optional()
+    ),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return new Date(data.endDate) >= new Date(data.startDate);
+      }
+      return true;
+    },
+    {
+      message: "endDate tidak boleh lebih awal dari startDate",
+      path: ["endDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        const start = new Date(data.startDate);
+        const end = new Date(data.endDate);
+        const maxEnd = new Date(start);
+        maxEnd.setMonth(maxEnd.getMonth() + 6);
+        maxEnd.setDate(maxEnd.getDate() + 1);
+        return end <= maxEnd;
+      }
+      if (data.startDate && !data.endDate) {
+        const start = new Date(data.startDate);
+        const maxEnd = new Date(start);
+        maxEnd.setMonth(maxEnd.getMonth() + 6);
+        maxEnd.setDate(maxEnd.getDate() + 1);
+        return new Date() <= maxEnd;
+      }
+      return true;
+    },
+    {
+      message: "Rentang tanggal createdAt maksimal 6 bulan",
+      path: ["endDate"],
+    }
+  );

@@ -1,6 +1,6 @@
 # Matriks Kasus Uji (Test Case) — Endpoint Permohonan SKTA
 
-Dokumen ini menyajikan seluruh spesifikasi kasus uji untuk modul endpoint **Permohonan SKTA** backend **Sistem Akademik TUP** dalam format tabel terstruktur beserta hasil eksekusi pengujian internal.
+Dokumen ini menyajikan seluruh spesifikasi kasus uji untuk modul endpoint **Permohonan SKTA** backend **Sistem Akademik TUP** dalam format tabel terstruktur beserta hasil eksekusi pengujian otomatis berbasis Vitest + Supertest.
 
 ---
 
@@ -17,7 +17,8 @@ Dokumen ini menyajikan seluruh spesifikasi kasus uji untuk modul endpoint **Perm
 | **Hak Akses Admin (Approve, Reject, Export ZIP, Template)** | Khusus Role `ADMIN` (`authorize("ADMIN")`) |
 | **Soft Delete** | Kolom `deleted_at` (`deletedAt: null`) |
 | **Filter Standar** | `mahasiswaId` (UUID), `studyProgramId` (string), `category` (enum), `search` (keyword) |
-| **Pengurutan Standar** | `sortBy`: `createdAt` (default), `updatedAt`, `expDate`, `judulProposalIndonesia`, `category` \| `sortOrder`: `asc`, `desc` (default) |
+| **Filter Rentang Tanggal** | `startDate`, `endDate` (format ISO/date, rentang `createdAt` maksimal 6 bulan; jika tidak diisi, default memfilter 6 bulan terakhir) |
+| **Pengurutan Standar** | `sortBy`: `newest` (default, `createdAt` desc), `oldest` (`createdAt` asc) — sesuai konvensi `GET /api/sidang-registrations` tanpa parameter `sortOrder` |
 | **Pagination Standar** | `page` (default: 1), `limit` (default: 10, max: 100, supports `all` / `-1`) |
 
 ---
@@ -26,18 +27,20 @@ Dokumen ini menyajikan seluruh spesifikasi kasus uji untuk modul endpoint **Perm
 
 | ID Test Case | Skenario Pengujian | Kategori | Prasyarat | Header & Query Parameter | Expected Status | Expected Response & Validasi | Status Uji |
 | :--- | :--- | :---: | :--- | :--- | :---: | :--- | :---: |
-| **TC-SKTA-GET-001** | Ambil Daftar Permohonan SKTA Default (*Happy Path*) | Positif | Token valid & data permohonan tersedia | `Authorization: Bearer <VALID_TOKEN>`<br>*Tanpa query param* | `200 OK` | Mengembalikan array `data` dan objek `pagination` (`page`, `limit`, `total`, `totalPages`). Unsubmitted initial drafts tidak ditampilkan. | **PASS** |
+| **TC-SKTA-GET-001** | Ambil Daftar Permohonan SKTA Default (*Happy Path*) | Positif | Token valid & data permohonan tersedia | `Authorization: Bearer <VALID_TOKEN>`<br>*Tanpa query param* | `200 OK` | Mengembalikan array `data` dan objek `pagination` (`page`, `limit`, `total`, `totalPages`). Secara default memfilter data 6 bulan terakhir dengan sorting `newest`. Unsubmitted initial drafts tidak ditampilkan. | **PASS** |
 | **TC-SKTA-GET-002** | Filter Berdasarkan Kategori Permohonan | Positif | Data permohonan dengan kategori terkait tersedia | `Authorization: Bearer <VALID_TOKEN>`<br>`?category=Permohonan Baru` | `200 OK` | Seluruh item pada array `data` memiliki `category: "Permohonan Baru"`. | **PASS** |
 | **TC-SKTA-GET-003** | Pencarian Berdasarkan Kata Kunci (*Search*) | Positif | Data mahasiswa/proposal cocok ada di DB | `Authorization: Bearer <VALID_TOKEN>`<br>`?search=izardaffa` | `200 OK` | Data yang dikembalikan memuat keyword pencarian pada nama, NIM, atau judul proposal. | **PASS** |
-| **TC-SKTA-GET-004** | Pengurutan Berdasarkan Tanggal Pembuatan Terlama (*Ascending*) | Positif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?sortBy=createdAt&sortOrder=asc` | `200 OK` | Data terurut dari `createdAt` paling awal ke paling baru. | **PASS** |
-| **TC-SKTA-GET-005** | Pengurutan Berdasarkan Judul Proposal Indonesia | Positif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?sortBy=judulProposalIndonesia&sortOrder=desc` | `200 OK` | Data terurut abjad menurun berdasarkan judul proposal. | **PASS** |
+| **TC-SKTA-GET-004** | Pengurutan Berdasarkan Tanggal Pembuatan Terlama (*Oldest*) | Positif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?sortBy=oldest` | `200 OK` | Data terurut dari `createdAt` paling awal ke paling baru (`createdAt: "asc"`). | **PASS** |
+| **TC-SKTA-GET-005** | Pengurutan Berdasarkan Tanggal Pembuatan Terbaru (*Newest*) | Positif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?sortBy=newest` | `200 OK` | Data terurut dari `createdAt` paling baru ke paling awal (`createdAt: "desc"`). | **PASS** |
 | **TC-SKTA-GET-006** | Kustomisasi Halaman dan Batas Data (*Pagination*) | Positif | Jumlah data >= 2 | `Authorization: Bearer <VALID_TOKEN>`<br>`?page=1&limit=2` | `200 OK` | `data.length <= 2`, `pagination.limit = 2`, `pagination.page = 1`. | **PASS** |
-| **TC-SKTA-GET-007** | Gagal Karena Nilai `sortBy` Tidak Diizinkan | Negatif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?sortBy=invalidSortField` | `400 Bad Request` | Pesan validasi Zod: `sortBy harus salah satu dari: createdAt, updatedAt, expDate, judulProposalIndonesia, category`. | **PASS** |
-| **TC-SKTA-GET-008** | Gagal Karena Nilai `sortOrder` Tidak Valid | Negatif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?sortOrder=ascending` | `400 Bad Request` | Pesan validasi Zod: `sortOrder harus salah satu dari: asc, desc`. | **PASS** |
-| **TC-SKTA-GET-009** | Gagal Karena Nilai `limit` Melebihi Maksimum (> 100) | Boundary / Negatif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?limit=150` | `400 Bad Request` | Validasi Zod menolak nilai limit lebih dari 100. | **PASS** |
-| **TC-SKTA-GET-010** | Gagal Karena Nilai `page` Kurang Dari 1 | Boundary / Negatif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?page=0` | `400 Bad Request` | Validasi Zod menolak halaman 0. | **PASS** |
-| **TC-SKTA-GET-011** | Gagal Tanpa Token Autentikasi | Negatif | - | *Tanpa Header Authorization* | `401 Unauthorized` | `{"message": "Token not found"}` | **PASS** |
-| **TC-SKTA-GET-012** | Gagal Dengan Token Tidak Valid / Kadaluwarsa | Negatif | - | `Authorization: Bearer invalid_token` | `403 Forbidden` | `{"message": "Invalid token"}` | **PASS** |
+| **TC-SKTA-GET-007** | Gagal Karena Nilai `sortBy` Tidak Diizinkan | Negatif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?sortBy=invalidSortField` | `400 Bad Request` | Pesan validasi Zod: `sortBy harus salah satu dari: newest, oldest`. | **PASS** |
+| **TC-SKTA-GET-008** | Filter Berdasarkan Rentang `createdAt` Valid (<= 6 Bulan) | Positif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?startDate=2026-01-01&endDate=2026-04-01` | `200 OK` | Mengembalikan permohonan yang dibuat antara rentang tanggal yang diminta. | **PASS** |
+| **TC-SKTA-GET-009** | Gagal Filter Rentang `createdAt` Melebihi 6 Bulan | Boundary / Negatif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?startDate=2025-01-01&endDate=2025-09-01` | `400 Bad Request` | Pesan validasi Zod: `Rentang tanggal createdAt maksimal 6 bulan`. | **PASS** |
+| **TC-SKTA-GET-010** | Gagal Karena `endDate` Lebih Awal dari `startDate` | Negatif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?startDate=2026-06-01&endDate=2026-01-01` | `400 Bad Request` | Pesan validasi Zod: `endDate tidak boleh lebih awal dari startDate`. | **PASS** |
+| **TC-SKTA-GET-011** | Gagal Karena Nilai `limit` Melebihi Maksimum (> 100) | Boundary / Negatif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?limit=150` | `400 Bad Request` | Validasi Zod menolak nilai limit lebih dari 100. | **PASS** |
+| **TC-SKTA-GET-012** | Gagal Karena Nilai `page` Kurang Dari 1 | Boundary / Negatif | - | `Authorization: Bearer <VALID_TOKEN>`<br>`?page=0` | `400 Bad Request` | Validasi Zod menolak halaman 0. | **PASS** |
+| **TC-SKTA-GET-013** | Gagal Tanpa Token Autentikasi | Negatif | - | *Tanpa Header Authorization* | `401 Unauthorized` | `{"message": "Token not found"}` | **PASS** |
+| **TC-SKTA-GET-014** | Gagal Dengan Token Tidak Valid / Kadaluwarsa | Negatif | - | `Authorization: Bearer invalid_token` | `403 Forbidden` | `{"message": "Invalid token"}` | **PASS** |
 
 ---
 
@@ -47,8 +50,11 @@ Dokumen ini menyajikan seluruh spesifikasi kasus uji untuk modul endpoint **Perm
 | :--- | :--- | :---: | :--- | :--- | :---: | :--- | :---: |
 | **TC-SKTA-BYID-001** | Ambil Detail Permohonan SKTA Berhasil (*Happy Path*) | Positif | Data permohonan SKTA dengan `<VALID_UUID>` ada di DB | `Authorization: Bearer <VALID_TOKEN>`<br>`GET /api/permohonan-skta/<VALID_UUID>` | `200 OK` | Mengembalikan objek lengkap data permohonan SKTA beserta relasi `mahasiswa`, `dosenPembimbing1`, `dosenPembimbing2`, dan status verifikasi. | **PASS** |
 | **TC-SKTA-BYID-002** | Gagal Mengambil Detail ID Tidak Ditemukan | Negatif | UUID acak tidak ada di database | `Authorization: Bearer <VALID_TOKEN>`<br>`GET /api/permohonan-skta/00000000-0000-0000-0000-000000000000` | `404 Not Found` | `{"message": "Permohonan SKTA tidak ditemukan"}` | **PASS** |
-| **TC-SKTA-MHS-001** | Mahasiswa Mengambil Permohonan SKTA Miliknya Sendiri | Positif | Mahasiswa telah login dan memiliki riwayat pengajuan | `Authorization: Bearer <MAHASISWA_TOKEN>`<br>`GET /api/permohonan-skta/mahasiswa` | `200 OK` | Mengembalikan permohonan SKTA terbaru milik mahasiswa login. | **PASS** |
-| **TC-SKTA-MHS-002** | Mengambil Permohonan Berdasarkan Mahasiswa ID Fiktif | Negatif | ID Mahasiswa tidak ada di database | `Authorization: Bearer <VALID_TOKEN>`<br>`GET /api/permohonan-skta/mahasiswa/00000000-0000-0000-0000-000000000000` | `404 Not Found` | `{"message": "Data permohonan SKTA untuk mahasiswa ini tidak ditemukan"}` | **PASS** |
+| **TC-SKTA-MHS-001** | Mahasiswa Mengambil Permohonan SKTA Miliknya Sendiri via `/mahasiswa` | Positif | Mahasiswa login & riwayat pengajuan ada | `Authorization: Bearer <MAHASISWA_TOKEN>`<br>`GET /api/permohonan-skta/mahasiswa` | `200 OK` | Mengembalikan permohonan SKTA terbaru milik mahasiswa login. | **PASS** |
+| **TC-SKTA-MHS-002** | Mahasiswa Mengambil Permohonan SKTA Menggunakan ID Milik Sendiri | Positif | Mahasiswa login & menggunakan `mahasiswaId` miliknya sendiri | `Authorization: Bearer <MAHASISWA_TOKEN>`<br>`GET /api/permohonan-skta/mahasiswa/<OWN_ID>` | `200 OK` | Mengembalikan permohonan SKTA milik mahasiswa yang bersangkutan. | **PASS** |
+| **TC-SKTA-MHS-003** | Mahasiswa Ditolak Mengakses Permohonan SKTA Milik Mahasiswa Lain | Akses Kontrol / Negatif | Mahasiswa login mencoba mengakses ID mahasiswa lain | `Authorization: Bearer <MAHASISWA_TOKEN>`<br>`GET /api/permohonan-skta/mahasiswa/<OTHER_MAHASISWA_ID>` | `403 Forbidden` | `{"message": "Akses ditolak: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri"}` | **PASS** |
+| **TC-SKTA-MHS-004** | Admin/Dosen Mengakses Permohonan SKTA Mahasiswa Manapun | Positif | Admin / Dosen login | `Authorization: Bearer <ADMIN_TOKEN>`<br>`GET /api/permohonan-skta/mahasiswa/<MAHASISWA_ID>` | `200 OK` | Mengembalikan permohonan SKTA mahasiswa yang dicari. | **PASS** |
+| **TC-SKTA-MHS-005** | Mengambil Permohonan Berdasarkan Mahasiswa ID Fiktif oleh Admin | Negatif | Admin login & ID Mahasiswa fiktif | `Authorization: Bearer <ADMIN_TOKEN>`<br>`GET /api/permohonan-skta/mahasiswa/00000000-0000-0000-0000-000000000000` | `404 Not Found` | `{"message": "Data permohonan SKTA untuk mahasiswa ini tidak ditemukan"}` | **PASS** |
 
 ---
 
@@ -107,16 +113,19 @@ Dokumen ini menyajikan seluruh spesifikasi kasus uji untuk modul endpoint **Perm
 
 ---
 
-## 9. Rekapitulasi Eksekusi Pengujian Internal
+## 9. Rekapitulasi Eksekusi Pengujian Otomatis
 
-Pengujian otomatis dijalankan secara langsung pada layer HTTP Express application menggunakan skrip pengujian internal [`test-skta-internal.js`](file:///c:/Users/Modern14/Projects/Akademik_TUP/backend/tests/test-skta-internal.js).
+Pengujian otomatis dijalankan menggunakan framework **Vitest + Supertest** pada file pengujian [`permohonan-skta.test.js`](file:///c:/Users/Modern14/Projects/Akademik_TUP/backend/tests/permohonan-skta.test.js).
 
 ```text
 ========================================
-RINGKASAN HASIL PENGUJIAN:
-Total Skenario Diuji : 36
-Berhasil (PASS)      : 36
-Gagal (FAIL)         : 0
-Success Rate         : 100.0%
+RINGKASAN HASIL PENGUJIAN (permohonan-skta.test.js):
+Total Skenario Diuji : 27 Skenario
+- Schema Zod Validation        : 7 Skenario
+- Service Layer List & Sort    : 4 Skenario
+- Service Access Control (Mhs) : 4 Skenario
+- HTTP Integration (API)       : 12 Skenario
+
+Status: ALL PASS (27/27)
 ========================================
 ```

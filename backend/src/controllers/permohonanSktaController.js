@@ -162,7 +162,10 @@ const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
     throw new Error("ID mahasiswa atau sesi login tidak valid");
   }
 
-  const data = await permohonanSktaService.getLatestPermohonanByMahasiswaId(targetId);
+  const data = await permohonanSktaService.getLatestPermohonanByMahasiswaId(
+    targetId,
+    req.user
+  );
 
   if (!data) {
     res.status(404);
