@@ -45,6 +45,18 @@ const router = express.Router();
  *         schema:
  *           type: string
  *         description: ID Periode Sidang. Jika dikosongkan, otomatis memfilter data pada periode sidang yang saat ini aktif.
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Keyword pencarian untuk nama mahasiswa, NIM, atau judul tugas akhir
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [newest, oldest]
+ *           default: newest
+ *         description: Sort option (newest atau oldest berdasarkan createdAt)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -70,6 +82,18 @@ const router = express.Router();
  *                         format: date-time
  *                       mahasiswa:
  *                         type: object
+ *                       judulTugasAkhirIndonesia:
+ *                         type: string
+ *                         nullable: true
+ *                       judulTugasAkhirInggris:
+ *                         type: string
+ *                         nullable: true
+ *                       skemaSidang:
+ *                         type: string
+ *                         nullable: true
+ *                       skemaSidangFinal:
+ *                         type: string
+ *                         nullable: true
  *                       dosenPembimbing1:
  *                         type: object
  *                       dosenPembimbing2:
@@ -91,6 +115,9 @@ const router = express.Router();
  *                       isPublished:
  *                         type: boolean
  *                         description: Publish status of sidang schedule to mahasiswa
+ *                       isInfoPenjadwalanReaded:
+ *                         type: boolean
+ *                         description: Status baca info penjadwalan oleh mahasiswa
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
@@ -105,6 +132,7 @@ router.get("/", verifyToken, authorize("ADMIN", "DOSEN_KETUAKK"), listPenjadwala
  * /api/penjadwalan-sidang/{id}/toggle-lock:
  *   patch:
  *     summary: Toggle lock status of sidang registration (Admin only)
+ *     description: Mengunci atau membuka status penguncian sidang. Status isLocked ditujukan khusus untuk membatasi dosen/Ketua KK agar tidak dapat mengubah penguji setelah dikunci.
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -183,8 +211,6 @@ router.patch(
   togglePublishSidangPeriod,
 );
 
-
-
 /**
  * @swagger
  * /api/penjadwalan-sidang/{id}/toggle-read-info-penjadwalan:
@@ -257,6 +283,7 @@ router.get("/export", verifyToken, authorize("ADMIN", "DOSEN_KETUAKK"), exportJa
  * /api/penjadwalan-sidang/set-penguji/batch:
  *   put:
  *     summary: Set dosen penguji sidang batch (Ketua KK only)
+ *     description: Menentukan dosen penguji secara massal. Dosen pembimbing tidak dapat menjadi dosen penguji. Tindakan dibatasi jika pendaftaran dikunci atau periode telah dipublikasikan.
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -297,7 +324,7 @@ router.get("/export", verifyToken, authorize("ADMIN", "DOSEN_KETUAKK"), exportJa
  *                   items:
  *                     type: object
  *       400:
- *         description: Validation error / Jadwal bentrok / Sidang terkunci
+ *         description: Validation error / Jadwal bentrok / Sidang terkunci / Penguji merangkap pembimbing
  *       401:
  *         description: Token not found
  *       403:
@@ -318,6 +345,7 @@ router.put(
  * /api/penjadwalan-sidang/set-jadwal/batch:
  *   put:
  *     summary: Set jadwal sidang batch (Admin only)
+ *     description: Menentukan jadwal sidang secara massal oleh Admin. Admin tidak dibatasi oleh isLocked.
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -380,6 +408,7 @@ router.put(
  * /api/penjadwalan-sidang/{id}/set-penguji:
  *   put:
  *     summary: Set dosen penguji sidang (Ketua KK only)
+ *     description: Menentukan dosen penguji satu pendaftaran sidang oleh Ketua KK. Dosen pembimbing tidak dapat menjadi dosen penguji. Tindakan ditolak jika sidang terkunci atau telah dipublikasikan.
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -419,7 +448,7 @@ router.put(
  *                 data:
  *                   type: object
  *       400:
- *         description: Validation error / Sidang terkunci
+ *         description: Validation error / Sidang terkunci / Penguji merangkap pembimbing
  *       401:
  *         description: Token not found
  *       403:
@@ -440,6 +469,7 @@ router.put(
  * /api/penjadwalan-sidang/{id}/set-jadwal:
  *   put:
  *     summary: Set jadwal sidang (Admin only)
+ *     description: Menentukan jadwal sidang satu pendaftaran oleh Admin. Admin tidak dibatasi oleh isLocked.
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -480,7 +510,7 @@ router.put(
  *                 data:
  *                   type: object
  *       400:
- *         description: Validation error
+ *         description: Validation error / Jadwal bentrok
  *       401:
  *         description: Token not found
  *       403:
@@ -501,6 +531,7 @@ router.put(
  * /api/penjadwalan-sidang/{id}/set-penguji-jadwal:
  *   put:
  *     summary: Set dosen penguji dan jadwal sidang sekaligus (Admin only)
+ *     description: Menentukan dosen penguji dan jadwal sidang sekaligus oleh Admin. Admin tidak dibatasi oleh isLocked, namun dosen penguji tidak boleh sama dengan dosen pembimbing.
  *     tags: [Penjadwalan Sidang]
  *     security:
  *       - bearerAuth: []
@@ -549,7 +580,7 @@ router.put(
  *                 data:
  *                   type: object
  *       400:
- *         description: Validation error / Jadwal bentrok
+ *         description: Validation error / Jadwal bentrok / Penguji merangkap pembimbing
  *       401:
  *         description: Token not found
  *       403:

@@ -15,6 +15,8 @@ const listPenjadwalanSidang = asyncHandler(async (req, res) => {
       user: req.user,
       dosen: req.dosen,
       sidangPeriodId: req.query.sidangPeriodId,
+      search: req.query.search,
+      sortBy: req.query.sortBy,
       ...paginationParams,
     });
 
@@ -54,6 +56,7 @@ const batchSetPengujiSidang = asyncHandler(async (req, res) => {
 });
 
 // Set Jadwal Sidang (Admin Only)
+// Catatan: Admin tidak dibatasi oleh isLocked (isLocked khusus untuk membatasi Ketua KK)
 const setJadwalSidang = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { tglSidang, ruanganSidangId } = req.body;
@@ -71,6 +74,7 @@ const setJadwalSidang = asyncHandler(async (req, res) => {
 });
 
 // Set Jadwal Sidang Batch (Admin Only)
+// Catatan: Admin tidak dibatasi oleh isLocked (isLocked khusus untuk membatasi Ketua KK)
 const batchSetJadwalSidang = asyncHandler(async (req, res) => {
   const updatedRegistrations =
     await penjadwalanSidangService.batchSetJadwalSidang(req.body);
@@ -102,6 +106,7 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
 });
 
 // Toggle Lock Sidang Registration (Admin Only)
+// Digunakan oleh admin untuk mengunci pendaftaran agar dosen/Ketua KK tidak dapat lagi mengubah penguji
 const toggleLockSidangRegistration = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -117,6 +122,7 @@ const toggleLockSidangRegistration = asyncHandler(async (req, res) => {
 });
 
 // Set Dosen Penguji dan Jadwal Sidang Sekaligus (Admin Only)
+// Catatan: Admin tidak dibatasi oleh isLocked (isLocked khusus untuk membatasi Ketua KK)
 const setPengujiJadwalSidang = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { dosenPenguji1Id, dosenPenguji2Id, tglSidang, ruanganSidangId } =

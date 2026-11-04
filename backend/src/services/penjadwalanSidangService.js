@@ -41,11 +41,14 @@ export const penjadwalanSidangInclude = {
 
 /**
  * Mendapatkan daftar penjadwalan sidang (paginated)
+ * Mendukung pencarian keyword (nama mahasiswa, NIM, judul TA) dan pengurutan (newest / oldest)
  */
 export const getPenjadwalanSidangList = async ({
   user,
   dosen,
   sidangPeriodId,
+  search,
+  sortBy,
   skip,
   take,
 }) => {
@@ -76,9 +79,6 @@ export const getPenjadwalanSidangList = async ({
   const where = {
     isDraft: false,
     deletedAt: null,
-    // --- dokumentasi saja kalau di sini juga bisa ada data ini ---
-    // sidangPeriodId = targetPeriodId
-    // dosenPembimbing1
   };
 
   if (targetPeriodId) {
@@ -104,7 +104,26 @@ export const getPenjadwalanSidangList = async ({
     };
   }
 
-  console.log("where.dosenPembimbing1", where.dosenPembimbing1);
+  // Filter pencarian: nama mahasiswa, NIM, atau judul tugas akhir (Indonesia / Inggris)
+  if (search && typeof search === "string" && search.trim() !== "") {
+    const searchTerm = search.trim();
+    where.AND = [
+      ...(where.AND || []),
+      {
+        OR: [
+          { judulTugasAkhirIndonesia: { contains: searchTerm, mode: "insensitive" } },
+          { judulTugasAkhirInggris: { contains: searchTerm, mode: "insensitive" } },
+          { mahasiswa: { name: { contains: searchTerm, mode: "insensitive" } } },
+          { mahasiswa: { nim: { contains: searchTerm, mode: "insensitive" } } },
+        ],
+      },
+    ];
+  }
+
+  // Sorting: newest (desc) atau oldest (asc) berdasarkan createdAt sesuai standar /api/sidang-registrations
+  const sortParam = (sortBy || "").toLowerCase().trim();
+  const orderBy =
+    sortParam === "oldest" ? { createdAt: "asc" } : { createdAt: "desc" };
 
   const [total, registrations] = await Promise.all([
     prisma.sidangRegistration.count({ where }),
@@ -113,9 +132,7 @@ export const getPenjadwalanSidangList = async ({
       skip,
       take,
       include: penjadwalanSidangInclude,
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy,
     }),
   ]);
 
@@ -123,7 +140,7 @@ export const getPenjadwalanSidangList = async ({
 };
 
 /**
- * Menentukan dosen penguji sidang untuk satu pendaftaran
+ * Menentukan dosen penguji sidang untuk satu pendaftaran (Ketua KK Only)
  */
 export const setPengujiSidang = async ({
   id,
@@ -134,6 +151,7 @@ export const setPengujiSidang = async ({
     where: { id },
     include: {
       sidangPeriod: true,
+      mahasiswa: true,
     },
   });
 
@@ -143,9 +161,27 @@ export const setPengujiSidang = async ({
     throw error;
   }
 
+  // Catatan: Pengecekan isLocked & isPublished secara khusus membatasi role Dosen / Ketua KK
   if (registration.isLocked || registration.sidangPeriod?.isPublished) {
     const error = new Error(
       "Pendaftaran sidang telah dikunci atau telah dipublikasikan oleh admin. Dosen penguji tidak dapat diubah.",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Validasi: Dosen pembimbing tidak boleh ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri
+  const pembimbingIds = [
+    registration.dosenPembimbing1Id,
+    registration.dosenPembimbing2Id,
+  ].filter(Boolean);
+
+  if (
+    pembimbingIds.includes(dosenPenguji1Id) ||
+    pembimbingIds.includes(dosenPenguji2Id)
+  ) {
+    const error = new Error(
+      "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri",
     );
     error.statusCode = 400;
     throw error;
@@ -201,7 +237,7 @@ export const setPengujiSidang = async ({
 };
 
 /**
- * Menentukan dosen penguji sidang untuk multiple pendaftaran (batch)
+ * Menentukan dosen penguji sidang untuk multiple pendaftaran (batch) (Ketua KK Only)
  */
 export const batchSetPengujiSidang = async (items) => {
   const registrationIds = Array.from(new Set(items.map((item) => item.id)));
@@ -229,6 +265,7 @@ export const batchSetPengujiSidang = async (items) => {
     }
   }
 
+  // Catatan: Pengecekan isLocked & isPublished secara khusus membatasi role Dosen / Ketua KK
   const lockedRegistrations = registrations.filter(
     (reg) => reg.isLocked || reg.sidangPeriod?.isPublished,
   );
@@ -241,6 +278,27 @@ export const batchSetPengujiSidang = async (items) => {
     );
     error.statusCode = 400;
     throw error;
+  }
+
+  // Validasi: Dosen pembimbing tidak boleh ditugaskan sebagai dosen penguji
+  for (const item of items) {
+    const reg = registrationMap.get(item.id);
+    const pembimbingIds = [
+      reg.dosenPembimbing1Id,
+      reg.dosenPembimbing2Id,
+    ].filter(Boolean);
+
+    if (
+      pembimbingIds.includes(item.dosenPenguji1Id) ||
+      pembimbingIds.includes(item.dosenPenguji2Id)
+    ) {
+      const mhsName = reg.mahasiswa?.name || reg.id;
+      const error = new Error(
+        `Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri (${mhsName})`,
+      );
+      error.statusCode = 400;
+      throw error;
+    }
   }
 
   const allDosenIds = new Set();
@@ -327,7 +385,9 @@ export const batchSetPengujiSidang = async (items) => {
 };
 
 /**
- * Menentukan jadwal sidang (tanggal dan ruangan) untuk satu pendaftaran
+ * Menentukan jadwal sidang (tanggal dan ruangan) untuk satu pendaftaran (Admin Only)
+ * Catatan: Endpoint ini hanya untuk Admin. Admin tidak dibatasi oleh status isLocked
+ * (status isLocked secara khusus ditujukan untuk membatasi Ketua KK agar tidak mengubah penguji).
  */
 export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
   const registration = await prisma.sidangRegistration.findUnique({
@@ -386,7 +446,8 @@ export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
 };
 
 /**
- * Menentukan jadwal sidang (tanggal dan ruangan) untuk multiple pendaftaran (batch)
+ * Menentukan jadwal sidang (tanggal dan ruangan) untuk multiple pendaftaran (batch) (Admin Only)
+ * Catatan: Endpoint ini hanya untuk Admin. Admin tidak dibatasi oleh status isLocked.
  */
 export const batchSetJadwalSidang = async (items) => {
   const registrationIds = Array.from(new Set(items.map((item) => item.id)));
@@ -571,6 +632,7 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
 
 /**
  * Toggle kunci pendaftaran sidang oleh admin
+ * Mengunci pendaftaran agar dosen/Ketua KK tidak dapat mengubah susunan dosen penguji
  */
 export const toggleLockSidangRegistration = async (id) => {
   const registration = await prisma.sidangRegistration.findUnique({
@@ -594,6 +656,8 @@ export const toggleLockSidangRegistration = async (id) => {
 
 /**
  * Menentukan dosen penguji dan jadwal sidang (tanggal dan ruangan) sekaligus untuk satu pendaftaran (Admin Only)
+ * Catatan: Endpoint ini diperuntukkan bagi Admin (tidak terikat batasan isLocked).
+ * Namun aturan integritas akademik dosen pembimbing !== dosen penguji tetap berlaku.
  */
 export const setPengujiJadwalSidang = async ({
   id,
@@ -609,6 +673,23 @@ export const setPengujiJadwalSidang = async ({
   if (!registration || registration.deletedAt) {
     const error = new Error("Pendaftaran sidang tidak ditemukan");
     error.statusCode = 404;
+    throw error;
+  }
+
+  // Validasi: Dosen pembimbing tidak boleh ditugaskan sebagai dosen penguji
+  const pembimbingIds = [
+    registration.dosenPembimbing1Id,
+    registration.dosenPembimbing2Id,
+  ].filter(Boolean);
+
+  if (
+    pembimbingIds.includes(dosenPenguji1Id) ||
+    pembimbingIds.includes(dosenPenguji2Id)
+  ) {
+    const error = new Error(
+      "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri",
+    );
+    error.statusCode = 400;
     throw error;
   }
 

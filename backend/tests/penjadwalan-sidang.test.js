@@ -9,7 +9,15 @@ import {
   validateBatchPengujiInternalConflict,
   validateBatchJadwalInternalConflict,
   checkJadwalConflict,
+  formatWibDateTime,
 } from "../src/utils/penjadwalanSidangHelper.js";
+import { mapPenjadwalanSidangToFrontend } from "../src/mappers/penjadwalanMapper.js";
+import {
+  setPengujiSidang,
+  batchSetPengujiSidang,
+  setPengujiJadwalSidang,
+  getPenjadwalanSidangList,
+} from "../src/services/penjadwalanSidangService.js";
 import prisma from "../src/config/prisma.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "akademiktup";
@@ -371,6 +379,212 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
 
       expect(res.status).toBe(403);
       expect(res.body.message).toContain("Access denied");
+    });
+  });
+
+  // ===============================================================
+  // SEKSI 6: Integritas Akademik: Dosen Pembimbing !== Dosen Penguji
+  // ===============================================================
+  describe("Integritas Akademik: Dosen Pembimbing tidak boleh menjadi Penguji", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("TC-PENGUJI-DOSPIN-001: setPengujiSidang menolak jika penguji 1 adalah pembimbing 1", async () => {
+      const mockReg = {
+        id: "reg-1",
+        dosenPembimbing1Id: "dospem-1",
+        dosenPembimbing2Id: "dospem-2",
+        isLocked: false,
+        sidangPeriod: { isPublished: false },
+        mahasiswa: { name: "Budi" },
+      };
+
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(mockReg);
+
+      await expect(
+        setPengujiSidang({
+          id: "reg-1",
+          dosenPenguji1Id: "dospem-1",
+          dosenPenguji2Id: "dosen-lain",
+        })
+      ).rejects.toThrow(
+        "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri"
+      );
+    });
+
+    it("TC-PENGUJI-DOSPIN-002: setPengujiSidang menolak jika penguji 2 adalah pembimbing 2", async () => {
+      const mockReg = {
+        id: "reg-1",
+        dosenPembimbing1Id: "dospem-1",
+        dosenPembimbing2Id: "dospem-2",
+        isLocked: false,
+        sidangPeriod: { isPublished: false },
+        mahasiswa: { name: "Budi" },
+      };
+
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(mockReg);
+
+      await expect(
+        setPengujiSidang({
+          id: "reg-1",
+          dosenPenguji1Id: "dosen-lain",
+          dosenPenguji2Id: "dospem-2",
+        })
+      ).rejects.toThrow(
+        "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri"
+      );
+    });
+
+    it("TC-PENGUJI-DOSPIN-003: batchSetPengujiSidang menolak jika penguji merangkap pembimbing", async () => {
+      const mockRegistrations = [
+        {
+          id: "reg-10",
+          dosenPembimbing1Id: "dospem-10",
+          dosenPembimbing2Id: null,
+          isLocked: false,
+          sidangPeriod: { isPublished: false },
+          mahasiswa: { name: "Siti Rahma" },
+        },
+      ];
+
+      vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue(mockRegistrations);
+
+      await expect(
+        batchSetPengujiSidang([
+          {
+            id: "reg-10",
+            dosenPenguji1Id: "dospem-10",
+            dosenPenguji2Id: "penguji-lain",
+          },
+        ])
+      ).rejects.toThrow(
+        /Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri/
+      );
+    });
+
+    it("TC-PENGUJI-DOSPIN-004: setPengujiJadwalSidang (Admin) menolak jika penguji merangkap pembimbing", async () => {
+      const mockReg = {
+        id: "reg-admin-1",
+        dosenPembimbing1Id: "dospem-1",
+        dosenPembimbing2Id: "dospem-2",
+      };
+
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(mockReg);
+
+      await expect(
+        setPengujiJadwalSidang({
+          id: "reg-admin-1",
+          dosenPenguji1Id: "dospem-1",
+          dosenPenguji2Id: "dosen-lain",
+          tglSidang: "2026-11-20T09:00:00.000Z",
+          ruanganSidangId: "room-1",
+        })
+      ).rejects.toThrow(
+        "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri"
+      );
+    });
+  });
+
+  // ===============================================================
+  // SEKSI 7: Format Waktu Ekspor Excel WIB (Asia/Jakarta)
+  // ===============================================================
+  describe("Helper: formatWibDateTime", () => {
+    it("harus memformat tanggal dan waktu ke standar WIB secara konsisten", () => {
+      // 09:00 WIB sama dengan 02:00 UTC
+      const utcDate = new Date("2026-11-20T02:00:00.000Z");
+      const { formattedDate, formattedTime } = formatWibDateTime(utcDate);
+
+      expect(formattedDate).toBe("20-Nov-26");
+      expect(formattedTime).toBe("09:00");
+    });
+
+    it("harus menangani input null atau tidak valid secara aman", () => {
+      expect(formatWibDateTime(null)).toEqual({ formattedDate: "", formattedTime: "" });
+      expect(formatWibDateTime("invalid-date")).toEqual({ formattedDate: "", formattedTime: "" });
+    });
+  });
+
+  // ===============================================================
+  // SEKSI 8: DTO Mapper (mapPenjadwalanSidangToFrontend)
+  // ===============================================================
+  describe("Mapper: mapPenjadwalanSidangToFrontend", () => {
+    it("harus menyertakan judul tugas akhir dan skema sidang pada response", () => {
+      const mockItem = {
+        id: "reg-map-1",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        judulTugasAkhirIndonesia: "Sistem Pemantauan Cerdas",
+        judulTugasAkhirInggris: "Smart Monitoring System",
+        skemaSidang: "Capstone",
+        skemaSidangFinal: "Capstone",
+        mahasiswa: { id: "mhs-1", name: "Ahmad" },
+        dosenPembimbing1: { id: "d-1", name: "Dosen 1" },
+        dosenPembimbing2: null,
+        dosenPenguji1: null,
+        dosenPenguji2: null,
+        tglSidang: null,
+        ruanganSidang: null,
+        isLocked: false,
+        sidangPeriod: { isPublished: false },
+        isInfoPenjadwalanReaded: true,
+      };
+
+      const mapped = mapPenjadwalanSidangToFrontend(mockItem);
+      expect(mapped.judulTugasAkhirIndonesia).toBe("Sistem Pemantauan Cerdas");
+      expect(mapped.judulTugasAkhirInggris).toBe("Smart Monitoring System");
+      expect(mapped.skemaSidang).toBe("Capstone");
+      expect(mapped.skemaSidangFinal).toBe("Capstone");
+      expect(mapped.isInfoPenjadwalanReaded).toBe(true);
+    });
+
+    it("harus mengembalikan null jika item bernilai falsy", () => {
+      expect(mapPenjadwalanSidangToFrontend(null)).toBeNull();
+    });
+  });
+
+  // ===============================================================
+  // SEKSI 9: Query Parameter (Search & SortBy newest/oldest)
+  // ===============================================================
+  describe("Service: getPenjadwalanSidangList Query Parameter", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("harus menerapkan filter search dan sort newest secara default", async () => {
+      const countSpy = vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
+      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+
+      await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        sidangPeriodId: "period-uuid-1",
+        search: "Smart IoT",
+        sortBy: "newest",
+        skip: 0,
+        take: 10,
+      });
+
+      expect(countSpy).toHaveBeenCalled();
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.sidangPeriodId).toBe("period-uuid-1");
+      expect(findArgs.where.AND).toBeDefined();
+      expect(findArgs.orderBy).toEqual({ createdAt: "desc" });
+    });
+
+    it("harus menerapkan sort oldest ketika sortBy=oldest", async () => {
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
+      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+
+      await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        sidangPeriodId: "period-uuid-1",
+        sortBy: "oldest",
+        skip: 0,
+        take: 10,
+      });
+
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.orderBy).toEqual({ createdAt: "asc" });
     });
   });
 });

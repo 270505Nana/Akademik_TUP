@@ -244,7 +244,42 @@ export const validateBatchJadwalInternalConflict = (itemsWithMeta, ruanganMap) =
 };
 
 /**
- * Membuat Workbook Excel untuk ekspor data jadwal sidang
+ * Format tanggal dan waktu ke standar WIB (Asia/Jakarta)
+ */
+export const formatWibDateTime = (date) => {
+  if (!date) return { formattedDate: "", formattedTime: "" };
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return { formattedDate: "", formattedTime: "" };
+
+  const optionsDate = {
+    timeZone: "Asia/Jakarta",
+    day: "2-digit",
+    month: "short",
+    year: "2-digit",
+  };
+  const optionsTime = {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  };
+
+  const parts = new Intl.DateTimeFormat("en-GB", optionsDate).formatToParts(d);
+  const day = parts.find((p) => p.type === "day")?.value || String(d.getDate()).padStart(2, "0");
+  const month = parts.find((p) => p.type === "month")?.value || "";
+  const year = parts.find((p) => p.type === "year")?.value || String(d.getFullYear()).slice(-2);
+  const formattedDate = `${day}-${month}-${year}`;
+
+  const timeParts = new Intl.DateTimeFormat("en-GB", optionsTime).formatToParts(d);
+  const hours = timeParts.find((p) => p.type === "hour")?.value || "00";
+  const mins = timeParts.find((p) => p.type === "minute")?.value || "00";
+  const formattedTime = `${hours}:${mins}`;
+
+  return { formattedDate, formattedTime };
+};
+
+/**
+ * Membuat Workbook Excel untuk ekspor data jadwal sidang format iGracias
  */
 export const generateJadwalSidangWorkbook = (jadwalList) => {
   const workbook = new excel.Workbook();
@@ -259,24 +294,8 @@ export const generateJadwalSidangWorkbook = (jadwalList) => {
     { header: "PENGUJI II", key: "penguji2", width: 15 },
   ];
 
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
   jadwalList.forEach((jadwal) => {
-    let formattedDate = "";
-    let formattedTime = "";
-
-    if (jadwal.tglSidang) {
-      const d = new Date(jadwal.tglSidang);
-      const day = String(d.getDate()).padStart(2, "0");
-      const month = months[d.getMonth()];
-      const year = String(d.getFullYear()).slice(-2);
-
-      formattedDate = `${day}-${month}-${year}`;
-
-      const hours = String(d.getHours()).padStart(2, "0");
-      const mins = String(d.getMinutes()).padStart(2, "0");
-      formattedTime = `${hours}:${mins}`;
-    }
+    const { formattedDate, formattedTime } = formatWibDateTime(jadwal.tglSidang);
 
     worksheet.addRow({
       nim: jadwal.mahasiswa?.nim || "",
