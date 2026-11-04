@@ -12,6 +12,27 @@ export const isCapstoneScheme = (reg) => {
 };
 
 /**
+ * Helper untuk memeriksa apakah dua pendaftaran sidang merupakan kelompok Capstone yang sama
+ * (Sesama Capstone dan memiliki judul tugas akhir yang sama, case-insensitive & trimmed)
+ */
+export const isSameCapstoneGroup = (regA, regB) => {
+  if (!isCapstoneScheme(regA) || !isCapstoneScheme(regB)) {
+    return false;
+  }
+
+  const judulIndoA = (regA?.judulTugasAkhirIndonesia || "").trim().toLowerCase();
+  const judulIndoB = (regB?.judulTugasAkhirIndonesia || "").trim().toLowerCase();
+
+  const judulEnA = (regA?.judulTugasAkhirInggris || "").trim().toLowerCase();
+  const judulEnB = (regB?.judulTugasAkhirInggris || "").trim().toLowerCase();
+
+  const matchIndo = Boolean(judulIndoA && judulIndoB && judulIndoA === judulIndoB);
+  const matchEn = Boolean(judulEnA && judulEnB && judulEnA === judulEnB);
+
+  return matchIndo || matchEn;
+};
+
+/**
  * Helper untuk memeriksa bentrok jadwal (jarak 2 jam) antara ruangan dan dosen
  */
 export const checkJadwalConflict = async ({
@@ -21,6 +42,7 @@ export const checkJadwalConflict = async ({
   ruanganSidangId,
   dosenIds = [],
   isCapstone = false,
+  targetRegistration = null,
 }) => {
   if (!tglSidang) return null;
 
@@ -80,11 +102,21 @@ export const checkJadwalConflict = async ({
 
   if (!potentialConflicts || potentialConflicts.length === 0) return null;
 
-  // Filter out pendaftaran sesama skema Capstone (kelonggaran Capstone diperbolehkan bersamaan)
+  let currentReg = targetRegistration;
+  if (!currentReg && registrationId) {
+    currentReg = await prisma.sidangRegistration.findUnique({
+      where: { id: registrationId },
+    });
+  }
+
+  // Filter out pendaftaran sesama kelompok Capstone (kelompok sama jika judul TA sama)
   const conflicts = potentialConflicts.filter((otherReg) => {
     const otherIsCapstone = isCapstoneScheme(otherReg);
     if (isCapstone && otherIsCapstone) {
-      return false;
+      if (currentReg && isSameCapstoneGroup(currentReg, otherReg)) {
+        return false; // Sama kelompok Capstone: boleh dijadwalkan bersamaan
+      }
+      return true; // Berbeda kelompok Capstone: bentrok!
     }
     return true;
   });
@@ -125,9 +157,13 @@ export const validateBatchPengujiInternalConflict = (scheduledItems, dosenMap) =
       const itemA = scheduledItems[i];
       const itemB = scheduledItems[j];
 
-      // Pengecualian kelonggaran skema Capstone: sesama Capstone tidak dianggap bentrok
+      // Pengecualian kelonggaran skema Capstone: hanya jika sesama Capstone dan 1 kelompok (judul sama)
       if (itemA.isCapstone && itemB.isCapstone) {
-        continue;
+        const regA = itemA.registration || itemA;
+        const regB = itemB.registration || itemB;
+        if (isSameCapstoneGroup(regA, regB)) {
+          continue;
+        }
       }
 
       const diff = Math.abs(
@@ -163,9 +199,13 @@ export const validateBatchJadwalInternalConflict = (itemsWithMeta, ruanganMap) =
       const itemA = itemsWithMeta[i];
       const itemB = itemsWithMeta[j];
 
-      // Pengecualian kelonggaran skema Capstone: sesama Capstone tidak dianggap bentrok
+      // Pengecualian kelonggaran skema Capstone: hanya jika sesama Capstone dan 1 kelompok (judul sama)
       if (itemA.isCapstone && itemB.isCapstone) {
-        continue;
+        const regA = itemA.registration || itemA;
+        const regB = itemB.registration || itemB;
+        if (isSameCapstoneGroup(regA, regB)) {
+          continue;
+        }
       }
 
       const diff = Math.abs(
@@ -204,7 +244,42 @@ export const validateBatchJadwalInternalConflict = (itemsWithMeta, ruanganMap) =
 };
 
 /**
- * Membuat Workbook Excel untuk ekspor data jadwal sidang
+ * Format tanggal dan waktu ke standar WIB (Asia/Jakarta)
+ */
+export const formatWibDateTime = (date) => {
+  if (!date) return { formattedDate: "", formattedTime: "" };
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return { formattedDate: "", formattedTime: "" };
+
+  const optionsDate = {
+    timeZone: "Asia/Jakarta",
+    day: "2-digit",
+    month: "short",
+    year: "2-digit",
+  };
+  const optionsTime = {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  };
+
+  const parts = new Intl.DateTimeFormat("en-GB", optionsDate).formatToParts(d);
+  const day = parts.find((p) => p.type === "day")?.value || String(d.getDate()).padStart(2, "0");
+  const month = parts.find((p) => p.type === "month")?.value || "";
+  const year = parts.find((p) => p.type === "year")?.value || String(d.getFullYear()).slice(-2);
+  const formattedDate = `${day}-${month}-${year}`;
+
+  const timeParts = new Intl.DateTimeFormat("en-GB", optionsTime).formatToParts(d);
+  const hours = timeParts.find((p) => p.type === "hour")?.value || "00";
+  const mins = timeParts.find((p) => p.type === "minute")?.value || "00";
+  const formattedTime = `${hours}:${mins}`;
+
+  return { formattedDate, formattedTime };
+};
+
+/**
+ * Membuat Workbook Excel untuk ekspor data jadwal sidang format iGracias
  */
 export const generateJadwalSidangWorkbook = (jadwalList) => {
   const workbook = new excel.Workbook();
@@ -219,24 +294,8 @@ export const generateJadwalSidangWorkbook = (jadwalList) => {
     { header: "PENGUJI II", key: "penguji2", width: 15 },
   ];
 
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
   jadwalList.forEach((jadwal) => {
-    let formattedDate = "";
-    let formattedTime = "";
-
-    if (jadwal.tglSidang) {
-      const d = new Date(jadwal.tglSidang);
-      const day = String(d.getDate()).padStart(2, "0");
-      const month = months[d.getMonth()];
-      const year = String(d.getFullYear()).slice(-2);
-
-      formattedDate = `${day}-${month}-${year}`;
-
-      const hours = String(d.getHours()).padStart(2, "0");
-      const mins = String(d.getMinutes()).padStart(2, "0");
-      formattedTime = `${hours}:${mins}`;
-    }
+    const { formattedDate, formattedTime } = formatWibDateTime(jadwal.tglSidang);
 
     worksheet.addRow({
       nim: jadwal.mahasiswa?.nim || "",

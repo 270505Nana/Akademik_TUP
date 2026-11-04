@@ -56,6 +56,7 @@ const createPermohonanSkta = asyncHandler(async (req, res) => {
     dosenPembimbing2Id,
     researchGroupId,
     evidenceFile,
+    currentUser: req.user,
   });
 
   res.status(200).json({
@@ -92,6 +93,7 @@ const submitPermohonanSkta = asyncHandler(async (req, res) => {
       dosenPembimbing2Id,
       researchGroupId,
       evidenceFile,
+      currentUser: req.user,
     });
 
     res.status(200).json({
@@ -128,6 +130,7 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
     dosenPembimbing2Id,
     researchGroupId,
     evidenceFile,
+    currentUser: req.user,
   });
 
   res.json({
@@ -141,7 +144,7 @@ const updatePermohonanSkta = asyncHandler(async (req, res) => {
  */
 const getPermohonanSktaById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const data = await permohonanSktaService.getPermohonanSktaById(id);
+  const data = await permohonanSktaService.getPermohonanSktaById(id, req.user);
 
   if (!data) {
     res.status(404);
@@ -162,7 +165,10 @@ const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
     throw new Error("ID mahasiswa atau sesi login tidak valid");
   }
 
-  const data = await permohonanSktaService.getLatestPermohonanByMahasiswaId(targetId);
+  const data = await permohonanSktaService.getLatestPermohonanByMahasiswaId(
+    targetId,
+    req.user
+  );
 
   if (!data) {
     res.status(404);
@@ -177,7 +183,7 @@ const getLatestPermohonanSktaByMahasiswaId = asyncHandler(async (req, res) => {
  */
 const downloadSkta = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const downloadInfo = await permohonanSktaService.getSktaDownloadInfo(id);
+  const downloadInfo = await permohonanSktaService.getSktaDownloadInfo(id, req.user);
 
   await serveDownload(res, downloadInfo);
 });
@@ -187,7 +193,7 @@ const downloadSkta = asyncHandler(async (req, res) => {
  */
 const downloadEvidence = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const downloadInfo = await permohonanSktaService.getEvidenceDownloadInfo(id);
+  const downloadInfo = await permohonanSktaService.getEvidenceDownloadInfo(id, req.user);
 
   await serveDownload(res, downloadInfo);
 });
@@ -362,7 +368,7 @@ const uploadFormulirSkta = asyncHandler(async (req, res) => {
  */
 const downloadValidasi = asyncHandler(async (req, res) => {
   const { berkasId } = req.params;
-  const upload = await permohonanSktaService.getBerkasMahasiswaById(berkasId);
+  const upload = await permohonanSktaService.getBerkasMahasiswaById(berkasId, req.user);
 
   await serveDownload(res, {
     filepath: upload.filepath,

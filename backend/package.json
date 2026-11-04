@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:db-push": "prisma db push",
@@ -48,7 +50,9 @@
   "devDependencies": {
     "nodemon": "^3.1.14",
     "prisma": "^7.10.0",
+    "supertest": "^7.3.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "vitest": "^5.1.0"
   }
 }

@@ -38,12 +38,80 @@ export const sanitizeFilenamePart = (str) => {
     .replace(/^_+|_+$/g, "");
 };
 
+export const ALLOWED_EVIDENCE_MIMES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+];
+
+export const ALLOWED_SKTA_MIMES = ["application/pdf"];
+
+export const validateEvidenceFile = (file) => {
+  if (!file) return;
+  if (!ALLOWED_EVIDENCE_MIMES.includes(file.mimetype)) {
+    const error = new Error(
+      "Tipe file evidence tidak valid (hanya diperbolehkan PDF atau Gambar JPG/PNG/WebP)"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+};
+
+export const validateSktaFile = (file) => {
+  if (!file) return;
+  if (!ALLOWED_SKTA_MIMES.includes(file.mimetype)) {
+    const error = new Error(
+      "Tipe file SKTA tidak valid (hanya diperbolehkan PDF)"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+};
+
+export const verifyMahasiswaOwnership = async (mahasiswaIdOrUserId, currentUser) => {
+  if (!currentUser || currentUser.role?.toUpperCase() !== "MAHASISWA") {
+    return true;
+  }
+  const normalizedId = String(mahasiswaIdOrUserId || "").trim();
+  if (!normalizedId) return false;
+  if (normalizedId === currentUser.id) return true;
+
+  const student = await prisma.mahasiswa.findFirst({
+    where: {
+      userId: currentUser.id,
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+
+  return Boolean(student && student.id === normalizedId);
+};
+
+export const verifyPermohonanOwnership = async (permohonanOrId, currentUser) => {
+  if (!currentUser || currentUser.role?.toUpperCase() !== "MAHASISWA") {
+    return true;
+  }
+  let permohonan = permohonanOrId;
+  if (typeof permohonanOrId === "string") {
+    permohonan = await prisma.permohonanSkta.findFirst({
+      where: { id: permohonanOrId, deletedAt: null },
+      select: { mahasiswaId: true },
+    });
+  }
+  if (!permohonan || !permohonan.mahasiswaId) return false;
+
+  return await verifyMahasiswaOwnership(permohonan.mahasiswaId, currentUser);
+};
+
+
 /**
  * Pengecekan apakah permohonan SKTA dapat diedit oleh mahasiswa
  */
 export const checkSktaEditable = async (id) => {
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
+  const permohonan = await prisma.permohonanSkta.findFirst({
+    where: { id, deletedAt: null },
   });
 
   if (!permohonan) {
@@ -122,7 +190,15 @@ export const resolveAdmin = async (adminId, currentUser) => {
  */
 export const getPermohonanSktas = async (query = {}, customWhere = {}) => {
   const paginationParams = getPaginationParams(query);
-  const { mahasiswaId, studyProgramId, category, search, sortBy, sortOrder } = query;
+  const {
+    mahasiswaId,
+    studyProgramId,
+    category,
+    search,
+    sortBy,
+    startDate,
+    endDate,
+  } = query;
 
   const where = {
     deletedAt: null,
@@ -139,6 +215,29 @@ export const getPermohonanSktas = async (query = {}, customWhere = {}) => {
     ],
     ...customWhere,
   };
+
+  // Filter rentang createdAt (maksimal 6 bulan, default 6 bulan terakhir jika tidak ada filter)
+  if (customWhere.createdAt) {
+    where.createdAt = customWhere.createdAt;
+  } else if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) {
+      where.createdAt.gte = new Date(startDate);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      if (typeof endDate === "string" && !endDate.includes("T")) {
+        end.setHours(23, 59, 59, 999);
+      }
+      where.createdAt.lte = end;
+    }
+  } else {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    where.createdAt = {
+      gte: sixMonthsAgo,
+    };
+  }
 
   if (mahasiswaId) {
     where.mahasiswaId = mahasiswaId;
@@ -170,9 +269,10 @@ export const getPermohonanSktas = async (query = {}, customWhere = {}) => {
     ];
   }
 
-  const sortField = (sortBy || "createdAt").trim();
-  const sortDir = (sortOrder || "desc").toLowerCase() === "asc" ? "asc" : "desc";
-  const orderBy = { [sortField]: sortDir };
+  // Sorting: newest (desc) atau oldest (asc) berdasarkan createdAt sesuai standar /api/sidang-registrations
+  const sortParam = (sortBy || "").toLowerCase().trim();
+  const orderBy =
+    sortParam === "oldest" ? { createdAt: "asc" } : { createdAt: "desc" };
 
   const [total, data] = await Promise.all([
     prisma.permohonanSkta.count({ where }),
@@ -191,24 +291,72 @@ export const getPermohonanSktas = async (query = {}, customWhere = {}) => {
 /**
  * Mengambil data permohonan SKTA berdasarkan ID
  */
-export const getPermohonanSktaById = async (id) => {
-  return await prisma.permohonanSkta.findUnique({
-    where: { id },
+export const getPermohonanSktaById = async (id, currentUser) => {
+  const permohonan = await prisma.permohonanSkta.findFirst({
+    where: { id, deletedAt: null },
     include: permohonanSktaInclude,
   });
+
+  if (!permohonan) {
+    return null;
+  }
+
+  if (currentUser?.role?.toUpperCase() === "MAHASISWA") {
+    const isOwner = await verifyMahasiswaOwnership(permohonan.mahasiswaId, currentUser);
+    if (!isOwner) {
+      const error = new Error(
+        "Akses ditolak: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+
+  return permohonan;
 };
 
 /**
  * Mengambil permohonan SKTA terbaru berdasarkan ID Mahasiswa atau User ID
  */
-export const getLatestPermohonanByMahasiswaId = async (idOrUserId) => {
+export const getLatestPermohonanByMahasiswaId = async (
+  idOrUserId,
+  currentUser
+) => {
   if (!idOrUserId) return null;
 
-  let resolvedMahasiswaId = idOrUserId;
+  const normalizedId = String(idOrUserId).trim();
+
+  // Authorization Check: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri
+  if (currentUser?.role?.toUpperCase() === "MAHASISWA") {
+    let isOwner = normalizedId === currentUser.id;
+    if (!isOwner) {
+      const studentRecord = await prisma.mahasiswa.findFirst({
+        where: {
+          userId: currentUser.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      if (studentRecord && studentRecord.id === normalizedId) {
+        isOwner = true;
+      }
+    }
+
+    if (!isOwner) {
+      const error = new Error(
+        "Akses ditolak: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+
+  let resolvedMahasiswaId = normalizedId;
 
   const student = await prisma.mahasiswa.findFirst({
     where: {
-      OR: [{ id: idOrUserId }, { userId: idOrUserId }],
+      OR: [{ id: normalizedId }, { userId: normalizedId }],
       deletedAt: null,
     },
   });
@@ -221,7 +369,7 @@ export const getLatestPermohonanByMahasiswaId = async (idOrUserId) => {
     where: {
       OR: [
         { mahasiswaId: resolvedMahasiswaId },
-        { mahasiswa: { userId: idOrUserId } },
+        { mahasiswa: { userId: normalizedId } },
       ],
       deletedAt: null,
     },
@@ -245,11 +393,51 @@ export const saveDraftPermohonanSkta = async ({
   dosenPembimbing2Id,
   researchGroupId: explicitResearchGroupId,
   evidenceFile,
+  currentUser,
 }) => {
-  if (id) {
-    const existing = await prisma.permohonanSkta.findUnique({
-      where: { id },
-    });
+  if (
+    dosenPembimbing1Id &&
+    dosenPembimbing2Id &&
+    dosenPembimbing1Id === dosenPembimbing2Id
+  ) {
+    const error = new Error(
+      "Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  validateEvidenceFile(evidenceFile);
+
+  if (currentUser?.role?.toUpperCase() === "MAHASISWA") {
+    if (mahasiswaId) {
+      const isOwner = await verifyMahasiswaOwnership(mahasiswaId, currentUser);
+      if (!isOwner) {
+        const error = new Error(
+          "Akses ditolak: Anda hanya dapat menyimpan draft untuk akun Anda sendiri"
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+    if (id) {
+      const isOwner = await verifyPermohonanOwnership(id, currentUser);
+      if (!isOwner) {
+        const error = new Error(
+          "Akses ditolak: Anda hanya dapat mengubah draft milik sendiri"
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+  }
+
+  let newlyUploadedEvidence = null;
+  try {
+    if (id) {
+      const existing = await prisma.permohonanSkta.findFirst({
+        where: { id, deletedAt: null },
+      });
     if (!existing) {
       const error = new Error("Permohonan SKTA tidak ditemukan");
       error.statusCode = 404;
@@ -300,10 +488,12 @@ export const saveDraftPermohonanSkta = async ({
         mimetype: evidenceFile.mimetype,
       });
 
+      newlyUploadedEvidence = uploadedEvidence.filepath;
       if (existing.evidenceUploadPath) {
         await deleteFile(existing.evidenceUploadPath);
       }
       updateData.evidenceUploadPath = uploadedEvidence.filepath;
+      newlyUploadedEvidence = uploadedEvidence.filepath;
     }
 
     return await prisma.permohonanSkta.update({
@@ -322,13 +512,13 @@ export const saveDraftPermohonanSkta = async ({
     }
 
     const existing = await prisma.permohonanSkta.findFirst({
-      where: {
-        mahasiswaId,
-        isDraft: true,
-        deletedAt: null,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        where: {
+          mahasiswaId,
+          isDraft: true,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
+      });
 
     if (existing) {
       const editCheck = await checkSktaEditable(existing.id);
@@ -441,12 +631,18 @@ export const saveDraftPermohonanSkta = async ({
         include: permohonanSktaInclude,
       });
     }
-  } else {
-    const error = new Error(
-      "mahasiswaId atau id permohonan wajib diisi untuk membuat draft permohonan",
-    );
-    error.statusCode = 400;
-    throw error;
+    } else {
+      const error = new Error(
+        "mahasiswaId atau id permohonan wajib diisi untuk membuat draft permohonan",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+  } catch (err) {
+    if (newlyUploadedEvidence) {
+      await deleteFile(newlyUploadedEvidence).catch(() => {});
+    }
+    throw err;
   }
 };
 
@@ -463,10 +659,45 @@ export const submitPermohonanSkta = async ({
   dosenPembimbing2Id,
   researchGroupId: explicitResearchGroupId,
   evidenceFile,
+  currentUser,
 }) => {
-  const existingRecord = await prisma.permohonanSkta.findUnique({
-    where: { id },
+  if (dosenPembimbing1Id === dosenPembimbing2Id) {
+    const error = new Error(
+      "Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama"
+    );
+    error.statusCode = 400;
+    error.errors = [
+      {
+        field: "dosenPembimbing2Id",
+        message: "Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama",
+      },
+    ];
+    throw error;
+  }
+
+  validateEvidenceFile(evidenceFile);
+
+  const existingRecord = await prisma.permohonanSkta.findFirst({
+    where: { id, deletedAt: null },
   });
+
+  if (!existingRecord) {
+    const error = new Error("Permohonan SKTA tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (currentUser?.role?.toUpperCase() === "MAHASISWA") {
+    const isOwner = await verifyMahasiswaOwnership(mahasiswaId, currentUser);
+    const isPermohonanOwner = await verifyPermohonanOwnership(id, currentUser);
+    if (!isOwner || !isPermohonanOwner) {
+      const error = new Error(
+        "Akses ditolak: Anda hanya dapat mengajukan permohonan SKTA milik sendiri"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+  }
 
   if (!existingRecord) {
     const error = new Error("Permohonan SKTA tidak ditemukan");
@@ -584,15 +815,41 @@ export const updatePermohonanSktaData = async (
     dosenPembimbing2Id,
     researchGroupId: explicitResearchGroupId,
     evidenceFile,
+    currentUser,
   },
 ) => {
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
+  if (
+    dosenPembimbing1Id &&
+    dosenPembimbing2Id &&
+    dosenPembimbing1Id === dosenPembimbing2Id
+  ) {
+    const error = new Error(
+      "Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  validateEvidenceFile(evidenceFile);
+
+  const permohonan = await prisma.permohonanSkta.findFirst({
+    where: { id, deletedAt: null },
   });
   if (!permohonan) {
     const error = new Error("Permohonan SKTA tidak ditemukan");
     error.statusCode = 404;
     throw error;
+  }
+
+  if (currentUser?.role?.toUpperCase() === "MAHASISWA") {
+    const isOwner = await verifyPermohonanOwnership(permohonan, currentUser);
+    if (!isOwner) {
+      const error = new Error(
+        "Akses ditolak: Anda hanya dapat mengubah permohonan SKTA milik sendiri"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   const editCheck = await checkSktaEditable(id);
@@ -659,9 +916,9 @@ export const updatePermohonanSktaData = async (
 /**
  * Mengambil informasi berkas SKTA untuk diunduh
  */
-export const getSktaDownloadInfo = async (id) => {
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
+export const getSktaDownloadInfo = async (id, currentUser) => {
+  const permohonan = await prisma.permohonanSkta.findFirst({
+    where: { id, deletedAt: null },
     include: {
       mahasiswa: {
         include: {
@@ -678,6 +935,17 @@ export const getSktaDownloadInfo = async (id) => {
     );
     error.statusCode = 404;
     throw error;
+  }
+
+  if (currentUser?.role?.toUpperCase() === "MAHASISWA") {
+    const isOwner = await verifyMahasiswaOwnership(permohonan.mahasiswaId, currentUser);
+    if (!isOwner) {
+      const error = new Error(
+        "Akses ditolak: Anda hanya dapat mengunduh berkas SKTA milik sendiri"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   const ext = path.extname(permohonan.sktaUploadPath || "") || ".pdf";
@@ -698,15 +966,26 @@ export const getSktaDownloadInfo = async (id) => {
 /**
  * Mengambil informasi berkas evidence untuk diunduh
  */
-export const getEvidenceDownloadInfo = async (id) => {
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
+export const getEvidenceDownloadInfo = async (id, currentUser) => {
+  const permohonan = await prisma.permohonanSkta.findFirst({
+    where: { id, deletedAt: null },
   });
 
   if (!permohonan || !permohonan.evidenceUploadPath) {
     const error = new Error("Berkas evidence tidak ditemukan");
     error.statusCode = 404;
     throw error;
+  }
+
+  if (currentUser?.role?.toUpperCase() === "MAHASISWA") {
+    const isOwner = await verifyMahasiswaOwnership(permohonan.mahasiswaId, currentUser);
+    if (!isOwner) {
+      const error = new Error(
+        "Akses ditolak: Anda hanya dapat mengunduh berkas evidence milik sendiri"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   const ext = path.extname(permohonan.evidenceUploadPath || "") || ".pdf";
@@ -730,8 +1009,10 @@ export const approvePermohonanSkta = async ({
   sktaFile,
   currentUser,
 }) => {
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
+  validateSktaFile(sktaFile);
+
+  const permohonan = await prisma.permohonanSkta.findFirst({
+    where: { id, deletedAt: null },
     include: {
       mahasiswa: {
         include: {
@@ -814,8 +1095,8 @@ export const rejectPermohonanSkta = async ({
   isEdit,
   currentUser,
 }) => {
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id },
+  const permohonan = await prisma.permohonanSkta.findFirst({
+    where: { id, deletedAt: null },
   });
 
   if (!permohonan) {
@@ -864,8 +1145,8 @@ export const getBerkasByPermohonanIdAndCategory = async ({
   category,
   notFoundMessage = "Berkas tidak ditemukan",
 }) => {
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id: permohonanId },
+  const permohonan = await prisma.permohonanSkta.findFirst({
+    where: { id: permohonanId, deletedAt: null },
   });
 
   if (!permohonan) {
@@ -910,8 +1191,8 @@ export const uploadBerkasMahasiswaForSkta = async ({
   file,
   filePrefix = "Dokumen_",
 }) => {
-  const permohonan = await prisma.permohonanSkta.findUnique({
-    where: { id: permohonanId },
+  const permohonan = await prisma.permohonanSkta.findFirst({
+    where: { id: permohonanId, deletedAt: null },
     include: {
       mahasiswa: true,
     },
@@ -982,7 +1263,7 @@ export const uploadBerkasMahasiswaForSkta = async ({
 /**
  * Mengambil record berkas mahasiswa berdasarkan berkasId
  */
-export const getBerkasMahasiswaById = async (berkasId) => {
+export const getBerkasMahasiswaById = async (berkasId, currentUser) => {
   const upload = await prisma.berkasMahasiswa.findFirst({
     where: { id: berkasId, deletedAt: null },
   });
@@ -991,6 +1272,17 @@ export const getBerkasMahasiswaById = async (berkasId) => {
     const error = new Error("File dokumen tidak ditemukan");
     error.statusCode = 404;
     throw error;
+  }
+
+  if (currentUser?.role?.toUpperCase() === "MAHASISWA") {
+    const isOwner = await verifyMahasiswaOwnership(upload.mahasiswaId, currentUser);
+    if (!isOwner) {
+      const error = new Error(
+        "Akses ditolak: Anda hanya dapat mengunduh berkas milik sendiri"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   return upload;
@@ -1033,7 +1325,7 @@ export const getSktaFilesForExport = async ({
     }
     if (endDate) {
       const end = new Date(endDate);
-      if (!endDate.includes("T")) {
+      if (typeof endDate === "string" && !endDate.includes("T")) {
         end.setHours(23, 59, 59, 999);
       }
       where[validDateField].lte = end;
