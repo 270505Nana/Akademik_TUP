@@ -6,17 +6,6 @@ import { z } from "zod";
 const isValidDateString = (val) => typeof val === "string" && !isNaN(Date.parse(val));
 
 /**
- * Helper untuk preprocessing boolean dari query/body
- */
-const booleanPreprocess = z.preprocess((val) => {
-  if (val === undefined || val === null || val === "") return undefined;
-  if (typeof val === "boolean") return val;
-  if (val === "true") return true;
-  if (val === "false") return false;
-  return val;
-}, z.boolean({ invalid_type_error: "Minat wirausaha harus berupa boolean" }).optional().nullable());
-
-/**
  * Schema untuk Query Parameters Daftar Pendaftaran Yudisium (GET /api/yudisium-registrations)
  */
 export const listYudisiumQuerySchema = z.object({
@@ -103,7 +92,7 @@ export const saveYudisiumDraftSchema = z.object({
   eviden_cumlaude: z.string({ invalid_type_error: "Eviden cumlaude harus berupa string jika diisi" }).trim().optional().nullable(),
   evidenList: z.string({ invalid_type_error: "Eviden cumlaude harus berupa string jika diisi" }).trim().optional().nullable(),
   statusKelulusan: z.string().trim().optional().nullable(),
-  berminatWirausaha: booleanPreprocess,
+  berminatWirausaha: z.never().optional(),
   mahasiswaId: z.string({ invalid_type_error: "ID mahasiswa harus berupa string" }).uuid("ID mahasiswa harus berupa string").optional().nullable(),
   dosenWaliId: z.string({ invalid_type_error: "ID dosen wali harus berupa string" }).trim().min(1).optional().nullable(),
   doswalId: z.string({ invalid_type_error: "ID dosen wali harus berupa string" }).trim().min(1).optional().nullable(),
@@ -137,19 +126,7 @@ export const submitYudisiumSchema = z
     thesisTitleId: z.string({ invalid_type_error: "Judul TA (Indonesia) harus berupa string" }).trim().optional(),
     judulTugasAkhirInggris: z.string({ invalid_type_error: "Judul TA (Inggris) harus berupa string" }).trim().optional(),
     thesisTitleEn: z.string({ invalid_type_error: "Judul TA (Inggris) harus berupa string" }).trim().optional(),
-    berminatWirausaha: z.preprocess(
-      (val) => {
-        if (val === undefined || val === null || val === "") return undefined;
-        if (typeof val === "boolean") return val;
-        if (val === "true") return true;
-        if (val === "false") return false;
-        return val;
-      },
-      z.boolean({
-        required_error: "Minat wirausaha wajib diisi",
-        invalid_type_error: "Minat wirausaha harus berupa boolean",
-      })
-    ),
+    berminatWirausaha: z.never().optional(),
     mahasiswaId: z
       .string({ required_error: "ID mahasiswa wajib diisi", invalid_type_error: "ID mahasiswa harus berupa string" })
       .trim()
