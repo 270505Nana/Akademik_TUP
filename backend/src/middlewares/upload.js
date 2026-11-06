@@ -6,7 +6,7 @@ function upload(folderName = "") {
   return multer({
     storage,
     limits: {
-      fileSize: 25 * 1024 * 1024, // 25 MB max
+      fileSize: 1 * 1024 * 1024, // 1 MB max
     },
   });
 }
