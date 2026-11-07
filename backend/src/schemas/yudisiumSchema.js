@@ -33,6 +33,14 @@ export const listYudisiumQuerySchema = z.object({
     (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
     z.string().optional()
   ),
+  yudisiumRegistrationPeriodId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string().optional()
+  ),
+  yudisiumPeriodId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string().optional()
+  ),
   sortBy: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
     z.string().optional().default("newest")

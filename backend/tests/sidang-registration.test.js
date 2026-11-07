@@ -8,6 +8,7 @@ import {
   maskMahasiswaName,
   maskMahasiswaNim,
   cekKelompokCapstone,
+  listSidangRegistrations,
 } from "../src/services/sidangRegistrationService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "akademiktup";
@@ -224,6 +225,129 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
           nim: "*******019",
         },
       ]);
+    });
+  });
+  // ===============================================================
+  // SEKSI 4: Periode Pendaftaran Sidang Filter & Default Fallback
+  // ===============================================================
+  describe("List Sidang Registration - Filter by Periode & Default Fallback", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("secara default memilih periode pendaftaran aktif jika filter periode tidak disertakan", async () => {
+      const activePeriodMock = {
+        id: "active-sidang-period-uuid",
+        category: "pendaftaran",
+        isOpen: true,
+        name: "Periode Sidang Semester Ganjil",
+      };
+
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(activePeriodMock);
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
+      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([
+        {
+          id: "reg-1",
+          sidangRegistrationPeriodId: activePeriodMock.id,
+          mahasiswa: { user: { name: "Ahmad" } },
+        },
+      ]);
+
+      const result = await listSidangRegistrations({ query: {} });
+
+      expect(prisma.sidangPeriod.findFirst).toHaveBeenCalledWith({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran sidang"] },
+          isOpen: true,
+          deletedAt: null,
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.sidangRegistrationPeriodId).toBe("active-sidang-period-uuid");
+      expect(result.data).toBeDefined();
+    });
+
+    it("secara default memilih periode pendaftaran kemarin terdekat jika tidak ada periode yang aktif", async () => {
+      const nearestPeriodMock = {
+        id: "nearest-past-period-uuid",
+        category: "pendaftaran",
+        isOpen: false,
+        endDate: new Date("2026-05-01"),
+      };
+
+      vi.spyOn(prisma.sidangPeriod, "findFirst")
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(nearestPeriodMock);
+
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
+      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+
+      await listSidangRegistrations({ query: {} });
+
+      expect(prisma.sidangPeriod.findFirst).toHaveBeenCalledTimes(2);
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.sidangRegistrationPeriodId).toBe("nearest-past-period-uuid");
+    });
+
+    it("menggunakan filter sidangRegistrationPeriodId yang diberikan secara eksplisit", async () => {
+      const findPeriodSpy = vi.spyOn(prisma.sidangPeriod, "findFirst");
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
+      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+
+      await listSidangRegistrations({
+        query: { sidangRegistrationPeriodId: "custom-period-uuid" },
+      });
+
+      expect(findPeriodSpy).not.toHaveBeenCalled();
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.sidangRegistrationPeriodId).toBe("custom-period-uuid");
+    });
+
+    it("menggunakan filter sidangPeriodId (pelaksanaan) jika diberikan secara eksplisit", async () => {
+      const findPeriodSpy = vi.spyOn(prisma.sidangPeriod, "findFirst");
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
+      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+
+      await listSidangRegistrations({
+        query: { sidangPeriodId: "exec-sidang-period-uuid" },
+      });
+
+      expect(findPeriodSpy).not.toHaveBeenCalled();
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.sidangPeriodId).toBe("exec-sidang-period-uuid");
+    });
+
+    it("endpoint GET /api/sidang-registrations mengembalikan response paginasi dengan filter periode", async () => {
+      const token = jwt.sign(
+        { id: "admin-uuid", role: "ADMIN", email: "admin@telkomuniversity.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue({
+        id: "active-period-1",
+        isOpen: true,
+      });
+
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
+      vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([
+        {
+          id: "reg-1",
+          sidangRegistrationPeriodId: "active-period-1",
+          mahasiswa: { user: { name: "Nizar Daffa" } },
+        },
+      ]);
+
+      const res = await request(app)
+        .get("/api/sidang-registrations")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toBeDefined();
+      expect(res.body.pagination).toBeDefined();
+      expect(res.body.pagination.total).toBe(1);
     });
   });
 });

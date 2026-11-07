@@ -177,11 +177,57 @@ export const listSidangRegistrations = async ({ query = {}, req } = {}) => {
     jalurNonSidang,
     status,
     sortBy,
+    sidangRegistrationPeriodId,
+    sidangPeriodId,
   } = query;
 
   const where = {
     deletedAt: null,
   };
+
+  // Filter by Periode Pendaftaran / Periode Sidang
+  if (sidangRegistrationPeriodId) {
+    where.sidangRegistrationPeriodId = sidangRegistrationPeriodId.trim();
+  }
+
+  if (sidangPeriodId) {
+    where.sidangPeriodId = sidangPeriodId.trim();
+  }
+
+  if (!sidangRegistrationPeriodId && !sidangPeriodId) {
+    const now = new Date();
+
+    const activePeriod = await prisma.sidangPeriod.findFirst({
+      where: {
+        category: { in: ["pendaftaran", "pendaftaran sidang"] },
+        isOpen: true,
+        deletedAt: null,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const defaultPeriod =
+      activePeriod ||
+      (await prisma.sidangPeriod.findFirst({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran sidang"] },
+          endDate: { lte: now },
+          deletedAt: null,
+        },
+        orderBy: [{ endDate: "desc" }, { createdAt: "desc" }],
+      })) ||
+      (await prisma.sidangPeriod.findFirst({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran sidang"] },
+          deletedAt: null,
+        },
+        orderBy: [{ startDate: "asc" }, { createdAt: "desc" }],
+      }));
+
+    if (defaultPeriod) {
+      where.sidangRegistrationPeriodId = defaultPeriod.id;
+    }
+  }
 
   // 1. Global Search
   const searchTerm = (search || "").trim();

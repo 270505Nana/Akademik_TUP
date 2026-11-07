@@ -83,6 +83,16 @@ import {
  *             - "Hasil Sidang Ditetapkan"
  *         description: Filter pendaftaran yudisium berdasarkan status
  *       - in: query
+ *         name: yudisiumRegistrationPeriodId
+ *         schema:
+ *           type: string
+ *         description: Filter pendaftaran yudisium berdasarkan ID periode pendaftaran yudisium. Jika tidak disertakan, otomatis menampilkan pendaftaran pada periode pendaftaran aktif atau kemarin terdekat.
+ *       - in: query
+ *         name: yudisiumPeriodId
+ *         schema:
+ *           type: string
+ *         description: Filter pendaftaran yudisium berdasarkan ID periode pelaksanaan yudisium (yang sudah disetujui).
+ *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string

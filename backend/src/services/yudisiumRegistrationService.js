@@ -150,11 +150,57 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
     skemaCumlaude,
     status,
     sortBy,
+    yudisiumRegistrationPeriodId,
+    yudisiumPeriodId,
   } = query;
 
   const where = {
     deletedAt: null,
   };
+
+  // Filter by Periode Pendaftaran / Periode Yudisium
+  if (yudisiumRegistrationPeriodId) {
+    where.yudisiumRegistrationPeriodId = yudisiumRegistrationPeriodId.trim();
+  }
+
+  if (yudisiumPeriodId) {
+    where.yudisiumPeriodId = yudisiumPeriodId.trim();
+  }
+
+  if (!yudisiumRegistrationPeriodId && !yudisiumPeriodId) {
+    const now = new Date();
+
+    const activePeriod = await prisma.yudisiumPeriod.findFirst({
+      where: {
+        category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+        isOpen: true,
+        deletedAt: null,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const defaultPeriod =
+      activePeriod ||
+      (await prisma.yudisiumPeriod.findFirst({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+          endDate: { lte: now },
+          deletedAt: null,
+        },
+        orderBy: [{ endDate: "desc" }, { createdAt: "desc" }],
+      })) ||
+      (await prisma.yudisiumPeriod.findFirst({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+          deletedAt: null,
+        },
+        orderBy: [{ startDate: "asc" }, { createdAt: "desc" }],
+      }));
+
+    if (defaultPeriod) {
+      where.yudisiumRegistrationPeriodId = defaultPeriod.id;
+    }
+  }
 
   // 1. Global Search
   const searchTerm = (search || "").trim();

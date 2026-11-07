@@ -29,6 +29,14 @@ export const listSidangQuerySchema = z.object({
     (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
     z.string().optional()
   ),
+  sidangRegistrationPeriodId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string().optional()
+  ),
+  sidangPeriodId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string().optional()
+  ),
   sortBy: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
     z.string().optional().default("newest")

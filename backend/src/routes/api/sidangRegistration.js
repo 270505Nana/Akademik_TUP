@@ -78,6 +78,16 @@ import {
  *             - "Siap Sidang"
  *         description: Filter pendaftaran sidang berdasarkan status
  *       - in: query
+ *         name: sidangRegistrationPeriodId
+ *         schema:
+ *           type: string
+ *         description: Filter pendaftaran sidang berdasarkan ID periode pendaftaran sidang. Jika tidak disertakan, otomatis menampilkan pendaftaran pada periode pendaftaran aktif atau kemarin terdekat.
+ *       - in: query
+ *         name: sidangPeriodId
+ *         schema:
+ *           type: string
+ *         description: Filter pendaftaran sidang berdasarkan ID periode pelaksanaan sidang (yang sudah disetujui / dijadwalkan).
+ *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
