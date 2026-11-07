@@ -93,7 +93,11 @@ export const saveYudisiumDraftSchema = z.object({
   evidenList: z.string({ invalid_type_error: "Eviden cumlaude harus berupa string jika diisi" }).trim().optional().nullable(),
   statusKelulusan: z.string().trim().optional().nullable(),
   berminatWirausaha: z.never().optional(),
-  mahasiswaId: z.string({ invalid_type_error: "ID mahasiswa harus berupa string" }).uuid("ID mahasiswa harus berupa string").optional().nullable(),
+  // Dilonggarkan seperti FK dosen agar mendukung ID lama (integer) maupun UUID
+  mahasiswaId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
+    z.string({ invalid_type_error: "ID mahasiswa harus berupa string" }).min(1).optional().nullable()
+  ),
   dosenWaliId: z.string({ invalid_type_error: "ID dosen wali harus berupa string" }).trim().min(1).optional().nullable(),
   doswalId: z.string({ invalid_type_error: "ID dosen wali harus berupa string" }).trim().min(1).optional().nullable(),
   dosenPembimbing1Id: z.string({ invalid_type_error: "ID dosen pembimbing 1 harus berupa string" }).trim().min(1).optional().nullable(),
@@ -127,10 +131,10 @@ export const submitYudisiumSchema = z
     judulTugasAkhirInggris: z.string({ invalid_type_error: "Judul TA (Inggris) harus berupa string" }).trim().optional(),
     thesisTitleEn: z.string({ invalid_type_error: "Judul TA (Inggris) harus berupa string" }).trim().optional(),
     berminatWirausaha: z.never().optional(),
-    mahasiswaId: z
+    mahasiswaId: z.preprocess((val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val), z
       .string({ required_error: "ID mahasiswa wajib diisi", invalid_type_error: "ID mahasiswa harus berupa string" })
       .trim()
-      .min(1, "ID mahasiswa wajib diisi"),
+      .min(1, "ID mahasiswa wajib diisi")),
     dosenWaliId: z.string({ invalid_type_error: "ID dosen wali harus berupa string jika diisi" }).trim().optional().nullable(),
     doswalId: z.string({ invalid_type_error: "ID dosen wali harus berupa string jika diisi" }).trim().optional().nullable(),
     dosenPembimbing1Id: z.string({ invalid_type_error: "ID dosen pembimbing 1 harus berupa string jika diisi" }).trim().optional().nullable(),

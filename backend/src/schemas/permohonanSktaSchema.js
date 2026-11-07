@@ -14,16 +14,18 @@ export const sktaCategories = [
 
 /**
  * Helper untuk field teks opsional yang membersihkan spasi dan string kosong
+ * Mendukung string maupun tipe integer (id legacy) yang dikonversi ke string
  */
-const optionalTrimmedString = () =>
+const optionalTrimmedString = (invalidMsg = "Format string tidak valid") =>
   z.preprocess((val) => {
     if (val === "" || val === null || val === undefined) return undefined;
+    if (typeof val === "number") return String(val);
     if (typeof val === "string") {
       const trimmed = val.trim();
       return trimmed === "" ? undefined : trimmed;
     }
     return val;
-  }, z.string().optional().nullable());
+  }, z.string({ invalid_type_error: invalidMsg }).optional().nullable());
 
 /**
  * Helper untuk field UUID opsional yang mengabaikan string kosong / null
@@ -35,13 +37,21 @@ const optionalUuid = (invalidMsg = "Format UUID tidak valid") =>
   );
 
 /**
- * Helper untuk field UUID wajib
+ * Helper untuk field string wajib (mendukung integer id legacy)
  */
-const requiredTrimmedString = (emptyMsg) =>
-  z
-    .string({ error: emptyMsg })
-    .trim()
-    .min(1, emptyMsg);
+const requiredTrimmedString = (emptyMsg, invalidMsg = "Format tidak valid") =>
+  z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      if (typeof val === "number") return String(val);
+      if (typeof val === "string") return val.trim();
+      return val;
+    },
+    z
+      .string({ error: emptyMsg, invalid_type_error: invalidMsg })
+      .trim()
+      .min(1, emptyMsg)
+  );
 
 const requiredUuid = (emptyMsg, invalidMsg = "Format UUID tidak valid") =>
   z
@@ -58,7 +68,8 @@ const requiredUuid = (emptyMsg, invalidMsg = "Format UUID tidak valid") =>
 export const savePermohonanSktaDraftSchema = z
   .object({
     id: optionalUuid("ID Permohonan SKTA tidak valid"),
-    mahasiswaId: optionalUuid("ID Mahasiswa tidak valid"),
+    // Dilonggarkan seperti FK dosen agar mendukung ID lama (integer) maupun UUID
+    mahasiswaId: optionalTrimmedString("ID Mahasiswa tidak valid"),
     category: z
       .preprocess(
         (val) => (val === "" || val === null || val === undefined ? undefined : val),
@@ -98,7 +109,8 @@ export const savePermohonanSktaDraftSchema = z
  */
 export const submitPermohonanSktaSchema = z.object({
   id: requiredUuid("ID wajib diisi untuk submit", "ID harus berupa format UUID yang valid"),
-  mahasiswaId: requiredUuid("Mahasiswa ID wajib diisi", "ID Mahasiswa tidak valid"),
+  // Dilonggarkan seperti FK dosen agar mendukung ID lama (integer) maupun UUID
+  mahasiswaId: requiredTrimmedString("Mahasiswa ID wajib diisi", "ID Mahasiswa tidak valid"),
   category: z
     .preprocess(
       (val) => (val === "" || val === null || val === undefined ? undefined : val),
@@ -257,7 +269,8 @@ export const exportSktaZipSchema = z.object({
  */
 export const listPermohonanSktaQuerySchema = z
   .object({
-    mahasiswaId: optionalUuid("ID Mahasiswa tidak valid"),
+    // Dilonggarkan seperti FK dosen agar mendukung ID lama (integer) maupun UUID
+    mahasiswaId: optionalTrimmedString("ID Mahasiswa tidak valid"),
     studyProgramId: optionalTrimmedString(),
     category: z.preprocess(
       (val) => (val === "" || val === null || val === undefined ? undefined : val),

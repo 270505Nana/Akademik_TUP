@@ -53,7 +53,11 @@ export const listSidangQuerySchema = z.object({
  */
 export const saveSidangDraftSchema = z.object({
   id: z.string().uuid("ID Pendaftaran tidak valid").optional().nullable(),
-  mahasiswaId: z.string().uuid("ID Mahasiswa tidak valid").optional().nullable(),
+  // Dilonggarkan seperti FK dosen agar mendukung ID lama (integer) maupun UUID
+  mahasiswaId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
+    z.string({ invalid_type_error: "ID Mahasiswa tidak valid" }).min(1, "ID Mahasiswa tidak valid").optional().nullable()
+  ),
   programType: z.string({ invalid_type_error: "Tipe program harus berupa string" }).trim().optional().nullable(),
   program: z.string({ invalid_type_error: "Tipe program harus berupa string" }).trim().optional().nullable(),
   sidangScheme: z.string().trim().optional().nullable(),
@@ -94,8 +98,14 @@ export const saveSidangDraftSchema = z.object({
   thesisTitleEn: z.string({ invalid_type_error: "Judul TA (EN) harus berupa string" }).trim().optional().nullable(),
   judulTugasAkhirIndonesia: z.string({ invalid_type_error: "Judul TA (ID) harus berupa string" }).trim().optional().nullable(),
   judulTugasAkhirInggris: z.string({ invalid_type_error: "Judul TA (EN) harus berupa string" }).trim().optional().nullable(),
-  dosenPembimbing1Id: z.string({ invalid_type_error: "ID Dosen Pembimbing 1 harus berupa string" }).trim().min(1).optional().nullable(),
-  dosenPembimbing2Id: z.string({ invalid_type_error: "ID Dosen Pembimbing 2 harus berupa string" }).trim().min(1).optional().nullable(),
+  dosenPembimbing1Id: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
+    z.string({ invalid_type_error: "ID Dosen Pembimbing 1 harus berupa string" }).min(1).optional().nullable()
+  ),
+  dosenPembimbing2Id: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
+    z.string({ invalid_type_error: "ID Dosen Pembimbing 2 harus berupa string" }).min(1).optional().nullable()
+  ),
 });
 
 /**
@@ -147,18 +157,19 @@ export const submitSidangSchema = z
     thesisTitleEn: z.string({ invalid_type_error: "Judul TA (EN) harus berupa string" }).trim().optional(),
     judulTugasAkhirIndonesia: z.string({ invalid_type_error: "Judul TA (ID) harus berupa string" }).trim().optional(),
     judulTugasAkhirInggris: z.string({ invalid_type_error: "Judul TA (EN) harus berupa string" }).trim().optional(),
-    mahasiswaId: z
-      .string({ required_error: "ID mahasiswa wajib diisi", invalid_type_error: "ID mahasiswa harus berupa string" })
-      .trim()
-      .min(1, "ID mahasiswa wajib diisi"),
-    dosenPembimbing1Id: z
-      .string({ required_error: "ID dosen pembimbing 1 wajib diisi", invalid_type_error: "ID dosen pembimbing 1 harus berupa string" })
-      .trim()
-      .min(1, "ID dosen pembimbing 1 wajib diisi"),
-    dosenPembimbing2Id: z
-      .string({ required_error: "ID dosen pembimbing 2 wajib diisi", invalid_type_error: "ID dosen pembimbing 2 harus berupa string" })
-      .trim()
-      .min(1, "ID dosen pembimbing 2 wajib diisi"),
+    // Dilonggarkan seperti FK dosen agar mendukung ID lama (integer) maupun UUID
+    mahasiswaId: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
+      z.string({ required_error: "ID mahasiswa wajib diisi", invalid_type_error: "ID mahasiswa harus berupa string" }).min(1, "ID mahasiswa wajib diisi")
+    ),
+    dosenPembimbing1Id: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
+      z.string({ required_error: "ID dosen pembimbing 1 wajib diisi", invalid_type_error: "ID dosen pembimbing 1 harus berupa string" }).min(1, "ID dosen pembimbing 1 wajib diisi")
+    ),
+    dosenPembimbing2Id: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
+      z.string({ required_error: "ID dosen pembimbing 2 wajib diisi", invalid_type_error: "ID dosen pembimbing 2 harus berupa string" }).min(1, "ID dosen pembimbing 2 wajib diisi")
+    ),
   })
   .refine((data) => Boolean(data.programType || data.program), {
     message: "Tipe program wajib diisi",
