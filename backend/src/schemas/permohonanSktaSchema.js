@@ -176,7 +176,8 @@ export const updatePermohonanSktaSchema = z
  * Dilakukan oleh Admin untuk menerbitkan SKTA.
  */
 export const approvePermohonanSktaSchema = z.object({
-  adminId: requiredUuid("Admin ID wajib diisi", "Admin ID tidak valid"),
+  // Dilonggarkan seperti FK dosen & mahasiswa agar mendukung format ID lama (integer) maupun UUID
+  adminId: requiredTrimmedString("Admin ID wajib diisi", "Admin ID tidak valid"),
   hasUploadedFinalProposal: z.preprocess((val) => {
     if (typeof val === "boolean") return val;
     if (val === "true" || val === "1") return true;
@@ -201,7 +202,8 @@ export const approvePermohonanSktaSchema = z.object({
  * Schema untuk Reject / Minta Revisi Permohonan SKTA (PUT /api/permohonan-skta/:id/reject)
  */
 export const rejectPermohonanSktaSchema = z.object({
-  adminId: requiredUuid("ID staf akademik wajib diisi", "Admin ID tidak valid"),
+  // Dilonggarkan seperti FK dosen & mahasiswa agar mendukung format ID lama (integer) maupun UUID
+  adminId: requiredTrimmedString("ID staf akademik wajib diisi", "Admin ID tidak valid"),
   message: z
     .string({ error: "Pesan penolakan wajib diisi" })
     .trim()

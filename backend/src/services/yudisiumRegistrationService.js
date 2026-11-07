@@ -1077,8 +1077,10 @@ export const approveYudisiumRegistration = async (
     throw error;
   }
 
-  const admin = await prisma.admin.findUnique({
-    where: { id: adminId },
+  const admin = await prisma.admin.findFirst({
+    where: {
+      OR: [{ id: adminId }, { userId: adminId }],
+    },
   });
 
   if (!admin) {
@@ -1136,7 +1138,7 @@ export const approveYudisiumRegistration = async (
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: {
-      adminId,
+      adminId: admin.id,
       yudisiumPeriodId,
       pengajuanCumlaudeFinal: finalPengajuanCumlaude,
       skemaCumlaudeFinal: finalSkemaCumlaude,
@@ -1167,8 +1169,10 @@ export const rejectYudisiumRegistration = async (
     throw error;
   }
 
-  const admin = await prisma.admin.findUnique({
-    where: { id: adminId },
+  const admin = await prisma.admin.findFirst({
+    where: {
+      OR: [{ id: adminId }, { userId: adminId }],
+    },
   });
 
   if (!admin) {
@@ -1198,7 +1202,7 @@ export const rejectYudisiumRegistration = async (
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: {
-      adminId,
+      adminId: admin.id,
       message,
       isEdit: isEdit ? new Date(isEdit) : null,
       yudisiumPeriodId: null,

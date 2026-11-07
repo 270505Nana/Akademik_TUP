@@ -1042,8 +1042,10 @@ export const approveSidangRegistration = async (
     throw error;
   }
 
-  const admin = await prisma.admin.findUnique({
-    where: { id: adminId },
+  const admin = await prisma.admin.findFirst({
+    where: {
+      OR: [{ id: adminId }, { userId: adminId }],
+    },
   });
 
   if (!admin) {
@@ -1093,7 +1095,7 @@ export const approveSidangRegistration = async (
   const updatedRegistration = await prisma.sidangRegistration.update({
     where: { id },
     data: {
-      adminId,
+      adminId: admin.id,
       sidangPeriodId,
       skemaSidangFinal: finalSkemaSidang,
       jalurNonSidangFinal: finalJalurNonSidang,
@@ -1124,8 +1126,10 @@ export const rejectSidangRegistration = async (
     throw error;
   }
 
-  const admin = await prisma.admin.findUnique({
-    where: { id: adminId },
+  const admin = await prisma.admin.findFirst({
+    where: {
+      OR: [{ id: adminId }, { userId: adminId }],
+    },
   });
 
   if (!admin) {
@@ -1155,7 +1159,7 @@ export const rejectSidangRegistration = async (
   const updatedRegistration = await prisma.sidangRegistration.update({
     where: { id },
     data: {
-      adminId,
+      adminId: admin.id,
       message,
       isEdit: isEdit ? new Date(isEdit) : null,
       sidangPeriodId: null,

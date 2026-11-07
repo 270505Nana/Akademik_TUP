@@ -169,11 +169,11 @@ export const submitYudisiumSchema = z
  * Schema untuk Approve Yudisium Registration (PUT /api/yudisium-registrations/:id/approve)
  */
 export const approveYudisiumSchema = z.object({
-  adminId: z
+  adminId: z.preprocess((val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val), z
     .string({ required_error: "ID staf akademik wajib diisi" })
     .trim()
     .min(1, "ID staf akademik wajib diisi")
-    .uuid("ID staf akademik tidak valid"),
+  ),
   yudisiumPeriodId: z
     .string({ required_error: "ID periode yudisium wajib diisi" })
     .trim()
@@ -191,11 +191,11 @@ export const approveYudisiumSchema = z.object({
  * Schema untuk Reject / Request Revision Yudisium Registration (PUT /api/yudisium-registrations/:id/reject)
  */
 export const rejectYudisiumSchema = z.object({
-  adminId: z
+  adminId: z.preprocess((val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val), z
     .string({ required_error: "ID staf akademik wajib diisi" })
     .trim()
     .min(1, "ID staf akademik wajib diisi")
-    .uuid("ID staf akademik tidak valid"),
+  ),
   message: z
     .string({ required_error: "Pesan penolakan wajib diisi" })
     .trim()
