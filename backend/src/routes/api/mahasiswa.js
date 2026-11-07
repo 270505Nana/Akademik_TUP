@@ -160,6 +160,11 @@ router.get("/dashboard", verifyToken, getMahasiswaDashboard);
  *               dosenWaliId:
  *                 type: string
  *                 example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "081234567890"
+ *                 description: Nomor telepon mahasiswa (disimpan pada akun user)
  *     responses:
  *       200:
  *         description: Mahasiswa data created or updated successfully

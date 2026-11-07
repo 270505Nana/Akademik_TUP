@@ -22,14 +22,32 @@ export const upsertMahasiswaSchema = z.object({
     .min(2000)
     .max(2100),
   // NOTE: Validasi UUID sementara dilonggarkan menjadi non-empty string untuk fleksibilitas format ID (legacy / custom ID).
-  studyProgramId: z
-    .string({ required_error: "Program Studi wajib dipilih" })
-    .trim()
-    .min(1, "Program Studi wajib dipilih"),
-  dosenWaliId: z
-    .string({ required_error: "Dosen Wali wajib dipilih" })
-    .trim()
-    .min(1, "Dosen Wali wajib dipilih"),
+  studyProgramId: z.preprocess(
+    (val) =>
+      val === "" || val === null || val === undefined
+        ? undefined
+        : typeof val === "number"
+        ? String(val)
+        : typeof val === "string"
+        ? val.trim()
+        : val,
+    z
+      .string({ required_error: "Program Studi wajib dipilih" })
+      .min(1, "Program Studi wajib dipilih")
+  ),
+  dosenWaliId: z.preprocess(
+    (val) =>
+      val === "" || val === null || val === undefined
+        ? undefined
+        : typeof val === "number"
+        ? String(val)
+        : typeof val === "string"
+        ? val.trim()
+        : val,
+    z
+      .string({ required_error: "Dosen Wali wajib dipilih" })
+      .min(1, "Dosen Wali wajib dipilih")
+  ),
   sks: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? null : val),
     z.coerce.number().int().min(0).max(200).nullable().optional()
@@ -41,6 +59,22 @@ export const upsertMahasiswaSchema = z.object({
   tak: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? null : val),
     z.coerce.number().int().min(0).nullable().optional()
+  ),
+  phone: z.preprocess(
+    (val) => {
+      if (val === undefined) return undefined;
+      if (val === "" || val === null) return null;
+      if (typeof val === "string") {
+        const trimmed = val.trim();
+        return trimmed === "" ? null : trimmed;
+      }
+      return String(val).trim();
+    },
+    z
+      .string()
+      .regex(/^\+?[0-9\s-]{8,15}$/, "Nomor telepon tidak valid")
+      .nullable()
+      .optional()
   ),
 });
 

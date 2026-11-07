@@ -69,6 +69,15 @@ export const mapYudisiumRegistrationToFrontend = (item, req) => {
           isActive: item.yudisiumPeriod.isActive,
         }
       : null,
+    yudisiumRegistrationPeriod: item.yudisiumRegistrationPeriod
+      ? {
+          id: item.yudisiumRegistrationPeriod.id,
+          name: item.yudisiumRegistrationPeriod.name,
+          startDate: item.yudisiumRegistrationPeriod.startDate,
+          endDate: item.yudisiumRegistrationPeriod.endDate,
+          isOpen: item.yudisiumRegistrationPeriod.isOpen,
+        }
+      : null,
     yudisiumRegistrationUploads: uploads.map((u) => ({
       id: u.id,
       name: u.name,

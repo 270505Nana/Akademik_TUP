@@ -1,7 +1,6 @@
 import path from "path";
 import excel from "exceljs";
 import prisma from "../config/prisma.js";
-import { parseBoolean } from "../utils/validationHelper.js";
 import {
   getPaginationParams,
   formatPaginationResponse,
@@ -55,9 +54,6 @@ export const getSlugsByCategory = async (categoryName) => {
 
 export const getRequiredSlugsFromDb = () =>
   getSlugsByCategory(DOCUMENT_CATEGORIES.YUDISIUM_WAJIB);
-
-export const getWirausahaSlugsFromDb = () =>
-  getSlugsByCategory(DOCUMENT_CATEGORIES.YUDISIUM_WIRAUSAHA);
 
 export const getCumlaudeSlugsFromDb = (skemaCumlaude) => {
   const categoryName =
@@ -154,11 +150,57 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
     skemaCumlaude,
     status,
     sortBy,
+    yudisiumRegistrationPeriodId,
+    yudisiumPeriodId,
   } = query;
 
   const where = {
     deletedAt: null,
   };
+
+  // Filter by Periode Pendaftaran / Periode Yudisium
+  if (yudisiumRegistrationPeriodId) {
+    where.yudisiumRegistrationPeriodId = yudisiumRegistrationPeriodId.trim();
+  }
+
+  if (yudisiumPeriodId) {
+    where.yudisiumPeriodId = yudisiumPeriodId.trim();
+  }
+
+  if (!yudisiumRegistrationPeriodId && !yudisiumPeriodId) {
+    const now = new Date();
+
+    const activePeriod = await prisma.yudisiumPeriod.findFirst({
+      where: {
+        category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+        isOpen: true,
+        deletedAt: null,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const defaultPeriod =
+      activePeriod ||
+      (await prisma.yudisiumPeriod.findFirst({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+          endDate: { lte: now },
+          deletedAt: null,
+        },
+        orderBy: [{ endDate: "desc" }, { createdAt: "desc" }],
+      })) ||
+      (await prisma.yudisiumPeriod.findFirst({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+          deletedAt: null,
+        },
+        orderBy: [{ startDate: "asc" }, { createdAt: "desc" }],
+      }));
+
+    if (defaultPeriod) {
+      where.yudisiumRegistrationPeriodId = defaultPeriod.id;
+    }
+  }
 
   // 1. Global Search
   const searchTerm = (search || "").trim();
@@ -449,7 +491,6 @@ export const saveYudisiumRegistration = async (body, req) => {
         ? body.eviden_cumlaude
         : body.evidenList;
 
-  const parsedBerminatWirausaha = parseBoolean(body.berminatWirausaha);
   const finalDosenWaliId = dosenWaliId !== undefined ? dosenWaliId : doswalId;
 
   // Validate references if provided
@@ -540,10 +581,6 @@ export const saveYudisiumRegistration = async (body, req) => {
       pengajuanCumlaude !== undefined ? pengajuanCumlaude : undefined,
     skemaCumlaude: skemaCumlaude !== undefined ? skemaCumlaude : undefined,
     evidenCumlaude: evidenCumlaude !== undefined ? evidenCumlaude : undefined,
-    berminatWirausaha:
-      parsedBerminatWirausaha !== undefined
-        ? parsedBerminatWirausaha
-        : undefined,
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenWaliId: finalDosenWaliId !== undefined ? finalDosenWaliId : undefined,
     dosenPembimbing1Id:
@@ -688,8 +725,6 @@ export const submitYudisiumRegistration = async (body, req) => {
         ? body.eviden_cumlaude
         : body.evidenList;
 
-  // NOOTE: kita sebenarnya sudah tidak mengurus berkas berminat wirausaha tapi untuk backward kompatibilitas fitur ini belum dihapus dari backend
-  const parsedBerminatWirausaha = parseBoolean(body.berminatWirausaha);
   const finalDosenWaliId = dosenWaliId !== undefined ? dosenWaliId : doswalId;
 
   const existingRegistration = await prisma.yudisiumRegistration.findUnique({
@@ -727,10 +762,6 @@ export const submitYudisiumRegistration = async (body, req) => {
       pengajuanCumlaude !== undefined ? pengajuanCumlaude : undefined,
     skemaCumlaude: skemaCumlaude !== undefined ? skemaCumlaude : undefined,
     evidenCumlaude: evidenCumlaude !== undefined ? evidenCumlaude : undefined,
-    berminatWirausaha:
-      parsedBerminatWirausaha !== undefined
-        ? parsedBerminatWirausaha
-        : undefined,
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenWaliId: finalDosenWaliId !== undefined ? finalDosenWaliId : undefined,
     dosenPembimbing1Id:
@@ -811,15 +842,7 @@ export const submitYudisiumRegistration = async (body, req) => {
     if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
   }
 
-  // 2. Yudisium - Evidence Wirausaha
-  if (mergedData.berminatWirausaha === true) {
-    const wirausahaSlugs = await getWirausahaSlugsFromDb();
-    for (const slug of wirausahaSlugs) {
-      if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
-    }
-  }
-
-  // 3. Yudisium - Evidence Cumlaude
+  // 2. Yudisium - Evidence Cumlaude
   if (mergedData.skemaCumlaude) {
     const cumlaudeSlugs = await getCumlaudeSlugsFromDb(
       mergedData.skemaCumlaude,
@@ -835,13 +858,6 @@ export const submitYudisiumRegistration = async (body, req) => {
     );
     error.statusCode = 400;
     throw error;
-  }
-
-  if (mergedData.berminatWirausaha === false) {
-    const wirausahaSlugs = await getSlugsByCategory(
-      "Yudisium - Evidence Wirausaha",
-    );
-    await deleteUploadsByCategory(id, wirausahaSlugs);
   }
 
   if (mergedData.mahasiswaId) {
@@ -947,6 +963,17 @@ export const uploadYudisiumRegistrationFile = async ({
 
   if (!fileCategory || !name) {
     const error = new Error("Kategori (slug) dan nama berkas wajib diisi");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const wirausahaSlugs = await getSlugsByCategory(
+    DOCUMENT_CATEGORIES.YUDISIUM_WIRAUSAHA,
+  );
+  if (wirausahaSlugs.includes(fileCategory)) {
+    const error = new Error(
+      "Berkas kewirausahaan tidak lagi diterima untuk pendaftaran yudisium",
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -1096,8 +1123,10 @@ export const approveYudisiumRegistration = async (
     throw error;
   }
 
-  const admin = await prisma.admin.findUnique({
-    where: { id: adminId },
+  const admin = await prisma.admin.findFirst({
+    where: {
+      OR: [{ id: adminId }, { userId: adminId }],
+    },
   });
 
   if (!admin) {
@@ -1155,7 +1184,7 @@ export const approveYudisiumRegistration = async (
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: {
-      adminId,
+      adminId: admin.id,
       yudisiumPeriodId,
       pengajuanCumlaudeFinal: finalPengajuanCumlaude,
       skemaCumlaudeFinal: finalSkemaCumlaude,
@@ -1186,8 +1215,10 @@ export const rejectYudisiumRegistration = async (
     throw error;
   }
 
-  const admin = await prisma.admin.findUnique({
-    where: { id: adminId },
+  const admin = await prisma.admin.findFirst({
+    where: {
+      OR: [{ id: adminId }, { userId: adminId }],
+    },
   });
 
   if (!admin) {
@@ -1217,7 +1248,7 @@ export const rejectYudisiumRegistration = async (
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: {
-      adminId,
+      adminId: admin.id,
       message,
       isEdit: isEdit ? new Date(isEdit) : null,
       yudisiumPeriodId: null,

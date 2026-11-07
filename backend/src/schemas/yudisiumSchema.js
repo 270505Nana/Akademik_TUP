@@ -6,17 +6,6 @@ import { z } from "zod";
 const isValidDateString = (val) => typeof val === "string" && !isNaN(Date.parse(val));
 
 /**
- * Helper untuk preprocessing boolean dari query/body
- */
-const booleanPreprocess = z.preprocess((val) => {
-  if (val === undefined || val === null || val === "") return undefined;
-  if (typeof val === "boolean") return val;
-  if (val === "true") return true;
-  if (val === "false") return false;
-  return val;
-}, z.boolean({ invalid_type_error: "Minat wirausaha harus berupa boolean" }).optional().nullable());
-
-/**
  * Schema untuk Query Parameters Daftar Pendaftaran Yudisium (GET /api/yudisium-registrations)
  */
 export const listYudisiumQuerySchema = z.object({
@@ -41,6 +30,14 @@ export const listYudisiumQuerySchema = z.object({
     z.string().optional()
   ),
   status: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string().optional()
+  ),
+  yudisiumRegistrationPeriodId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
+    z.string().optional()
+  ),
+  yudisiumPeriodId: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "string" ? val.trim() : val),
     z.string().optional()
   ),
@@ -103,8 +100,12 @@ export const saveYudisiumDraftSchema = z.object({
   eviden_cumlaude: z.string({ invalid_type_error: "Eviden cumlaude harus berupa string jika diisi" }).trim().optional().nullable(),
   evidenList: z.string({ invalid_type_error: "Eviden cumlaude harus berupa string jika diisi" }).trim().optional().nullable(),
   statusKelulusan: z.string().trim().optional().nullable(),
-  berminatWirausaha: booleanPreprocess,
-  mahasiswaId: z.string({ invalid_type_error: "ID mahasiswa harus berupa string" }).uuid("ID mahasiswa harus berupa string").optional().nullable(),
+  berminatWirausaha: z.never().optional(),
+  // Dilonggarkan seperti FK dosen agar mendukung ID lama (integer) maupun UUID
+  mahasiswaId: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
+    z.string({ invalid_type_error: "ID mahasiswa harus berupa string" }).min(1).optional().nullable()
+  ),
   dosenWaliId: z.string({ invalid_type_error: "ID dosen wali harus berupa string" }).trim().min(1).optional().nullable(),
   doswalId: z.string({ invalid_type_error: "ID dosen wali harus berupa string" }).trim().min(1).optional().nullable(),
   dosenPembimbing1Id: z.string({ invalid_type_error: "ID dosen pembimbing 1 harus berupa string" }).trim().min(1).optional().nullable(),
@@ -137,23 +138,11 @@ export const submitYudisiumSchema = z
     thesisTitleId: z.string({ invalid_type_error: "Judul TA (Indonesia) harus berupa string" }).trim().optional(),
     judulTugasAkhirInggris: z.string({ invalid_type_error: "Judul TA (Inggris) harus berupa string" }).trim().optional(),
     thesisTitleEn: z.string({ invalid_type_error: "Judul TA (Inggris) harus berupa string" }).trim().optional(),
-    berminatWirausaha: z.preprocess(
-      (val) => {
-        if (val === undefined || val === null || val === "") return undefined;
-        if (typeof val === "boolean") return val;
-        if (val === "true") return true;
-        if (val === "false") return false;
-        return val;
-      },
-      z.boolean({
-        required_error: "Minat wirausaha wajib diisi",
-        invalid_type_error: "Minat wirausaha harus berupa boolean",
-      })
-    ),
-    mahasiswaId: z
+    berminatWirausaha: z.never().optional(),
+    mahasiswaId: z.preprocess((val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val), z
       .string({ required_error: "ID mahasiswa wajib diisi", invalid_type_error: "ID mahasiswa harus berupa string" })
       .trim()
-      .min(1, "ID mahasiswa wajib diisi"),
+      .min(1, "ID mahasiswa wajib diisi")),
     dosenWaliId: z.string({ invalid_type_error: "ID dosen wali harus berupa string jika diisi" }).trim().optional().nullable(),
     doswalId: z.string({ invalid_type_error: "ID dosen wali harus berupa string jika diisi" }).trim().optional().nullable(),
     dosenPembimbing1Id: z.string({ invalid_type_error: "ID dosen pembimbing 1 harus berupa string jika diisi" }).trim().optional().nullable(),
@@ -188,11 +177,11 @@ export const submitYudisiumSchema = z
  * Schema untuk Approve Yudisium Registration (PUT /api/yudisium-registrations/:id/approve)
  */
 export const approveYudisiumSchema = z.object({
-  adminId: z
+  adminId: z.preprocess((val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val), z
     .string({ required_error: "ID staf akademik wajib diisi" })
     .trim()
     .min(1, "ID staf akademik wajib diisi")
-    .uuid("ID staf akademik tidak valid"),
+  ),
   yudisiumPeriodId: z
     .string({ required_error: "ID periode yudisium wajib diisi" })
     .trim()
@@ -210,11 +199,11 @@ export const approveYudisiumSchema = z.object({
  * Schema untuk Reject / Request Revision Yudisium Registration (PUT /api/yudisium-registrations/:id/reject)
  */
 export const rejectYudisiumSchema = z.object({
-  adminId: z
+  adminId: z.preprocess((val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val), z
     .string({ required_error: "ID staf akademik wajib diisi" })
     .trim()
     .min(1, "ID staf akademik wajib diisi")
-    .uuid("ID staf akademik tidak valid"),
+  ),
   message: z
     .string({ required_error: "Pesan penolakan wajib diisi" })
     .trim()

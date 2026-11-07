@@ -8,6 +8,8 @@ export const listTranskripQuerySchema = z.object({
     (val) =>
       val === "" || val === null || val === undefined
         ? undefined
+        : typeof val === "number"
+        ? String(val)
         : typeof val === "string"
         ? val.trim()
         : val,
@@ -17,6 +19,8 @@ export const listTranskripQuerySchema = z.object({
     (val) =>
       val === "" || val === null || val === undefined
         ? undefined
+        : typeof val === "number"
+        ? String(val)
         : typeof val === "string"
         ? val.trim()
         : val,
@@ -58,10 +62,20 @@ export const createTranskripSchema = z.object({
     .string({ required_error: "name wajib diisi" })
     .trim()
     .min(1, "name wajib diisi"),
-  mahasiswaId: z
-    .string({ required_error: "mahasiswaId wajib diisi" })
-    .trim()
-    .min(1, "mahasiswaId wajib diisi"),
+  mahasiswaId: z.preprocess(
+    (val) =>
+      val === "" || val === null || val === undefined
+        ? undefined
+        : typeof val === "number"
+        ? String(val)
+        : typeof val === "string"
+        ? val.trim()
+        : val,
+    z
+      .string({ required_error: "mahasiswaId wajib diisi" })
+      .trim()
+      .min(1, "mahasiswaId wajib diisi")
+  ),
 });
 
 /**
@@ -73,9 +87,19 @@ export const updateTranskripSchema = z.object({
     .trim()
     .min(1, "name tidak boleh kosong jika diisi")
     .optional(),
-  mahasiswaId: z
-    .string()
-    .trim()
-    .min(1, "mahasiswaId tidak boleh kosong jika diisi")
-    .optional(),
+  mahasiswaId: z.preprocess(
+    (val) =>
+      val === "" || val === null || val === undefined
+        ? undefined
+        : typeof val === "number"
+        ? String(val)
+        : typeof val === "string"
+        ? val.trim()
+        : val,
+    z
+      .string()
+      .trim()
+      .min(1, "mahasiswaId tidak boleh kosong jika diisi")
+      .optional()
+  ),
 });

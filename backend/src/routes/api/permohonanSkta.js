@@ -54,7 +54,7 @@ import {
  *         name: mahasiswaId
  *         schema:
  *           type: string
- *         description: Filter by Mahasiswa ID (UUID)
+ *         description: Filter by Mahasiswa ID (UUID / format ID legacy)
  *       - in: query
  *         name: studyProgramId
  *         schema:

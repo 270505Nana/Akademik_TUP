@@ -96,6 +96,7 @@ export const upsertMahasiswa = async (idOrUserId, payload, currentUser) => {
     tak,
     studyProgramId,
     dosenWaliId,
+    phone,
   } = payload;
 
   // Cek apakah ada mahasiswa dengan id sama
@@ -149,7 +150,28 @@ export const upsertMahasiswa = async (idOrUserId, payload, currentUser) => {
     throw error;
   }
 
+  if (phone) {
+    const existingPhoneUser = await prisma.user.findFirst({
+      where: {
+        phone,
+        id: { not: userId },
+        deletedAt: null,
+      },
+    });
+    if (existingPhoneUser) {
+      const error = new Error("Nomor telepon sudah digunakan oleh pengguna lain");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
   return await prisma.$transaction(async (tx) => {
+    if (phone !== undefined) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { phone },
+      });
+    }
     return await tx.mahasiswa.upsert({
       where: { userId },
       update: {

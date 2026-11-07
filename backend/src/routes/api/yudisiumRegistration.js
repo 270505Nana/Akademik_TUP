@@ -83,6 +83,16 @@ import {
  *             - "Hasil Sidang Ditetapkan"
  *         description: Filter pendaftaran yudisium berdasarkan status
  *       - in: query
+ *         name: yudisiumRegistrationPeriodId
+ *         schema:
+ *           type: string
+ *         description: Filter pendaftaran yudisium berdasarkan ID periode pendaftaran yudisium. Jika tidak disertakan, otomatis menampilkan pendaftaran pada periode pendaftaran aktif atau kemarin terdekat.
+ *       - in: query
+ *         name: yudisiumPeriodId
+ *         schema:
+ *           type: string
+ *         description: Filter pendaftaran yudisium berdasarkan ID periode pelaksanaan yudisium (yang sudah disetujui).
+ *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
@@ -253,10 +263,6 @@ router.get(
  *                 type: string
  *                 description: Masukan nama jurnal/conference publikasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional
  *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
- *               berminatWirausaha:
- *                 type: boolean
- *                 example: true
- *                 description: Pilihan minat berwirausaha mahasiswa
  *               mahasiswaId:
  *                 type: string
  *                 description: Mahasiswa UUID
@@ -318,7 +324,6 @@ router.post(
  *               - tglSidang
  *               - judulTugasAkhirIndonesia
  *               - judulTugasAkhirInggris
- *               - berminatWirausaha
  *               - mahasiswaId
  *             properties:
  *               id:
@@ -354,10 +359,6 @@ router.post(
  *                 type: string
  *                 description: Masukan nama jurnal/conference publikasi Tugas Akhir anda atau predikat juara+nama lomba sesuai bidang keilmuan tingkat nasional/internasional
  *                 example: Juara 1 Pagelaran Mahasiswa Nasional Bidang TIK (GEMASTIK) 2025\nPublikasi IEEE International Conference on Software Engineering 2026
- *               berminatWirausaha:
- *                 type: boolean
- *                 example: true
- *                 description: Pilihan minat berwirausaha mahasiswa
  *               mahasiswaId:
  *                 type: string
  *                 description: Mahasiswa UUID

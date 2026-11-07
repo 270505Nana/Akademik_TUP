@@ -14,6 +14,7 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
     id: item.id,
     periodId: item.periodId,
     sidangPeriodId: item.sidangPeriodId,
+    sidangRegistrationPeriodId: item.sidangRegistrationPeriodId,
     isEdit: item.isEdit,
     message: item.message,
     mahasiswaId: item.mahasiswaId,
@@ -80,6 +81,15 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
           endDate: item.sidangPeriod.endDate,
           isActive: item.sidangPeriod.isActive,
           isOpen: item.sidangPeriod.isOpen,
+        }
+      : null,
+    sidangRegistrationPeriod: item.sidangRegistrationPeriod
+      ? {
+          id: item.sidangRegistrationPeriod.id,
+          name: item.sidangRegistrationPeriod.name,
+          startDate: item.sidangRegistrationPeriod.startDate,
+          endDate: item.sidangRegistrationPeriod.endDate,
+          isOpen: item.sidangRegistrationPeriod.isOpen,
         }
       : null,
     sidangRegistrationUploads: uploads.map((u) => ({
