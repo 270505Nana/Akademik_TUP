@@ -60,6 +60,22 @@ export const upsertMahasiswaSchema = z.object({
     (val) => (val === "" || val === null || val === undefined ? null : val),
     z.coerce.number().int().min(0).nullable().optional()
   ),
+  phone: z.preprocess(
+    (val) => {
+      if (val === undefined) return undefined;
+      if (val === "" || val === null) return null;
+      if (typeof val === "string") {
+        const trimmed = val.trim();
+        return trimmed === "" ? null : trimmed;
+      }
+      return String(val).trim();
+    },
+    z
+      .string()
+      .regex(/^\+?[0-9\s-]{8,15}$/, "Nomor telepon tidak valid")
+      .nullable()
+      .optional()
+  ),
 });
 
 /**
