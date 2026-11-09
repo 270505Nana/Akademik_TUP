@@ -174,6 +174,27 @@ const togglePublishSidangPeriod = asyncHandler(async (req, res) => {
   });
 });
 
+// Upload Nota Dinas (Admin Only)
+const uploadNotaDinasController = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const fileData = req.file; 
+
+  if (!fileData) {
+    res.status(400);
+    throw new Error("File Nota Dinas wajib dilampirkan");
+  }
+
+  const updatedRegistration = await penjadwalanSidangService.uploadNotaDinas({
+    id,
+    fileData,
+  });
+
+  res.status(201).json({
+    message: "Nota Dinas berhasil diunggah",
+    data: mapPenjadwalanSidangToFrontend(updatedRegistration),
+  });
+});
+
 export {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -185,4 +206,5 @@ export {
   toggleLockSidangRegistration,
   toggleReadInfoPenjadwalan,
   togglePublishSidangPeriod,
+  uploadNotaDinasController,
 };

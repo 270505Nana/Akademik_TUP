@@ -645,11 +645,17 @@ export const toggleLockSidangRegistration = async (id) => {
     throw error;
   }
 
+  const updateData = {
+    isLocked: !registration.isLocked,
+  }
+
+  if (registration.isLocked) {
+    updateData.notaDinasUrl = null;
+  }
+
   return prisma.sidangRegistration.update({
     where: { id },
-    data: {
-      isLocked: !registration.isLocked,
-    },
+    data: updateData,
     include: penjadwalanSidangInclude,
   });
 };
@@ -826,5 +832,37 @@ export const togglePublishSidangPeriod = async (sidangPeriodId) => {
     data: {
       isPublished: !period.isPublished,
     },
+  });
+};
+
+/**
+ * Upload Nota Dinas (Admin Only)
+ * Hanya dapat diunggah jika status jadwal sidang sudah di-lock (isLocked: true)
+ */
+export const uploadNotaDinas = async ({ id, fileData }) => {
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!registration || registration.deletedAt) {
+    const error = new Error("Pendaftaran sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Validasi: Pastikan jadwal sudah di-lock sebelum upload nota dinas
+  if (!registration.isLocked) {
+    const error = new Error("Jadwal sidang belum di-lock (final). Nota dinas tidak dapat diunggah.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Simpan path file nota dinas ke kolom notaDinasUrl pada SidangRegistration
+  return prisma.sidangRegistration.update({
+    where: { id },
+    data: {
+      notaDinasUrl: fileData.path, // Path file dari multer
+    },
+    include: penjadwalanSidangInclude,
   });
 };
