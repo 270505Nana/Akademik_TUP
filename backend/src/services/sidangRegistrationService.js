@@ -572,6 +572,16 @@ export const saveSidangRegistration = async (body, req) => {
   let sidangRegistration;
 
   if (id) {
+    if (activePeriod) {
+      const existing = await prisma.sidangRegistration.findUnique({
+        where: { id },
+        select: { isDraft: true },
+      });
+      if (existing?.isDraft) {
+        upsertData.sidangRegistrationPeriodId = activePeriod.id;
+      }
+    }
+
     sidangRegistration = await prisma.sidangRegistration.update({
       where: { id },
       data: upsertData,
@@ -589,6 +599,10 @@ export const saveSidangRegistration = async (body, req) => {
         const error = new Error(editCheck.reason);
         error.statusCode = 403;
         throw error;
+      }
+
+      if (activePeriod) {
+        upsertData.sidangRegistrationPeriodId = activePeriod.id;
       }
 
       sidangRegistration = await prisma.sidangRegistration.update({
@@ -745,22 +759,41 @@ export const submitSidangRegistration = async (body, req) => {
     },
   });
 
-  if (existingRegistration.sidangRegistrationPeriodId) {
-    const period = await prisma.sidangPeriod.findUnique({
-      where: { id: existingRegistration.sidangRegistrationPeriodId },
-    });
-    if (!period || !period.isOpen) {
+  if (existingRegistration.isDraft) {
+    if (!activePeriod) {
       const error = new Error("Periode pendaftaran sidang ini sudah ditutup.");
       error.statusCode = 400;
       throw error;
     }
-  } else {
-    if (!activePeriod) {
-      const error = new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
-      error.statusCode = 400;
-      throw error;
-    }
+    // Jika masih berupa draft, selalu kaitkan ke periode pendaftaran yang aktif saat submit
     updateData.sidangRegistrationPeriodId = activePeriod.id;
+  } else {
+    // Jika bukan draft (misal revisi setelah submit atau pengajuan kembali)
+    const isRevision =
+      existingRegistration.status === "Perlu Revisi" ||
+      existingRegistration.isEdit !== null ||
+      existingRegistration.message !== null;
+
+    if (existingRegistration.sidangRegistrationPeriodId) {
+      const period = await prisma.sidangPeriod.findUnique({
+        where: { id: existingRegistration.sidangRegistrationPeriodId },
+      });
+      if ((!period || !period.isOpen) && !isRevision) {
+        if (!activePeriod) {
+          const error = new Error("Periode pendaftaran sidang ini sudah ditutup.");
+          error.statusCode = 400;
+          throw error;
+        }
+        updateData.sidangRegistrationPeriodId = activePeriod.id;
+      }
+    } else {
+      if (!activePeriod) {
+        const error = new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+        error.statusCode = 400;
+        throw error;
+      }
+      updateData.sidangRegistrationPeriodId = activePeriod.id;
+    }
   }
 
   const mergedData = { ...existingRegistration, ...updateData };
