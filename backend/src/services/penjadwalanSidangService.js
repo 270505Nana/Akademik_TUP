@@ -8,6 +8,17 @@ import {
   generateJadwalSidangFilename,
 } from "../utils/penjadwalanSidangHelper.js";
 
+const hitungStatusPenjadwalan = (penguji1, penguji2, tglSidang, ruangan) => {
+  const adaPenguji = penguji1 && penguji2;
+  const adaJadwal = tglSidang && ruangan;
+
+  if (adaPenguji && adaJadwal) return "Siap Sidang";
+  if (adaPenguji && !adaJadwal) return "Penguji Ready";
+  if (!adaPenguji && adaJadwal) return "Penjadwalan Ready";
+  
+  return null;
+};
+
 export const penjadwalanSidangInclude = {
   mahasiswa: {
     include: {
@@ -51,6 +62,7 @@ export const getPenjadwalanSidangList = async ({
   sortBy,
   skip,
   take,
+  statusPenjadwalan,
 }) => {
   let targetPeriodId = sidangPeriodId;
 
@@ -83,6 +95,10 @@ export const getPenjadwalanSidangList = async ({
 
   if (targetPeriodId) {
     where.sidangPeriodId = targetPeriodId;
+  }
+
+  if (statusPenjadwalan && statusPenjadwalan.trim() !== "") {
+    where.statusPenjadwalan = statusPenjadwalan;
   }
 
   if (user?.role === "DOSEN") {
@@ -225,11 +241,19 @@ export const setPengujiSidang = async ({
     }
   }
 
+  const statusBaru = hitungStatusPenjadwalan(
+    dosenPenguji1Id,
+    dosenPenguji2Id,
+    registration.tglSidang, 
+    registration.ruanganSidangId 
+  );
+
   return prisma.sidangRegistration.update({
     where: { id },
     data: {
       dosenPenguji1Id,
       dosenPenguji2Id,
+      statusPenjadwalan: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -369,11 +393,20 @@ export const batchSetPengujiSidang = async (items) => {
   return prisma.$transaction(async (tx) => {
     const results = [];
     for (const item of items) {
+
+      const statusBaru = hitungStatusPenjadwalan(
+        item.dosenPenguji1Id,
+        item.dosenPenguji2Id,
+        reg.tglSidang, 
+        reg.ruanganSidangId 
+      );
+
       const updated = await tx.sidangRegistration.update({
         where: { id: item.id },
         data: {
           dosenPenguji1Id: item.dosenPenguji1Id,
           dosenPenguji2Id: item.dosenPenguji2Id,
+          statusPenjadwalan: statusBaru,
           isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
@@ -434,11 +467,19 @@ export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
     throw error;
   }
 
+  const statusBaru = hitungStatusPenjadwalan(
+    registration.dosenPenguji1Id, 
+    registration.dosenPenguji2Id, 
+    new Date(tglSidang), 
+    ruanganSidangId 
+  );
+
   return prisma.sidangRegistration.update({
     where: { id },
     data: {
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
+      statusPenjadwalan: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -542,11 +583,21 @@ export const batchSetJadwalSidang = async (items) => {
   return prisma.$transaction(async (tx) => {
     const results = [];
     for (const item of items) {
+      const reg = registrationMap.get(item.id);
+      
+      const statusBaru = hitungStatusPenjadwalan(
+        reg.dosenPenguji1Id, 
+        reg.dosenPenguji2Id, 
+        new Date(item.tglSidang),
+        item.ruanganSidangId 
+      );
+
       const updated = await tx.sidangRegistration.update({
         where: { id: item.id },
         data: {
           tglSidang: new Date(item.tglSidang),
           ruanganSidangId: item.ruanganSidangId,
+          statusPenjadwalan: statusBaru,
           isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
@@ -754,6 +805,13 @@ export const setPengujiJadwalSidang = async ({
     throw error;
   }
 
+  const statusBaru = hitungStatusPenjadwalan(
+    dosenPenguji1Id,
+    dosenPenguji2Id,
+    new Date(tglSidang),
+    ruanganSidangId
+  )
+
   return prisma.sidangRegistration.update({
     where: { id },
     data: {
@@ -761,6 +819,7 @@ export const setPengujiJadwalSidang = async ({
       dosenPenguji2Id,
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
+      statusPenjadwalan: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,

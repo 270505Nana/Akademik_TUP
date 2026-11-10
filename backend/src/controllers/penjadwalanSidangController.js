@@ -17,6 +17,7 @@ const listPenjadwalanSidang = asyncHandler(async (req, res) => {
       sidangPeriodId: req.query.sidangPeriodId,
       search: req.query.search,
       sortBy: req.query.sortBy,
+      statusPenjadwalan: req.query.statusPenjadwalan,
       ...paginationParams,
     });
 
