@@ -9,6 +9,8 @@ import {
   maskMahasiswaNim,
   cekKelompokCapstone,
   listSidangRegistrations,
+  saveSidangRegistration,
+  submitSidangRegistration,
 } from "../src/services/sidangRegistrationService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "akademiktup";
@@ -348,6 +350,232 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
       expect(res.body.data).toBeDefined();
       expect(res.body.pagination).toBeDefined();
       expect(res.body.pagination.total).toBe(1);
+    });
+  });
+  // ===============================================================
+  // SEKSI 5: Transisi Periode Draft ke Submit (Periode 1 ke Periode 2)
+  // ===============================================================
+  describe("Transisi Pendaftaran Draft dari Periode 1 ke Periode 2", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("saveSidangRegistration: memperbarui sidangRegistrationPeriodId ke Periode 2 saat draft disimpan kembali pada periode baru", async () => {
+      const activePeriod2 = {
+        id: "period-2-active-uuid",
+        category: "pendaftaran",
+        isOpen: true,
+      };
+
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(activePeriod2);
+
+      vi.spyOn(prisma.sidangRegistration, "findUnique")
+        .mockResolvedValueOnce({
+          id: "reg-draft-1",
+          isDraft: true,
+          sidangRegistrationPeriodId: "period-1-closed-uuid",
+        })
+        .mockResolvedValueOnce({
+          isDraft: true,
+        });
+
+      const updateSpy = vi.spyOn(prisma.sidangRegistration, "update").mockResolvedValue({
+        id: "reg-draft-1",
+        isDraft: true,
+        sidangRegistrationPeriodId: activePeriod2.id,
+      });
+
+      const result = await saveSidangRegistration({
+        id: "reg-draft-1",
+        program: "Reguler",
+      });
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "reg-draft-1" },
+          data: expect.objectContaining({
+            sidangRegistrationPeriodId: "period-2-active-uuid",
+          }),
+        })
+      );
+      expect(result.sidangRegistrationPeriodId).toBe("period-2-active-uuid");
+    });
+
+    it("submitSidangRegistration: draft yang dibuat di Periode 1 (tutup) otomatis dialihkan ke Periode 2 yang aktif saat disubmit", async () => {
+      const period1Closed = {
+        id: "period-1-closed-uuid",
+        category: "pendaftaran",
+        isOpen: false,
+      };
+
+      const activePeriod2 = {
+        id: "period-2-active-uuid",
+        category: "pendaftaran",
+        isOpen: true,
+      };
+
+      const existingDraftReg = {
+        id: "reg-draft-1",
+        isDraft: true,
+        status: null,
+        isEdit: null,
+        message: null,
+        sidangRegistrationPeriodId: period1Closed.id,
+        program: "Reguler",
+        sks: 144,
+        ipk: 3.8,
+        tak: 50,
+        sktaExpDate: new Date("2026-12-31"),
+        judulTugasAkhirIndonesia: "Implementasi AI",
+        judulTugasAkhirInggris: "AI Implementation",
+        mahasiswaId: "mhs-1",
+        dosenPembimbing1Id: "dos-1",
+        dosenPembimbing2Id: "dos-2",
+        lulusTesBahasa: true,
+        skemaSidang: "Reguler",
+        jalurNonSidang: [],
+        sidangRegistrationUploads: [{ category: "wajib-doc" }, { category: "bahasa-doc" }],
+      };
+
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(existingDraftReg);
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(activePeriod2);
+      vi.spyOn(prisma.dokumenPersyaratanBerkas, "findMany").mockResolvedValue([]);
+      vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue({ id: "mhs-1" });
+      vi.spyOn(prisma.dosen, "findUnique")
+        .mockResolvedValueOnce({ id: "dos-1" })
+        .mockResolvedValueOnce({ id: "dos-2" });
+      vi.spyOn(prisma.sidangRegistrationUpload, "findMany").mockResolvedValue([]);
+      vi.spyOn(prisma.sidangRegistrationUpload, "deleteMany").mockResolvedValue({ count: 0 });
+
+      const updateSpy = vi.spyOn(prisma.sidangRegistration, "update").mockResolvedValue({
+        ...existingDraftReg,
+        isDraft: false,
+        status: "Dalam Proses",
+        sidangRegistrationPeriodId: activePeriod2.id,
+        submittedAt: new Date(),
+      });
+
+      const submitPayload = {
+        id: "reg-draft-1",
+        program: "Reguler",
+        sks: 144,
+        ipk: 3.8,
+        tak: 50,
+        sktaExpDate: "2026-12-31T00:00:00.000Z",
+        judulTugasAkhirIndonesia: "Implementasi AI",
+        judulTugasAkhirInggris: "AI Implementation",
+        mahasiswaId: "mhs-1",
+        dosenPembimbing1Id: "dos-1",
+        dosenPembimbing2Id: "dos-2",
+        lulusTesBahasa: true,
+        skemaSidang: "Reguler",
+      };
+
+      const result = await submitSidangRegistration(submitPayload);
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "reg-draft-1" },
+          data: expect.objectContaining({
+            sidangRegistrationPeriodId: "period-2-active-uuid",
+            isDraft: false,
+            status: "Dalam Proses",
+          }),
+        })
+      );
+      expect(result.sidangRegistrationPeriodId).toBe("period-2-active-uuid");
+      expect(result.status).toBe("Dalam Proses");
+    });
+
+    it("submitSidangRegistration: melempar error 400 jika mahasiswa submit draft dari Periode 1 namun tidak ada periode aktif saat ini", async () => {
+      const existingDraftReg = {
+        id: "reg-draft-1",
+        isDraft: true,
+        sidangRegistrationPeriodId: "period-1-closed-uuid",
+      };
+
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(existingDraftReg);
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(null);
+
+      await expect(submitSidangRegistration({ id: "reg-draft-1" })).rejects.toThrowError(
+        "Periode pendaftaran sidang ini sudah ditutup."
+      );
+    });
+
+    it("endpoint POST /api/sidang-registrations/submit berhasil mengalihkan periode 1 ke periode 2 (HTTP 200)", async () => {
+      const token = jwt.sign(
+        { id: "mhs-uuid", role: "MAHASISWA", email: "mhs@student.telkomuniversity.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      const existingDraftReg = {
+        id: "reg-draft-http",
+        isDraft: true,
+        status: null,
+        isEdit: null,
+        message: null,
+        sidangRegistrationPeriodId: "period-1-closed-uuid",
+        program: "Reguler",
+        sks: 144,
+        ipk: 3.8,
+        tak: 50,
+        sktaExpDate: new Date("2026-12-31"),
+        judulTugasAkhirIndonesia: "Sistem IoT",
+        judulTugasAkhirInggris: "IoT System",
+        mahasiswaId: "mhs-uuid",
+        dosenPembimbing1Id: "dos-1",
+        dosenPembimbing2Id: "dos-2",
+        lulusTesBahasa: true,
+        skemaSidang: "Reguler",
+        jalurNonSidang: [],
+        sidangRegistrationUploads: [],
+      };
+
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(existingDraftReg);
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue({
+        id: "period-2-active-uuid",
+        category: "pendaftaran",
+        isOpen: true,
+      });
+      vi.spyOn(prisma.dokumenPersyaratanBerkas, "findMany").mockResolvedValue([]);
+      vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue({ id: "mhs-uuid" });
+      vi.spyOn(prisma.dosen, "findUnique").mockResolvedValue({ id: "dos-1" });
+      vi.spyOn(prisma.sidangRegistrationUpload, "findMany").mockResolvedValue([]);
+
+      vi.spyOn(prisma.sidangRegistration, "update").mockResolvedValue({
+        ...existingDraftReg,
+        isDraft: false,
+        status: "Dalam Proses",
+        sidangRegistrationPeriodId: "period-2-active-uuid",
+        submittedAt: new Date(),
+      });
+
+      const submitBody = {
+        id: "reg-draft-http",
+        program: "Reguler",
+        sks: 144,
+        ipk: 3.8,
+        tak: 50,
+        sktaExpDate: "2026-12-31T00:00:00.000Z",
+        judulTugasAkhirIndonesia: "Sistem IoT",
+        judulTugasAkhirInggris: "IoT System",
+        mahasiswaId: "mhs-uuid",
+        dosenPembimbing1Id: "dos-1",
+        dosenPembimbing2Id: "dos-2",
+        lulusTesBahasa: true,
+        skemaSidang: "Reguler",
+      };
+
+      const res = await request(app)
+        .post("/api/sidang-registrations/submit")
+        .set("Authorization", `Bearer ${token}`)
+        .send(submitBody);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Sidang registration submitted successfully");
+      expect(res.body.data.sidangRegistrationPeriodId).toBe("period-2-active-uuid");
+      expect(res.body.data.isDraft).toBe(false);
     });
   });
 });
