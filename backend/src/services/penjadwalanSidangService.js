@@ -1,4 +1,6 @@
 import prisma from "../config/prisma.js";
+import { ZipArchive } from "archiver";
+import { PassThrough } from "stream";
 import {
   checkJadwalConflict,
   isCapstoneScheme,
@@ -6,7 +8,19 @@ import {
   validateBatchJadwalInternalConflict,
   generateJadwalSidangWorkbook,
   generateJadwalSidangFilename,
+  generateJadwalBandungWorkbook,
 } from "../utils/penjadwalanSidangHelper.js";
+
+const hitungStatusPenjadwalan = (penguji1, penguji2, tglSidang, ruangan) => {
+  const adaPenguji = penguji1 && penguji2;
+  const adaJadwal = tglSidang && ruangan;
+
+  if (adaPenguji && adaJadwal) return "Siap Sidang";
+  if (adaPenguji && !adaJadwal) return "Penguji Ready";
+  if (!adaPenguji && adaJadwal) return "Penjadwalan Ready";
+  
+  return null;
+};
 
 export const penjadwalanSidangInclude = {
   mahasiswa: {
@@ -51,6 +65,7 @@ export const getPenjadwalanSidangList = async ({
   sortBy,
   skip,
   take,
+  statusPenjadwalan,
 }) => {
   let targetPeriodId = sidangPeriodId;
 
@@ -83,6 +98,10 @@ export const getPenjadwalanSidangList = async ({
 
   if (targetPeriodId) {
     where.sidangPeriodId = targetPeriodId;
+  }
+
+  if (statusPenjadwalan && statusPenjadwalan.trim() !== "") {
+    where.statusPenjadwalan = statusPenjadwalan;
   }
 
   if (user?.role === "DOSEN") {
@@ -225,11 +244,19 @@ export const setPengujiSidang = async ({
     }
   }
 
+  const statusBaru = hitungStatusPenjadwalan(
+    dosenPenguji1Id,
+    dosenPenguji2Id,
+    registration.tglSidang, 
+    registration.ruanganSidangId 
+  );
+
   return prisma.sidangRegistration.update({
     where: { id },
     data: {
       dosenPenguji1Id,
       dosenPenguji2Id,
+      statusPenjadwalan: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -369,11 +396,20 @@ export const batchSetPengujiSidang = async (items) => {
   return prisma.$transaction(async (tx) => {
     const results = [];
     for (const item of items) {
+
+      const statusBaru = hitungStatusPenjadwalan(
+        item.dosenPenguji1Id,
+        item.dosenPenguji2Id,
+        reg.tglSidang, 
+        reg.ruanganSidangId 
+      );
+
       const updated = await tx.sidangRegistration.update({
         where: { id: item.id },
         data: {
           dosenPenguji1Id: item.dosenPenguji1Id,
           dosenPenguji2Id: item.dosenPenguji2Id,
+          statusPenjadwalan: statusBaru,
           isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
@@ -434,11 +470,19 @@ export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
     throw error;
   }
 
+  const statusBaru = hitungStatusPenjadwalan(
+    registration.dosenPenguji1Id, 
+    registration.dosenPenguji2Id, 
+    new Date(tglSidang), 
+    ruanganSidangId 
+  );
+
   return prisma.sidangRegistration.update({
     where: { id },
     data: {
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
+      statusPenjadwalan: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -542,11 +586,21 @@ export const batchSetJadwalSidang = async (items) => {
   return prisma.$transaction(async (tx) => {
     const results = [];
     for (const item of items) {
+      const reg = registrationMap.get(item.id);
+      
+      const statusBaru = hitungStatusPenjadwalan(
+        reg.dosenPenguji1Id, 
+        reg.dosenPenguji2Id, 
+        new Date(item.tglSidang),
+        item.ruanganSidangId 
+      );
+
       const updated = await tx.sidangRegistration.update({
         where: { id: item.id },
         data: {
           tglSidang: new Date(item.tglSidang),
           ruanganSidangId: item.ruanganSidangId,
+          statusPenjadwalan: statusBaru,
           isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
@@ -624,10 +678,34 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
     orderBy: { tglSidang: "asc" },
   });
 
-  const workbook = generateJadwalSidangWorkbook(jadwalList);
-  const filename = generateJadwalSidangFilename(selectedPeriod);
+  // Workbook Format Awal
+  const workbookAwal = generateJadwalSidangWorkbook(jadwalList);
+  const bufferAwal = await workbookAwal.xlsx.writeBuffer();
 
-  return { workbook, filename };
+  //Workbook Format Bandung
+  const workbookBandung = generateJadwalBandungWorkbook(jadwalList);
+  const bufferBandung = await workbookBandung.xlsx.writeBuffer();
+
+  //keduanya dalam arsip ZIP
+  const archive = new ZipArchive({ zlib: { level: 9 } });
+  const stream = new PassThrough();
+
+  archive.on("error", (err) => {
+    throw err;
+  });
+
+  archive.pipe(stream);
+  archive.append(Buffer.from(bufferAwal), { name: "Jadwal_Sidang_Format_Awal.xlsx" });
+  archive.append(Buffer.from(bufferBandung), { name: "Jadwal_Sidang_Format_Bandung.xlsx" });
+  
+  await archive.finalize();
+
+  const baseFilename = generateJadwalSidangFilename(selectedPeriod);
+  const zipFilename = baseFilename.endsWith(".xlsx") 
+    ? baseFilename.replace(".xlsx", ".zip") 
+    : `${baseFilename}.zip`;
+
+  return { stream, filename: zipFilename };
 };
 
 /**
@@ -645,11 +723,17 @@ export const toggleLockSidangRegistration = async (id) => {
     throw error;
   }
 
+  const updateData = {
+    isLocked: !registration.isLocked,
+  }
+
+  if (registration.isLocked) {
+    updateData.notaDinasUrl = null;
+  }
+
   return prisma.sidangRegistration.update({
     where: { id },
-    data: {
-      isLocked: !registration.isLocked,
-    },
+    data: updateData,
     include: penjadwalanSidangInclude,
   });
 };
@@ -748,6 +832,13 @@ export const setPengujiJadwalSidang = async ({
     throw error;
   }
 
+  const statusBaru = hitungStatusPenjadwalan(
+    dosenPenguji1Id,
+    dosenPenguji2Id,
+    new Date(tglSidang),
+    ruanganSidangId
+  )
+
   return prisma.sidangRegistration.update({
     where: { id },
     data: {
@@ -755,6 +846,7 @@ export const setPengujiJadwalSidang = async ({
       dosenPenguji2Id,
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
+      statusPenjadwalan: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -826,5 +918,37 @@ export const togglePublishSidangPeriod = async (sidangPeriodId) => {
     data: {
       isPublished: !period.isPublished,
     },
+  });
+};
+
+/**
+ * Upload Nota Dinas (Admin Only)
+ * Hanya dapat diunggah jika status jadwal sidang sudah di-lock (isLocked: true)
+ */
+export const uploadNotaDinas = async ({ id, fileData }) => {
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!registration || registration.deletedAt) {
+    const error = new Error("Pendaftaran sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Validasi: Pastikan jadwal sudah di-lock sebelum upload nota dinas
+  if (!registration.isLocked) {
+    const error = new Error("Jadwal sidang belum di-lock (final). Nota dinas tidak dapat diunggah.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Simpan path file nota dinas ke kolom notaDinasUrl pada SidangRegistration
+  return prisma.sidangRegistration.update({
+    where: { id },
+    data: {
+      notaDinasUrl: fileData.path, // Path file dari multer
+    },
+    include: penjadwalanSidangInclude,
   });
 };
