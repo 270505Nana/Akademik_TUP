@@ -90,20 +90,17 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
 
 // Export Jadwal Sidang
 const exportJadwalSidang = asyncHandler(async (req, res) => {
-  const { workbook, filename } =
+  const { stream, filename } =
     await penjadwalanSidangService.exportJadwalSidang({
       user: req.user,
       dosen: req.dosen,
       sidangPeriodId: req.query.sidangPeriodId,
     });
 
-  res.setHeader(
-    "Content-Type",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  );
+  res.setHeader("Content-Type", "application/zip");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  await workbook.xlsx.write(res);
-  res.end();
+  
+  stream.pipe(res);
 });
 
 // Toggle Lock Sidang Registration (Admin Only)

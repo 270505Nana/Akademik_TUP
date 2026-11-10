@@ -1,4 +1,6 @@
 import prisma from "../config/prisma.js";
+import { ZipArchive } from "archiver";
+import { PassThrough } from "stream";
 import {
   checkJadwalConflict,
   isCapstoneScheme,
@@ -6,6 +8,7 @@ import {
   validateBatchJadwalInternalConflict,
   generateJadwalSidangWorkbook,
   generateJadwalSidangFilename,
+  generateJadwalBandungWorkbook,
 } from "../utils/penjadwalanSidangHelper.js";
 
 const hitungStatusPenjadwalan = (penguji1, penguji2, tglSidang, ruangan) => {
@@ -675,10 +678,34 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
     orderBy: { tglSidang: "asc" },
   });
 
-  const workbook = generateJadwalSidangWorkbook(jadwalList);
-  const filename = generateJadwalSidangFilename(selectedPeriod);
+  // Workbook Format Awal
+  const workbookAwal = generateJadwalSidangWorkbook(jadwalList);
+  const bufferAwal = await workbookAwal.xlsx.writeBuffer();
 
-  return { workbook, filename };
+  //Workbook Format Bandung
+  const workbookBandung = generateJadwalBandungWorkbook(jadwalList);
+  const bufferBandung = await workbookBandung.xlsx.writeBuffer();
+
+  //keduanya dalam arsip ZIP
+  const archive = new ZipArchive({ zlib: { level: 9 } });
+  const stream = new PassThrough();
+
+  archive.on("error", (err) => {
+    throw err;
+  });
+
+  archive.pipe(stream);
+  archive.append(Buffer.from(bufferAwal), { name: "Jadwal_Sidang_Format_Awal.xlsx" });
+  archive.append(Buffer.from(bufferBandung), { name: "Jadwal_Sidang_Format_Bandung.xlsx" });
+  
+  await archive.finalize();
+
+  const baseFilename = generateJadwalSidangFilename(selectedPeriod);
+  const zipFilename = baseFilename.endsWith(".xlsx") 
+    ? baseFilename.replace(".xlsx", ".zip") 
+    : `${baseFilename}.zip`;
+
+  return { stream, filename: zipFilename };
 };
 
 /**
