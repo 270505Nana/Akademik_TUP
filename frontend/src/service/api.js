@@ -87,8 +87,12 @@ export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, stud
   
   formData.append("mahasiswaId", String(mahasiswaId || studentId)); 
   
-  if (dosenPembimbing1Id) formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
-  if (dosenPembimbing2Id) formData.append("dosenPembimbing2Id", String(  dosenPembimbing2Id));
+  // Ambil .value jika dikirim dalam bentuk objek react-select
+  const d1 = dosenPembimbing1Id?.value ?? dosenPembimbing1Id;
+  const d2 = dosenPembimbing2Id?.value ?? dosenPembimbing2Id;
+
+  if (d1) formData.append("dosenPembimbing1Id", String(d1));
+  if (d2) formData.append("dosenPembimbing2Id", String(d2));
   if (researchGroupId) formData.append("researchGroupId", String(researchGroupId));
   
   if (evidence) formData.append("evidence", evidence);
@@ -139,10 +143,34 @@ export const getSKTAResponse = async (sktaRequestId) => {
 };
 
 // ------------------------------------------- DOSEN -------------------------------------------
-export const getLecturersData = async () => {
-  const response = await api.get('/api/dosen');
-  return response.data?.data ?? response.data;
-};
+// export const getLecturers = async (params = {}) => {
+//   const safeParams = {
+//     limit: 99, 
+//     ...params
+//   };
+
+//   delete safeParams.sortBy;
+//   delete safeParams.sortOrder;
+//   delete safeParams.pagination;
+
+//   try {
+//     const response = await api.get("/api/dosen", { params: safeParams });
+//     const data = response.data?.data ?? response.data;
+    
+//     let list = Array.isArray(data) ? data : (data?.data || []);
+
+//     list.sort((a, b) => {
+//       const nameA = (a.user?.name || a.name || a.nama || "").toLowerCase();
+//       const nameB = (b.user?.name || b.name || b.nama || "").toLowerCase();
+//       return nameA.localeCompare(nameB);
+//     });
+
+//     return list;
+//   } catch (error) {
+//     console.error("API getLecturers error:", error.response?.data || error.message);
+//     return [];
+//   }
+// };
 
 export const getLecturerData = async (userId) => {
   const response = await api.get(`/api/dosen/${userId}`);
@@ -156,7 +184,7 @@ export const getAllDosen = async (params = {}) => {
 
 export const getPenjadwalanSidang = async (params = {}) => {
   try {
-    const response = await api.get('/api/penjadwalan-sidang', { params });
+    const response = await api.get('/api/penjadwalan-sidang', { params });  
     return response.data;
   } catch (err) {
     console.error('Error fetching penjadwalan sidang:', err);
@@ -1067,4 +1095,4 @@ export const cancelRequest = async (id) => {
   return response.data;
 };
 
-export default api; 
+export default api;

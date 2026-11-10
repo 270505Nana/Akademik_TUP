@@ -332,9 +332,12 @@ const PengajuanSK = () => {
     const fetchDosen = async () => {
       try {
         setLoadingDosen(true);
-        const data    = await getLecturers();
-        const options = data.map((d) => ({
-          value: d.id,
+        const rawData = await getLecturers();
+        
+        const safeData = Array.isArray(rawData) ? rawData : [];
+        
+        const options = safeData.map((d) => ({
+          value: String(d.id), 
           label: `${d.kodeDosen ?? d.lecturerCode ?? d.kode ?? ''} — ${d.user?.name ?? d.name ?? d.nama ?? ''}`,
           nama:  d.user?.name ?? d.name ?? d.nama ?? '',
           researchGroupId: d.researchGroupId ?? null,
@@ -586,8 +589,10 @@ const PengajuanSK = () => {
 
     setPageStatus('submitting');
 
+    const p1 = formData.kode1?.value ? String(formData.kode1.value) : null;
+    const p2 = formData.kode2?.value ? String(formData.kode2.value) : null;
+
     try {
-      // Bypass pembuatan draft untuk Revisi maupun Perpanjangan
       if (submissionMode === 'patch-revisi' || submissionMode === 'create-perpanjangan') {
         const activeRequestId = sktaRequestId ?? permohonan?.id;
 
@@ -602,8 +607,8 @@ const PengajuanSK = () => {
         finalPayload.append('category', categoryString);
         finalPayload.append('judulProposalIndonesia', formData.judulIndo.trim());
         finalPayload.append('judulProposalInggris', formData.judulInggris.trim());
-        if (formData.kode1?.value) finalPayload.append('dosenPembimbing1Id', formData.kode1.value);
-        if (formData.kode2?.value) finalPayload.append('dosenPembimbing2Id', formData.kode2.value);
+        if (p1) finalPayload.append('dosenPembimbing1Id', p1);
+        if (p2) finalPayload.append('dosenPembimbing2Id', p2);
         if (actualFile) finalPayload.append('evidence', actualFile);
 
         await submitFinalSKTARequest(finalPayload);
@@ -620,8 +625,8 @@ const PengajuanSK = () => {
           proposalTitleId:    formData.judulIndo.trim(),
           proposalTitleEn:    formData.judulInggris.trim(),
           studentId:          mahasiswaId,
-          dosenPembimbing1Id: formData.kode1?.value,
-          dosenPembimbing2Id: formData.kode2?.value,
+          dosenPembimbing1Id: p1,
+          dosenPembimbing2Id: p2,
           category:           categoryString
         });
         
@@ -634,8 +639,8 @@ const PengajuanSK = () => {
         finalPayload.append('category', categoryString);
         finalPayload.append('judulProposalIndonesia', formData.judulIndo.trim());
         finalPayload.append('judulProposalInggris', formData.judulInggris.trim());
-        if (formData.kode1?.value) finalPayload.append('dosenPembimbing1Id', formData.kode1.value);
-        if (formData.kode2?.value) finalPayload.append('dosenPembimbing2Id', formData.kode2.value);
+        if (p1) finalPayload.append('dosenPembimbing1Id', p1);
+        if (p2) finalPayload.append('dosenPembimbing2Id', p2);
         if (actualFile) finalPayload.append('evidence', actualFile);
 
         await submitFinalSKTARequest(finalPayload);
