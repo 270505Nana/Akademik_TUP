@@ -311,6 +311,63 @@ export const generateJadwalSidangWorkbook = (jadwalList) => {
 };
 
 /**
+ * Membuat Workbook Excel untuk ekspor data jadwal sidang format Bandung (Yudisium Student)
+ */
+export const generateJadwalBandungWorkbook = (jadwalList) => {
+  const workbook = new excel.Workbook();
+  const worksheet = workbook.addWorksheet("Yudisium & Sidang");
+
+  worksheet.columns = [
+    { header: "NIM", key: "nim", width: 15 },
+    { header: "TANGGAL SIDANG AKAD", key: "tglSidangAkad", width: 20 },
+    { header: "BULAN SIDANG AKAD", key: "blnSidangAkad", width: 20 },
+    { header: "TAHUN SIDANG AKAD", key: "thnSidangAkad", width: 20 },
+    { header: "TANGGAL SIDANG TA/PA", key: "tglSidangTa", width: 20 },
+    { header: "BULAN SIDANG TA/PA", key: "blnSidangTa", width: 20 },
+    { header: "TAHUN SIDANG  TA/PA", key: "thnSidangTa", width: 20 },
+    { header: "TANGGAL SURAT", key: "tglSurat", width: 15 },
+    { header: "BULAN SURAT", key: "blnSurat", width: 15 },
+    { header: "TAHUN SURAT", key: "thnSurat", width: 15 },
+    { header: "NOMOR SURAT", key: "noSurat", width: 20 },
+    { header: "KODE DOSEN WALI", key: "kodeWali", width: 18 },
+    { header: "PREDIKAT YUDISIUM", key: "predikat", width: 18 },
+    { header: "STATUS", key: "status", width: 12 },
+    { header: "MEDIA JURNAL", key: "mediaJurnal", width: 18 },
+    { header: "TANGGAL UPLOAD JURNAL", key: "tglUpload", width: 22 },
+    { header: "BULAN UPLOAD JURNAL", key: "blnUpload", width: 20 },
+    { header: "TAHUN UPLOAD JURNAL", key: "thnUpload", width: 20 },
+    { header: "AKUN GOOGLE SCHOOLAR", key: "scholar", width: 25 },
+  ];
+
+  jadwalList.forEach((jadwal) => {
+    const tgl = jadwal.tglSidang ? new Date(jadwal.tglSidang) : null;
+    worksheet.addRow({
+      nim: jadwal.mahasiswa?.nim || "",
+      tglSidangAkad: tgl ? tgl.getDate() : "",
+      blnSidangAkad: tgl ? tgl.getMonth() + 1 : "",
+      thnSidangAkad: tgl ? tgl.getFullYear() : "",
+      tglSidangTa: tgl ? tgl.getDate() : "",
+      blnSidangTa: tgl ? tgl.getMonth() + 1 : "",
+      thnSidangTa: tgl ? tgl.getFullYear() : "",
+      tglSurat: tgl ? tgl.getDate() : "",
+      blnSurat: tgl ? tgl.getMonth() + 1 : "",
+      thnSurat: tgl ? tgl.getFullYear() : "",
+      noSurat: "",
+      kodeWali: jadwal.mahasiswa?.dosenWali?.kodeDosen || "",
+      predikat: "",
+      status: jadwal.statusPenjadwalan || "",
+      mediaJurnal: "",
+      tglUpload: "",
+      blnUpload: "",
+      thnUpload: "",
+      scholar: "",
+    });
+  });
+
+  return workbook;
+};
+
+/**
  * Menghasilkan nama file Excel ekspor jadwal sidang yang tersanitasi
  */
 export const generateJadwalSidangFilename = (selectedPeriod) => {
