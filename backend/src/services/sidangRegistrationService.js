@@ -70,7 +70,7 @@ export const getRequiredSlugsFromDb = () =>
 export const getNonSidangSlugsFromDb = (jalur) => {
   const normalized = String(jalur || "").trim();
   const matchedKey = Object.keys(NON_SIDANG_CATEGORY_MAP).find(
-    (key) => key.toLowerCase() === normalized.toLowerCase()
+    (key) => key.toLowerCase() === normalized.toLowerCase(),
   );
   const categoryName = matchedKey
     ? NON_SIDANG_CATEGORY_MAP[matchedKey]
@@ -270,13 +270,21 @@ export const listSidangRegistrations = async ({ query = {}, req } = {}) => {
   }
 
   // 2. Filter by Study Program ID
-  if (studyProgramId && typeof studyProgramId === "string" && studyProgramId.trim() !== "") {
+  if (
+    studyProgramId &&
+    typeof studyProgramId === "string" &&
+    studyProgramId.trim() !== ""
+  ) {
     where.mahasiswa = where.mahasiswa || {};
     where.mahasiswa.studyProgramId = studyProgramId.trim();
   }
 
   // 3. Filter by Skema Sidang
-  if (skemaSidang && typeof skemaSidang === "string" && skemaSidang.trim() !== "") {
+  if (
+    skemaSidang &&
+    typeof skemaSidang === "string" &&
+    skemaSidang.trim() !== ""
+  ) {
     const skema = skemaSidang.trim();
     where.AND = where.AND || [];
     where.AND.push({
@@ -299,7 +307,11 @@ export const listSidangRegistrations = async ({ query = {}, req } = {}) => {
   }
 
   // 4. Filter by Jalur Non Sidang
-  if (jalurNonSidang && typeof jalurNonSidang === "string" && jalurNonSidang.trim() !== "") {
+  if (
+    jalurNonSidang &&
+    typeof jalurNonSidang === "string" &&
+    jalurNonSidang.trim() !== ""
+  ) {
     const jalur = jalurNonSidang.trim();
     where.AND = where.AND || [];
     where.AND.push({
@@ -401,7 +413,7 @@ export const listSidangRegistrations = async ({ query = {}, req } = {}) => {
   });
 
   const data = sidangRegistrations.map((reg) =>
-    mapSidangRegistrationToFrontend(reg, req)
+    mapSidangRegistrationToFrontend(reg, req),
   );
 
   return formatPaginationResponse(data, total, paginationParams);
@@ -474,13 +486,20 @@ export const saveSidangRegistration = async (body, req) => {
   const parsedLulusTesBahasa = parseBoolean(lulusTesBahasa);
 
   // Validate references if provided
+  let studentForSave = null;
   if (mahasiswaId) {
-    const studentExists = await prisma.mahasiswa.findUnique({
+    studentForSave = await prisma.mahasiswa.findUnique({
       where: { id: mahasiswaId },
+      select: { id: true, dosenWaliId: true },
     });
-    if (!studentExists) {
+    if (!studentForSave) {
       const error = new Error("Mahasiswa tidak ditemukan");
       error.statusCode = 404;
+      throw error;
+    }
+    if (!studentForSave.dosenWaliId) {
+      const error = new Error("Mahasiswa belum memiliki dosen wali");
+      error.statusCode = 400;
       throw error;
     }
   }
@@ -529,7 +548,8 @@ export const saveSidangRegistration = async (body, req) => {
     }
   }
 
-  const effectiveScheme = sidangScheme !== undefined ? sidangScheme : skemaSidang;
+  const effectiveScheme =
+    sidangScheme !== undefined ? sidangScheme : skemaSidang;
   const isNonSidangScheme =
     effectiveScheme !== undefined
       ? String(effectiveScheme).trim().toLowerCase() === "non sidang" ||
@@ -546,8 +566,10 @@ export const saveSidangRegistration = async (body, req) => {
         : undefined;
 
   const resolvedProgram = programType !== undefined ? programType : program;
-  const resolvedJudulId = thesisTitleId !== undefined ? thesisTitleId : judulTugasAkhirIndonesia;
-  const resolvedJudulEn = thesisTitleEn !== undefined ? thesisTitleEn : judulTugasAkhirInggris;
+  const resolvedJudulId =
+    thesisTitleId !== undefined ? thesisTitleId : judulTugasAkhirIndonesia;
+  const resolvedJudulEn =
+    thesisTitleEn !== undefined ? thesisTitleEn : judulTugasAkhirInggris;
 
   const upsertData = {
     program: resolvedProgram !== undefined ? resolvedProgram : undefined,
@@ -559,9 +581,12 @@ export const saveSidangRegistration = async (body, req) => {
     ipk: ipk !== undefined && ipk !== null ? parseFloat(ipk) : undefined,
     tak: tak !== undefined && tak !== null ? parseInt(tak, 10) : undefined,
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
-    judulTugasAkhirIndonesia: resolvedJudulId !== undefined ? resolvedJudulId : undefined,
-    judulTugasAkhirInggris: resolvedJudulEn !== undefined ? resolvedJudulEn : undefined,
+    judulTugasAkhirIndonesia:
+      resolvedJudulId !== undefined ? resolvedJudulId : undefined,
+    judulTugasAkhirInggris:
+      resolvedJudulEn !== undefined ? resolvedJudulEn : undefined,
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
+    dosenWaliId: studentForSave?.dosenWaliId,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
     dosenPembimbing2Id:
@@ -572,14 +597,34 @@ export const saveSidangRegistration = async (body, req) => {
   let sidangRegistration;
 
   if (id) {
+    const existing = await prisma.sidangRegistration.findUnique({
+      where: { id },
+      select: { isDraft: true, mahasiswaId: true },
+    });
+
     if (activePeriod) {
-      const existing = await prisma.sidangRegistration.findUnique({
-        where: { id },
-        select: { isDraft: true },
-      });
       if (existing?.isDraft) {
         upsertData.sidangRegistrationPeriodId = activePeriod.id;
       }
+    }
+
+    if (!studentForSave && existing?.mahasiswaId) {
+      studentForSave = await prisma.mahasiswa.findUnique({
+        where: { id: existing.mahasiswaId },
+        select: { id: true, dosenWaliId: true },
+      });
+      if (!studentForSave) {
+        const error = new Error("Mahasiswa tidak ditemukan");
+        error.statusCode = 404;
+        throw error;
+      }
+      if (!studentForSave.dosenWaliId) {
+        const error = new Error("Mahasiswa belum memiliki dosen wali");
+        error.statusCode = 400;
+        throw error;
+      }
+      upsertData.mahasiswaId = existing.mahasiswaId;
+      upsertData.dosenWaliId = studentForSave.dosenWaliId;
     }
 
     sidangRegistration = await prisma.sidangRegistration.update({
@@ -612,7 +657,9 @@ export const saveSidangRegistration = async (body, req) => {
       });
     } else {
       if (!activePeriod) {
-        const error = new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+        const error = new Error(
+          "Tidak ada periode pendaftaran sidang yang aktif saat ini.",
+        );
         error.statusCode = 400;
         throw error;
       }
@@ -626,7 +673,9 @@ export const saveSidangRegistration = async (body, req) => {
       });
 
       if (existingInPeriod) {
-        const error = new Error("Mahasiswa sudah terdaftar pada periode pendaftaran sidang yang aktif.");
+        const error = new Error(
+          "Mahasiswa sudah terdaftar pada periode pendaftaran sidang yang aktif.",
+        );
         error.statusCode = 400;
         throw error;
       }
@@ -640,7 +689,9 @@ export const saveSidangRegistration = async (body, req) => {
     }
   } else {
     if (!activePeriod) {
-      const error = new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+      const error = new Error(
+        "Tidak ada periode pendaftaran sidang yang aktif saat ini.",
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -703,7 +754,12 @@ export const submitSidangRegistration = async (body, req) => {
     throw error;
   }
 
-  const effectiveScheme = sidangScheme !== undefined ? sidangScheme : (skemaSidang !== undefined ? skemaSidang : existingRegistration.skemaSidang);
+  const effectiveScheme =
+    sidangScheme !== undefined
+      ? sidangScheme
+      : skemaSidang !== undefined
+        ? skemaSidang
+        : existingRegistration.skemaSidang;
 
   const currentJalurNonSidang =
     jalurNonSidang !== undefined
@@ -725,10 +781,14 @@ export const submitSidangRegistration = async (body, req) => {
       .includes("non") ||
     hasJalurNonSidang;
 
-  const resolvedSubmitJalurNonSidang = !isNonSidang ? [] : currentJalurNonSidang;
+  const resolvedSubmitJalurNonSidang = !isNonSidang
+    ? []
+    : currentJalurNonSidang;
   const resolvedProgram = programType !== undefined ? programType : program;
-  const resolvedJudulId = thesisTitleId !== undefined ? thesisTitleId : judulTugasAkhirIndonesia;
-  const resolvedJudulEn = thesisTitleEn !== undefined ? thesisTitleEn : judulTugasAkhirInggris;
+  const resolvedJudulId =
+    thesisTitleId !== undefined ? thesisTitleId : judulTugasAkhirIndonesia;
+  const resolvedJudulEn =
+    thesisTitleEn !== undefined ? thesisTitleEn : judulTugasAkhirInggris;
 
   const updateData = {
     program: resolvedProgram !== undefined ? resolvedProgram : undefined,
@@ -740,8 +800,10 @@ export const submitSidangRegistration = async (body, req) => {
     ipk: ipk !== undefined && ipk !== null ? parseFloat(ipk) : undefined,
     tak: tak !== undefined && tak !== null ? parseInt(tak, 10) : undefined,
     sktaExpDate: sktaExpDate ? new Date(sktaExpDate) : undefined,
-    judulTugasAkhirIndonesia: resolvedJudulId !== undefined ? resolvedJudulId : undefined,
-    judulTugasAkhirInggris: resolvedJudulEn !== undefined ? resolvedJudulEn : undefined,
+    judulTugasAkhirIndonesia:
+      resolvedJudulId !== undefined ? resolvedJudulId : undefined,
+    judulTugasAkhirInggris:
+      resolvedJudulEn !== undefined ? resolvedJudulEn : undefined,
     mahasiswaId: mahasiswaId !== undefined ? mahasiswaId : undefined,
     dosenPembimbing1Id:
       dosenPembimbing1Id !== undefined ? dosenPembimbing1Id : undefined,
@@ -780,7 +842,9 @@ export const submitSidangRegistration = async (body, req) => {
       });
       if ((!period || !period.isOpen) && !isRevision) {
         if (!activePeriod) {
-          const error = new Error("Periode pendaftaran sidang ini sudah ditutup.");
+          const error = new Error(
+            "Periode pendaftaran sidang ini sudah ditutup.",
+          );
           error.statusCode = 400;
           throw error;
         }
@@ -788,7 +852,9 @@ export const submitSidangRegistration = async (body, req) => {
       }
     } else {
       if (!activePeriod) {
-        const error = new Error("Tidak ada periode pendaftaran sidang yang aktif saat ini.");
+        const error = new Error(
+          "Tidak ada periode pendaftaran sidang yang aktif saat ini.",
+        );
         error.statusCode = 400;
         throw error;
       }
@@ -813,11 +879,13 @@ export const submitSidangRegistration = async (body, req) => {
   ];
 
   const missingFields = requiredFields.filter(
-    (field) => mergedData[field] === null || mergedData[field] === undefined
+    (field) => mergedData[field] === null || mergedData[field] === undefined,
   );
 
   if (missingFields.length > 0) {
-    const error = new Error(`Tidak dapat submit. Field wajib belum lengkap: ${missingFields.join(", ")}`);
+    const error = new Error(
+      `Tidak dapat submit. Field wajib belum lengkap: ${missingFields.join(", ")}`,
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -834,20 +902,27 @@ export const submitSidangRegistration = async (body, req) => {
     if (!uploadedCategories.includes(slug)) missingFiles.push(slug);
   }
 
-  if (mergedData.lulusTesBahasa === undefined || mergedData.lulusTesBahasa === null) {
-    const error = new Error("Tidak dapat submit. Status Test Bahasa (Sudah/Belum) wajib dipilih.");
+  if (
+    mergedData.lulusTesBahasa === undefined ||
+    mergedData.lulusTesBahasa === null
+  ) {
+    const error = new Error(
+      "Tidak dapat submit. Status Test Bahasa (Sudah/Belum) wajib dipilih.",
+    );
     error.statusCode = 400;
     throw error;
   }
 
-  const testBahasaSlugs = await getTestBahasaSlugsFromDb(mergedData.lulusTesBahasa);
+  const testBahasaSlugs = await getTestBahasaSlugsFromDb(
+    mergedData.lulusTesBahasa,
+  );
 
   const overlappingSlugs = requiredSlugs.filter((slug) =>
-    testBahasaSlugs.includes(slug)
+    testBahasaSlugs.includes(slug),
   );
   if (overlappingSlugs.length > 0) {
     console.error(
-      `[Konfigurasi Bermasalah] Dokumen berikut terdaftar di kategori "Sidang - Berkas Wajib" DAN kategori Test Bahasa sekaligus: ${overlappingSlugs.join(", ")}. Periksa data di tabel dokumenPersyaratanBerkas.`
+      `[Konfigurasi Bermasalah] Dokumen berikut terdaftar di kategori "Sidang - Berkas Wajib" DAN kategori Test Bahasa sekaligus: ${overlappingSlugs.join(", ")}. Periksa data di tabel dokumenPersyaratanBerkas.`,
     );
   }
 
@@ -869,7 +944,9 @@ export const submitSidangRegistration = async (body, req) => {
   }
 
   if (missingFiles.length > 0) {
-    const error = new Error(`Tidak dapat submit. Berkas wajib belum lengkap: ${missingFiles.join(", ")}`);
+    const error = new Error(
+      `Tidak dapat submit. Berkas wajib belum lengkap: ${missingFiles.join(", ")}`,
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -878,12 +955,19 @@ export const submitSidangRegistration = async (body, req) => {
   if (mergedData.mahasiswaId) {
     const s = await prisma.mahasiswa.findUnique({
       where: { id: mergedData.mahasiswaId },
+      select: { id: true, dosenWaliId: true },
     });
     if (!s) {
       const error = new Error("Mahasiswa tidak ditemukan");
       error.statusCode = 404;
       throw error;
     }
+    if (!s.dosenWaliId) {
+      const error = new Error("Mahasiswa belum memiliki dosen wali");
+      error.statusCode = 400;
+      throw error;
+    }
+    updateData.dosenWaliId = s.dosenWaliId;
   }
   if (mergedData.dosenPembimbing1Id) {
     const d1 = await prisma.dosen.findUnique({
@@ -1109,7 +1193,7 @@ export const approveSidangRegistration = async (
     skemaSidangFinal,
     jalurNonSidangFinal,
   },
-  req
+  req,
 ) => {
   const registration = await prisma.sidangRegistration.findUnique({
     where: { id },
@@ -1193,7 +1277,7 @@ export const approveSidangRegistration = async (
  */
 export const rejectSidangRegistration = async (
   { adminId, message, isEdit, sidangRegistrationUploadIds, id },
-  req
+  req,
 ) => {
   const registration = await prisma.sidangRegistration.findUnique({
     where: { id },
@@ -1279,7 +1363,6 @@ export const toggleLockSidangRegistration = async (id, req) => {
     data: mapSidangRegistrationToFrontend(updatedRegistration, req),
   };
 };
-
 
 /**
  * Helper untuk menyensor nama mahasiswa:
