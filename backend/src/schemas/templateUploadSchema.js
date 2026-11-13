@@ -1,11 +1,20 @@
 import { z } from "zod";
 
+export const MIME_MAP = {
+  ".pdf": "application/pdf",
+  ".doc": "application/msword",
+  ".docx":
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".zip": "application/zip",
+  ".txt": "text/plain; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8",
+  ".markdown": "text/markdown; charset=utf-8",
+};
+
 export const ALLOWED_TEMPLATE_MIME_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/zip",
+  ...new Set(Object.values(MIME_MAP).map((mime) => mime.split(";")[0])),
   "application/x-zip-compressed",
+  "text/x-markdown",
 ];
 
 /**
@@ -17,18 +26,18 @@ export const listTemplateUploadQuerySchema = z.object({
       val === "" || val === null || val === undefined
         ? undefined
         : typeof val === "string"
-        ? val.trim()
-        : val,
-    z.string().optional()
+          ? val.trim()
+          : val,
+    z.string().optional(),
   ),
   search: z.preprocess(
     (val) =>
       val === "" || val === null || val === undefined
         ? undefined
         : typeof val === "string"
-        ? val.trim()
-        : val,
-    z.string().optional()
+          ? val.trim()
+          : val,
+    z.string().optional(),
   ),
   sortBy: z
     .enum(["category", "queue", "name", "createdAt", "newest", "oldest"], {
@@ -44,18 +53,20 @@ export const listTemplateUploadQuerySchema = z.object({
     .optional()
     .default("asc"),
   page: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : val),
-    z.coerce.number().int().min(1).optional()
+    (val) =>
+      val === "" || val === null || val === undefined ? undefined : val,
+    z.coerce.number().int().min(1).optional(),
   ),
   limit: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    (val) =>
+      val === "" || val === null || val === undefined ? undefined : val,
     z
       .union([
         z.literal("all"),
         z.literal("-1"),
         z.coerce.number().int().min(1).max(100),
       ])
-      .optional()
+      .optional(),
   ),
 });
 
@@ -73,11 +84,11 @@ export const createTemplateUploadSchema = z.object({
     .min(1, "category wajib diisi"),
   isPublish: z.preprocess(
     (val) => val === "true" || val === true,
-    z.boolean().optional().default(false)
+    z.boolean().optional().default(false),
   ),
   isRequired: z.preprocess(
     (val) => (val === undefined ? true : val === "true" || val === true),
-    z.boolean().optional().default(true)
+    z.boolean().optional().default(true),
   ),
 });
 
@@ -85,44 +96,40 @@ export const createTemplateUploadSchema = z.object({
  * Schema untuk Update Template Upload (PATCH /api/templates/:id)
  */
 export const updateTemplateUploadSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "name tidak boleh kosong")
-    .optional(),
-  category: z
-    .string()
-    .trim()
-    .min(1, "category tidak boleh kosong")
-    .optional(),
+  name: z.string().trim().min(1, "name tidak boleh kosong").optional(),
+  category: z.string().trim().min(1, "category tidak boleh kosong").optional(),
   isPublish: z.preprocess(
     (val) =>
       val === "" || val === null || val === undefined
         ? undefined
         : val === "true" || val === true
-        ? true
-        : val === "false" || val === false
-        ? false
-        : val,
-    z.boolean().optional()
+          ? true
+          : val === "false" || val === false
+            ? false
+            : val,
+    z.boolean().optional(),
   ),
   isRequired: z.preprocess(
     (val) =>
       val === "" || val === null || val === undefined
         ? undefined
         : val === "true" || val === true
-        ? true
-        : val === "false" || val === false
-        ? false
-        : val,
-    z.boolean().optional()
+          ? true
+          : val === "false" || val === false
+            ? false
+            : val,
+    z.boolean().optional(),
   ),
   queue: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    (val) =>
+      val === "" || val === null || val === undefined ? undefined : val,
     z.coerce
-      .number({ invalid_type_error: "queue harus berupa angka integer positif (minimal 1)" })
+      .number({
+        invalid_type_error:
+          "queue harus berupa angka integer positif (minimal 1)",
+      })
       .int("queue harus berupa angka integer positif (minimal 1)")
       .min(1, "queue harus berupa angka integer positif (minimal 1)")
-      .optional()
+      .optional(),
   ),
 });

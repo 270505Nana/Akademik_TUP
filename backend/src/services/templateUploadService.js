@@ -1,15 +1,15 @@
 import path from "path";
 import prisma from "../config/prisma.js";
 import { getPaginationParams } from "../utils/paginationHelper.js";
-import {
-  uploadFile,
-  deleteFile,
-} from "./storageService.js";
+import { uploadFile, deleteFile } from "./storageService.js";
 import {
   sanitizeFilename,
   generateCodeFromCategoryAndName,
 } from "../utils/templateHelper.js";
-import { ALLOWED_TEMPLATE_MIME_TYPES } from "../schemas/templateUploadSchema.js";
+import {
+  MIME_MAP,
+  ALLOWED_TEMPLATE_MIME_TYPES,
+} from "../schemas/templateUploadSchema.js";
 
 const throwError = (statusCode, message, errors) => {
   const error = new Error(message);
@@ -271,17 +271,7 @@ export const getTemplateForPreview = async (code) => {
   }
 
   const ext = path.extname(template.filepath || "").toLowerCase();
-  let contentType = "application/octet-stream";
-  if (ext === ".pdf") {
-    contentType = "application/pdf";
-  } else if (ext === ".doc") {
-    contentType = "application/msword";
-  } else if (ext === ".docx") {
-    contentType =
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-  } else if (ext === ".zip") {
-    contentType = "application/zip";
-  }
+  const contentType = MIME_MAP[ext] || "application/octet-stream";
 
   const displayName = `${sanitizeFilename(template.name)}${ext}`;
 
