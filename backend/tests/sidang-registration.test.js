@@ -378,6 +378,10 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         .mockResolvedValueOnce({
           isDraft: true,
         });
+      vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue({
+        id: "mhs-1",
+        dosenWaliId: "dosen-wali-1",
+      });
 
       const updateSpy = vi.spyOn(prisma.sidangRegistration, "update").mockResolvedValue({
         id: "reg-draft-1",
@@ -387,6 +391,7 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
 
       const result = await saveSidangRegistration({
         id: "reg-draft-1",
+        mahasiswaId: "mhs-1",
         program: "Reguler",
       });
 
@@ -395,6 +400,7 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
           where: { id: "reg-draft-1" },
           data: expect.objectContaining({
             sidangRegistrationPeriodId: "period-2-active-uuid",
+            dosenWaliId: "dosen-wali-1",
           }),
         })
       );
@@ -440,7 +446,10 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
       vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(existingDraftReg);
       vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(activePeriod2);
       vi.spyOn(prisma.dokumenPersyaratanBerkas, "findMany").mockResolvedValue([]);
-      vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue({ id: "mhs-1" });
+      vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue({
+        id: "mhs-1",
+        dosenWaliId: "dosen-wali-1",
+      });
       vi.spyOn(prisma.dosen, "findUnique")
         .mockResolvedValueOnce({ id: "dos-1" })
         .mockResolvedValueOnce({ id: "dos-2" });
@@ -480,6 +489,7 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
             sidangRegistrationPeriodId: "period-2-active-uuid",
             isDraft: false,
             status: "Dalam Proses",
+            dosenWaliId: "dosen-wali-1",
           }),
         })
       );
@@ -539,7 +549,10 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         isOpen: true,
       });
       vi.spyOn(prisma.dokumenPersyaratanBerkas, "findMany").mockResolvedValue([]);
-      vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue({ id: "mhs-uuid" });
+      vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue({
+        id: "mhs-uuid",
+        dosenWaliId: "dosen-wali-1",
+      });
       vi.spyOn(prisma.dosen, "findUnique").mockResolvedValue({ id: "dos-1" });
       vi.spyOn(prisma.sidangRegistrationUpload, "findMany").mockResolvedValue([]);
 
