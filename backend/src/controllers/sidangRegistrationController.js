@@ -54,6 +54,22 @@ export const saveSidangRegistration = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Edit Sidang Registration (Admin)
+ * PUT /api/sidang-registrations/:id
+ */
+export const editSidangRegistrationByAdmin = asyncHandler(async (req, res) => {
+  const data = await sidangRegistrationService.editSidangRegistrationByAdmin(
+    req.params.id,
+    req.body,
+    req
+  );
+  res.json({
+    message: "Sidang registration updated successfully",
+    data,
+  });
+});
+
+/**
  * Submit Sidang Registration (Finalize with Validation)
  * POST /api/sidang-registrations/submit
  */
