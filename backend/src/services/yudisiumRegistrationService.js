@@ -601,6 +601,16 @@ export const saveYudisiumRegistration = async (body, req) => {
   let yudisiumRegistration;
 
   if (id) {
+    if (activePeriod) {
+      const existing = await prisma.yudisiumRegistration.findUnique({
+        where: { id },
+        select: { isDraft: true },
+      });
+      if (existing?.isDraft) {
+        upsertData.yudisiumRegistrationPeriodId = activePeriod.id;
+      }
+    }
+
     yudisiumRegistration = await prisma.yudisiumRegistration.update({
       where: { id },
       data: upsertData,
@@ -618,6 +628,10 @@ export const saveYudisiumRegistration = async (body, req) => {
         const error = new Error(editCheck.reason);
         error.statusCode = 403;
         throw error;
+      }
+
+      if (activePeriod) {
+        upsertData.yudisiumRegistrationPeriodId = activePeriod.id;
       }
 
       yudisiumRegistration = await prisma.yudisiumRegistration.update({
@@ -782,29 +796,41 @@ export const submitYudisiumRegistration = async (body, req) => {
     },
   });
 
-  const periodIdToCheck = yudisiumRegistrationPeriodId
-    ? yudisiumRegistrationPeriodId
-    : existingRegistration.yudisiumRegistrationPeriodId ||
-      (activePeriod ? activePeriod.id : null);
-
-  if (periodIdToCheck) {
-    const period = await prisma.yudisiumPeriod.findUnique({
-      where: { id: periodIdToCheck },
-    });
-    if (!period || !period.isOpen) {
-      const error = new Error(
-        "Periode pendaftaran yudisium ini sudah ditutup.",
-      );
+  if (existingRegistration.isDraft) {
+    if (!activePeriod) {
+      const error = new Error("Periode pendaftaran yudisium ini sudah ditutup.");
       error.statusCode = 400;
       throw error;
     }
-    updateData.yudisiumRegistrationPeriodId = periodIdToCheck;
+    // Jika masih berupa draft, selalu kaitkan ke periode pendaftaran yang aktif saat submit
+    updateData.yudisiumRegistrationPeriodId = activePeriod.id;
   } else {
-    const error = new Error(
-      "Tidak ada periode pendaftaran yudisium yang aktif saat ini.",
-    );
-    error.statusCode = 400;
-    throw error;
+    // Jika bukan draft (misal revisi setelah submit atau pengajuan kembali)
+    const isRevision =
+      existingRegistration.status === "Perlu Revisi" ||
+      existingRegistration.isEdit !== null ||
+      existingRegistration.message !== null;
+
+    if (existingRegistration.yudisiumRegistrationPeriodId) {
+      const period = await prisma.yudisiumPeriod.findUnique({
+        where: { id: existingRegistration.yudisiumRegistrationPeriodId },
+      });
+      if ((!period || !period.isOpen) && !isRevision) {
+        if (!activePeriod) {
+          const error = new Error("Periode pendaftaran yudisium ini sudah ditutup.");
+          error.statusCode = 400;
+          throw error;
+        }
+        updateData.yudisiumRegistrationPeriodId = activePeriod.id;
+      }
+    } else {
+      if (!activePeriod) {
+        const error = new Error("Tidak ada periode pendaftaran yudisium yang aktif saat ini.");
+        error.statusCode = 400;
+        throw error;
+      }
+      updateData.yudisiumRegistrationPeriodId = activePeriod.id;
+    }
   }
 
   const mergedData = { ...existingRegistration, ...updateData };
