@@ -7,6 +7,7 @@ import { validate } from "../../middlewares/validate.js";
 import {
   listSidangQuerySchema,
   saveSidangDraftSchema,
+  adminEditSidangSchema,
   submitSidangSchema,
   approveSidangSchema,
   rejectSidangSchema,
@@ -17,6 +18,7 @@ import {
   getSidangRegistrationById,
   getSidangRegistrationByMahasiswaId,
   saveSidangRegistration,
+  editSidangRegistrationByAdmin,
   submitSidangRegistration,
   deleteSidangRegistration,
   uploadSidangRegistrationFile,
@@ -302,6 +304,109 @@ router.post(
 
 /**
  * @swagger
+ * /api/sidang-registrations/{id}/admin-edit:
+ *   put:
+ *     summary: Edit sidang registration (Admin only)
+ *     tags: [Sidang Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Same fields as the draft endpoint, without id
+ *             properties:
+ *               mahasiswaId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID mahasiswa
+ *               program:
+ *                 type: string
+ *                 example: Reguler
+ *               skemaSidang:
+ *                 type: string
+ *                 example: Reguler
+ *               jalurNonSidang:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: []
+ *               lulusTesBahasa:
+ *                 type: boolean
+ *                 example: true
+ *               sks:
+ *                 type: integer
+ *                 example: 144
+ *               ipk:
+ *                 type: number
+ *                 format: float
+ *                 example: 3.75
+ *               tak:
+ *                 type: integer
+ *                 example: 85
+ *               sktaExpDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2026-12-31T23:59:59.000Z"
+ *               judulTugasAkhirIndonesia:
+ *                 type: string
+ *                 example: Sistem Informasi Akademik Terintegrasi
+ *               judulTugasAkhirInggris:
+ *                 type: string
+ *                 example: Integrated Academic Information System
+ *               dosenPembimbing1Id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID dosen pembimbing 1
+ *               dosenPembimbing2Id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID dosen pembimbing 2
+ *             example:
+ *               mahasiswaId: "00000000-0000-0000-0000-000000000001"
+ *               program: Reguler
+ *               skemaSidang: Reguler
+ *               jalurNonSidang: []
+ *               lulusTesBahasa: true
+ *               sks: 144
+ *               ipk: 3.75
+ *               tak: 85
+ *               sktaExpDate: "2026-12-31T23:59:59.000Z"
+ *               judulTugasAkhirIndonesia: Sistem Informasi Akademik Terintegrasi
+ *               judulTugasAkhirInggris: Integrated Academic Information System
+ *               dosenPembimbing1Id: "00000000-0000-0000-0000-000000000002"
+ *               dosenPembimbing2Id: "00000000-0000-0000-0000-000000000003"
+ *     responses:
+ *       200:
+ *         description: Sidang registration updated successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Admin only)
+ *       404:
+ *         description: Sidang registration or referenced entity not found
+ */
+router.put(
+  "/:id/admin-edit",
+  verifyToken,
+  authorize("ADMIN"),
+  validate(adminEditSidangSchema),
+  editSidangRegistrationByAdmin,
+);
+
+/**
+ * @swagger
  * /api/sidang-registrations/submit:
  *   post:
  *     summary: Submit sidang registration
@@ -460,7 +565,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteSidangRegistration)
 router.post(
   "/:id/uploads",
   verifyToken,
-  authorize("MAHASISWA"),
+  authorize("MAHASISWA", "ADMIN"),
   upload("sidang-requirements").single("file"),
   uploadSidangRegistrationFile,
 );

@@ -708,6 +708,125 @@ export const saveSidangRegistration = async (body, req) => {
 };
 
 /**
+ * Mengedit pendaftaran sidang oleh admin tanpa mengubah status pendaftaran.
+ */
+export const editSidangRegistrationByAdmin = async (id, body, req) => {
+  const existingRegistration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+  });
+
+  if (!existingRegistration) {
+    const error = new Error("Pendaftaran sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const {
+    program,
+    skemaSidang,
+    jalurNonSidang,
+    lulusTesBahasa,
+    sks,
+    ipk,
+    tak,
+    sktaExpDate,
+    judulTugasAkhirIndonesia,
+    judulTugasAkhirInggris,
+    mahasiswaId,
+    dosenPembimbing1Id,
+    dosenPembimbing2Id,
+  } = body;
+
+  let studentForSave;
+  if (mahasiswaId !== undefined && mahasiswaId !== null) {
+    studentForSave = await prisma.mahasiswa.findUnique({
+      where: { id: mahasiswaId },
+      select: { id: true, dosenWaliId: true },
+    });
+    if (!studentForSave) {
+      const error = new Error("Mahasiswa tidak ditemukan");
+      error.statusCode = 404;
+      throw error;
+    }
+    if (!studentForSave.dosenWaliId) {
+      const error = new Error("Mahasiswa belum memiliki dosen wali");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  for (const [dosenId, label] of [
+    [dosenPembimbing1Id, "1"],
+    [dosenPembimbing2Id, "2"],
+  ]) {
+    if (dosenId !== undefined && dosenId !== null) {
+      const dosenExists = await prisma.dosen.findUnique({
+        where: { id: dosenId },
+      });
+      if (!dosenExists) {
+        const error = new Error(`Dosen pembimbing ${label} tidak ditemukan`);
+        error.statusCode = 404;
+        throw error;
+      }
+    }
+  }
+
+  const updateData = {};
+
+  if (program !== undefined) updateData.program = program;
+  if (skemaSidang !== undefined) {
+    updateData.skemaSidang = skemaSidang;
+    if (
+      String(skemaSidang || "")
+        .trim()
+        .toLowerCase()
+        .includes("non") === false
+    ) {
+      updateData.jalurNonSidang = [];
+    }
+  }
+  if (jalurNonSidang !== undefined && updateData.jalurNonSidang === undefined) {
+    updateData.jalurNonSidang = Array.isArray(jalurNonSidang)
+      ? jalurNonSidang
+      : [];
+  }
+  const parsedLulusTesBahasa = parseBoolean(lulusTesBahasa);
+  if (parsedLulusTesBahasa !== undefined) {
+    updateData.lulusTesBahasa = parsedLulusTesBahasa;
+  }
+  if (sks !== undefined && sks !== null) updateData.sks = parseInt(sks, 10);
+  if (ipk !== undefined && ipk !== null) updateData.ipk = parseFloat(ipk);
+  if (tak !== undefined && tak !== null) updateData.tak = parseInt(tak, 10);
+  if (sktaExpDate !== undefined) {
+    updateData.sktaExpDate = sktaExpDate ? new Date(sktaExpDate) : null;
+  }
+  if (judulTugasAkhirIndonesia !== undefined) {
+    updateData.judulTugasAkhirIndonesia = judulTugasAkhirIndonesia;
+  }
+  if (judulTugasAkhirInggris !== undefined) {
+    updateData.judulTugasAkhirInggris = judulTugasAkhirInggris;
+  }
+  if (mahasiswaId !== undefined) {
+    updateData.mahasiswaId = mahasiswaId;
+    updateData.dosenWaliId = studentForSave?.dosenWaliId || null;
+  }
+  if (dosenPembimbing1Id !== undefined) {
+    updateData.dosenPembimbing1Id = dosenPembimbing1Id;
+  }
+  if (dosenPembimbing2Id !== undefined) {
+    updateData.dosenPembimbing2Id = dosenPembimbing2Id;
+  }
+
+  const updatedRegistration = await prisma.sidangRegistration.update({
+    where: { id },
+    data: updateData,
+    include: sidangInclude,
+  });
+
+  return mapSidangRegistrationToFrontend(updatedRegistration, req);
+};
+
+/**
  * Mengirim (submit) pendaftaran sidang dengan validasi lengkap kelengkapan data & berkas
  */
 export const submitSidangRegistration = async (body, req) => {
