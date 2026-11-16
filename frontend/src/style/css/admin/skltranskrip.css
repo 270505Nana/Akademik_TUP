@@ -778,3 +778,88 @@ body,
     width: 111.11% !important;
   }
 }
+/* ── Toolbar: hilangkan garis ganda & rapikan tinggi ── */
+.sk-toolbar-row {
+  border-bottom: none;
+  padding: 14px 0 16px;
+}
+.sk-toolbar-row .sk-status-tabs { gap: 8px; }
+
+.sk-status-tab,
+.sk-prodi-dropdown-trigger,
+.sk-refresh-btn {
+  height: 34px;
+  box-sizing: border-box;
+}
+.sk-prodi-dropdown-trigger {
+  padding: 0 12px;
+  min-width: 150px;
+}
+.sk-refresh-btn {
+  width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 9999px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+.sk-refresh-btn:hover:not(:disabled) {
+  border-color: #C0182A;
+  color: #C0182A;
+  background: #FFF1F2;
+}
+.sk-refresh-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Tabel: sejajar dengan padding card ── */
+.sk-table { table-layout: fixed; }
+.sk-table th:first-child,
+.sk-table td:first-child { padding-left: 20px; width: 56px; }
+.sk-table th:last-child,
+.sk-table td:last-child  { padding-right: 20px; }
+
+.sk-table th:nth-child(2) { width: 24%; }
+.sk-table th:nth-child(3) { width: 20%; }
+.sk-table th:nth-child(4) { width: 18%; }
+.sk-table th:nth-child(5) { width: 130px; }
+.sk-table th:nth-child(6) { width: 130px; }
+.sk-table th:nth-child(7) { width: 170px; }
+
+.sk-table td { word-break: break-word; }
+
+/* ── Empty & loading state (specificity dinaikkan supaya menimpa CSS global) ── */
+.sk-table td.sk-empty-wrap { padding: 0; border-bottom: none; }
+
+.sk-table .sk-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding: 64px 20px;
+  border: none;
+  background: transparent;
+  width: 100%;
+  min-height: 0;
+}
+.sk-table .sk-empty-icon { margin: 0; }
+.sk-table .sk-empty-state p {
+  margin: 0;
+  max-width: 360px;
+  line-height: 1.5;
+  font-size: 13.5px;
+  color: #94A3B8;
+}
+
+.sk-empty-cell {
+  text-align: center;
+  padding: 48px 20px !important;
+  color: #94A3B8;
+  font-size: 13px;
+  border-bottom: none !important;
+}

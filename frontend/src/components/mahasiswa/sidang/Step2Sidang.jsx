@@ -11,12 +11,14 @@ import {
   Link as LinkIcon,
   CheckCircle2,
   Loader,
+  ExternalLink,
 } from "lucide-react";
 import { useSidangContext } from "../../../context/SidangFormContext";
 import { SECTIONS, PATH_MAP } from "../../../requirement/sidangDocument";
 import {
   uploadSidangRegistrationFile,
   downloadFileFromUrl,
+  downloadSidangRegistrationUpload,
 } from "../../../service/api";
 import {
   fetchTemplatePreviewBlob,
@@ -256,6 +258,20 @@ const PreviewModal = ({ doc, onClose }) => {
   );
 };
 
+export const checkIsLinkPaper = (doc) => {
+  if (!doc) return false;
+  const slug = (doc.slug || doc.templateCode || "").toLowerCase();
+  const name = (doc.name || "").toLowerCase();
+  const cat = (doc.category || "").toLowerCase();
+  return (
+    slug.includes("link-paper") ||
+    slug.includes("link_paper") ||
+    name.includes("link paper") ||
+    cat.includes("link-paper") ||
+    cat.includes("link_paper")
+  );
+};
+
 /* ------------------------------------------------------------------ */
 /* Panel upload per section (sidebar daftar berkas + panel kanan)      */
 /* ------------------------------------------------------------------ */
@@ -276,8 +292,10 @@ const DocUploadPanel = ({
   isLoading = false,
   readOnly = false,
   panelAlert = null,
+  isRevisionDeadlinePassed = false,
 }) => {
   const activeDoc = documents.find((d) => d.id === activeDocId) || documents[0];
+  const isLinkPaper = checkIsLinkPaper(activeDoc);
   const [isDragging, setIsDragging] = useState(false);
 
   // State untuk alur preview template via modal in-page
@@ -505,7 +523,7 @@ const DocUploadPanel = ({
             )}
 
             {/* Kotak template */}
-            {showTemplateBox && (
+            {showTemplateBox && !isLinkPaper && (
               <div
                 style={{
                   border: "1px solid #E2E8F0",
@@ -632,6 +650,24 @@ const DocUploadPanel = ({
                   Berkas ini sudah divalidasi dan disetujui. Tidak perlu diunggah ulang.
                 </span>
               </div>
+            ) : isRevisionDeadlinePassed ? (
+              <div
+                style={{
+                  padding: "12px 16px",
+                  background: "#FEF2F2",
+                  border: "1px solid #FECACA",
+                  borderRadius: "8px",
+                  marginBottom: "1.5rem",
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                }}
+              >
+                <AlertTriangle size={18} color="#DC2626" />
+                <span style={{ fontSize: "13px", color: "#991B1B", fontWeight: 600 }}>
+                  Batas waktu perbaikan telah berakhir. Pengunggahan berkas dinonaktifkan.
+                </span>
+              </div>
             ) : readOnly ? (
               <div
                 style={{
@@ -649,6 +685,27 @@ const DocUploadPanel = ({
                 <span style={{ fontSize: "13px", color: "#475569", fontWeight: 600 }}>
                   Pendaftaran sudah dikirim, berkas tidak dapat diubah.
                 </span>
+              </div>
+            ) : isLinkPaper ? (
+              <div style={{ maxWidth: "600px", marginBottom: "1.5rem" }}>
+                <h4 style={{ fontWeight: 700, marginBottom: "0.5rem", fontSize: "1rem" }}>
+                  Tautan Link Paper
+                </h4>
+                <p style={{ fontSize: "0.85rem", color: "#64748B", marginBottom: "1rem" }}>
+                  Masukkan URL publikasi paper Anda (opsional jika sudah terbit).
+                </p>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <LinkIcon size={16} color="#94A3B8" style={{ position: "absolute", left: "12px" }} />
+                  <input
+                    type="text"
+                    className="sidang-input-field"
+                    placeholder="Contoh: https://doi.org/... atau https://publisher.com/paper"
+                    style={{ paddingLeft: "36px" }}
+                    value={linkPaperValue || ""}
+                    onChange={(e) => onUpdateLink(e.target.value)}
+                    disabled={readOnly || isRevisionDeadlinePassed}
+                  />
+                </div>
               </div>
             ) : (
               <>
@@ -716,17 +773,17 @@ const DocUploadPanel = ({
             )}
 
             {/* Kartu file terpilih / error */}
-            {(hasFile || activeDoc.error) && (
+            {(hasFile || activeDoc.error || (isLinkPaper && Boolean(linkPaperValue))) && (
               <div style={{ marginTop: "1.5rem", maxWidth: "600px" }}>
                 <h4 style={{ fontWeight: 700, marginBottom: "0.75rem", fontSize: "0.95rem" }}>
                   {isVerified
-                    ? "File yang Disetujui"
+                    ? isLinkPaper ? "Link Paper yang Disetujui" : "File yang Disetujui"
                     : isRejected
-                      ? "File Sebelumnya (Perlu Revisi)"
-                      : "File Terpilih"}
+                      ? isLinkPaper ? "Link Paper Sebelumnya (Perlu Revisi)" : "File Sebelumnya (Perlu Revisi)"
+                      : isLinkPaper ? "Link Paper Terpilih" : "File Terpilih"}
                 </h4>
 
-                {!activeDoc.error && hasFile ? (
+                {!activeDoc.error && (hasFile || (isLinkPaper && Boolean(linkPaperValue))) ? (
                   <div
                     className="file-card"
                     style={{
@@ -756,7 +813,7 @@ const DocUploadPanel = ({
                           background: "#F8FAFC",
                         }}
                       >
-                        <FileText size={20} color="#64748B" />
+                        {isLinkPaper ? <LinkIcon size={20} color="#2563EB" /> : <FileText size={20} color="#64748B" />}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div
@@ -771,10 +828,10 @@ const DocUploadPanel = ({
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {activeDoc.fileName || activeDoc.name}
+                          {isLinkPaper ? (linkPaperValue || activeDoc.fileName || activeDoc.name) : (activeDoc.fileName || activeDoc.name)}
                         </div>
                         <div className="file-meta" style={{ fontSize: "0.75rem", color: "#64748B" }}>
-                          {activeDoc.fileSize || "File tersimpan"}
+                          {isLinkPaper ? "Tautan URL publikasi paper" : (activeDoc.fileSize || "File tersimpan")}
                         </div>
                       </div>
                     </div>
@@ -783,7 +840,35 @@ const DocUploadPanel = ({
                       className="action-buttons-wrap"
                       style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}
                     >
-                      {canPreview && (
+                      {isLinkPaper ? (
+                        linkPaperValue ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const targetUrl = linkPaperValue.startsWith("http://") || linkPaperValue.startsWith("https://")
+                                ? linkPaperValue
+                                : `https://${linkPaperValue}`;
+                              window.open(targetUrl, "_blank", "noopener,noreferrer");
+                            }}
+                            style={{
+                              padding: "5px 10px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              background: "#EFF6FF",
+                              color: "#1D4ED8",
+                              border: "none",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              transition: "0.2s",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <ExternalLink size={12} /> Buka Link
+                          </button>
+                        ) : null
+                      ) : canPreview && (
                         <button
                           type="button"
                           onClick={() =>
@@ -850,7 +935,7 @@ const DocUploadPanel = ({
                             border: "1px solid #E2E8F0",
                           }}
                         >
-                          Siap Upload
+                          {isLinkPaper ? "Siap Disimpan" : "Siap Upload"}
                         </div>
                       )}
                     </div>
@@ -905,35 +990,35 @@ const DocUploadPanel = ({
               </div>
             )}
 
-            {/* Input link paper (jalur jurnal / proceeding) */}
-            {showLinkInput && (
-              <div className="sidang-input-group" style={{ marginTop: "1.5rem", maxWidth: "600px" }}>
-                <label>Link Paper (Opsional jika sudah terbit)</label>
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <LinkIcon size={16} color="#94A3B8" style={{ position: "absolute", left: "12px" }} />
-                  <input
-                    type="text"
-                    className="sidang-input-field"
-                    placeholder="Masukan Link Paper Anda"
-                    style={{ paddingLeft: "36px" }}
-                    value={linkPaperValue || ""}
-                    onChange={(e) => onUpdateLink(e.target.value)}
-                    disabled={readOnly}
-                  />
-                </div>
-              </div>
-            )}
+            {/* Kolom teks Link Paper sudah dirender di dalam showUploadArea block (isLinkPaper branch).
+                Tidak ada input tambahan di sini agar tidak duplikat. */}
 
             {/* Tombol simpan dokumen */}
-            {showUploadArea && activeDoc.status !== "completed" && (
+            {showUploadArea && (isLinkPaper || activeDoc.status !== "completed") && (
               <button
                 type="button"
                 className="btn-primary"
-                style={{ marginTop: "1.5rem" }}
-                onClick={() => onSave(activeDoc.id)}
-                disabled={isUploading}
+                style={{
+                  marginTop: "1.5rem",
+                  ...(isRevisionDeadlinePassed
+                    ? { opacity: 0.5, cursor: "not-allowed", background: "#94A3B8" }
+                    : {}),
+                }}
+                onClick={() => !isRevisionDeadlinePassed && onSave(activeDoc.id)}
+                disabled={isUploading || isRevisionDeadlinePassed}
+                title={
+                  isRevisionDeadlinePassed
+                    ? "Batas waktu perbaikan telah berakhir"
+                    : undefined
+                }
               >
-                {isUploading ? "Mengunggah..." : "Simpan Dokumen"}
+                {isUploading
+                  ? "Mengunggah..."
+                  : isLinkPaper
+                  ? activeDoc.status === "completed"
+                    ? "Perbarui Link Paper"
+                    : "Simpan Link Paper"
+                  : "Simpan Dokumen"}
               </button>
             )}
           </div>
@@ -973,6 +1058,7 @@ export default function Step2({
   readOnly = false,
   setFormAlert, // opsional: kalau tidak dikirim, fallback ke alert() bawaan browser
   studentInfo,
+  isRevisionDeadlinePassed = false,
 }) {
   const { state, dispatch } = useSidangContext();
   const { data, documents, activeDocIds } = state;
@@ -1001,6 +1087,38 @@ export default function Step2({
   const updateField = (field, value) => {
     dispatch({ type: "UPDATE_FIELD", field, value });
   };
+
+  // Auto-load teks isi Link Paper jika sudah pernah tersimpan di server
+  useEffect(() => {
+    documents.forEach((doc) => {
+      const isLink =
+        doc.category?.includes("lampiran-link-paper") ||
+        doc.slug?.includes("lampiran-link-paper") ||
+        doc.name?.toLowerCase().includes("link paper");
+
+      if (isLink && doc.uploadId) {
+        if (doc.section === SECTIONS.JURNAL && !data.linkPaperJurnal) {
+          downloadSidangRegistrationUpload(doc.uploadId)
+            .then((blob) => blob.text())
+            .then((text) => {
+              if (text && text.trim()) {
+                dispatch({ type: "UPDATE_FIELD", field: "linkPaperJurnal", value: text.trim() });
+              }
+            })
+            .catch((err) => console.warn("Gagal memuat teks link paper jurnal:", err));
+        } else if (doc.section === SECTIONS.PROCEEDING && !data.linkPaperProceeding) {
+          downloadSidangRegistrationUpload(doc.uploadId)
+            .then((blob) => blob.text())
+            .then((text) => {
+              if (text && text.trim()) {
+                dispatch({ type: "UPDATE_FIELD", field: "linkPaperProceeding", value: text.trim() });
+              }
+            })
+            .catch((err) => console.warn("Gagal memuat teks link paper proceeding:", err));
+        }
+      }
+    });
+  }, [documents, data.linkPaperJurnal, data.linkPaperProceeding, dispatch]);
 
   const notify = (type, title, msg) => {
     if (typeof setFormAlert === "function") {
@@ -1052,13 +1170,13 @@ export default function Step2({
   };
 
   const handleDropFile = (targetId, file) => {
-    if (readOnly) return;
+    if (readOnly || isRevisionDeadlinePassed) return;
     dispatch({ type: "CLEAR_DOCUMENT_STATUS", docId: targetId });
     processFile(file, targetId);
   };
 
   const handleManualUpload = (targetId) => {
-    if (readOnly) return;
+    if (readOnly || isRevisionDeadlinePassed) return;
     dispatch({ type: "CLEAR_DOCUMENT_STATUS", docId: targetId });
     uploadTargetIdRef.current = targetId;
     fileInputRef.current.click();
@@ -1071,10 +1189,10 @@ export default function Step2({
   const handleSaveDoc = async (docId) => {
     if (typeof setFormAlert === "function") setFormAlert(null);
     const doc = documents.find((d) => d.id === docId);
-    const file = fileMapRef.current[docId];
+    if (!doc) return;
 
-    if (!doc?.fileUrl || !file) {
-      showPanelAlert(doc?.section, "warning", "Silahkan pilih file terlebih dahulu sebelum menyimpan.");
+    if (isRevisionDeadlinePassed) {
+      showPanelAlert(doc.section, "error", "Batas waktu perbaikan telah berakhir.");
       return;
     }
 
@@ -1083,12 +1201,84 @@ export default function Step2({
       return;
     }
 
+    const isLinkPaper = checkIsLinkPaper(doc);
+    const nim = studentInfo?.nim;
+
+    // Alur khusus Link Paper (disimpan sebagai file .txt dari tautan teks)
+    if (isLinkPaper) {
+      const linkValue = (
+        doc.section === SECTIONS.JURNAL
+          ? data.linkPaperJurnal
+          : doc.section === SECTIONS.PROCEEDING
+          ? data.linkPaperProceeding
+          : ""
+      )?.trim();
+
+      // Jika kolom teks link KOSONG: field ini opsional, tampilkan pesan informatif tanpa memblokir/error
+      if (!linkValue) {
+        showPanelAlert(
+          doc.section,
+          "info",
+          "Dokumen Link Paper bersifat opsional. Jika publikasi Anda belum terbit daring, Anda dapat melewati dokumen ini."
+        );
+        return;
+      }
+
+      if (!doc.slug) {
+        showPanelAlert(doc.section, "error", "Slug dokumen belum tersedia.");
+        return;
+      }
+
+      const txtFileName = `${nim || "LinkPaper"}_LampiranLinkPaper.txt`;
+      const txtFile = new File([linkValue], txtFileName, { type: "text/plain;charset=utf-8" });
+
+      try {
+        setIsUploading(true);
+        const res = await uploadSidangRegistrationFile(registrationId, {
+          file: txtFile,
+          slug: doc.slug,
+          name: doc.name || "Lampiran Link Paper",
+        });
+        const uploadId = res?.id || res?.data?.id || doc.uploadId;
+        const nowIso = new Date().toISOString();
+        const docName = doc.name || "Lampiran Link Paper";
+        dispatch({
+          type: "COMPLETE_DOCUMENT",
+          docId,
+          docName,
+          uploadedAt: nowIso,
+          uploadId,
+        });
+        showPanelAlert(doc.section, "success", "Link Paper berhasil disimpan.");
+
+        // Otomatis pindah ke berkas berikutnya dalam section yang sama
+        const sectionDocs = documents.filter((d) => d.section === doc.section);
+        const currentIndex = sectionDocs.findIndex((d) => d.id === docId);
+        if (currentIndex !== -1 && currentIndex < sectionDocs.length - 1) {
+          handleSetActive(doc.section, sectionDocs[currentIndex + 1].id);
+        }
+      } catch (error) {
+        console.error("Gagal simpan link paper:", error);
+        showPanelAlert(doc.section, "error", "Gagal menyimpan Link Paper. Silakan coba lagi.");
+      } finally {
+        setIsUploading(false);
+      }
+      return;
+    }
+
+    // Alur berkas biasa (PDF / gambar) - HANYA untuk dokumen non-Link Paper
     if (!doc.slug) {
       showPanelAlert(doc.section, "error", "Slug dokumen belum tersedia.");
       return;
     }
 
-    const nim = studentInfo?.nim;
+    const file = fileMapRef.current[docId];
+
+    if (!doc?.fileUrl || !file) {
+      showPanelAlert(doc?.section, "warning", "Silahkan pilih file terlebih dahulu sebelum menyimpan.");
+      return;
+    }
+
     if (!nim || nim === "-") {
       showPanelAlert(doc.section, "error", "NIM belum tersedia. Silakan refresh halaman.");
       return;
@@ -1107,6 +1297,42 @@ export default function Step2({
       const docName = doc.name || doc.fileName || file.name;
       dispatch({ type: "COMPLETE_DOCUMENT", docId, docName, uploadedAt: nowIso });
       showPanelAlert(doc.section, "success", `File "${doc.fileName || file.name}" berhasil diunggah.`);
+
+      // Jika ada input link paper yang terisi di section Jurnal/Proceeding dan link doc belum tersimpan, otomatis simpan juga
+      if (doc.section === SECTIONS.JURNAL || doc.section === SECTIONS.PROCEEDING) {
+        const sectionDocs = documents.filter((d) => d.section === doc.section);
+        const linkDoc = sectionDocs.find(
+          (d) =>
+            d.slug?.includes("lampiran-link-paper") ||
+            d.category?.includes("lampiran-link-paper") ||
+            d.name?.toLowerCase().includes("link paper")
+        );
+        const linkValue = (
+          doc.section === SECTIONS.JURNAL ? data.linkPaperJurnal : data.linkPaperProceeding
+        )?.trim();
+
+        if (linkDoc && linkValue && linkDoc.status !== "completed") {
+          try {
+            const txtFileName = `${nim}_LampiranLinkPaper.txt`;
+            const txtFile = new File([linkValue], txtFileName, { type: "text/plain;charset=utf-8" });
+            const res = await uploadSidangRegistrationFile(registrationId, {
+              file: txtFile,
+              slug: linkDoc.slug,
+              name: linkDoc.name || "Lampiran Link Paper",
+            });
+            const uploadId = res?.id || res?.data?.id;
+            dispatch({
+              type: "COMPLETE_DOCUMENT",
+              docId: linkDoc.id,
+              docName: linkDoc.name || "Lampiran Link Paper",
+              uploadedAt: nowIso,
+              uploadId,
+            });
+          } catch (linkErr) {
+            console.warn("Gagal auto-save link paper saat simpan dokumen:", linkErr);
+          }
+        }
+      }
 
       // Otomatis pindah ke berkas berikutnya dalam section yang sama
       const sectionDocs = documents.filter((d) => d.section === doc.section);
@@ -1131,6 +1357,7 @@ export default function Step2({
     isLoading: isTemplatesLoading,
     readOnly,
     panelAlert,
+    isRevisionDeadlinePassed,
   };
 
   return (
@@ -1144,7 +1371,7 @@ export default function Step2({
         accept=".pdf,.jpg,.jpeg,.png"
       />
 
-      {!readOnly && (
+      {!readOnly && !isRevisionDeadlinePassed && (
         <div className="info-banner" style={{ marginBottom: "2rem" }}>
           <div className="banner-icon-container">
             <Info color="#d69e2e" size={24} />
@@ -1172,10 +1399,11 @@ export default function Step2({
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "6px" }}>
             {["Sudah", "Belum"].map((opt) => {
               const isSelected = data.testBahasaPersyaratan === opt;
+              const isFieldDisabled = readOnly || isRevisionDeadlinePassed;
               return (
                 <div
                   key={opt}
-                  onClick={() => !readOnly && updateField("testBahasaPersyaratan", opt)}
+                  onClick={() => !isFieldDisabled && updateField("testBahasaPersyaratan", opt)}
                   style={{
                     flex: "1 1 180px",
                     display: "flex",
@@ -1184,12 +1412,12 @@ export default function Step2({
                     padding: "12px 16px",
                     border: `1.5px solid ${isSelected ? "#C0182A" : "#E2E8F0"}`,
                     borderRadius: "8px",
-                    cursor: readOnly ? "not-allowed" : "pointer",
+                    cursor: isFieldDisabled ? "not-allowed" : "pointer",
                     background: isSelected ? "#FFF5F5" : "#F8FAFC",
                     fontWeight: 600,
                     fontSize: "14px",
                     color: isSelected ? "#C0182A" : "#1E293B",
-                    opacity: readOnly ? 0.75 : 1,
+                    opacity: isFieldDisabled ? 0.75 : 1,
                     transition: "all 0.15s ease",
                   }}
                 >

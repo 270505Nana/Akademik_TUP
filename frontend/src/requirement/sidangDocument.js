@@ -22,6 +22,13 @@ export const REQUIRED_SLUGS = [
   "sidang-berkas-wajib-template-surat-ta",
 ];
 
+/**
+ * @deprecated TIDAK LAGI DIPAKAI sebagai sumber slug aktif sejak slug jalur non-sidang
+ * (Jurnal/Proceeding/HKI) diambil dinamis dari backend via DYNAMIC_SECTION_CATEGORY_MAP.
+ * Slug di bawah ini SUDAH TIDAK SINKRON dengan database dan menyebabkan bug
+ * "Berkas wajib belum lengkap" saat submit meski file sudah diupload.
+ * Jangan dipakai lagi untuk validasi atau build nama kategori upload.
+ */
 export const NON_SIDANG_SLUGS = {
   "Publikasi Jurnal": [
     "berkas-loa-jurnal",
@@ -99,6 +106,10 @@ const JURNAL_DOCUMENTS = [
     name: "Berkas Riwayat Review oleh Reviewers",
   },
   { slug: "berkas-response-jurnal", name: "Berkas Response Jurnal" },
+  {
+    slug: "sidang-evidence-non-sidang-publikasi-jurnal-lampiran-link-paper",
+    name: "Lampiran Link Paper",
+  },
 ];
 
 const PROCEEDING_DOCUMENTS = [
@@ -113,6 +124,10 @@ const PROCEEDING_DOCUMENTS = [
   },
   { slug: "berkas-pakta-integritas", name: "Berkas Pakta Integritas" },
   { slug: "berkas-response-proceeding", name: "Berkas Response Proceeding" },
+  {
+    slug: "sidang-evidence-non-sidang-proceeding-international-lampiran-link-paper",
+    name: "Lampiran Link Paper",
+  },
 ];
 
 const HKI_DOCUMENTS = [
@@ -121,6 +136,15 @@ const HKI_DOCUMENTS = [
   { slug: "sertifikat-pendukung-lainnya", name: "Sertifikat Pendukung Lainnya" },
 ];
 
+/**
+ * @deprecated JURNAL_DOCUMENTS, PROCEEDING_DOCUMENTS, HKI_DOCUMENTS di bawah ini
+ * (dan entry-nya di DOCUMENT_CONFIG) adalah daftar statis lama yang slug-nya SUDAH
+ * TIDAK SINKRON dengan database. Section ini sekarang mendapat daftar dokumennya
+ * secara dinamis dari backend (lihat DYNAMIC_SECTION_CATEGORY_MAP + SET_SECTION_TEMPLATES
+ * di SidangFormContext). Entry JURNAL/PROCEEDING/HKI di DOCUMENT_CONFIG di bawah
+ * HANYA dipakai sebagai fallback sebelum data dinamis datang, JANGAN dipakai untuk
+ * validasi kelengkapan submit.
+ */
 export const DOCUMENT_CONFIG = {
   [SECTIONS.WAJIB]: REQUIRED_DOCUMENTS,
   [SECTIONS.JURNAL]: JURNAL_DOCUMENTS,
@@ -142,5 +166,36 @@ export const DYNAMIC_SECTION_CATEGORY_MAP = {
   [SECTIONS.WAJIB]: "Sidang - Berkas Wajib",
   [SECTIONS.TEST_BAHASA_SUDAH]: "Sidang - Berkas Tes Bahasa (Sudah)",
   [SECTIONS.TEST_BAHASA_BELUM]: "Sidang - Berkas Tes Bahasa (Belum)",
+  [SECTIONS.JURNAL]: "Sidang - Evidence Non Sidang Publikasi Jurnal",
+  [SECTIONS.PROCEEDING]: "Sidang - Evidence Non Sidang Proceeding International",
+  [SECTIONS.HKI]: "Sidang - Evidence Non Sidang HKI",
 };
+
+/**
+ * Mengambil skema dan jalur non-sidang efektif dengan memprioritaskan keputusan final admin (skemaSidangFinal & jalurNonSidangFinal)
+ * di atas pengajuan awal mahasiswa (skemaSidang & jalurNonSidang).
+ *
+ * @param {Object} reg - Objek registrasi sidang
+ * @returns {{ scheme: string, jalur: string[] }}
+ */
+export const getEffectiveSidangSchemeAndJalur = (reg) => {
+  const scheme = reg?.skemaSidangFinal || reg?.skemaSidang || reg?.sidangScheme || "";
+  const isNonSidang = String(scheme).toLowerCase().includes("non");
+
+  let jalur = [];
+  if (isNonSidang) {
+    if (Array.isArray(reg?.jalurNonSidangFinal) && reg.jalurNonSidangFinal.length > 0) {
+      jalur = reg.jalurNonSidangFinal;
+    } else if (typeof reg?.jalurNonSidangFinal === "string" && reg.jalurNonSidangFinal.trim()) {
+      jalur = reg.jalurNonSidangFinal.split(",").map((s) => s.trim()).filter(Boolean);
+    } else if (Array.isArray(reg?.jalurNonSidang) && reg.jalurNonSidang.length > 0) {
+      jalur = reg.jalurNonSidang;
+    } else if (typeof reg?.jalurNonSidang === "string" && reg.jalurNonSidang.trim()) {
+      jalur = reg.jalurNonSidang.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+
+  return { scheme, jalur };
+};
+
 
