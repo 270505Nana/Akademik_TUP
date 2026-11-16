@@ -329,6 +329,7 @@ export default function Step1({
 
   const handleTakChange = (value) => {
     if (readOnly) return;
+    if (value !== "" && Number(value) < 0) return;
     updateField("tak", value);
     setTakAlert(null);
 
@@ -641,10 +642,14 @@ export default function Step1({
             ) : (
               <input
                 type="number"
+                min="0"
                 className="sidang-input-field"
                 placeholder="0"
                 value={data.sks}
-                onChange={(e) => updateField("sks", e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || Number(val) >= 0) updateField("sks", val);
+                }}
               />
             )}
           </div>
@@ -681,6 +686,7 @@ export default function Step1({
             ) : (
               <input
                 type="number"
+                min="0"
                 className="sidang-input-field"
                 style={takAlert ? { borderColor: "#ef4444" } : undefined}
                 placeholder="0"
@@ -697,17 +703,15 @@ export default function Step1({
 
           {/* Tanggal Batas Akhir SKTA */}
           <div className="sidang-input-group">
-            <label>Tanggal Batas Akhir SKTA <span style={{ color: "red" }}>*</span></label>
-            {readOnly ? (
-              <StaticValue>{formatDateID(data.sktaExpDate)}</StaticValue>
-            ) : (
-              <input
-                type="date"
-                className="sidang-input-field"
-                value={data.sktaExpDate}
-                onChange={(e) => updateField("sktaExpDate", e.target.value)}
-              />
-            )}
+            <label>Tanggal Batas Akhir SKTA </label>
+            <input
+              type="text"
+              className="sidang-input-field"
+              value={formatDateID(data.sktaExpDate)}
+              disabled
+              readOnly
+              style={{ cursor: "not-allowed", color: "#94A3B8", opacity: 1 }}
+            />
           </div>
         </div>
       </section>

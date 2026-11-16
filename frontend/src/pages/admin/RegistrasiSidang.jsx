@@ -16,29 +16,36 @@ import {
   Download,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import SidebarAdmin          from '../../components/sidebar/SidebarAdmin';
-import CustomAlert           from '../../components/common/CustomAlert';
+import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
+import CustomAlert from '../../components/common/CustomAlert';
 import VerifikasiBerkasModal from '../../components/admin/sidang/VerifikasiBerkasModal';
-import { useAuth }           from '../../context/AuthContext';
-import {getAllSidangRegistrations,getSidangPeriods,} from '../../service/api';
-import {determineSidangStatus,STATUS_SIDANG,SIDANG_STATUS_CONFIG,} from '../../components/admin/sidang/Sidangstatushelper';
+import { useAuth } from '../../context/AuthContext';
+import { getAllSidangRegistrations, getSidangPeriods, } from '../../service/api';
+import { determineSidangStatus, STATUS_SIDANG, SIDANG_STATUS_CONFIG, } from '../../components/admin/sidang/Sidangstatushelper';
+import { getEffectiveSidangSchemeAndJalur } from '../../requirement/sidangDocument';
 import '../../style/css/admin/RegistrasiSidang.css';
 
 const FILTER_TABS = [
-  { key: '',                                 label: 'Semua'                },
-  { key: STATUS_SIDANG.DALAM_PROSES,         label: 'Dalam Proses'         },
-  { key: STATUS_SIDANG.PERLU_REVISI,         label: 'Perlu Revisi'         },
-  { key: STATUS_SIDANG.REVISI_DIPERBARUI,    label: 'Revisi Diperbarui'    },
-  { key: STATUS_SIDANG.SIAP_SIDANG,          label: 'Siap Sidang'          },
+  { key: '', label: 'Semua' },
+  { key: STATUS_SIDANG.DALAM_PROSES, label: 'Dalam Proses' },
+  { key: STATUS_SIDANG.PERLU_REVISI, label: 'Perlu Revisi' },
+  { key: STATUS_SIDANG.REVISI_DIPERBARUI, label: 'Revisi Diperbarui' },
+  { key: STATUS_SIDANG.SIAP_SIDANG, label: 'Siap Sidang' },
   { key: STATUS_SIDANG.PENDAFTARAN_DITERIMA, label: 'Pendaftaran Diterima' },
 ];
 
+const UNVERIFIED_STATUSES = [
+  STATUS_SIDANG.DALAM_PROSES,
+  STATUS_SIDANG.PERLU_REVISI,
+  STATUS_SIDANG.REVISI_DIPERBARUI,
+];
+
 const STATUS_SORT_ORDER = {
-  [STATUS_SIDANG.DALAM_PROSES]         : 1,
-  [STATUS_SIDANG.REVISI_DIPERBARUI]    : 2,
-  [STATUS_SIDANG.PERLU_REVISI]         : 3,
-  [STATUS_SIDANG.SIAP_SIDANG]          : 4,
-  [STATUS_SIDANG.PENDAFTARAN_DITERIMA] : 5,
+  [STATUS_SIDANG.DALAM_PROSES]: 1,
+  [STATUS_SIDANG.REVISI_DIPERBARUI]: 2,
+  [STATUS_SIDANG.PERLU_REVISI]: 3,
+  [STATUS_SIDANG.SIAP_SIDANG]: 4,
+  [STATUS_SIDANG.PENDAFTARAN_DITERIMA]: 5,
 };
 
 const PAGE_SIZE = 8;
@@ -82,7 +89,7 @@ const StatusBadge = ({ status }) => {
 const SchemaBadge = ({ scheme, jalur = [] }) => {
   if (!scheme) return <span style={{ color: '#9CA3AF', fontSize: 12 }}>-</span>;
   const isNonSidang = scheme.toLowerCase().includes('non');
-  
+
   // Jika bukan skema Non Sidang (misal Sidang Reguler), tampilkan "-"
   if (!isNonSidang) {
     return <span style={{ color: '#9CA3AF', fontSize: 12 }}>-</span>;
@@ -98,8 +105,8 @@ const SchemaBadge = ({ scheme, jalur = [] }) => {
       fontSize: 10, fontWeight: 700, padding: '3px 10px',
       borderRadius: 9999,
       background: '#F5F3FF',
-      border:     '1.5px solid #DDD6FE',
-      color:      '#5B21B6',
+      border: '1.5px solid #DDD6FE',
+      color: '#5B21B6',
       whiteSpace: 'nowrap',
     }}>
       {labelText}
@@ -107,12 +114,11 @@ const SchemaBadge = ({ scheme, jalur = [] }) => {
   );
 };
 
-const JalurBadge = ({ jalur }) => {
-  if (!jalur || jalur.length === 0)
-    return <span style={{ fontSize: 12, color: '#374151', fontWeight: 500 }}>Reguler</span>;
+const JalurBadge = ({ jalur, fallbackText = 'Reguler' }) => {
+  const items = !jalur || jalur.length === 0 ? [fallbackText] : jalur;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      {jalur.map((j, i) => (
+      {items.map((j, i) => (
         <span key={i} style={{
           fontSize: 10, fontWeight: 600, padding: '2px 8px',
           borderRadius: 9999, background: '#F0FDF4',
@@ -130,7 +136,7 @@ const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
   const [open, setOpen] = useState(false);
   const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
   const btnWrapRef = useRef(null);
-  const panelRef   = useRef(null);
+  const panelRef = useRef(null);
 
   const computePosition = useCallback(() => {
     if (!btnWrapRef.current) return;
@@ -149,7 +155,7 @@ const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
   useEffect(() => {
     const handleClickOutside = (e) => {
       const clickedButton = btnWrapRef.current?.contains(e.target);
-      const clickedPanel   = panelRef.current?.contains(e.target);
+      const clickedPanel = panelRef.current?.contains(e.target);
       if (!clickedButton && !clickedPanel) setOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -215,6 +221,158 @@ const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
   );
 };
 
+const PeriodeFilterDropdown = ({ options, selected, onSelect, onClear }) => {
+  const [open, setOpen] = useState(false);
+  const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
+  const btnWrapRef = useRef(null);
+  const panelRef = useRef(null);
+
+  const computePosition = useCallback(() => {
+    if (!btnWrapRef.current) return;
+    const rect = btnWrapRef.current.getBoundingClientRect();
+    setPanelPos({
+      top: rect.bottom + 6,
+      right: Math.max(8, window.innerWidth - rect.right),
+    });
+  }, []);
+
+  const handleToggleOpen = () => {
+    if (!open) computePosition();
+    setOpen(o => !o);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const clickedButton = btnWrapRef.current?.contains(e.target);
+      const clickedPanel = panelRef.current?.contains(e.target);
+      if (!clickedButton && !clickedPanel) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const reposition = () => computePosition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [open, computePosition]);
+
+  const isActive = Boolean(selected);
+  const selectedPeriodObj = options.find(p => p.id === selected);
+
+  return (
+    <div className="vs-prodi-filter" ref={btnWrapRef}>
+      <button
+        type="button"
+        className={`vs-tab ${isActive ? 'active' : ''}`}
+        onClick={handleToggleOpen}
+        title={isActive ? `Periode: ${selectedPeriodObj?.name || 'Kustom'}` : 'Filter Periode Pendaftaran Sidang'}
+      >
+        Periode
+        {isActive && (
+          <span
+            className="vs-tab-count"
+            style={{
+              maxWidth: 120,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'inline-block',
+              verticalAlign: 'bottom',
+            }}
+          >
+            ({selectedPeriodObj?.name || '1'})
+          </span>
+        )}
+        <ChevronDown size={12} style={{ marginLeft: 2 }} />
+      </button>
+
+      {open && createPortal(
+        <div
+          className="vs-prodi-panel"
+          ref={panelRef}
+          style={{ position: 'fixed', top: panelPos.top, right: panelPos.right, width: 290 }}
+        >
+          {options.length === 0 ? (
+            <div className="vs-prodi-empty">Belum ada data periode pendaftaran.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div
+                className="vs-prodi-option"
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  onClear();
+                  setOpen(false);
+                }}
+                style={{
+                  cursor: 'pointer',
+                  fontWeight: !selected ? 700 : 400,
+                  backgroundColor: !selected ? '#FEF2F2' : 'transparent',
+                  color: !selected ? '#C0182A' : '#374151',
+                  borderRadius: 6,
+                  padding: '6px 8px',
+                }}
+              >
+                <span>Default (Periode Aktif/Terbaru)</span>
+              </div>
+
+              {options.map((p) => {
+                const isSelected = selected === p.id;
+                const periodLabel = p.name?.includes(p.period) ? p.name : `${p.name} ${p.period || ''}`.trim();
+                return (
+                  <div
+                    key={p.id}
+                    className="vs-prodi-option"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      onSelect(p.id);
+                      setOpen(false);
+                    }}
+                    style={{
+                      cursor: 'pointer',
+                      fontWeight: isSelected ? 700 : 400,
+                      backgroundColor: isSelected ? '#FEF2F2' : 'transparent',
+                      color: isSelected ? '#C0182A' : '#374151',
+                      borderRadius: 6,
+                      padding: '6px 8px',
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      {periodLabel}
+                      {p.isOpen && (
+                        <span
+                          style={{
+                            fontSize: 9,
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            background: '#DCFCE7',
+                            color: '#166534',
+                            fontWeight: 700,
+                          }}
+                        >
+                          Aktif
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+};
+
 const SortableHeader = ({ label, field, sort, onSort, style }) => {
   const isActive = sort.field === field;
   return (
@@ -243,18 +401,20 @@ const RegistrasiSidang = () => {
 
   // Data
   const [registrations, setRegistrations] = useState([]);
-  const [periodMap,     setPeriodMap]     = useState({});
-  const [prodiMap,      setProdiMap]      = useState({});
+  const [periodMap, setPeriodMap] = useState({});
+  const [periodList, setPeriodList] = useState([]);
+  const [prodiMap, setProdiMap] = useState({});
 
   // UI state
-  const [loading,         setLoading]         = useState(true);
-  const [search,          setSearch]          = useState('');
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
-  const [filterStatus,    setFilterStatus]    = useState('');
-  const [selectedProdis,  setSelectedProdis]  = useState([]);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [selectedProdis, setSelectedProdis] = useState([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [sort, setSort] = useState({ field: null, dir: 'asc' }); // field: 'name' | 'date' | null
-  const [currentPage,     setCurrentPage]     = useState(1);
-  const [alert,           setAlert]           = useState({ show: false, type: '', title: '', message: '' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [alert, setAlert] = useState({ show: false, type: '', title: '', message: '' });
 
   // Modal state
   const [selectedReg, setSelectedReg] = useState(null);
@@ -272,10 +432,14 @@ const RegistrasiSidang = () => {
   }, [search]);
 
   //  Fetch semua data 
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (periodId = selectedPeriodId) => {
     setLoading(true);
     try {
-      const res    = await getAllSidangRegistrations();
+      const params = {};
+      if (periodId) {
+        params.sidangRegistrationPeriodId = periodId;
+      }
+      const res = await getAllSidangRegistrations(params);
       const allList = Array.isArray(res) ? res : (res?.data ?? []);
 
       const visible = allList.filter((r) => {
@@ -288,16 +452,31 @@ const RegistrasiSidang = () => {
 
       const allPeriods = await getSidangPeriods().catch(() => []);
       const prdMap = {};
+      const regPeriods = [];
       (allPeriods ?? []).forEach(item => {
         if (!item) return;
         if (item.pendaftaran || item.pelaksanaan) {
-          if (item.pendaftaran?.id) prdMap[item.pendaftaran.id] = item.pendaftaran;
-          if (item.pelaksanaan?.id) prdMap[item.pelaksanaan.id] = item.pelaksanaan;
+          if (item.pendaftaran?.id) {
+            prdMap[item.pendaftaran.id] = item.pendaftaran;
+            if (!regPeriods.some(p => p.id === item.pendaftaran.id)) {
+              regPeriods.push(item.pendaftaran);
+            }
+          }
+          if (item.pelaksanaan?.id) {
+            prdMap[item.pelaksanaan.id] = item.pelaksanaan;
+          }
         } else if (item.id) {
           prdMap[item.id] = item;
+          if (!item.category || item.category.toLowerCase().includes('pendaftaran')) {
+            if (!regPeriods.some(p => p.id === item.id)) {
+              regPeriods.push(item);
+            }
+          }
         }
       });
       setPeriodMap(prdMap);
+      setPeriodList(regPeriods);
+
       const prMap = {};
       visible.forEach(r => {
         const m = r.mahasiswa || r.student;
@@ -313,15 +492,15 @@ const RegistrasiSidang = () => {
     } finally {
       setLoading(false);
     }
-  }, [logout, showAlert]);
+  }, [selectedPeriodId, logout, showAlert]);
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') fetchAll();
+    if (user?.role === 'ADMIN') fetchAll('');
   }, [user]);
 
   const getStatus = useCallback((reg) => {
     const periodId = reg.sidangPeriodId ?? null;
-    const period   = periodId ? (periodMap[periodId] ?? null) : null;
+    const period = periodId ? (periodMap[periodId] ?? null) : null;
     return determineSidangStatus(reg, null, period);
   }, [periodMap]);
 
@@ -341,15 +520,27 @@ const RegistrasiSidang = () => {
 
   const clearProdiFilter = useCallback(() => setSelectedProdis([]), []);
 
+  const handlePeriodChange = useCallback((periodId) => {
+    setSelectedPeriodId(periodId);
+    setCurrentPage(1);
+    fetchAll(periodId);
+  }, [fetchAll]);
+
+  const handlePeriodClear = useCallback(() => {
+    setSelectedPeriodId('');
+    setCurrentPage(1);
+    fetchAll('');
+  }, [fetchAll]);
+
   const getSubmitDate = useCallback((reg) =>
     reg.submittedAt ?? reg.sidangRegistrationUploads?.[0]?.createdAt ?? reg.createdAt ?? null,
-  []);
+    []);
 
   const handleSort = useCallback((field) => {
     setSort(prev => {
-      if (prev.field !== field) return { field, dir: 'asc' };       
-      if (prev.dir === 'asc')   return { field, dir: 'desc' };     
-      return { field: null, dir: 'asc' };                           
+      if (prev.field !== field) return { field, dir: 'asc' };
+      if (prev.dir === 'asc') return { field, dir: 'desc' };
+      return { field: null, dir: 'asc' };
     });
   }, []);
 
@@ -360,12 +551,16 @@ const RegistrasiSidang = () => {
         if (!searchDebounced) return true;
         const m = r.mahasiswa || r.student;
         const name = (m?.name || '').toLowerCase();
-        const nim  = (m?.nim  || '').toLowerCase();
+        const nim = (m?.nim || '').toLowerCase();
         return name.includes(searchDebounced) || nim.includes(searchDebounced);
       })
       .filter(r => {
-        if (!filterStatus) return true;
-        return getStatus(r) === filterStatus;
+        const s = getStatus(r);
+        if (!filterStatus) {
+          // Tab "Semua" aktif (default): tampilkan HANYA data berstatus BELUM diverifikasi
+          return UNVERIFIED_STATUSES.includes(s);
+        }
+        return s === filterStatus;
       })
       .filter(r => {
         if (selectedProdis.length === 0) return true;
@@ -392,11 +587,11 @@ const RegistrasiSidang = () => {
   }, [registrations, searchDebounced, filterStatus, selectedProdis, sort, getStatus, getProdiName, getSubmitDate]);
 
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
-  const paginated  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus, selectedProdis]);
+  useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus, selectedProdis, selectedPeriodId]);
 
-  const countAll    = registrations.length;
+  const countAll = registrations.filter(r => UNVERIFIED_STATUSES.includes(getStatus(r))).length;
   const countStatus = (s) => registrations.filter(r => getStatus(r) === s).length;
 
   const fmtDate = (iso) => {
@@ -436,10 +631,11 @@ const RegistrasiSidang = () => {
       const periodName = reg.sidangPeriodId && periodMap[reg.sidangPeriodId]
         ? periodMap[reg.sidangPeriodId].name
         : '-';
-      const jalur = Array.isArray(reg.jalurNonSidang) && reg.jalurNonSidang.length > 0
-        ? reg.jalurNonSidang.join('; ')
+      const { scheme: effectiveScheme, jalur: effectiveJalur } = getEffectiveSidangSchemeAndJalur(reg);
+      const jalur = effectiveJalur.length > 0
+        ? effectiveJalur.join('; ')
         : 'Reguler';
-      const skema = reg.skemaSidang || reg.sidangScheme || 'Sidang Reguler';
+      const skema = effectiveScheme || 'Sidang Reguler';
       const submitDate = fmtDate(getSubmitDate(reg));
 
       return [
@@ -473,9 +669,9 @@ const RegistrasiSidang = () => {
 
   const handleModalSaved = useCallback(() => {
     setSelectedReg(null);
-    fetchAll();
+    fetchAll(selectedPeriodId);
     showAlert('success', 'Berhasil', 'Verifikasi berkas berhasil disimpan.');
-  }, [fetchAll, showAlert]);
+  }, [fetchAll, selectedPeriodId, showAlert]);
 
   // 
   return (
@@ -512,7 +708,7 @@ const RegistrasiSidang = () => {
                     onChange={e => setSearch(e.target.value)}
                   />
                 </div>
-                <button className="vs-btn-refresh" onClick={fetchAll} title="Refresh data">
+                <button className="vs-btn-refresh" onClick={() => fetchAll(selectedPeriodId)} title="Refresh data">
                   <RefreshCw size={14} />
                   Refresh
                 </button>
@@ -541,9 +737,12 @@ const RegistrasiSidang = () => {
                   onClear={clearProdiFilter}
                 />
 
-                <button className="btn-export-sk sm" onClick={handleExportData}>
-                  <Download size={13} /> Expor Reg Sidang MHS
-                </button>
+                <PeriodeFilterDropdown
+                  options={periodList}
+                  selected={selectedPeriodId}
+                  onSelect={handlePeriodChange}
+                  onClear={handlePeriodClear}
+                />
               </div>
 
               <div className="vs-table-divider" />
@@ -580,19 +779,24 @@ const RegistrasiSidang = () => {
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                             <GraduationCap size={36} color="#D1D5DB" />
                             <span style={{ fontSize: 13, color: '#9CA3AF' }}>
-                              {search ? 'Tidak ada hasil pencarian.' : 'Belum ada data registrasi sidang.'}
+                              {search
+                                ? 'Tidak ada hasil pencarian.'
+                                : (!filterStatus && registrations.length > 0
+                                  ? 'Semua pendaftaran pada periode ini telah diverifikasi.'
+                                  : 'Belum ada data registrasi sidang.')}
                             </span>
                           </div>
                         </td>
                       </tr>
                     ) : (
                       paginated.map((reg, idx) => {
-                        const status    = getStatus(reg);
+                        const status = getStatus(reg);
                         const prodiName = getProdiName(reg);
                         const isVerified = status === STATUS_SIDANG.SIAP_SIDANG
-                                        || status === STATUS_SIDANG.PENDAFTARAN_DITERIMA;
+                          || status === STATUS_SIDANG.PENDAFTARAN_DITERIMA;
 
                         const m = reg.mahasiswa || reg.student;
+                        const { scheme: effectiveScheme, jalur: effectiveJalur } = getEffectiveSidangSchemeAndJalur(reg);
                         return (
                           <motion.tr
                             key={reg.id}
@@ -606,18 +810,18 @@ const RegistrasiSidang = () => {
                             </td>
                             <td>
                               <div className="vs-mhs-name">{m?.name || `Mahasiswa #${reg.mahasiswaId}`}</div>
-                              <div className="vs-mhs-nim">{m?.nim  || '-'}</div>
+                              <div className="vs-mhs-nim">{m?.nim || '-'}</div>
                             </td>
                             <td>
                               <span className="vs-prodi-text">{prodiName}</span>
                             </td>
                             <td>
-                              <JalurBadge jalur={reg.jalurNonSidang} />
+                              <JalurBadge jalur={effectiveJalur} />
                             </td>
                             <td>
                               <SchemaBadge
-                                scheme={reg.skemaSidang || reg.sidangScheme}
-                                jalur={reg.jalurNonSidang}
+                                scheme={effectiveScheme}
+                                jalur={effectiveJalur}
                               />
                             </td>
                             <td className="vs-td-center">
@@ -691,8 +895,8 @@ const RegistrasiSidang = () => {
           <motion.div
             className="vs-alert-overlay"
             initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0,   opacity: 1 }}
-            exit={{    x: 300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 300, opacity: 0 }}
           >
             <CustomAlert type={alert.type} title={alert.title} message={alert.message} />
           </motion.div>

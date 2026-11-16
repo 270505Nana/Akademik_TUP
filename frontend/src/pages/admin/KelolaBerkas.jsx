@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Eye, Edit, Trash2, X, UploadCloud, Menu, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { Search, Eye, Edit, Trash2, X, UploadCloud, Menu, ChevronDown, ChevronUp, Download, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert from '../../components/common/CustomAlert';
-import { getAllTemplates, createTemplate, updateTemplate, toggleTemplatePublish, toggleTemplateRequired, getTemplatePreview, downloadTemplateFile } from '../../service/api'; 
+import {
+  getAllTemplates,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  toggleTemplatePublish,
+  toggleTemplateRequired,
+  getTemplatePreview,
+  downloadTemplateFile
+} from '../../service/api'; 
 
 const CATEGORIES = [
   "Permohonan SKTA",
@@ -35,6 +44,7 @@ const KelolaBerkas = () => {
   const [file, setFile] = useState(null);
 
   const [previewModal, setPreviewModal] = useState({ isOpen: false, item: null, blobUrl: null, loading: false });
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null, loading: false });
 
   const [alert, setAlert] = useState({ show: false, type: '', title: '', message: '' });
 
@@ -82,6 +92,32 @@ const KelolaBerkas = () => {
   };
 
   const handleCloseModal = () => setIsModalOpen(false);
+
+  const handleOpenDeleteConfirm = (item) => {
+    setDeleteModal({ isOpen: true, item, loading: false });
+  };
+
+  const handleCloseDeleteConfirm = () => {
+    if (deleteModal.loading) return;
+    setDeleteModal({ isOpen: false, item: null, loading: false });
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteModal.item) return;
+    setDeleteModal((prev) => ({ ...prev, loading: true }));
+    try {
+      await deleteTemplate(deleteModal.item.id);
+      handleCloseDeleteConfirm();
+      showAlert("success", "Berhasil Dihapus", "Dokumen persyaratan berhasil dihapus.");
+      fetchTemplates();
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      const msg = error.response?.data?.message || "Terjadi kesalahan saat menghapus dokumen.";
+      showAlert("error", "Gagal Menghapus", msg);
+    } finally {
+      setDeleteModal((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -251,9 +287,42 @@ const KelolaBerkas = () => {
                               )}
                             </td>
                             <td style={{ padding: '16px', textAlign: 'center' }}>
-                              <button onClick={() => handleOpenEditModal(item)} style={{ background: '#F1F5F9', border: 'none', cursor: 'pointer', color: '#475569', padding: '8px', borderRadius: '8px' }} title="Edit Berkas">
-                                <Edit size={16} />
-                              </button>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                                <button
+                                  onClick={() => handleOpenEditModal(item)}
+                                  style={{
+                                    background: '#F1F5F9',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: '#475569',
+                                    padding: '8px',
+                                    borderRadius: '8px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                  title="Edit Berkas"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handleOpenDeleteConfirm(item)}
+                                  style={{
+                                    background: '#FEF2F2',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: '#DC2626',
+                                    padding: '8px',
+                                    borderRadius: '8px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                  title="Hapus Berkas"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -412,6 +481,48 @@ const KelolaBerkas = () => {
         )}
       </AnimatePresence>
 
+      {/* Modal Dialog Konfirmasi Hapus Dokumen Persyaratan */}
+      <AnimatePresence>
+        {deleteModal.isOpen && (
+          <div className="pi-delete-overlay">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="pi-delete-card"
+            >
+              <div className="pi-delete-icon-circle">
+                <AlertTriangle size={26} color="#DC2626" />
+              </div>
+              <h3 className="pi-delete-title">
+                Hapus Dokumen Persyaratan?
+              </h3>
+              <p className="pi-delete-text">
+                Apakah Anda yakin ingin menghapus <strong>"{deleteModal.item?.name}"</strong>? Tindakan ini bersifat permanen dan tidak dapat dibatalkan.
+              </p>
+              <div className="pi-delete-btn-group">
+                <button
+                  type="button"
+                  disabled={deleteModal.loading}
+                  onClick={handleCloseDeleteConfirm}
+                  className="pi-delete-btn-cancel"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={deleteModal.loading}
+                  onClick={handleExecuteDelete}
+                  className="pi-delete-btn-confirm"
+                >
+                  {deleteModal.loading ? 'Menghapus...' : 'Ya, Hapus'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {alert.show && (
           <motion.div initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }} style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999 }}>
@@ -431,6 +542,97 @@ const KelolaBerkas = () => {
           .modal-overlay {
             padding-left: 240px !important; /* Menyesuaikan posisi tengah modal agar tidak tertutup sidebar */
           }
+        }
+
+        /* Delete Confirm Modal */
+        .pi-delete-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          background: rgba(0, 0, 0, 0.45);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .pi-delete-card {
+          background: #fff;
+          border-radius: 16px;
+          padding: 32px 28px;
+          max-width: 380px;
+          width: 90%;
+          text-align: center;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+          box-sizing: border-box;
+        }
+
+        .pi-delete-icon-circle {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background: #FEF2F2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+        }
+
+        .pi-delete-title {
+          font-size: 17px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0 0 8px;
+        }
+
+        .pi-delete-text {
+          font-size: 13px;
+          color: #6B7280;
+          margin: 0 0 20px;
+          line-height: 1.5;
+        }
+
+        .pi-delete-btn-group {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+        }
+
+        .pi-delete-btn-cancel {
+          padding: 9px 22px;
+          border-radius: 9999px;
+          font-size: 13px;
+          font-weight: 600;
+          background: #F3F4F6;
+          color: #374151;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .pi-delete-btn-cancel:hover:not(:disabled) {
+          background: #E5E7EB;
+        }
+
+        .pi-delete-btn-confirm {
+          padding: 9px 22px;
+          border-radius: 9999px;
+          font-size: 13px;
+          font-weight: 700;
+          background: #DC2626;
+          color: #fff;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .pi-delete-btn-confirm:hover:not(:disabled) {
+          background: #B91C1C;
+        }
+
+        .pi-delete-btn-cancel:disabled,
+        .pi-delete-btn-confirm:disabled {
+          cursor: not-allowed;
+          opacity: 0.7;
         }
       `}</style>
     </div>

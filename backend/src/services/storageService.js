@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import sharp from 'sharp';
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -51,6 +52,36 @@ const normalizeKey = (filepathOrKey) => {
   return filepathOrKey.replace(/\\/g, '/').replace(/^\/+/, '');
 };
 
+export const compressImageBuffer = async (buffer, mimetype) => {
+  if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(mimetype)) {
+    return buffer;
+  }
+
+  try {
+    const image = sharp(buffer).rotate();
+    let compressed;
+
+    if (mimetype === "image/png") {
+      compressed = await image
+        .png({ compressionLevel: 9, adaptiveFiltering: true })
+        .toBuffer();
+    } else if (mimetype === "image/webp") {
+      compressed = await image.webp({ quality: 82 }).toBuffer();
+    } else {
+      compressed = await image
+        .jpeg({ quality: 82, mozjpeg: true })
+        .toBuffer();
+    }
+
+    return compressed.length < buffer.length ? compressed : buffer;
+  } catch (error) {
+    console.warn(
+      `[StorageService] Kompresi gambar gagal, menggunakan file asli: ${error.message}`
+    );
+    return buffer;
+  }
+};
+
 /**
  * Upload file buffer ke Storage (R2 atau Local Disk)
  * @param {Object} params
@@ -72,6 +103,7 @@ const uploadFile = async ({
     throw new Error('Buffer file tidak ditemukan untuk diunggah');
   }
 
+  const processedBuffer = await compressImageBuffer(buffer, mimetype);
   const ext = originalname ? path.extname(originalname) : '.pdf';
   const filename = customFilename || `${uuidv4()}${ext || ''}`;
 
@@ -85,7 +117,7 @@ const uploadFile = async ({
       new PutObjectCommand({
         Bucket: bucket,
         Key: key,
-        Body: buffer,
+        Body: processedBuffer,
         ContentType: mimetype,
       })
     );
@@ -105,7 +137,7 @@ const uploadFile = async ({
     }
 
     const localFilePath = path.join(targetDir, filename);
-    fs.writeFileSync(localFilePath, buffer);
+    fs.writeFileSync(localFilePath, processedBuffer);
 
     // Simpan format path relatif 'uploads/folder/filename'
     const relativePath = path.relative(process.cwd(), localFilePath).replace(/\\/g, '/');
