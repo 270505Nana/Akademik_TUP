@@ -2,6 +2,7 @@ import express from "express";
 import { verifyToken } from "../../middlewares/auth.js";
 import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
+import { upload } from "../../middlewares/upload.js";
 import {
   setPengujiSidangSchema,
   batchSetPengujiSidangSchema,
@@ -20,6 +21,7 @@ import {
   toggleLockSidangRegistration,
   toggleReadInfoPenjadwalan,
   togglePublishSidangPeriod,
+  uploadNotaDinasController,
 } from "../../controllers/penjadwalanSidangController.js";
 
 const router = express.Router();
@@ -57,6 +59,11 @@ const router = express.Router();
  *           enum: [newest, oldest]
  *           default: newest
  *         description: Sort option (newest atau oldest berdasarkan createdAt)
+ *       - in: query
+ *         name: statusPenjadwalan
+ *         schema:
+ *           type: string
+ *         description: Filter berdasarkan status penjadwalan (Penguji Ready, Penjadwalan Ready, Siap Sidang)
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -118,6 +125,10 @@ const router = express.Router();
  *                       isInfoPenjadwalanReaded:
  *                         type: boolean
  *                         description: Status baca info penjadwalan oleh mahasiswa
+ *                       statusPenjadwalan:
+ *                         type: string
+ *                         nullable: true
+ *                         description: Status kelengkapan penjadwalan
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
@@ -594,6 +605,55 @@ router.put(
   authorize("ADMIN"),
   validate(setPengujiJadwalSidangSchema),
   setPengujiJadwalSidang,
+);
+
+/**
+ * @swagger
+ * /api/penjadwalan-sidang/{id}/nota-dinas:
+ *   post:
+ *     summary: Upload Nota Dinas (Admin only)
+ *     description: Mengunggah file Nota Dinas untuk pendaftaran sidang. Hanya dapat dilakukan jika jadwal sidang sudah di-lock.
+ *     tags: [Penjadwalan Sidang]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Sidang registration ID (UUID)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - notaDinasFile
+ *             properties:
+ *               notaDinasFile:
+ *                 type: string
+ *                 format: binary
+ *                 description: File PDF Nota Dinas
+ *     responses:
+ *       201:
+ *         description: Nota Dinas berhasil diunggah
+ *       400:
+ *         description: Jadwal sidang belum di-lock atau file tidak dilampirkan
+ *       401:
+ *         description: Token not found
+ *       403:
+ *         description: Access denied (Hanya admin yang dapat mengakses)
+ *       404:
+ *         description: Pendaftaran sidang tidak ditemukan
+ */
+router.post(
+  "/:id/nota-dinas",
+  verifyToken,
+  authorize("ADMIN"),
+  upload("nota-dinas").single("notaDinasFile"),
+  uploadNotaDinasController,
 );
 
 export default router;

@@ -360,6 +360,8 @@ model SidangRegistration {
   dosenPenguji2Id              String?                       @map("dosen_penguji_2_id")
   isLocked                     Boolean                       @default(false) @map("is_locked")
   isInfoPenjadwalanReaded      Boolean                       @default(false) @map("is_info_penjadwalan_readed")
+  notaDinasUrl                 String?                       @map("nota_dinas_url")
+  statusPenjadwalan            String?                       @map("status_penjadwalan")
   // Tolak Permohonan
   message                      String?
   isEdit                       DateTime?                     @map("is_edit")
