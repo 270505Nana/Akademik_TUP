@@ -472,8 +472,10 @@ export const getMyYudisiumRegistrations = async (mahasiswaId) => {
 };
 
 // ---------------------------------------- YUDISIUM ADMIN -------------------------------------------
-export const getAllYudisiumRegistrations = async () => {
-  const response = await api.get('/api/yudisium-registrations?limit=all');
+export const getAllYudisiumRegistrations = async (params = {}) => {
+  const response = await api.get('/api/yudisium-registrations', {
+    params: { limit: 'all', ...params },
+  });
   return response.data?.data || response.data || [];
 };
 
@@ -512,6 +514,11 @@ export const getAllSidangRegistrations = async (params = {}) => {
 
 export const getSidangRegistrationById = async (id) => {
   const response = await api.get(`/api/sidang-registrations/${id}`);
+  return response.data?.data ?? response.data;
+};
+
+export const adminEditSidangRegistration = async (id, payload) => {
+  const response = await api.put(`/api/sidang-registrations/${id}/admin-edit`, payload);
   return response.data?.data ?? response.data;
 };
 

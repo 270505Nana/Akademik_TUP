@@ -656,21 +656,13 @@ const DocUploadManager = ({
 
                     {/* Quick refresh button for periode */}
                     <button
-                      className="btn-export-sk sm"
+                      type="button"
+                      className="sk-refresh-btn"
                       onClick={handleRefreshPeriods}
                       disabled={loadingPeriods}
                       title="Refresh periode yudisium"
-                      style={{
-                        padding: '5px 8px',
-                        fontSize: '10px',
-                        opacity: loadingPeriods ? 0.6 : 1,
-                        minWidth: 'auto',
-                        marginLeft: 4
-                      }}
                     >
-                      <RefreshCw size={11} style={{
-                        animation: loadingPeriods ? 'spin 1s linear infinite' : 'none'
-                      }} />
+                      <RefreshCw size={13} style={{ animation: loadingPeriods ? 'spin 1s linear infinite' : 'none' }} />
                     </button>
                   </div>
 
@@ -685,7 +677,7 @@ const DocUploadManager = ({
                 <table className="sk-table">
                   <thead>
                     <tr>
-                      <th style={{ width: 44, textAlign: 'center' }}>No</th>
+                      <th className="text-center">No</th>
                       <th>Mahasiswa</th>
                       <th>Program Studi</th>
                       <th>Periode Yudisium</th>
@@ -703,15 +695,17 @@ const DocUploadManager = ({
                       </tr>
                     ) : paginated.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ padding: 0 }}>
+                        <td colSpan={7} className="sk-empty-wrap">
                           <div className="sk-empty-state">
                             <div className="sk-empty-icon">
                               <FileText size={28} />
                             </div>
                             <p>
-                              {search
-                                ? 'Tidak ada hasil pencarian.'
-                                : 'Belum ada mahasiswa dengan periode yudisium yang ditentukan.'}
+                              {search || filterStatus || filterProdi
+                                ? 'Tidak ada data yang cocok dengan filter atau pencarian.'
+                                : periodeList.length === 0
+                                  ? 'Belum ada periode yudisium yang dibuat.'
+                                  : 'Belum ada mahasiswa yang terdaftar pada periode ini.'}
                             </p>
                           </div>
                         </td>

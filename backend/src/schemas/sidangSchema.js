@@ -117,6 +117,86 @@ export const saveSidangDraftSchema = z.object({
 });
 
 /**
+ * Schema untuk edit pendaftaran sidang oleh admin
+ * PUT /api/sidang-registrations/:id
+ */
+export const adminEditSidangSchema = z.object({
+  mahasiswaId: z.preprocess(
+    (val) =>
+      val === "" || val === null || val === undefined
+        ? undefined
+        : typeof val === "number"
+          ? String(val)
+          : typeof val === "string"
+            ? val.trim()
+            : val,
+    z
+      .string({ invalid_type_error: "ID Mahasiswa tidak valid" })
+      .min(1, "ID Mahasiswa tidak valid")
+      .optional()
+      .nullable()
+  ),
+  program: z
+    .string({ invalid_type_error: "Program harus berupa string" })
+    .trim()
+    .optional()
+    .nullable(),
+  skemaSidang: z.string().trim().optional().nullable(),
+  jalurNonSidang: z
+    .array(z.string(), {
+      invalid_type_error: "Jalur non sidang harus berupa array jika diisi",
+    })
+    .optional()
+    .nullable(),
+  lulusTesBahasa: z.preprocess((val) => {
+    if (val === undefined || val === null || val === "") return undefined;
+    if (typeof val === "boolean") return val;
+    if (val === "true") return true;
+    if (val === "false") return false;
+    return val;
+  }, z.boolean({ invalid_type_error: "lulusTesBahasa harus berupa boolean" }).optional().nullable()),
+  sks: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+    z.number({ invalid_type_error: "SKS harus berupa integer" }).int().min(0).max(200).optional().nullable()
+  ),
+  ipk: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+    z.number({ invalid_type_error: "IPK harus berupa float" }).min(0).max(4).optional().nullable()
+  ),
+  tak: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+    z.number({ invalid_type_error: "TAK harus berupa integer" }).int().min(0).optional().nullable()
+  ),
+  sktaExpDate: z
+    .string({ invalid_type_error: "Tanggal berlaku SKTA tidak valid" })
+    .refine(isValidDateString, {
+      message: "Tanggal berlaku SKTA tidak valid",
+    })
+    .optional()
+    .nullable(),
+  judulTugasAkhirIndonesia: z
+    .string({ invalid_type_error: "Judul TA Indonesia harus berupa string" })
+    .trim()
+    .optional()
+    .nullable(),
+  judulTugasAkhirInggris: z
+    .string({ invalid_type_error: "Judul TA Inggris harus berupa string" })
+    .trim()
+    .optional()
+    .nullable(),
+  dosenPembimbing1Id: z
+    .string({ invalid_type_error: "ID Dosen Pembimbing 1 harus berupa string" })
+    .min(1)
+    .optional()
+    .nullable(),
+  dosenPembimbing2Id: z
+    .string({ invalid_type_error: "ID Dosen Pembimbing 2 harus berupa string" })
+    .min(1)
+    .optional()
+    .nullable(),
+}).strict();
+
+/**
  * Schema untuk Submit Sidang Registration (POST /api/sidang-registrations/submit)
  */
 export const submitSidangSchema = z
