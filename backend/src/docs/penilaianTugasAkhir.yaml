@@ -1,0 +1,602 @@
+tags:
+  - name: Penilaian Tugas Akhir
+    description: Manajemen penilaian sidang tugas akhir oleh dosen pembimbing dan penguji
+
+paths:
+  /api/penilaian-tugas-akhir/sidang-registration/{sidangRegistrationId}:
+    get:
+      summary: Get Rekap Penilaian Sidang
+      description: Mengambil seluruh data penilaian dari dosen pembimbing dan penguji pada sidang tersebut, beserta status penutupan sidang dan informasi revisi tugas akhir.
+      tags:
+        - Penilaian Tugas Akhir
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SidangRegistrationIdParam"
+      responses:
+        "200":
+          description: Data rekap penilaian sidang berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Data rekap penilaian sidang berhasil diambil
+                  data:
+                    $ref: "#/components/schemas/RekapPenilaianData"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /api/penilaian-tugas-akhir/sidang-registration/{sidangRegistrationId}/me:
+    get:
+      summary: Get Penilaian Sidang Tugas Akhir Dosen Login (Me)
+      description: Mengembalikan data penilaian jika sudah ada (snapshot), atau template formulir kosong dari kurikulum master data prodi jika belum pernah dinilai (id null) untuk dosen penilai yang sedang login.
+      tags:
+        - Penilaian Tugas Akhir
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SidangRegistrationIdParam"
+      responses:
+        "200":
+          description: Data penilaian tugas akhir atau template formulir berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PenilaianDetail"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+    put:
+      summary: Create or Update Penilaian Sidang Tugas Akhir Dosen Login (Me)
+      description: Menyimpan atau memperbarui penilaian tugas akhir oleh dosen penilai yang sedang login (pembimbing atau penguji).
+      tags:
+        - Penilaian Tugas Akhir
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SidangRegistrationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavePenilaianInput"
+      responses:
+        "200":
+          description: Penilaian tugas akhir berhasil disimpan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Penilaian tugas akhir berhasil disimpan
+                  data:
+                    $ref: "#/components/schemas/PenilaianDetail"
+        "400":
+          description: Validasi error atau komponen penilaian belum lengkap
+          content:
+            application/json:
+              example:
+                message: "Komponen asesmen berikut belum dinilai: CLO 1 - Penguasaan dasar teori dan metodologi penelitian"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /api/penilaian-tugas-akhir/sidang-registration/{sidangRegistrationId}/tutup-sidang:
+    post:
+      summary: Menutup Sidang Tugas Akhir dan Menetapkan Batas Waktu Revisi (Khusus Dosen Pembimbing 1)
+      description: Endpoint untuk menutup sidang tugas akhir. Hanya dapat diakses oleh Dosen Pembimbing 1 setelah seluruh dosen penilai (Pembimbing 1, Pembimbing 2 jika ada, Penguji 1, Penguji 2 jika ada) telah menyimpan penilaian. Menentukan batas waktu revisi (deadlineRevisi) dan membuka status revisi tugas akhir bagi mahasiswa.
+      tags:
+        - Penilaian Tugas Akhir
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SidangRegistrationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TutupSidangInput"
+      responses:
+        "200":
+          description: Sidang tugas akhir berhasil ditutup dan batas waktu revisi telah ditetapkan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Sidang tugas akhir berhasil ditutup dan batas waktu revisi telah ditetapkan
+                  data:
+                    type: object
+                    properties:
+                      revisiTugasAkhir:
+                        $ref: "#/components/schemas/RevisiTugasAkhirResponse"
+        "400":
+          description: Validasi error, masih ada dosen belum menilai, atau sidang sudah ditutup
+          content:
+            application/json:
+              example:
+                message: "Sidang belum dapat ditutup karena dosen penilai berikut belum menyimpan penilaian: Penguji 2 (Dosen)"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+components:
+  parameters:
+    SidangRegistrationIdParam:
+      name: sidangRegistrationId
+      in: path
+      required: true
+      description: ID Pendaftaran Sidang (UUID)
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    DosenCompact:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        nip:
+          type: string
+          nullable: true
+          example: "198501012010121001"
+        nidn:
+          type: string
+          nullable: true
+          example: "0401018501"
+        kodeDosen:
+          type: string
+          nullable: true
+          example: ARD
+        isKetuaKK:
+          type: boolean
+          example: false
+        isKetuaProdi:
+          type: boolean
+          example: false
+        isKepalaUrusanAkademik:
+          type: boolean
+          example: false
+        signature:
+          type: string
+          nullable: true
+          example: signatures/dosen-ard.png
+        researchGroupId:
+          type: string
+          format: uuid
+          nullable: true
+          example: rg-01-uuid
+        studyProgramId:
+          type: string
+          format: uuid
+          nullable: true
+          example: a9b8c7d6-e5f4-3a2b-1c0d-e9f8a7b6c5d4
+        userId:
+          type: string
+          format: uuid
+          example: usr-dosen-1
+        name:
+          type: string
+          example: Dr. Ir. Ariyanto, M.T.
+        email:
+          type: string
+          example: ariyanto@telkomuniversity.ac.id
+        phone:
+          type: string
+          nullable: true
+          example: "081234567890"
+        researchGroup:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: rg-01-uuid
+            name:
+              type: string
+              example: Enterprise Systems
+            isActive:
+              type: boolean
+              example: true
+        studyProgram:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: a9b8c7d6-e5f4-3a2b-1c0d-e9f8a7b6c5d4
+            name:
+              type: string
+              example: S1 Sistem Informasi
+            isActive:
+              type: boolean
+              example: true
+            facultyId:
+              type: string
+              format: uuid
+              example: fac-01-uuid
+
+    AsesmenDetail:
+      type: object
+      properties:
+        jenisAsesmenId:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        content:
+          type: string
+          example: Penguasaan dasar teori dan metodologi penelitian
+        bobot:
+          type: number
+          example: 0.5
+        nilai:
+          type: number
+          nullable: true
+          example: 85.0
+
+    SubcloDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: e9b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+        name:
+          type: string
+          example: Sub-CLO 1.1
+        deskripsi:
+          type: string
+          example: Mampu menjelaskan teori pendukung
+
+    CloDetail:
+      type: object
+      properties:
+        cloProdiId:
+          type: string
+          format: uuid
+          example: c8a1b2c3-4d5e-6f7a-8b9c-0d1e2f3a4b5c
+        cloName:
+          type: string
+          example: CLO 1
+        deskripsi:
+          type: string
+          example: Penguasaan Teori dan Konsep Dasar
+        subClo:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubcloDetail"
+        asesmen:
+          type: array
+          items:
+            $ref: "#/components/schemas/AsesmenDetail"
+
+    PenilaianDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+          example: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+        bobotPenilai:
+          type: number
+          example: 0.6
+        nilai:
+          type: array
+          description: Hierarchical snapshot CLO, Sub-CLO, dan Asesmen
+          items:
+            $ref: "#/components/schemas/CloDetail"
+        catatanRevisi:
+          type: string
+          example: Perbaiki sitasi pada Bab 2 dan analisis performa pada Bab 4.
+        sidangRegistrationId:
+          type: string
+          format: uuid
+          example: d3b07384-d113-4944-9c88-c75c87243c22
+        penilaiType:
+          type: string
+          enum: [pembimbing, penguji]
+          example: pembimbing
+        dosenPenilai:
+          $ref: "#/components/schemas/DosenCompact"
+        dosenKaprodi:
+          $ref: "#/components/schemas/DosenCompact"
+
+    KomponenNilaiInput:
+      type: object
+      required:
+        - jenisAsesmenId
+        - nilai
+      properties:
+        jenisAsesmenId:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        nilai:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          example: 85.0
+
+    SavePenilaianInput:
+      type: object
+      required:
+        - nilai
+      properties:
+        nilai:
+          type: array
+          description: Daftar nilai per jenis asesmen
+          items:
+            $ref: "#/components/schemas/KomponenNilaiInput"
+        catatanRevisi:
+          type: string
+          nullable: true
+          description: Catatan revisi untuk mahasiswa
+          example: Perbaiki sitasi pada Bab 2 dan analisis performa pada Bab 4.
+
+    TutupSidangInput:
+      type: object
+      required:
+        - deadlineRevisi
+      properties:
+        deadlineRevisi:
+          type: string
+          format: date-time
+          example: 2026-11-30T23:59:59.000Z
+          description: Batas waktu maksimal penyelesaian revisi oleh mahasiswa
+
+    RevisiTugasAkhirResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: c1f7b80a-9d3e-4f1a-b672-8f9213bc01a4
+        deadlineRevisi:
+          type: string
+          format: date-time
+          example: 2026-11-30T23:59:59.000Z
+        tglSetujuiUntukRevisi:
+          type: string
+          format: date-time
+          example: 2026-11-20T11:00:00.000Z
+        setujuiUntukRevisiId:
+          type: string
+          format: uuid
+          example: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+
+    SkemaPerhitunganItem:
+      type: object
+      properties:
+        cloProdiId:
+          type: string
+          format: uuid
+          example: c8a1b2c3-4d5e-6f7a-8b9c-0d1e2f3a4b5c
+        cloName:
+          type: string
+          example: CLO 1
+        deskripsi:
+          type: string
+          example: Penguasaan Teori dan Konsep Dasar
+        bobotClo:
+          type: number
+          example: 1.00
+        bobotPembimbing:
+          type: number
+          example: 0.60
+        bobotPenguji:
+          type: number
+          example: 0.40
+        nilaiPembimbing1:
+          type: number
+          nullable: true
+          example: 86.0
+        nilaiPembimbing2:
+          type: number
+          nullable: true
+          example: 84.0
+        rataRataPembimbing:
+          type: number
+          nullable: true
+          example: 85.2
+        nilaiPenguji1:
+          type: number
+          nullable: true
+          example: 80.0
+        nilaiPenguji2:
+          type: number
+          nullable: true
+          example: 82.0
+        rataRataPenguji:
+          type: number
+          nullable: true
+          example: 81.0
+        nilaiHasilPerhitungan:
+          type: number
+          nullable: true
+          example: 83.52
+        nilaiTertimbang:
+          type: number
+          nullable: true
+          example: 83.52
+
+    RekapPenilaianData:
+      type: object
+      properties:
+        sidangRegistrationId:
+          type: string
+          format: uuid
+          example: d3b07384-d113-4944-9c88-c75c87243c22
+        mahasiswa:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: b1a2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+            name:
+              type: string
+              example: Ahmad Dani
+            nim:
+              type: string
+              example: "1202200001"
+            studyProgram:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  example: a9b8c7d6-e5f4-3a2b-1c0d-e9f8a7b6c5d4
+                name:
+                  type: string
+                  example: S1 Sistem Informasi
+            judulTugasAkhir:
+              type: string
+              example: Rancang Bangun Sistem Monitoring Logistik Menggunakan IoT
+        jadwalSidang:
+          type: object
+          properties:
+            tglSidang:
+              type: string
+              format: date-time
+              example: 2026-11-20T09:00:00.000Z
+            ruangan:
+              type: string
+              nullable: true
+              example: Ruang Sidang 1
+        statusPenilaian:
+          type: object
+          properties:
+            totalPenilai:
+              type: integer
+              example: 4
+            submittedCount:
+              type: integer
+              example: 4
+            isAllSubmitted:
+              type: boolean
+              example: true
+        penilaianList:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                nullable: true
+                example: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+              penilaiRole:
+                type: string
+                example: pembimbing_1
+              penilaiType:
+                type: string
+                example: pembimbing
+              bobotPenilai:
+                type: number
+                example: 0.6
+              isSubmitted:
+                type: boolean
+                example: true
+              dosen:
+                $ref: "#/components/schemas/DosenCompact"
+              catatanRevisi:
+                type: string
+                example: Perbaiki sitasi pada Bab 2 dan analisis performa pada Bab 4.
+              nilai:
+                type: array
+                nullable: true
+                items:
+                  $ref: "#/components/schemas/CloDetail"
+              skorPerClo:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    cloProdiId:
+                      type: string
+                      format: uuid
+                      example: c8a1b2c3-4d5e-6f7a-8b9c-0d1e2f3a4b5c
+                    cloName:
+                      type: string
+                      example: CLO 1
+                    skor:
+                      type: number
+                      nullable: true
+                      example: 86.0
+        isSidangClosed:
+          type: boolean
+          description: true jika sidang sudah ditutup oleh Dosen Pembimbing 1
+          example: false
+        revisiTugasAkhir:
+          type: object
+          nullable: true
+          description: Data revisi tugas akhir. null jika sidang belum ditutup.
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: c1f7b80a-9d3e-4f1a-b672-8f9213bc01a4
+            deadlineRevisi:
+              type: string
+              format: date-time
+              example: 2026-11-30T23:59:59.000Z
+            tglSetujuiUntukRevisi:
+              type: string
+              format: date-time
+              example: 2026-11-20T11:00:00.000Z
+            setujuiUntukRevisiId:
+              type: string
+              format: uuid
+              example: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+
+  responses:
+    UnauthorizedError:
+      description: Token tidak valid atau tidak ditemukan
+      content:
+        application/json:
+          example:
+            message: "Token not found"
+
+    ForbiddenError:
+      description: Akses ditolak
+      content:
+        application/json:
+          example:
+            message: "Access denied. Anda tidak memiliki hak akses untuk endpoint ini."
+
+    NotFoundError:
+      description: Data tidak ditemukan
+      content:
+        application/json:
+          example:
+            message: "Pendaftaran sidang tidak ditemukan"

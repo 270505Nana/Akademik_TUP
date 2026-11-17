@@ -155,15 +155,14 @@ Selalu gunakan konvensi penamaan yang seragam di seluruh layer kode:
   - Controller: `<namaModul>Controller.js`
   - Service: `<namaModul>Service.js`
   - Schema: `<namaModul>Schema.js`
-  - Mapper: `<namaModul>Mapper.js`
+  - Mapper: `<namaModul>Mapper.js` (Kalau bisa tidak perlu membuat mapper, response langsung dibentuk di controller atau service)
 
 ### 2. Aturan Query Parameter (Tanpa Parameter Alias)
 - **Dilarang keras menggunakan alias atau varian fallback** untuk query parameter (misal: dilarang mendukung `q` berdampingan dengan `search`, atau `sort` berdampingan dengan `sortBy`). Selalu gunakan satu nama kanonik eksplisit.
 - **Pencarian Kata Kunci**: Gunakan `search`.
 - **Pagination**: Gunakan `page` dan `limit` (selalu proses melalui helper `getPaginationParams(req.query)`).
 - **Pengurutan Data**:
-  - `sortBy`: Field yang diurutkan (contoh: `createdAt`, `name`, `nim`, `tglSidang`).
-  - `sortOrder`: `asc` atau `desc` (default: `desc` untuk waktu/tanggal, `asc` untuk alfabet/nama).
+  - `sortBy`: newest or oldest (default: newest).
 - **Filter Relasi & Identifier**: Gunakan **camelCase** sesuai model (contoh: `studyProgramId`, `facultyId`, `status`, `isDraft`).
 
 ### 3. Standardisasi Pagination & Response
@@ -190,3 +189,9 @@ Setiap penambahan atau modifikasi tabel/kolom:
 1. Cantumkan mapping `snake_case` untuk nama tabel dan kolom di `prisma/schema.prisma`.
 2. Jalankan `npm run prisma:db-push` dan `npm run prisma:generate`.
 3. Perbarui anotasi Swagger JSDoc, skema Zod, dan mapper terkait secara konsisten.
+
+### 6. Dokumentasi
+
+- Every query parameter supported in the controller must be documented in Swagger.
+- Document only the canonical parameter name and its valid schema/enum values.
+- Dokumentasi swagger sekarang ada di `src/docs/`.

@@ -45,9 +45,8 @@ export const mapBeritaAcara = (beritaAcara) => {
   };
 };
 
-export const mapTutupSidangResponse = ({ beritaAcara, revisiTugasAkhir }) => {
+export const mapTutupSidangResponse = ({ revisiTugasAkhir }) => {
   return {
-    beritaAcara: mapBeritaAcara(beritaAcara),
     revisiTugasAkhir: revisiTugasAkhir
       ? {
           id: revisiTugasAkhir.id,

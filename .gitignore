@@ -144,6 +144,6 @@ vite.config.ts.timestamp-*
 .vite/
 
 *-old*
-docs
+/docs/
 !backend/docs/
 !backend/docs/test-case/
