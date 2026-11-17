@@ -210,7 +210,6 @@ describe("Revisi Sidang Endpoints", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("Revisi sidang berhasil disubmit");
-      expect(res.body.data.isSubmitted).toBe(true);
     });
 
     it("Mahasiswa berhasil submit revisi dengan mengunggah berkas file", async () => {
@@ -247,8 +246,6 @@ describe("Revisi Sidang Endpoints", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("Revisi sidang berhasil disubmit");
-      expect(res.body.data.berkasRevisi).toBeDefined();
-      expect(res.body.data.berkasRevisi.name).toBe("revisi_laporan.pdf");
     });
 
     it("Gagal submit jika sidang belum ditutup oleh Dospem 1 (400)", async () => {

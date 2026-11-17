@@ -35,7 +35,7 @@ export const submitRevisiSidang = asyncHandler(async (req, res) => {
     throw new Error("ID Revisi Sidang wajib diisi");
   }
 
-  const data = await revisiSidangService.submitRevisiSidang({
+  await revisiSidangService.submitRevisiSidang({
     id,
     user: req.user,
     file: req.file,
@@ -43,7 +43,6 @@ export const submitRevisiSidang = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     message: "Revisi sidang berhasil disubmit",
-    data,
   });
 });
 
