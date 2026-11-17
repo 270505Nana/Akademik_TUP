@@ -510,15 +510,16 @@ model YudisiumRegistrationUpload {
 }
 
 model BerkasMahasiswa {
-  id          String    @id @default(uuid())
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
-  name        String // Nama Berkas
-  category    String // SKL, Transkrip, Dokumen Validasi Skta, Formulir Penerbitan Skta
-  filepath    String
-  mahasiswa   Mahasiswa @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
-  mahasiswaId String    @map("mahasiswa_id")
+  id               String             @id @default(uuid())
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  deletedAt        DateTime?          @map("deleted_at")
+  name             String // Nama Berkas
+  category         String // SKL, Transkrip, Dokumen Validasi Skta, Formulir Penerbitan Skta
+  filepath         String
+  mahasiswa        Mahasiswa          @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
+  mahasiswaId      String             @map("mahasiswa_id")
+  revisiTugasAkhir RevisiTugasAkhir[]
 
   @@index([mahasiswaId])
   @@index([category])
@@ -668,6 +669,10 @@ model RevisiTugasAkhir {
   tglSetujuiUntukRevisi DateTime?          @map("tgl_setujui_untuk_revisi")
   setujuiUntukRevisi    Dosen?             @relation("SetujuiUntukRevisi", fields: [setujuiUntukRevisiId], references: [id], onDelete: Cascade)
   setujuiUntukRevisiId  String?            @map("setujui_untuk_revisi_id")
+  // Mahasiswa Konfirmasi Revisi
+  tglSubmitRevisi       DateTime?          @map("tgl_submit_revisi")
+  berkasRevisi          BerkasMahasiswa?   @relation(fields: [berkasRevisiId], references: [id], onDelete: SetNull)
+  berkasRevisiId        String?            @map("berkas_revisi_id")
   // Setujui Hasil Revisi
   tglSetujuiHasilRevisi DateTime?          @map("tgl_setujui_hasil_revisi")
   setujuiHasilRevisi    Dosen?             @relation("SetujuiHasilRevisi", fields: [setujuiHasilRevisiId], references: [id], onDelete: Cascade)
@@ -699,9 +704,10 @@ model BeritaAcaraSidangTugasAkhir {
    * ]
    */
   nilaiAkhir            String             @map("nilai_akhir")
-  keterangan            String // Lulus / Lulus Bersyarat / Tidak Lulus
+  keteranganLulus       String             @map("keterangan_lulus") // Lulus / Lulus Bersyarat / Tidak Lulus
   nilaiHuruf            String             @map("nilai_huruf") // Contoh: A / AB / B / BC / C / D / E
   justifikasi           String? // diisi jika nilaiAkhir berbeda dari hasil perhitungan
+  isPublish             DateTime?          @map("is_publish") // kenapa datetime? supaya bisa 2 in 1
 
   @@map("berita_acara_sidang_tugas_akhir")
 }

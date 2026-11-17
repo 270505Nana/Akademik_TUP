@@ -4,7 +4,7 @@
 
 ### 1. No Parameter Aliases
 
-- **Do NOT use parameter aliases or fallback variants** (e.g., do NOT support q alongside search, sort alongside sortBy, order alongside sortOrder, or study_program_id / prodi alongside studyProgramId).
+- **Do NOT use parameter aliases or fallback variants** (e.g., do NOT support q alongside search, sort alongside sortBy and sortOrder, or study_program_id / prodi alongside studyProgramId).
 - Supporting multiple aliases leads to inconsistent declarations, confusing API contracts, and clutter in the codebase.
 - Always declare and use only the **single, canonical, explicit parameter name**.
 
@@ -13,7 +13,7 @@
 - **Search**: Use search for global/keyword search.
 - **Pagination**: Use page and limit (processed via getPaginationParams(req.query)).
 - **Sorting**:
-  - sortBy: newest or oldest (default: newest).
+  - sort: newest or oldest (default: newest).
 - **Filters & Identifiers**: Use explicit **camelCase** matching the data model / relation (e.g., studyProgramId, acultyId, ahunAngkatan, isDraft, status, yudisiumPeriodId, yudisiumRegistrationPeriodId).
 - **Boolean Filters**: Use explicit boolean parsing via parseBoolean(param) for fields like isDraft, erminatWirausaha, isActive.
 
