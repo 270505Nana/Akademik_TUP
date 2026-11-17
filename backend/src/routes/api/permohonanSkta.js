@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
 
 import {
@@ -18,12 +18,12 @@ import {
   getLatestPermohonanSktaByMahasiswaId,
   downloadValidasi,
   exportSktaZip,
-} from '../../controllers/permohonanSktaController.js';
+} from "../../controllers/permohonanSktaController.js";
 
-import { verifyToken } from '../../middlewares/auth.js';
-import { upload } from '../../middlewares/upload.js';
-import { authorize } from '../../middlewares/authorize.js';
-import { validate } from '../../middlewares/validate.js';
+import { verifyToken } from "../../middlewares/auth.js";
+import { upload } from "../../middlewares/upload.js";
+import { authorize } from "../../middlewares/authorize.js";
+import { validate } from "../../middlewares/validate.js";
 import {
   listPermohonanSktaQuerySchema,
   savePermohonanSktaDraftSchema,
@@ -32,7 +32,7 @@ import {
   approvePermohonanSktaSchema,
   rejectPermohonanSktaSchema,
   exportSktaZipSchema,
-} from '../../schemas/permohonanSktaSchema.js';
+} from "../../schemas/permohonanSktaSchema.js";
 
 /**
  * @swagger
@@ -108,7 +108,7 @@ import {
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       500:
@@ -118,7 +118,7 @@ router.get(
   "/",
   verifyToken,
   validate(listPermohonanSktaQuerySchema, "query"),
-  listPermohonanSkta
+  listPermohonanSkta,
 );
 
 /**
@@ -188,7 +188,7 @@ router.get(
   verifyToken,
   authorize("ADMIN"),
   validate(exportSktaZipSchema, "query"),
-  exportSktaZip
+  exportSktaZip,
 );
 
 /**
@@ -249,7 +249,7 @@ router.post(
   authorize("MAHASISWA"),
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   validate(savePermohonanSktaDraftSchema),
-  createPermohonanSkta
+  createPermohonanSkta,
 );
 
 /**
@@ -320,7 +320,7 @@ router.post(
   authorize("MAHASISWA"),
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   validate(submitPermohonanSktaSchema),
-  submitPermohonanSkta
+  submitPermohonanSkta,
 );
 
 /**
@@ -335,7 +335,7 @@ router.post(
  *       200:
  *         description: Latest Permohonan SKTA data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -358,14 +358,18 @@ router.post(
  *       200:
  *         description: Latest Permohonan SKTA data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token atau Akses ditolak (Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri)
  *       404:
  *         description: Permohonan SKTA data not found
  */
 router.get("/mahasiswa", verifyToken, getLatestPermohonanSktaByMahasiswaId);
-router.get("/mahasiswa/:mahasiswaId", verifyToken, getLatestPermohonanSktaByMahasiswaId);
+router.get(
+  "/mahasiswa/:mahasiswaId",
+  verifyToken,
+  getLatestPermohonanSktaByMahasiswaId,
+);
 
 /**
  * @swagger
@@ -436,7 +440,7 @@ router.put(
   authorize("MAHASISWA"),
   upload("skta-evidence").fields([{ name: "evidence", maxCount: 1 }]),
   validate(updatePermohonanSktaSchema),
-  updatePermohonanSkta
+  updatePermohonanSkta,
 );
 
 /**
@@ -532,7 +536,7 @@ router.put(
   authorize("ADMIN"),
   upload("skta").fields([{ name: "skta", maxCount: 1 }]),
   validate(approvePermohonanSktaSchema),
-  approvePermohonanSkta
+  approvePermohonanSkta,
 );
 
 /**
@@ -586,7 +590,7 @@ router.put(
   verifyToken,
   authorize("ADMIN"),
   validate(rejectPermohonanSktaSchema),
-  rejectPermohonanSkta
+  rejectPermohonanSkta,
 );
 
 /**
@@ -646,7 +650,7 @@ router.get(
   "/:id/generate/dokumen-validasi-skta",
   verifyToken,
   authorize("ADMIN"),
-  generateDokumenValidasiSkta
+  generateDokumenValidasiSkta,
 );
 
 router.post(
@@ -657,7 +661,7 @@ router.post(
     { name: "dokumenFile", maxCount: 1 },
     { name: "file", maxCount: 1 },
   ]),
-  uploadDokumenValidasiSkta
+  uploadDokumenValidasiSkta,
 );
 
 /**
@@ -717,7 +721,7 @@ router.get(
   "/:id/generate/formulir-skta",
   verifyToken,
   authorize("ADMIN"),
-  generateFormulirSkta
+  generateFormulirSkta,
 );
 
 router.post(
@@ -728,7 +732,7 @@ router.post(
     { name: "dokumenFile", maxCount: 1 },
     { name: "file", maxCount: 1 },
   ]),
-  uploadFormulirSkta
+  uploadFormulirSkta,
 );
 
 /**
@@ -749,7 +753,7 @@ router.post(
  *       200:
  *         description: File downloaded successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token atau Akses ditolak
  *       404:

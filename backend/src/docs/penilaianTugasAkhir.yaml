@@ -585,7 +585,7 @@ components:
       content:
         application/json:
           example:
-            message: "Token not found"
+            message: "Unauthorized"
 
     ForbiddenError:
       description: Akses ditolak

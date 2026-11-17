@@ -45,7 +45,7 @@ const router = express.Router();
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -97,7 +97,7 @@ router.get("/dashboard", verifyToken, authorize("ADMIN"), getAdminDashboard);
  *       400:
  *         description: User is not an admin
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -105,7 +105,13 @@ router.get("/dashboard", verifyToken, authorize("ADMIN"), getAdminDashboard);
  *       500:
  *         description: Internal server error
  */
-router.put("/:id", verifyToken, authorize("ADMIN"), validate(upsertAdminSchema), upsertAdmin);
+router.put(
+  "/:id",
+  verifyToken,
+  authorize("ADMIN"),
+  validate(upsertAdminSchema),
+  upsertAdmin,
+);
 
 /**
  * @swagger
@@ -126,7 +132,7 @@ router.put("/:id", verifyToken, authorize("ADMIN"), validate(upsertAdminSchema),
  *       200:
  *         description: Admin data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:

@@ -4,16 +4,24 @@ import request from "supertest";
 import jwt from "jsonwebtoken";
 import app from "../src/app.js";
 import prisma from "../src/config/prisma.js";
-import { listPermohonanSktaQuerySchema, submitPermohonanSktaSchema, savePermohonanSktaDraftSchema } from "../src/schemas/permohonanSktaSchema.js";
+import {
+  listPermohonanSktaQuerySchema,
+  submitPermohonanSktaSchema,
+  savePermohonanSktaDraftSchema,
+} from "../src/schemas/permohonanSktaSchema.js";
 import { calculatePermohonanStatus } from "../src/mappers/permohonanSktaMapper.js";
 import * as permohonanSktaService from "../src/services/permohonanSktaService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "akademiktup";
 
 const adminToken = jwt.sign(
-  { id: "admin-test-uuid", email: "admin@telkomuniversity.ac.id", role: "ADMIN" },
+  {
+    id: "admin-test-uuid",
+    email: "admin@telkomuniversity.ac.id",
+    role: "ADMIN",
+  },
   JWT_SECRET,
-  { expiresIn: "1h" }
+  { expiresIn: "1h" },
 );
 
 describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", () => {
@@ -31,17 +39,19 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
     });
 
     it("menerima sortBy: 'oldest' dan melakukan trim serta lowercase", () => {
-      const parsed = listPermohonanSktaQuerySchema.parse({ sortBy: "  OLDEST  " });
+      const parsed = listPermohonanSktaQuerySchema.parse({
+        sortBy: "  OLDEST  ",
+      });
       expect(parsed.sortBy).toBe("oldest");
     });
 
     it("menolak sortBy di luar 'newest' dan 'oldest'", () => {
       expect(() =>
-        listPermohonanSktaQuerySchema.parse({ sortBy: "createdAt" })
+        listPermohonanSktaQuerySchema.parse({ sortBy: "createdAt" }),
       ).toThrowError(/sortBy harus salah satu dari: newest, oldest/);
 
       expect(() =>
-        listPermohonanSktaQuerySchema.parse({ sortBy: "desc" })
+        listPermohonanSktaQuerySchema.parse({ sortBy: "desc" }),
       ).toThrowError(/sortBy harus salah satu dari: newest, oldest/);
     });
 
@@ -59,7 +69,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
         listPermohonanSktaQuerySchema.parse({
           startDate: "2026-06-01",
           endDate: "2026-01-01",
-        })
+        }),
       ).toThrowError("endDate tidak boleh lebih awal dari startDate");
     });
 
@@ -68,7 +78,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
         listPermohonanSktaQuerySchema.parse({
           startDate: "2026-01-01",
           endDate: "2026-08-01",
-        })
+        }),
       ).toThrowError("Rentang tanggal createdAt maksimal 6 bulan");
     });
 
@@ -76,7 +86,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
       expect(() =>
         listPermohonanSktaQuerySchema.parse({
           startDate: "2020-01-01",
-        })
+        }),
       ).toThrowError("Rentang tanggal createdAt maksimal 6 bulan");
     });
 
@@ -89,8 +99,10 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
           judulProposalInggris: "Title",
           dosenPembimbing1Id: "dosen-1",
           dosenPembimbing2Id: "dosen-1",
-        })
-      ).toThrowError(/Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama/i);
+        }),
+      ).toThrowError(
+        /Dosen Pembimbing 1 dan Dosen Pembimbing 2 tidak boleh sama/i,
+      );
     });
   });
 
@@ -117,7 +129,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
 
       // Selisih antara gte dan kalkulasi sixMonthsAgo harus sangat kecil (< 5000 ms)
       const diffMs = Math.abs(
-        capturedArgs.where.createdAt.gte.getTime() - beforeExecution.getTime()
+        capturedArgs.where.createdAt.gte.getTime() - beforeExecution.getTime(),
       );
       expect(diffMs).toBeLessThan(5000);
     });
@@ -179,47 +191,74 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
     const adminUser = { id: "user-admin-1", role: "ADMIN" };
 
     it("mengizinkan mahasiswa melihat permohonan dengan userId miliknya sendiri", async () => {
-      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({ id: "mhs-1", userId: "user-mhs-1" });
-      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue({ id: "skta-1", mahasiswaId: "mhs-1" });
+      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
+        id: "mhs-1",
+        userId: "user-mhs-1",
+      });
+      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue({
+        id: "skta-1",
+        mahasiswaId: "mhs-1",
+      });
 
-      const result = await permohonanSktaService.getLatestPermohonanByMahasiswaId(
-        "user-mhs-1",
-        studentUser
-      );
+      const result =
+        await permohonanSktaService.getLatestPermohonanByMahasiswaId(
+          "user-mhs-1",
+          studentUser,
+        );
       expect(result).toBeDefined();
       expect(result.id).toBe("skta-1");
     });
 
     it("mengizinkan mahasiswa melihat permohonan dengan mahasiswaId (tabel Mahasiswa) miliknya sendiri", async () => {
-      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({ id: "mhs-1", userId: "user-mhs-1" });
-      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue({ id: "skta-1", mahasiswaId: "mhs-1" });
+      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
+        id: "mhs-1",
+        userId: "user-mhs-1",
+      });
+      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue({
+        id: "skta-1",
+        mahasiswaId: "mhs-1",
+      });
 
-      const result = await permohonanSktaService.getLatestPermohonanByMahasiswaId(
-        "mhs-1",
-        studentUser
-      );
+      const result =
+        await permohonanSktaService.getLatestPermohonanByMahasiswaId(
+          "mhs-1",
+          studentUser,
+        );
       expect(result).toBeDefined();
       expect(result.id).toBe("skta-1");
     });
 
     it("menolak mahasiswa (403) jika mencoba melihat permohonan SKTA milik mahasiswa lain", async () => {
-      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({ id: "mhs-1", userId: "user-mhs-1" });
+      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
+        id: "mhs-1",
+        userId: "user-mhs-1",
+      });
 
       await expect(
-        permohonanSktaService.getLatestPermohonanByMahasiswaId("other-mhs-uuid", studentUser)
+        permohonanSktaService.getLatestPermohonanByMahasiswaId(
+          "other-mhs-uuid",
+          studentUser,
+        ),
       ).rejects.toThrowError(
-        "Akses ditolak: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri"
+        "Akses ditolak: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri",
       );
     });
 
     it("mengizinkan admin mengakses permohonan SKTA mahasiswa siapapun", async () => {
-      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({ id: "other-mhs-uuid", userId: "other-user-uuid" });
-      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue({ id: "skta-other", mahasiswaId: "other-mhs-uuid" });
+      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
+        id: "other-mhs-uuid",
+        userId: "other-user-uuid",
+      });
+      vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue({
+        id: "skta-other",
+        mahasiswaId: "other-mhs-uuid",
+      });
 
-      const result = await permohonanSktaService.getLatestPermohonanByMahasiswaId(
-        "other-mhs-uuid",
-        adminUser
-      );
+      const result =
+        await permohonanSktaService.getLatestPermohonanByMahasiswaId(
+          "other-mhs-uuid",
+          adminUser,
+        );
       expect(result).toBeDefined();
       expect(result.id).toBe("skta-other");
     });
@@ -232,7 +271,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
     it("menolak request tanpa token dengan status 401", async () => {
       const res = await request(app).get("/api/permohonan-skta");
       expect(res.status).toBe(401);
-      expect(res.body.message).toMatch(/Token not found/i);
+      expect(res.body.message).toMatch(/Unauthorized/i);
     });
 
     it("menolak request dengan token invalid dengan status 403", async () => {
@@ -288,7 +327,9 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.status).toBe(400);
-      expect(JSON.stringify(res.body)).toMatch(/sortBy harus salah satu dari: newest, oldest/i);
+      expect(JSON.stringify(res.body)).toMatch(
+        /sortBy harus salah satu dari: newest, oldest/i,
+      );
     });
 
     it("mengembalikan status 400 Bad Request jika endDate lebih awal dari startDate", async () => {
@@ -297,7 +338,9 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.status).toBe(400);
-      expect(JSON.stringify(res.body)).toMatch(/endDate tidak boleh lebih awal dari startDate/i);
+      expect(JSON.stringify(res.body)).toMatch(
+        /endDate tidak boleh lebih awal dari startDate/i,
+      );
     });
 
     it("mengembalikan status 400 Bad Request jika rentang tanggal melebihi 6 bulan", async () => {
@@ -306,7 +349,9 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.status).toBe(400);
-      expect(JSON.stringify(res.body)).toMatch(/Rentang tanggal createdAt maksimal 6 bulan/i);
+      expect(JSON.stringify(res.body)).toMatch(
+        /Rentang tanggal createdAt maksimal 6 bulan/i,
+      );
     });
 
     it("mengembalikan status 200 OK jika rentang tanggal valid (<= 6 bulan)", async () => {
@@ -322,9 +367,13 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
 
     it("TC-SKTA-MHS-001: Mahasiswa berhasil mengakses permohonan SKTA miliknya sendiri via /mahasiswa", async () => {
       const mhsToken = jwt.sign(
-        { id: "mhs-own-user-id", role: "MAHASISWA", email: "mhs@student.ac.id" },
+        {
+          id: "mhs-own-user-id",
+          role: "MAHASISWA",
+          email: "mhs@student.ac.id",
+        },
         JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
@@ -356,9 +405,13 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
 
     it("TC-SKTA-MHS-002: Mahasiswa berhasil mengakses permohonan SKTA dengan parameter ID miliknya sendiri", async () => {
       const mhsToken = jwt.sign(
-        { id: "mhs-own-user-id", role: "MAHASISWA", email: "mhs@student.ac.id" },
+        {
+          id: "mhs-own-user-id",
+          role: "MAHASISWA",
+          email: "mhs@student.ac.id",
+        },
         JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
@@ -390,9 +443,13 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
 
     it("TC-SKTA-MHS-003: Mahasiswa ditolak (403 Forbidden) saat mengakses /mahasiswa/:mahasiswaId milik orang lain", async () => {
       const mhsToken = jwt.sign(
-        { id: "mhs-own-user-id", role: "MAHASISWA", email: "mhs@student.ac.id" },
+        {
+          id: "mhs-own-user-id",
+          role: "MAHASISWA",
+          email: "mhs@student.ac.id",
+        },
         JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
@@ -406,7 +463,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
 
       expect(res.status).toBe(403);
       expect(res.body.message).toMatch(
-        /Akses ditolak: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri/i
+        /Akses ditolak: Mahasiswa hanya dapat melihat permohonan SKTA milik sendiri/i,
       );
     });
 
@@ -451,13 +508,13 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 3);
       expect(
-        calculatePermohonanStatus({ isDraft: true, isEdit: futureDate })
+        calculatePermohonanStatus({ isDraft: true, isEdit: futureDate }),
       ).toBe("Perlu Revisi");
     });
 
     it("menghasilkan 'Menunggu Persetujuan' jika isDraft false dan belum ada SKTA", () => {
       expect(
-        calculatePermohonanStatus({ isDraft: false, sktaUploadPath: null })
+        calculatePermohonanStatus({ isDraft: false, sktaUploadPath: null }),
       ).toBe("Menunggu Persetujuan");
     });
 
@@ -466,7 +523,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
         calculatePermohonanStatus({
           isDraft: false,
           sktaUploadPath: "/uploads/skta.pdf",
-        })
+        }),
       ).toBe("Disetujui");
     });
 
@@ -476,7 +533,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
           isDraft: false,
           wasRejectedBefore: true,
           isEdit: null,
-        })
+        }),
       ).toBe("Ditolak");
     });
   });
@@ -489,7 +546,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
       expect(() =>
         permohonanSktaService.validateEvidenceFile({
           mimetype: "application/x-executable",
-        })
+        }),
       ).toThrowError(/Tipe file evidence tidak valid/i);
     });
 
@@ -497,13 +554,16 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
       expect(() =>
         permohonanSktaService.validateSktaFile({
           mimetype: "image/png",
-        })
+        }),
       ).toThrowError(/Tipe file SKTA tidak valid/i);
     });
 
     it("getPermohonanSktaById mengabaikan permohonan yang sudah di-soft-delete", async () => {
       vi.spyOn(prisma.permohonanSkta, "findFirst").mockResolvedValue(null);
-      const result = await permohonanSktaService.getPermohonanSktaById("deleted-id", adminToken);
+      const result = await permohonanSktaService.getPermohonanSktaById(
+        "deleted-id",
+        adminToken,
+      );
       expect(result).toBeNull();
     });
   });
@@ -515,7 +575,7 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
     const studentToken = jwt.sign(
       { id: "student-user-1", role: "MAHASISWA", email: "student1@test.ac.id" },
       JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "1h" },
     );
 
     it("TC-SKTA-SEC-001: Mahasiswa ditolak (403) melihat detail permohonan SKTA milik mahasiswa lain via GET /:id", async () => {
@@ -576,7 +636,9 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
     });
 
     it("TC-SKTA-SEC-004: GET /download/validasi/:berkasId menolak request tanpa token (401)", async () => {
-      const res = await request(app).get("/api/permohonan-skta/download/validasi/some-berkas-id");
+      const res = await request(app).get(
+        "/api/permohonan-skta/download/validasi/some-berkas-id",
+      );
       expect(res.status).toBe(401);
     });
   });

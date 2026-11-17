@@ -89,7 +89,7 @@ router.get("/public", getPusatInformasiPublic);
  *       200:
  *         description: Pusat informasi data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -97,7 +97,7 @@ router.get(
   "/",
   verifyToken,
   validate(listPusatInformasiQuerySchema, "query"),
-  listPusatInformasi
+  listPusatInformasi,
 );
 
 /**
@@ -119,7 +119,7 @@ router.get(
  *       200:
  *         description: Pusat informasi detail retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -173,7 +173,7 @@ router.get("/:id", verifyToken, getPusatInformasiById);
  *       400:
  *         description: Validation error or duplicate code
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  */
@@ -182,7 +182,7 @@ router.post(
   verifyToken,
   authorize("ADMIN"),
   validate(createPusatInformasiSchema),
-  createPusatInformasi
+  createPusatInformasi,
 );
 
 /**
@@ -229,7 +229,7 @@ router.post(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -240,7 +240,7 @@ router.put(
   verifyToken,
   authorize("ADMIN"),
   validate(updatePusatInformasiSchema),
-  updatePusatInformasi
+  updatePusatInformasi,
 );
 
 /**
@@ -262,7 +262,7 @@ router.put(
  *       200:
  *         description: Pusat informasi deleted successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:

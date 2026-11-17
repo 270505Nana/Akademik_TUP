@@ -132,11 +132,16 @@ const router = express.Router();
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya Admin dan Dosen Ketua KK yang dapat mengakses)
  */
-router.get("/", verifyToken, authorize("ADMIN", "DOSEN_KETUAKK"), listPenjadwalanSidang);
+router.get(
+  "/",
+  verifyToken,
+  authorize("ADMIN", "DOSEN_KETUAKK"),
+  listPenjadwalanSidang,
+);
 
 /**
  * @swagger
@@ -167,7 +172,7 @@ router.get("/", verifyToken, authorize("ADMIN", "DOSEN_KETUAKK"), listPenjadwala
  *                 data:
  *                   type: object
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  *       404:
@@ -209,7 +214,7 @@ router.patch(
  *                 data:
  *                   type: object
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  *       404:
@@ -252,7 +257,7 @@ router.patch(
  *                 data:
  *                   type: object
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya mahasiswa pemilik pendaftaran yang dapat mengakses)
  *       404:
@@ -283,11 +288,16 @@ router.patch(
  *       200:
  *         description: Berhasil mengunduh file Excel format iGracias
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya Admin dan Dosen Ketua KK yang dapat mengakses)
  */
-router.get("/export", verifyToken, authorize("ADMIN", "DOSEN_KETUAKK"), exportJadwalSidang);
+router.get(
+  "/export",
+  verifyToken,
+  authorize("ADMIN", "DOSEN_KETUAKK"),
+  exportJadwalSidang,
+);
 
 /**
  * @swagger
@@ -337,7 +347,7 @@ router.get("/export", verifyToken, authorize("ADMIN", "DOSEN_KETUAKK"), exportJa
  *       400:
  *         description: Validation error / Jadwal bentrok / Sidang terkunci / Penguji merangkap pembimbing
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya dosen dengan status Ketua KK yang dapat mengakses)
  *       404:
@@ -400,7 +410,7 @@ router.put(
  *       400:
  *         description: Validation error / Jadwal bentrok
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  *       404:
@@ -461,7 +471,7 @@ router.put(
  *       400:
  *         description: Validation error / Sidang terkunci / Penguji merangkap pembimbing
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya dosen dengan status Ketua KK yang dapat mengakses)
  *       404:
@@ -523,7 +533,7 @@ router.put(
  *       400:
  *         description: Validation error / Jadwal bentrok
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  *       404:
@@ -593,7 +603,7 @@ router.put(
  *       400:
  *         description: Validation error / Jadwal bentrok / Penguji merangkap pembimbing
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  *       404:
@@ -642,7 +652,7 @@ router.put(
  *       400:
  *         description: Jadwal sidang belum di-lock atau file tidak dilampirkan
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  *       404:

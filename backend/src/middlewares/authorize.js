@@ -13,12 +13,12 @@ const SUB_ROLE_MAP = {
  */
 export const authorize = (...allowedRoles) => {
   const normalizedAllowedRoles = allowedRoles.map((role) =>
-    role.toUpperCase().trim()
+    role.toUpperCase().trim(),
   );
 
   return async (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ message: "Token not found" });
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
     const userRole = req.user.role?.toUpperCase();
@@ -61,7 +61,8 @@ export const authorize = (...allowedRoles) => {
     }
 
     return res.status(403).json({
-      message: "Access denied. Anda tidak memiliki hak akses untuk endpoint ini.",
+      message:
+        "Access denied. Anda tidak memiliki hak akses untuk endpoint ini.",
     });
   };
 };

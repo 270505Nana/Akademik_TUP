@@ -586,6 +586,6 @@ components:
     ForbiddenError:
       description: Akses ditolak
       content:
-        application/json:
+        application/jUnauthorized
           example:
             message: Access denied. Anda tidak memiliki hak akses untuk endpoint ini.

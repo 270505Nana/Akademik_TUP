@@ -113,7 +113,7 @@ import {
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -165,7 +165,7 @@ router.get(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -195,7 +195,7 @@ router.get(
  *       200:
  *         description: Sidang registration data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -222,7 +222,7 @@ router.get("/:id", verifyToken, getSidangRegistrationById);
  *       200:
  *         description: Sidang registration data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -286,7 +286,7 @@ router.get(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -391,7 +391,7 @@ router.post(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -469,7 +469,7 @@ router.put(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -504,7 +504,7 @@ router.post(
  *       200:
  *         description: Sidang registration deleted successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -512,7 +512,12 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, authorize("ADMIN"), deleteSidangRegistration);
+router.delete(
+  "/:id",
+  verifyToken,
+  authorize("ADMIN"),
+  deleteSidangRegistration,
+);
 
 /**
  * @swagger
@@ -556,7 +561,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteSidangRegistration)
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Sidang registration not found
  *       500:
@@ -589,7 +594,7 @@ router.post(
  *       200:
  *         description: Files retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Sidang registration not found
  */
@@ -614,7 +619,7 @@ router.get("/:id/uploads", verifyToken, getSidangRegistrationFiles);
  *       200:
  *         description: File downloaded successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Upload not found
  */
@@ -670,7 +675,7 @@ router.get(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Registration, admin or period not found
  */
@@ -725,7 +730,7 @@ router.put(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Registration or admin not found
  */
@@ -765,7 +770,7 @@ router.put(
  *                 data:
  *                   type: object
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  *       404:

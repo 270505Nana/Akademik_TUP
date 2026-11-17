@@ -72,7 +72,7 @@ const router = express.Router();
  *       200:
  *         description: Approval requests retrieved successfully with pagination
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  */
@@ -81,7 +81,7 @@ router.get(
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(listApprovalRequestQuerySchema, "query"),
-  listApprovalRequests
+  listApprovalRequests,
 );
 
 /**
@@ -103,7 +103,7 @@ router.get(
  *       200:
  *         description: Approval request data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  *       404:
@@ -113,7 +113,7 @@ router.get(
   "/:id",
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
-  findApprovalRequestById
+  findApprovalRequestById,
 );
 
 /**
@@ -137,7 +137,7 @@ router.get(
  *       400:
  *         description: Request cannot be approved due to invalid status
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Only Ketua KK of the connected study program or Admin)
  *       404:
@@ -147,7 +147,7 @@ router.patch(
   "/:id/approve",
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
-  approveApprovalRequest
+  approveApprovalRequest,
 );
 
 /**
@@ -183,7 +183,7 @@ router.patch(
  *       400:
  *         description: Validation error or invalid status
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  *       404:
@@ -194,7 +194,7 @@ router.patch(
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(rejectApprovalRequestSchema),
-  rejectApprovalRequest
+  rejectApprovalRequest,
 );
 
 /**
@@ -218,7 +218,7 @@ router.patch(
  *       400:
  *         description: Request cannot be cancelled due to invalid status
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Only requester or Admin)
  *       404:
@@ -228,7 +228,7 @@ router.patch(
   "/:id/cancel",
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
-  cancelApprovalRequest
+  cancelApprovalRequest,
 );
 
 export default router;

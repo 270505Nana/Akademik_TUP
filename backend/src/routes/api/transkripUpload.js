@@ -76,7 +76,7 @@ const router = express.Router();
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       500:
@@ -86,7 +86,7 @@ router.get(
   "/",
   verifyToken,
   validate(listTranskripQuerySchema, "query"),
-  listTranskripUploads
+  listTranskripUploads,
 );
 
 /**
@@ -108,7 +108,7 @@ router.get(
  *       200:
  *         description: File downloaded successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or invalid token
  *       404:
@@ -116,11 +116,7 @@ router.get(
  *       500:
  *         description: Internal server error
  */
-router.get(
-  "/uploads/:id/download",
-  verifyToken,
-  downloadTranskripUpload
-);
+router.get("/uploads/:id/download", verifyToken, downloadTranskripUpload);
 
 /**
  * @swagger
@@ -141,7 +137,7 @@ router.get(
  *       200:
  *         description: Transkrip upload details retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or invalid token
  *       404:
@@ -189,7 +185,7 @@ router.get("/:id", verifyToken, getTranskripUploadById);
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token or Access denied (Admin only)
  *       404:
@@ -203,7 +199,7 @@ router.post(
   authorize("ADMIN"),
   upload("transkrip").single("transkripFile"),
   validate(createTranskripSchema),
-  createTranskripUpload
+  createTranskripUpload,
 );
 
 /**
@@ -245,7 +241,7 @@ router.post(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or invalid token (Admin only)
  *       404:
@@ -259,7 +255,7 @@ router.patch(
   authorize("ADMIN"),
   upload("transkrip").single("transkripFile"),
   validate(updateTranskripSchema),
-  updateTranskripUpload
+  updateTranskripUpload,
 );
 
 /**
@@ -281,7 +277,7 @@ router.patch(
  *       200:
  *         description: Transkrip deleted successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or invalid token (Admin only)
  *       404:

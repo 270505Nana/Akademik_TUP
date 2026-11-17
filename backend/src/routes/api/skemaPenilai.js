@@ -63,7 +63,7 @@ const router = express.Router();
  *       200:
  *         description: Skema Penilai data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -71,7 +71,7 @@ router.get(
   "/",
   verifyToken,
   validate(listSkemaPenilaiQuerySchema, "query"),
-  getSkemaPenilais
+  getSkemaPenilais,
 );
 
 /**
@@ -108,7 +108,7 @@ router.get(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -119,7 +119,7 @@ router.post(
   verifyToken,
   authorize("ADMIN"),
   validate(createSkemaPenilaiSchema),
-  createSkemaPenilai
+  createSkemaPenilai,
 );
 
 /**
@@ -141,7 +141,7 @@ router.post(
  *       200:
  *         description: Skema Penilai data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Skema Penilai tidak ditemukan
  */
@@ -181,7 +181,7 @@ router.get("/:id", verifyToken, getSkemaPenilaiById);
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -192,7 +192,7 @@ router.put(
   verifyToken,
   authorize("ADMIN"),
   validate(updateSkemaPenilaiSchema),
-  updateSkemaPenilai
+  updateSkemaPenilai,
 );
 
 /**
@@ -213,7 +213,7 @@ router.put(
  *       200:
  *         description: Skema Penilai deleted successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
