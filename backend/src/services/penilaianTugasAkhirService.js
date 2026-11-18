@@ -415,6 +415,8 @@ export const tentukanKeteranganKelulusan = (nilaiHuruf) => {
 // Get All Penilaian by Sidang Registration ID
 export const getAllPenilaianBySidangRegistrationId = async ({
   sidangRegistrationId,
+  userId,
+  userRole,
 }) => {
   // 1. Ambil data pendaftaran sidang beserta mahasiswa dan seluruh dosen penilai
   const sidangRegistration = await prisma.sidangRegistration.findUnique({
@@ -457,6 +459,40 @@ export const getAllPenilaianBySidangRegistrationId = async ({
     const error = new Error("Pendaftaran sidang tidak ditemukan");
     error.statusCode = 404;
     throw error;
+  }
+
+  // 2. Validasi Hak Akses Dosen: hanya dosen yang terdaftar pada sidang ini (atau Kaprodi terkait) yang diizinkan
+  if (userRole === "DOSEN") {
+    const currentDosen = await prisma.dosen.findUnique({
+      where: { userId, deletedAt: null },
+    });
+
+    if (!currentDosen) {
+      const error = new Error("Data dosen tidak ditemukan");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const assignedDosenIds = [
+      sidangRegistration.dosenPembimbing1Id,
+      sidangRegistration.dosenPembimbing2Id,
+      sidangRegistration.dosenPenguji1Id,
+      sidangRegistration.dosenPenguji2Id,
+    ].filter(Boolean);
+
+    const isAssigned = assignedDosenIds.includes(currentDosen.id);
+    const isKaprodi =
+      Boolean(currentDosen.isKetuaProdi) &&
+      Boolean(currentDosen.studyProgramId) &&
+      currentDosen.studyProgramId === sidangRegistration.mahasiswa?.studyProgramId;
+
+    if (!isAssigned && !isKaprodi) {
+      const error = new Error(
+        "Akses ditolak. Anda tidak memiliki hak akses untuk melihat rekap penilaian sidang ini"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   const studyProgramId = sidangRegistration.mahasiswa?.studyProgramId;
