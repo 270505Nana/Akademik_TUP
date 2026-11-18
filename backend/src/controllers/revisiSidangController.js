@@ -72,7 +72,7 @@ export const verifyRevisiSidang = asyncHandler(async (req, res) => {
     throw new Error("ID Revisi Sidang wajib diisi");
   }
 
-  const result = await revisiSidangService.verifyRevisiSidang({
+  await revisiSidangService.verifyRevisiSidang({
     id,
     user: req.user,
     payload: req.body,
@@ -80,6 +80,5 @@ export const verifyRevisiSidang = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     message: "Hasil revisi sidang berhasil diverifikasi dan Berita Acara telah diterbitkan",
-    data: result,
   });
 });

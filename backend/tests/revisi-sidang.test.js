@@ -465,12 +465,6 @@ describe("Revisi Sidang Endpoints", () => {
         where: { id: "reg-sidang-1" },
         data: { status: "Sidang Selesai" },
       });
-      expect(res.body.data.revisiTugasAkhir).toBeDefined();
-      expect(res.body.data.revisiTugasAkhir.isApproved).toBe(true);
-      expect(res.body.data.revisiTugasAkhir.sidangRegistration.status).toBe("Sidang Selesai");
-      expect(res.body.data.beritaAcara).toBeDefined();
-      expect(res.body.data.beritaAcara.nilaiAkhir).toBe("85.5");
-      expect(res.body.data.beritaAcara.keteranganLulus).toBe("Lulus");
     });
 
     it("Gagal jika mahasiswa belum melakukan submit revisi (400)", async () => {

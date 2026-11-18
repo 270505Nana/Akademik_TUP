@@ -5,7 +5,6 @@ import { getPaginationParams, formatPaginationResponse } from "../utils/paginati
 import {
   mapRevisiSidangListItem,
   mapRevisiSidangDetail,
-  mapRevisiSidangFull,
 } from "../mappers/revisiSidangMapper.js";
 
 /**
@@ -488,32 +487,13 @@ export const submitRevisiSidang = async ({ id, user, file }) => {
     newBerkasId = newBerkas.id;
   }
 
-  const updatedRevisi = await prisma.revisiTugasAkhir.update({
+  await prisma.revisiTugasAkhir.update({
     where: { id },
     data: {
       tglSubmitRevisi: new Date(),
       berkasRevisiId: newBerkasId,
     },
-    include: {
-      berkasRevisi: true,
-      setujuiUntukRevisi: true,
-      setujuiHasilRevisi: true,
-      sidangRegistration: {
-        include: {
-          mahasiswa: { include: { studyProgram: true } },
-          dosenPembimbing1: true,
-          dosenPembimbing2: true,
-          dosenPenguji1: true,
-          dosenPenguji2: true,
-          ruanganSidang: true,
-          sidangPeriod: true,
-          beritaAcaraSidangTugasAkhirs: { where: { deletedAt: null } },
-        },
-      },
-    },
   });
-
-  return formatRevisiResponse(updatedRevisi);
 };
 
 /**
@@ -666,28 +646,11 @@ export const verifyRevisiSidang = async ({ id, user, payload }) => {
     });
 
     // 2. Update status Setujui Hasil Revisi di RevisiTugasAkhir
-    const updatedRevisi = await tx.revisiTugasAkhir.update({
+    await tx.revisiTugasAkhir.update({
       where: { id },
       data: {
         tglSetujuiHasilRevisi: new Date(),
         setujuiHasilRevisiId: currentDosen.id,
-      },
-      include: {
-        berkasRevisi: true,
-        setujuiUntukRevisi: true,
-        setujuiHasilRevisi: true,
-        sidangRegistration: {
-          include: {
-            mahasiswa: { include: { studyProgram: true } },
-            dosenPembimbing1: true,
-            dosenPembimbing2: true,
-            dosenPenguji1: true,
-            dosenPenguji2: true,
-            ruanganSidang: true,
-            sidangPeriod: true,
-            beritaAcaraSidangTugasAkhirs: { where: { deletedAt: null } },
-          },
-        },
       },
     });
 
@@ -699,9 +662,8 @@ export const verifyRevisiSidang = async ({ id, user, payload }) => {
       },
     });
 
-    let savedBeritaAcara;
     if (existingBeritaAcara) {
-      savedBeritaAcara = await tx.beritaAcaraSidangTugasAkhir.update({
+      await tx.beritaAcaraSidangTugasAkhir.update({
         where: { id: existingBeritaAcara.id },
         data: {
           skemaPerhitunganNilai,
@@ -712,7 +674,7 @@ export const verifyRevisiSidang = async ({ id, user, payload }) => {
         },
       });
     } else {
-      savedBeritaAcara = await tx.beritaAcaraSidangTugasAkhir.create({
+      await tx.beritaAcaraSidangTugasAkhir.create({
         data: {
           sidangRegistrationId: revisi.sidangRegistrationId,
           skemaPerhitunganNilai,
@@ -723,20 +685,5 @@ export const verifyRevisiSidang = async ({ id, user, payload }) => {
         },
       });
     }
-
-    return {
-      revisiTugasAkhir: mapRevisiSidangFull(updatedRevisi),
-      beritaAcara: {
-        id: savedBeritaAcara.id,
-        sidangRegistrationId: savedBeritaAcara.sidangRegistrationId,
-        skemaPerhitunganNilai: savedBeritaAcara.skemaPerhitunganNilai,
-        nilaiAkhir: savedBeritaAcara.nilaiAkhir,
-        nilaiHuruf: savedBeritaAcara.nilaiHuruf,
-        keteranganLulus: savedBeritaAcara.keteranganLulus,
-        justifikasi: savedBeritaAcara.justifikasi,
-        createdAt: savedBeritaAcara.createdAt,
-        updatedAt: savedBeritaAcara.updatedAt,
-      },
-    };
   });
 };
