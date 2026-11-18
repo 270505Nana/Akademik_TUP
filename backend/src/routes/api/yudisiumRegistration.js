@@ -578,6 +578,9 @@ router.get(
  *                 type: string
  *               yudisiumPeriodId:
  *                 type: string
+ *               message:
+ *                 type: string
+ *                 description: Pesan atau catatan persetujuan untuk mahasiswa (opsional)
  *               pengajuanCumlaudeFinal:
  *                 type: string
  *                 description: Status pengajuan cumlaude final yang disetujui (opsional)

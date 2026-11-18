@@ -1136,6 +1136,7 @@ export const approveYudisiumRegistration = async (
     yudisiumRegistrationUploadIds,
     pengajuanCumlaudeFinal,
     skemaCumlaudeFinal,
+    message,
   },
   req,
 ) => {
@@ -1215,7 +1216,10 @@ export const approveYudisiumRegistration = async (
       pengajuanCumlaudeFinal: finalPengajuanCumlaude,
       skemaCumlaudeFinal: finalSkemaCumlaude,
       status,
-      message: null,
+      message:
+        typeof message === "string" && message.trim() !== ""
+          ? message.trim()
+          : null,
       isEdit: null,
     },
     include: yudisiumInclude,
