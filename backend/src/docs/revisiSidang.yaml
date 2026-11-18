@@ -55,6 +55,38 @@ paths:
           description: Daftar revisi sidang berhasil diambil
           content:
             application/json:
+              example:
+                message: Daftar revisi sidang berhasil diambil
+                data:
+                  - id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    deadlineRevisi: "2026-11-30T23:59:59.000Z"
+                    tglSubmitRevisi: "2026-11-18T14:30:00.000Z"
+                    tglSetujuiHasilRevisi: "2026-11-20T10:00:00.000Z"
+                    isSubmitted: true
+                    isApproved: true
+                    hasBerkas: true
+                    mahasiswa:
+                      id: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Ahmad Dani
+                      nim: "1202200001"
+                      studyProgram: S1 Sistem Informasi
+                    sidang:
+                      id: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
+                      tglSidang: "2026-11-15T09:00:00.000Z"
+                      ruangan: Ruang Sidang 1
+                pagination:
+                  page: 1
+                  limit: 10
+                  total: 1
+                  totalPages: 1
+                selectedPeriod:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: Periode Pelaksanaan Sidang Ganjil 2026/2027
+                  period: "2026/2027"
+                  isOpen: true
+                  startDate: "2026-11-01T00:00:00.000Z"
+                  endDate: "2026-11-30T23:59:59.000Z"
               schema:
                 type: object
                 properties:
@@ -87,6 +119,31 @@ paths:
           description: Data revisi sidang mahasiswa berhasil diambil
           content:
             application/json:
+              example:
+                message: Data revisi sidang mahasiswa berhasil diambil
+                data:
+                  id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  deadlineRevisi: "2026-11-30T23:59:59.000Z"
+                  tglSubmitRevisi: "2026-11-18T14:30:00.000Z"
+                  tglSetujuiHasilRevisi: "2026-11-20T10:00:00.000Z"
+                  isSubmitted: true
+                  isApproved: true
+                  hasBerkas: true
+                  berkasRevisi:
+                    id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Laporan_Revisi_Akhir.pdf
+                    category: Revisi Sidang
+                    filepath: uploads/berkas-revisi/uuid_Laporan_Revisi_Akhir.pdf
+                  mahasiswa:
+                    id: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Ahmad Dani
+                    nim: "1202200001"
+                    studyProgram: S1 Sistem Informasi
+                  sidang:
+                    id: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
+                    tglSidang: "2026-11-15T09:00:00.000Z"
+                    ruangan: Ruang Sidang 1
               schema:
                 type: object
                 properties:
@@ -94,7 +151,7 @@ paths:
                     type: string
                     example: Data revisi sidang mahasiswa berhasil diambil
                   data:
-                    $ref: "#/components/schemas/RevisiSidangItem"
+                    $ref: "#/components/schemas/RevisiSidangDetail"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "403":
@@ -266,7 +323,7 @@ paths:
                     type: object
                     properties:
                       revisiTugasAkhir:
-                        $ref: "#/components/schemas/RevisiSidangItem"
+                        $ref: "#/components/schemas/RevisiSidangFull"
                       beritaAcara:
                         $ref: "#/components/schemas/BeritaAcaraItem"
         "400":
@@ -439,6 +496,146 @@ components:
           example: 2026-11-20T10:00:00.000Z
 
     RevisiSidangItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+        deadlineRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-30T23:59:59.000Z
+        tglSubmitRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-18T14:30:00.000Z
+        tglSetujuiHasilRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-20T10:00:00.000Z
+        isSubmitted:
+          type: boolean
+          example: true
+        isApproved:
+          type: boolean
+          example: true
+        hasBerkas:
+          type: boolean
+          example: true
+        mahasiswa:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+            name:
+              type: string
+              example: Ahmad Dani
+            nim:
+              type: string
+              example: "1202200001"
+            studyProgram:
+              type: string
+              example: S1 Sistem Informasi
+        sidang:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+            judulTugasAkhir:
+              type: string
+              example: Rancang Bangun Sistem Monitoring IoT
+            tglSidang:
+              type: string
+              format: date-time
+              nullable: true
+              example: 2026-11-15T09:00:00.000Z
+            ruangan:
+              type: string
+              nullable: true
+              example: Ruang Sidang 1
+
+    RevisiSidangDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+        deadlineRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-30T23:59:59.000Z
+        tglSubmitRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-18T14:30:00.000Z
+        tglSetujuiHasilRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-20T10:00:00.000Z
+        isSubmitted:
+          type: boolean
+          example: true
+        isApproved:
+          type: boolean
+          example: true
+        hasBerkas:
+          type: boolean
+          example: true
+        berkasRevisi:
+          $ref: "#/components/schemas/BerkasRevisiCompact"
+        mahasiswa:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+            name:
+              type: string
+              example: Ahmad Dani
+            nim:
+              type: string
+              example: "1202200001"
+            studyProgram:
+              type: string
+              example: S1 Sistem Informasi
+        sidang:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+            judulTugasAkhir:
+              type: string
+              example: Rancang Bangun Sistem Monitoring IoT
+            tglSidang:
+              type: string
+              format: date-time
+              nullable: true
+              example: 2026-11-15T09:00:00.000Z
+            ruangan:
+              type: string
+              nullable: true
+              example: Ruang Sidang 1
+
+    RevisiSidangFull:
       type: object
       properties:
         id:

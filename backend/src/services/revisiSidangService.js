@@ -236,6 +236,86 @@ export const calculateSkemaPerhitunganNilai = async (sidangRegistration) => {
 };
 
 /**
+ * Format response item revisi sidang untuk list (Get All)
+ */
+export const formatRevisiListItem = (revisi) => {
+  if (!revisi) return null;
+  const reg = revisi.sidangRegistration || {};
+  const mhs = reg.mahasiswa || {};
+
+  return {
+    id: revisi.id,
+    deadlineRevisi: revisi.deadlineRevisi,
+    tglSubmitRevisi: revisi.tglSubmitRevisi,
+    tglSetujuiHasilRevisi: revisi.tglSetujuiHasilRevisi,
+    isSubmitted: Boolean(revisi.tglSubmitRevisi),
+    isApproved: Boolean(revisi.tglSetujuiHasilRevisi),
+    hasBerkas: Boolean(revisi.berkasRevisiId || revisi.berkasRevisi),
+    mahasiswa: reg.mahasiswa
+      ? {
+          id: mhs.id,
+          name: mhs.name,
+          nim: mhs.nim,
+          studyProgram: mhs.studyProgram?.name || null,
+        }
+      : null,
+    sidang: reg.id
+      ? {
+          id: reg.id,
+          judulTugasAkhir:
+            reg.judulTugasAkhirIndonesia || reg.judulTugasAkhirInggris || "-",
+          tglSidang: reg.tglSidang,
+          ruangan: reg.ruanganSidang?.name || null,
+        }
+      : null,
+  };
+};
+
+/**
+ * Format response detail revisi sidang mahasiswa (Get Me)
+ */
+export const formatRevisiMeResponse = (revisi) => {
+  if (!revisi) return null;
+  const reg = revisi.sidangRegistration || {};
+  const mhs = reg.mahasiswa || {};
+
+  return {
+    id: revisi.id,
+    deadlineRevisi: revisi.deadlineRevisi,
+    tglSubmitRevisi: revisi.tglSubmitRevisi,
+    tglSetujuiHasilRevisi: revisi.tglSetujuiHasilRevisi,
+    isSubmitted: Boolean(revisi.tglSubmitRevisi),
+    isApproved: Boolean(revisi.tglSetujuiHasilRevisi),
+    hasBerkas: Boolean(revisi.berkasRevisiId || revisi.berkasRevisi),
+    berkasRevisi: revisi.berkasRevisi
+      ? {
+          id: revisi.berkasRevisi.id,
+          name: revisi.berkasRevisi.name,
+          category: revisi.berkasRevisi.category,
+          filepath: revisi.berkasRevisi.filepath,
+        }
+      : null,
+    mahasiswa: reg.mahasiswa
+      ? {
+          id: mhs.id,
+          name: mhs.name,
+          nim: mhs.nim,
+          studyProgram: mhs.studyProgram?.name || null,
+        }
+      : null,
+    sidang: reg.id
+      ? {
+          id: reg.id,
+          judulTugasAkhir:
+            reg.judulTugasAkhirIndonesia || reg.judulTugasAkhirInggris || "-",
+          tglSidang: reg.tglSidang,
+          ruangan: reg.ruanganSidang?.name || null,
+        }
+      : null,
+  };
+};
+
+/**
  * Format response objek revisi sidang
  */
 const formatRevisiResponse = (revisi) => {
@@ -442,7 +522,7 @@ export const getRevisiSidangList = async ({ user, query }) => {
     take: paginationParams.take,
   });
 
-  const formattedData = revisiList.map(formatRevisiResponse);
+  const formattedData = revisiList.map(formatRevisiListItem);
 
   const response = formatPaginationResponse(formattedData, total, paginationParams);
   return {
@@ -508,7 +588,7 @@ export const getLatestRevisiSidangMahasiswa = async ({ user }) => {
     return null;
   }
 
-  return formatRevisiResponse(latestRevisi);
+  return formatRevisiMeResponse(latestRevisi);
 };
 
 /**

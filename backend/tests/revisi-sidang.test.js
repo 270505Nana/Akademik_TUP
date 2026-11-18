@@ -140,6 +140,21 @@ describe("Revisi Sidang Endpoints", () => {
       expect(res.body.message).toBe("Daftar revisi sidang berhasil diambil");
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].id).toBe("revisi-1");
+      expect(res.body.data[0].hasBerkas).toBe(false);
+      expect(res.body.data[0].isSubmitted).toBe(false);
+      expect(res.body.data[0].isApproved).toBe(false);
+      expect(res.body.data[0].mahasiswa).toEqual({
+        id: "mhs-1-id",
+        name: "Ahmad Mahasiswa",
+        nim: "1202200001",
+        studyProgram: "S1 Sistem Informasi",
+      });
+      expect(res.body.data[0].sidang).toEqual({
+        id: "reg-sidang-1",
+        judulTugasAkhir: "Aplikasi Monitoring",
+        tglSidang: expect.any(String),
+        ruangan: "Ruang 101",
+      });
       expect(res.body.pagination).toBeDefined();
       expect(res.body.selectedPeriod).toBeDefined();
     });
@@ -180,6 +195,21 @@ describe("Revisi Sidang Endpoints", () => {
       expect(res.body.data).toBeDefined();
       expect(res.body.data.id).toBe("revisi-1");
       expect(res.body.data.isSubmitted).toBe(false);
+      expect(res.body.data.isApproved).toBe(false);
+      expect(res.body.data.hasBerkas).toBe(false);
+      expect(res.body.data.berkasRevisi).toBeNull();
+      expect(res.body.data.mahasiswa).toEqual({
+        id: "mhs-1-id",
+        name: "Ahmad Mahasiswa",
+        nim: "1202200001",
+        studyProgram: "S1 Sistem Informasi",
+      });
+      expect(res.body.data.sidang).toEqual({
+        id: "reg-sidang-1",
+        judulTugasAkhir: "Aplikasi Monitoring",
+        tglSidang: expect.any(String),
+        ruangan: "Ruang 101",
+      });
     });
 
     it("Mahasiswa mengembalikan data: null jika belum ada revisi sidang", async () => {
