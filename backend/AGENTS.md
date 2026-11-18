@@ -24,7 +24,9 @@
 
 ## Aturan Baru
 
-- Kalau bisa tidak perlu membuat mapper, response langsung dibentuk di controller atau service.
+- Kalau bisa tidak perlu membuat mapper, jika sumber data hanya dari 1 model maka response bisa langsung dibentuk di controller atau service.
+- Gunakan Zod sebagai input validator.
+- Helper jangan ditumpuk di Service. Helper bisa disimpan di `src/utils/` dengan nama file mengikuti nama route atau nama khusus jika helper tidak berkaitan dengan flow bisnis (seperti pagination).
 - Dokumentasi swagger sekarang ada di `src/docs/`.
 - Hindari kode yang redundant.
 - Pastikan contoh response yang ada di dokumentasi swagger sama dengan response yang dikembalikan.

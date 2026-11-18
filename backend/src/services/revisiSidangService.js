@@ -2,6 +2,11 @@ import { v4 as uuidv4 } from "uuid";
 import prisma from "../config/prisma.js";
 import { uploadFile, deleteFile } from "./storageService.js";
 import { getPaginationParams, formatPaginationResponse } from "../utils/paginationHelper.js";
+import {
+  mapRevisiSidangListItem,
+  mapRevisiSidangDetail,
+  mapRevisiSidangFull,
+} from "../mappers/revisiSidangMapper.js";
 
 /**
  * Mencari periode pelaksanaan sidang yang aktif (isOpen: true) atau yang terakhir aktif
@@ -236,200 +241,6 @@ export const calculateSkemaPerhitunganNilai = async (sidangRegistration) => {
 };
 
 /**
- * Format response item revisi sidang untuk list (Get All)
- */
-export const formatRevisiListItem = (revisi) => {
-  if (!revisi) return null;
-  const reg = revisi.sidangRegistration || {};
-  const mhs = reg.mahasiswa || {};
-
-  return {
-    id: revisi.id,
-    deadlineRevisi: revisi.deadlineRevisi,
-    tglSubmitRevisi: revisi.tglSubmitRevisi,
-    tglSetujuiHasilRevisi: revisi.tglSetujuiHasilRevisi,
-    isSubmitted: Boolean(revisi.tglSubmitRevisi),
-    isApproved: Boolean(revisi.tglSetujuiHasilRevisi),
-    hasBerkas: Boolean(revisi.berkasRevisiId || revisi.berkasRevisi),
-    mahasiswa: reg.mahasiswa
-      ? {
-          id: mhs.id,
-          name: mhs.name,
-          nim: mhs.nim,
-          studyProgram: mhs.studyProgram?.name || null,
-        }
-      : null,
-    sidang: reg.id
-      ? {
-          id: reg.id,
-          judulTugasAkhir:
-            reg.judulTugasAkhirIndonesia || reg.judulTugasAkhirInggris || "-",
-          tglSidang: reg.tglSidang,
-          ruangan: reg.ruanganSidang?.name || null,
-        }
-      : null,
-  };
-};
-
-/**
- * Format response detail revisi sidang mahasiswa (Get Me)
- */
-export const formatRevisiMeResponse = (revisi) => {
-  if (!revisi) return null;
-  const reg = revisi.sidangRegistration || {};
-  const mhs = reg.mahasiswa || {};
-
-  return {
-    id: revisi.id,
-    deadlineRevisi: revisi.deadlineRevisi,
-    tglSubmitRevisi: revisi.tglSubmitRevisi,
-    tglSetujuiHasilRevisi: revisi.tglSetujuiHasilRevisi,
-    isSubmitted: Boolean(revisi.tglSubmitRevisi),
-    isApproved: Boolean(revisi.tglSetujuiHasilRevisi),
-    hasBerkas: Boolean(revisi.berkasRevisiId || revisi.berkasRevisi),
-    berkasRevisi: revisi.berkasRevisi
-      ? {
-          id: revisi.berkasRevisi.id,
-          name: revisi.berkasRevisi.name,
-          category: revisi.berkasRevisi.category,
-          filepath: revisi.berkasRevisi.filepath,
-        }
-      : null,
-    mahasiswa: reg.mahasiswa
-      ? {
-          id: mhs.id,
-          name: mhs.name,
-          nim: mhs.nim,
-          studyProgram: mhs.studyProgram?.name || null,
-        }
-      : null,
-    sidang: reg.id
-      ? {
-          id: reg.id,
-          judulTugasAkhir:
-            reg.judulTugasAkhirIndonesia || reg.judulTugasAkhirInggris || "-",
-          tglSidang: reg.tglSidang,
-          ruangan: reg.ruanganSidang?.name || null,
-        }
-      : null,
-  };
-};
-
-/**
- * Format response objek revisi sidang
- */
-const formatRevisiResponse = (revisi) => {
-  if (!revisi) return null;
-  const reg = revisi.sidangRegistration || {};
-
-  return {
-    id: revisi.id,
-    sidangRegistrationId: revisi.sidangRegistrationId,
-    deadlineRevisi: revisi.deadlineRevisi,
-    tglSetujuiUntukRevisi: revisi.tglSetujuiUntukRevisi,
-    setujuiUntukRevisi: revisi.setujuiUntukRevisi
-      ? {
-          id: revisi.setujuiUntukRevisi.id,
-          name: revisi.setujuiUntukRevisi.name,
-          kodeDosen: revisi.setujuiUntukRevisi.kodeDosen,
-        }
-      : null,
-    tglSubmitRevisi: revisi.tglSubmitRevisi,
-    berkasRevisi: revisi.berkasRevisi
-      ? {
-          id: revisi.berkasRevisi.id,
-          name: revisi.berkasRevisi.name,
-          category: revisi.berkasRevisi.category,
-          filepath: revisi.berkasRevisi.filepath,
-        }
-      : null,
-    tglSetujuiHasilRevisi: revisi.tglSetujuiHasilRevisi,
-    setujuiHasilRevisi: revisi.setujuiHasilRevisi
-      ? {
-          id: revisi.setujuiHasilRevisi.id,
-          name: revisi.setujuiHasilRevisi.name,
-          kodeDosen: revisi.setujuiHasilRevisi.kodeDosen,
-        }
-      : null,
-    isSubmitted: Boolean(revisi.tglSubmitRevisi),
-    isApproved: Boolean(revisi.tglSetujuiHasilRevisi),
-    sidangRegistration: reg.id
-      ? {
-          id: reg.id,
-          judulTugasAkhir:
-            reg.judulTugasAkhirIndonesia || reg.judulTugasAkhirInggris || "-",
-          status: reg.status || null,
-          tglSidang: reg.tglSidang,
-          ruangan: reg.ruanganSidang?.name || null,
-          mahasiswa: reg.mahasiswa
-            ? {
-                id: reg.mahasiswa.id,
-                name: reg.mahasiswa.name,
-                nim: reg.mahasiswa.nim,
-                studyProgram: reg.mahasiswa.studyProgram
-                  ? {
-                      id: reg.mahasiswa.studyProgram.id,
-                      name: reg.mahasiswa.studyProgram.name,
-                    }
-                  : null,
-              }
-            : null,
-          dosenPembimbing1: reg.dosenPembimbing1
-            ? {
-                id: reg.dosenPembimbing1.id,
-                name: reg.dosenPembimbing1.name,
-                kodeDosen: reg.dosenPembimbing1.kodeDosen,
-              }
-            : null,
-          dosenPembimbing2: reg.dosenPembimbing2
-            ? {
-                id: reg.dosenPembimbing2.id,
-                name: reg.dosenPembimbing2.name,
-                kodeDosen: reg.dosenPembimbing2.kodeDosen,
-              }
-            : null,
-          dosenPenguji1: reg.dosenPenguji1
-            ? {
-                id: reg.dosenPenguji1.id,
-                name: reg.dosenPenguji1.name,
-                kodeDosen: reg.dosenPenguji1.kodeDosen,
-              }
-            : null,
-          dosenPenguji2: reg.dosenPenguji2
-            ? {
-                id: reg.dosenPenguji2.id,
-                name: reg.dosenPenguji2.name,
-                kodeDosen: reg.dosenPenguji2.kodeDosen,
-              }
-            : null,
-          sidangPeriod: reg.sidangPeriod
-            ? {
-                id: reg.sidangPeriod.id,
-                name: reg.sidangPeriod.name,
-                period: reg.sidangPeriod.period,
-                isOpen: reg.sidangPeriod.isOpen,
-              }
-            : null,
-          beritaAcara:
-            reg.beritaAcaraSidangTugasAkhirs &&
-            reg.beritaAcaraSidangTugasAkhirs.length > 0
-              ? {
-                  id: reg.beritaAcaraSidangTugasAkhirs[0].id,
-                  nilaiAkhir: reg.beritaAcaraSidangTugasAkhirs[0].nilaiAkhir,
-                  nilaiHuruf: reg.beritaAcaraSidangTugasAkhirs[0].nilaiHuruf,
-                  keteranganLulus: reg.beritaAcaraSidangTugasAkhirs[0].keteranganLulus,
-                  justifikasi: reg.beritaAcaraSidangTugasAkhirs[0].justifikasi,
-                  createdAt: reg.beritaAcaraSidangTugasAkhirs[0].createdAt,
-                }
-              : null,
-        }
-      : null,
-    createdAt: revisi.createdAt,
-    updatedAt: revisi.updatedAt,
-  };
-};
-
-/**
  * 1. GET /api/revisi-sidang
  * Admin: get all revisi sidang pada periode pelaksanaan aktif atau terakhir aktif
  * Dosen: get all revisi sidang pada periode pelaksanaan aktif atau terakhir aktif (peran Dospem 1)
@@ -522,7 +333,7 @@ export const getRevisiSidangList = async ({ user, query }) => {
     take: paginationParams.take,
   });
 
-  const formattedData = revisiList.map(formatRevisiListItem);
+  const formattedData = revisiList.map(mapRevisiSidangListItem);
 
   const response = formatPaginationResponse(formattedData, total, paginationParams);
   return {
@@ -588,7 +399,7 @@ export const getLatestRevisiSidangMahasiswa = async ({ user }) => {
     return null;
   }
 
-  return formatRevisiMeResponse(latestRevisi);
+  return mapRevisiSidangDetail(latestRevisi);
 };
 
 /**
@@ -914,7 +725,7 @@ export const verifyRevisiSidang = async ({ id, user, payload }) => {
     }
 
     return {
-      revisiTugasAkhir: formatRevisiResponse(updatedRevisi),
+      revisiTugasAkhir: mapRevisiSidangFull(updatedRevisi),
       beritaAcara: {
         id: savedBeritaAcara.id,
         sidangRegistrationId: savedBeritaAcara.sidangRegistrationId,
