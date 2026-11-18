@@ -13,8 +13,8 @@ export const listSkemaPenilaiQuerySchema = z.object({
     z.string().optional()
   ),
   sortBy: z
-    .enum(["type", "bobot", "createdAt"], {
-      error: "sortBy harus salah satu dari: type, bobot, createdAt",
+    .enum(["peran", "bobot", "createdAt"], {
+      error: "sortBy harus salah satu dari: peran, bobot, createdAt",
     })
     .optional()
     .default("createdAt"),
@@ -38,10 +38,10 @@ export const listSkemaPenilaiQuerySchema = z.object({
  * Schema untuk Create Skema Penilai (POST /api/skema-penilai)
  */
 export const createSkemaPenilaiSchema = z.object({
-  type: z
-    .string({ required_error: "Tipe penilai wajib diisi (contoh: pembimbing_1, penguji_1)" })
-    .trim()
-    .min(1, "Tipe penilai wajib diisi (contoh: pembimbing_1, penguji_1)"),
+  peran: z
+    .enum(["dosenPembimbing1", "dosenPembimbing2", "dosenPenguji1", "dosenPenguji2"], {
+      error: "Peran harus salah satu dari: dosenPembimbing1, dosenPembimbing2, dosenPenguji1, dosenPenguji2",
+    }),
   bobot: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? undefined : val),
     z.coerce
@@ -58,10 +58,10 @@ export const createSkemaPenilaiSchema = z.object({
  * Schema untuk Update Skema Penilai (PUT /api/skema-penilai/:id)
  */
 export const updateSkemaPenilaiSchema = z.object({
-  type: z
-    .string()
-    .trim()
-    .min(1, "Tipe penilai tidak boleh kosong")
+  peran: z
+    .enum(["dosenPembimbing1", "dosenPembimbing2", "dosenPenguji1", "dosenPenguji2"], {
+      error: "Peran harus salah satu dari: dosenPembimbing1, dosenPembimbing2, dosenPenguji1, dosenPenguji2",
+    })
     .optional(),
   bobot: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? undefined : val),

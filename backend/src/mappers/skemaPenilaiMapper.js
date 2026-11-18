@@ -6,7 +6,7 @@ export const mapSkemaPenilai = (item) => {
 
   const result = {
     id: item.id,
-    type: item.type,
+    peran: item.peran,
     bobot: item.bobot,
     studyProgramId: item.studyProgramId,
     createdAt: item.createdAt,

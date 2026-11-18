@@ -321,10 +321,10 @@ components:
           type: string
           format: uuid
           example: d3b07384-d113-4944-9c88-c75c87243c22
-        penilaiType:
+        peran:
           type: string
-          enum: [pembimbing, penguji]
-          example: pembimbing
+          enum: [dosenPembimbing1, dosenPembimbing2, dosenPenguji1, dosenPenguji2]
+          example: dosenPembimbing1
         dosenPenilai:
           $ref: "#/components/schemas/DosenCompact"
         dosenKaprodi:
@@ -515,12 +515,10 @@ components:
                 type: string
                 nullable: true
                 example: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
-              penilaiRole:
+              peran:
                 type: string
-                example: pembimbing_1
-              penilaiType:
-                type: string
-                example: pembimbing
+                enum: [dosenPembimbing1, dosenPembimbing2, dosenPenguji1, dosenPenguji2]
+                example: dosenPembimbing1
               bobotPenilai:
                 type: number
                 example: 0.6

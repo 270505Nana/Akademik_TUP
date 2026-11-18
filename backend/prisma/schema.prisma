@@ -614,7 +614,7 @@ model SkemaPenilaiProdi {
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
   deletedAt      DateTime?    @map("deleted_at")
-  type           String // Contoh: pembimbing_1, pembimbing_2, penguji_1, penguji_2
+  peran          String       @map("peran") // dosenPembimbing1, dosenPembimbing2, dosenPenguji1, dosenPenguji2
   bobot          Decimal      @db.Decimal(5, 2) // bobot nilai misal 60% -> 0.6
   studyProgram   StudyProgram @relation(fields: [studyProgramId], references: [id], onDelete: Cascade)
   studyProgramId String       @map("study_program_id")
@@ -648,7 +648,7 @@ model PenilaianTugasAkhir {
   catatanRevisi        String             @map("catatan_revisi") @db.Text
   sidangRegistration   SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
   sidangRegistrationId String             @map("sidang_registration_id")
-  penilaiType          String             @map("penilai_type") // pembimbing / penguji
+  peran                String             @map("peran") // dosenPembimbing1 / dosenPembimbing2 / dosenPenguji1 / dosenPenguji2
   dosenPenilai         Dosen              @relation("DosenPenilai", fields: [dosenPenilaiId], references: [id]) // Dosen Penilai (Pembimbing 1/2/Penguji 1/2)
   dosenPenilaiId       String             @map("dosen_penilai_id")
   dosenKaprodi         Dosen?             @relation("DosenKaprodi", fields: [dosenKaprodiId], references: [id]) // Kaprodi

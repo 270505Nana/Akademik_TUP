@@ -87,26 +87,21 @@ const buildPenilaianSnapshot = (cloList, nilaiInputList) => {
   return snapshot;
 };
 
-// Helper menentukan peran dosen (pembimbing / penguji) dan bobot penilai
+// Helper menentukan peran dosen dan bobot penilai
 const resolvePenilaiInfo = async (dosenPenilaiId, sidangRegistration) => {
-  let type = null;
-  let penilaiType = null;
+  let peran = null;
 
   if (dosenPenilaiId === sidangRegistration.dosenPembimbing1Id) {
-    type = "pembimbing_1";
-    penilaiType = "pembimbing";
+    peran = "dosenPembimbing1";
   } else if (dosenPenilaiId === sidangRegistration.dosenPembimbing2Id) {
-    type = "pembimbing_2";
-    penilaiType = "pembimbing";
+    peran = "dosenPembimbing2";
   } else if (dosenPenilaiId === sidangRegistration.dosenPenguji1Id) {
-    type = "penguji_1";
-    penilaiType = "penguji";
+    peran = "dosenPenguji1";
   } else if (dosenPenilaiId === sidangRegistration.dosenPenguji2Id) {
-    type = "penguji_2";
-    penilaiType = "penguji";
+    peran = "dosenPenguji2";
   }
 
-  if (!penilaiType) {
+  if (!peran) {
     const error = new Error(
       "Dosen tidak terdaftar sebagai pembimbing atau penguji pada sidang ini"
     );
@@ -126,17 +121,20 @@ const resolvePenilaiInfo = async (dosenPenilaiId, sidangRegistration) => {
 
   let bobotPenilai = 0.5;
 
+  const isPembimbing = peran.startsWith("dosenPembimbing");
+  const isPenguji = peran.startsWith("dosenPenguji");
+
   // Jika pembimbing atau penguji hanya 1 orang, bobot adalah 100% (1.0)
-  if (penilaiType === "pembimbing" && !hasMultiplePembimbing) {
+  if (isPembimbing && !hasMultiplePembimbing) {
     bobotPenilai = 1.0;
-  } else if (penilaiType === "penguji" && !hasMultiplePenguji) {
+  } else if (isPenguji && !hasMultiplePenguji) {
     bobotPenilai = 1.0;
-  } else if (type && studyProgramId) {
+  } else if (studyProgramId) {
     // Jika terdapat 2 penilai, cek skema master data prodi
     const skema = await prisma.skemaPenilaiProdi.findFirst({
       where: {
         studyProgramId,
-        type,
+        peran,
         deletedAt: null,
       },
     });
@@ -149,7 +147,7 @@ const resolvePenilaiInfo = async (dosenPenilaiId, sidangRegistration) => {
     }
   }
 
-  return { type, penilaiType, bobotPenilai, studyProgramId };
+  return { peran, bobotPenilai, studyProgramId };
 };
 
 // Get Penilaian Tugas Akhir by Sidang Registration ID
@@ -213,7 +211,7 @@ export const getPenilaianBySidangRegistrationId = async ({
     throw error;
   }
 
-  const { penilaiType, bobotPenilai, studyProgramId } =
+  const { peran, bobotPenilai, studyProgramId } =
     await resolvePenilaiInfo(currentDosen.id, sidangRegistration);
 
   if (!studyProgramId) {
@@ -228,7 +226,7 @@ export const getPenilaianBySidangRegistrationId = async ({
   return {
     id: null,
     sidangRegistrationId,
-    penilaiType,
+    peran,
     bobotPenilai,
     nilai: template,
     catatanRevisi: "",
@@ -327,7 +325,7 @@ export const savePenilaianTugasAkhir = async ({
   }
 
   // Tentukan peran penilai dan bobot penilai
-  const { penilaiType, bobotPenilai, studyProgramId } =
+  const { peran, bobotPenilai, studyProgramId } =
     await resolvePenilaiInfo(dosenPenilaiId, sidangRegistration);
 
   if (!studyProgramId) {
@@ -361,14 +359,14 @@ export const savePenilaianTugasAkhir = async ({
       nilai: snapshot,
       catatanRevisi:
         catatanRevisi !== undefined ? catatanRevisi || "" : undefined,
-      penilaiType,
+      peran,
     },
     create: {
       bobotPenilai,
       nilai: snapshot,
       catatanRevisi: catatanRevisi || "",
       sidangRegistrationId,
-      penilaiType,
+      peran,
       dosenPenilaiId,
     },
     include: {
@@ -482,13 +480,13 @@ export const getAllPenilaianBySidangRegistrationId = async ({
     where: { studyProgramId, deletedAt: null },
   });
 
-  const getBobotDefaultPenilai = (role, penilaiType) => {
+  const getBobotDefaultPenilai = (peran) => {
     // Jika penilai tunggal -> bobot otomatis 100% (1.0)
-    if (penilaiType === "pembimbing" && !hasMultiplePembimbing) return 1.0;
-    if (penilaiType === "penguji" && !hasMultiplePenguji) return 1.0;
+    if (peran.startsWith("dosenPembimbing") && !hasMultiplePembimbing) return 1.0;
+    if (peran.startsWith("dosenPenguji") && !hasMultiplePenguji) return 1.0;
 
-    // Cek master data skema penilai prodi mahasiswa (contoh: Bisdig punya aturan pembimbing_1 = 0.6)
-    const found = skemaPenilaiList.find((s) => s.type === role);
+    // Cek master data skema penilai prodi mahasiswa
+    const found = skemaPenilaiList.find((s) => s.peran === peran);
     if (found && found.bobot != null) {
       return Number(found.bobot);
     }
@@ -500,26 +498,22 @@ export const getAllPenilaianBySidangRegistrationId = async ({
   // 5. Susun daftar penilai yang ditugaskan pada sidang ini
   const assignedRoles = [
     {
-      role: "pembimbing_1",
-      penilaiType: "pembimbing",
+      peran: "dosenPembimbing1",
       dosen: sidangRegistration.dosenPembimbing1,
       defaultBobot: hasMultiplePembimbing ? 0.5 : 1.0,
     },
     {
-      role: "pembimbing_2",
-      penilaiType: "pembimbing",
+      peran: "dosenPembimbing2",
       dosen: sidangRegistration.dosenPembimbing2,
       defaultBobot: 0.5,
     },
     {
-      role: "penguji_1",
-      penilaiType: "penguji",
+      peran: "dosenPenguji1",
       dosen: sidangRegistration.dosenPenguji1,
       defaultBobot: hasMultiplePenguji ? 0.5 : 1.0,
     },
     {
-      role: "penguji_2",
-      penilaiType: "penguji",
+      peran: "dosenPenguji2",
       dosen: sidangRegistration.dosenPenguji2,
       defaultBobot: 0.5,
     },
@@ -569,7 +563,7 @@ export const getAllPenilaianBySidangRegistrationId = async ({
     const bobot =
       existing?.bobotPenilai != null
         ? Number(existing.bobotPenilai)
-        : getBobotDefaultPenilai(p.role, p.penilaiType);
+        : getBobotDefaultPenilai(p.peran);
 
     const skorPerClo = cloList.map((clo) => ({
       cloProdiId: clo.id,
@@ -579,8 +573,7 @@ export const getAllPenilaianBySidangRegistrationId = async ({
 
     return {
       id: existing?.id || null,
-      penilaiRole: p.role,
-      penilaiType: p.penilaiType,
+      peran: existing?.peran || p.peran,
       bobotPenilai: bobot,
       isSubmitted,
       dosen: p.dosen,

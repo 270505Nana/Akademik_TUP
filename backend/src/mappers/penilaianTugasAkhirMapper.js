@@ -9,7 +9,7 @@ export const mapPenilaianTugasAkhir = (penilaian) => {
     nilai: Array.isArray(penilaian.nilai) ? penilaian.nilai : [],
     catatanRevisi: penilaian.catatanRevisi || "",
     sidangRegistrationId: penilaian.sidangRegistrationId,
-    penilaiType: penilaian.penilaiType,
+    peran: penilaian.peran,
     dosenPenilai: penilaian.dosenPenilai ? mapDosen(penilaian.dosenPenilai) : null,
     dosenKaprodi: penilaian.dosenKaprodi ? mapDosen(penilaian.dosenKaprodi) : null,
   };

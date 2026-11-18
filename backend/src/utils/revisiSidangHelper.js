@@ -53,10 +53,10 @@ export const calculateSkemaPerhitunganNilai = async (sidangRegistration) => {
     sidangRegistration.dosenPenguji1Id && sidangRegistration.dosenPenguji2Id
   );
 
-  const getBobotDefaultPenilai = (role, penilaiType) => {
-    if (penilaiType === "pembimbing" && !hasMultiplePembimbing) return 1.0;
-    if (penilaiType === "penguji" && !hasMultiplePenguji) return 1.0;
-    const found = skemaPenilaiList.find((s) => s.type === role);
+  const getBobotDefaultPenilai = (peran) => {
+    if (peran.startsWith("dosenPembimbing") && !hasMultiplePembimbing) return 1.0;
+    if (peran.startsWith("dosenPenguji") && !hasMultiplePenguji) return 1.0;
+    const found = skemaPenilaiList.find((s) => s.peran === peran);
     if (found && found.bobot != null) return Number(found.bobot);
     return 0.5;
   };
@@ -86,23 +86,19 @@ export const calculateSkemaPerhitunganNilai = async (sidangRegistration) => {
 
   const assignedRoles = [
     {
-      role: "pembimbing_1",
-      penilaiType: "pembimbing",
+      peran: "dosenPembimbing1",
       dosenId: sidangRegistration.dosenPembimbing1Id,
     },
     {
-      role: "pembimbing_2",
-      penilaiType: "pembimbing",
+      peran: "dosenPembimbing2",
       dosenId: sidangRegistration.dosenPembimbing2Id,
     },
     {
-      role: "penguji_1",
-      penilaiType: "penguji",
+      peran: "dosenPenguji1",
       dosenId: sidangRegistration.dosenPenguji1Id,
     },
     {
-      role: "penguji_2",
-      penilaiType: "penguji",
+      peran: "dosenPenguji2",
       dosenId: sidangRegistration.dosenPenguji2Id,
     },
   ];
@@ -143,20 +139,19 @@ export const calculateSkemaPerhitunganNilai = async (sidangRegistration) => {
     const bobot =
       existing?.bobotPenilai != null
         ? Number(existing.bobotPenilai)
-        : getBobotDefaultPenilai(p.role, p.penilaiType);
+        : getBobotDefaultPenilai(p.peran);
     return {
-      penilaiRole: p.role,
-      penilaiType: p.penilaiType,
+      peran: p.peran,
       bobotPenilai: bobot,
       isSubmitted,
       nilai: isSubmitted ? existing.nilai : null,
     };
   });
 
-  const p1 = penilaianList.find((p) => p.penilaiRole === "pembimbing_1");
-  const p2 = penilaianList.find((p) => p.penilaiRole === "pembimbing_2");
-  const u1 = penilaianList.find((p) => p.penilaiRole === "penguji_1");
-  const u2 = penilaianList.find((p) => p.penilaiRole === "penguji_2");
+  const p1 = penilaianList.find((p) => p.peran === "dosenPembimbing1");
+  const p2 = penilaianList.find((p) => p.peran === "dosenPembimbing2");
+  const u1 = penilaianList.find((p) => p.peran === "dosenPenguji1");
+  const u2 = penilaianList.find((p) => p.peran === "dosenPenguji2");
 
   const wP1 = p1 ? p1.bobotPenilai : 0;
   const wP2 = p2 ? p2.bobotPenilai : 0;
