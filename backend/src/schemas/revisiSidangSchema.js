@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const listRevisiSidangQuerySchema = z.object({
   sidangPeriodId: z.string().uuid("Format ID Periode Sidang tidak valid").optional(),
+  status: z.enum(["IN_PROGRESS", "SUBMITTED", "APPROVED"]).optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),

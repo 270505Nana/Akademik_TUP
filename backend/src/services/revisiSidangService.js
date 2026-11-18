@@ -73,6 +73,11 @@ export const getRevisiSidangList = async ({ user, query }) => {
     ];
   }
 
+  // Filter status jika diberikan
+  if (query.status) {
+    where.status = query.status;
+  }
+
   // Sorting: newest (default) or oldest
   const orderBy = {
     createdAt: sort === "oldest" ? "asc" : "desc",
@@ -336,6 +341,7 @@ export const submitRevisiSidang = async ({ id, user, file }) => {
     data: {
       tglSubmitRevisi: new Date(),
       berkasRevisiId: newBerkasId,
+      status: "SUBMITTED",
     },
   });
 };
@@ -495,6 +501,7 @@ export const verifyRevisiSidang = async ({ id, user, payload }) => {
       data: {
         tglSetujuiHasilRevisi: new Date(),
         setujuiHasilRevisiId: currentDosen.id,
+        status: "APPROVED",
       },
     });
 

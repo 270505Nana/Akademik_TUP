@@ -8,6 +8,7 @@ export const mapRevisiSidangListItem = (revisi) => {
 
   return {
     id: revisi.id,
+    status: revisi.status,
     deadlineRevisi: revisi.deadlineRevisi,
     tglSubmitRevisi: revisi.tglSubmitRevisi,
     tglSetujuiHasilRevisi: revisi.tglSetujuiHasilRevisi,
@@ -72,6 +73,7 @@ export const mapRevisiSidangDetail = (revisi) => {
 
   return {
     id: revisi.id,
+    status: revisi.status,
     deadlineRevisi: revisi.deadlineRevisi,
     tglSubmitRevisi: revisi.tglSubmitRevisi,
     tglSetujuiHasilRevisi: revisi.tglSetujuiHasilRevisi,

@@ -114,6 +114,7 @@ describe("Revisi Sidang Endpoints", () => {
 
   const mockRevisi = {
     id: "revisi-1",
+    status: "IN_PROGRESS",
     sidangRegistrationId: "reg-sidang-1",
     sidangRegistration: mockSidangRegistration,
     deadlineRevisi: new Date("2026-11-30"),
@@ -255,8 +256,12 @@ describe("Revisi Sidang Endpoints", () => {
     });
 
     it("Dosen Pembimbing 1 berhasil mengambil detail revisi sidang bimbingannya", async () => {
-      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisi);
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue({
+        ...mockRevisi,
+        status: "SUBMITTED",
+      });
       vi.spyOn(prisma.dosen, "findUnique").mockResolvedValue(mockDosenP1);
+      const updateSpy = vi.spyOn(prisma.revisiTugasAkhir, "update");
 
       const res = await request(app)
         .get("/api/revisi-sidang/revisi-1")
@@ -265,6 +270,8 @@ describe("Revisi Sidang Endpoints", () => {
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("Data revisi sidang berhasil diambil");
       expect(res.body.data.id).toBe("revisi-1");
+      expect(res.body.data.status).toBe("SUBMITTED");
+      expect(updateSpy).not.toHaveBeenCalled();
     });
 
     it("Dosen yang bukan Pembimbing 1 ditolak dengan 403 Forbidden", async () => {

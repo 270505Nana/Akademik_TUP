@@ -44,7 +44,7 @@ const buildPenilaianTemplate = (cloList) => {
 // Helper untuk menyusun Hierarchical Snapshot dari input nilai dosen
 const buildPenilaianSnapshot = (cloList, nilaiInputList) => {
   const nilaiMap = new Map();
-  for (const item of (nilaiInputList || [])) {
+  for (const item of nilaiInputList || []) {
     nilaiMap.set(item.jenisAsesmenId, Number(item.nilai));
   }
 
@@ -78,7 +78,7 @@ const buildPenilaianSnapshot = (cloList, nilaiInputList) => {
 
   if (missingAsesmen.length > 0) {
     const error = new Error(
-      `Komponen asesmen berikut belum dinilai: ${missingAsesmen.join(", ")}`
+      `Komponen asesmen berikut belum dinilai: ${missingAsesmen.join(", ")}`,
     );
     error.statusCode = 400;
     throw error;
@@ -103,7 +103,7 @@ const resolvePenilaiInfo = async (dosenPenilaiId, sidangRegistration) => {
 
   if (!peran) {
     const error = new Error(
-      "Dosen tidak terdaftar sebagai pembimbing atau penguji pada sidang ini"
+      "Dosen tidak terdaftar sebagai pembimbing atau penguji pada sidang ini",
     );
     error.statusCode = 403;
     throw error;
@@ -112,11 +112,10 @@ const resolvePenilaiInfo = async (dosenPenilaiId, sidangRegistration) => {
   const studyProgramId = sidangRegistration.mahasiswa?.studyProgramId;
   const hasMultiplePembimbing = Boolean(
     sidangRegistration.dosenPembimbing1Id &&
-      sidangRegistration.dosenPembimbing2Id
+    sidangRegistration.dosenPembimbing2Id,
   );
   const hasMultiplePenguji = Boolean(
-    sidangRegistration.dosenPenguji1Id &&
-      sidangRegistration.dosenPenguji2Id
+    sidangRegistration.dosenPenguji1Id && sidangRegistration.dosenPenguji2Id,
   );
 
   let bobotPenilai = 0.5;
@@ -158,7 +157,7 @@ export const getPenilaianBySidangRegistrationId = async ({
 }) => {
   if (userRole !== "DOSEN") {
     const error = new Error(
-      "Hanya dosen yang dapat mengakses penilaian tugas akhir"
+      "Hanya dosen yang dapat mengakses penilaian tugas akhir",
     );
     error.statusCode = 403;
     throw error;
@@ -211,8 +210,10 @@ export const getPenilaianBySidangRegistrationId = async ({
     throw error;
   }
 
-  const { peran, bobotPenilai, studyProgramId } =
-    await resolvePenilaiInfo(currentDosen.id, sidangRegistration);
+  const { peran, bobotPenilai, studyProgramId } = await resolvePenilaiInfo(
+    currentDosen.id,
+    sidangRegistration,
+  );
 
   if (!studyProgramId) {
     const error = new Error("Program studi mahasiswa tidak ditemukan");
@@ -247,7 +248,7 @@ export const savePenilaianTugasAkhir = async ({
 }) => {
   if (userRole !== "DOSEN") {
     const error = new Error(
-      "Hanya dosen yang dapat melakukan penilaian tugas akhir"
+      "Hanya dosen yang dapat melakukan penilaian tugas akhir",
     );
     error.statusCode = 403;
     throw error;
@@ -293,7 +294,7 @@ export const savePenilaianTugasAkhir = async ({
     });
   if (existingRevisi || existingBeritaAcara) {
     const error = new Error(
-      "Penilaian tidak dapat diubah karena sidang sudah ditutup"
+      "Penilaian tidak dapat diubah karena sidang sudah ditutup",
     );
     error.statusCode = 400;
     throw error;
@@ -302,7 +303,7 @@ export const savePenilaianTugasAkhir = async ({
   // Validasi waktu sidang: penilaian hanya boleh dilakukan saat atau setelah sidang dimulai
   if (!sidangRegistration.tglSidang) {
     const error = new Error(
-      "Penilaian belum dapat dilakukan karena sidang belum memiliki jadwal"
+      "Penilaian belum dapat dilakukan karena sidang belum memiliki jadwal",
     );
     error.statusCode = 400;
     throw error;
@@ -318,15 +319,17 @@ export const savePenilaianTugasAkhir = async ({
   const now = new Date();
   if (now < tglSidang) {
     const error = new Error(
-      "Penilaian belum dapat dilakukan karena sidang belum dimulai"
+      "Penilaian belum dapat dilakukan karena sidang belum dimulai",
     );
     error.statusCode = 400;
     throw error;
   }
 
   // Tentukan peran penilai dan bobot penilai
-  const { peran, bobotPenilai, studyProgramId } =
-    await resolvePenilaiInfo(dosenPenilaiId, sidangRegistration);
+  const { peran, bobotPenilai, studyProgramId } = await resolvePenilaiInfo(
+    dosenPenilaiId,
+    sidangRegistration,
+  );
 
   if (!studyProgramId) {
     const error = new Error("Program studi mahasiswa tidak ditemukan");
@@ -338,7 +341,7 @@ export const savePenilaianTugasAkhir = async ({
   const cloList = await getMasterDataPenilaianProdi(studyProgramId);
   if (!cloList.length) {
     const error = new Error(
-      "CLO / Jenis Asesmen belum dikonfigurasi untuk Program Studi ini"
+      "CLO / Jenis Asesmen belum dikonfigurasi untuk Program Studi ini",
     );
     error.statusCode = 400;
     throw error;
@@ -467,12 +470,10 @@ export const getAllPenilaianBySidangRegistrationId = async ({
   const cloList = await getMasterDataPenilaianProdi(studyProgramId);
 
   const hasMultiplePembimbing = Boolean(
-    sidangRegistration.dosenPembimbing1 &&
-      sidangRegistration.dosenPembimbing2
+    sidangRegistration.dosenPembimbing1 && sidangRegistration.dosenPembimbing2,
   );
   const hasMultiplePenguji = Boolean(
-    sidangRegistration.dosenPenguji1 &&
-      sidangRegistration.dosenPenguji2
+    sidangRegistration.dosenPenguji1 && sidangRegistration.dosenPenguji2,
   );
 
   // 3. Ambil konfigurasi skema penilai prodi (digunakan untuk fallback preview jika penilai belum submit)
@@ -482,7 +483,8 @@ export const getAllPenilaianBySidangRegistrationId = async ({
 
   const getBobotDefaultPenilai = (peran) => {
     // Jika penilai tunggal -> bobot otomatis 100% (1.0)
-    if (peran.startsWith("dosenPembimbing") && !hasMultiplePembimbing) return 1.0;
+    if (peran.startsWith("dosenPembimbing") && !hasMultiplePembimbing)
+      return 1.0;
     if (peran.startsWith("dosenPenguji") && !hasMultiplePenguji) return 1.0;
 
     // Cek master data skema penilai prodi mahasiswa
@@ -532,9 +534,13 @@ export const getAllPenilaianBySidangRegistrationId = async ({
   const hitungSkorCloDosen = (snapshotNilai, cloId) => {
     if (!Array.isArray(snapshotNilai)) return null;
     const cloItem = snapshotNilai.find(
-      (c) => c.cloProdiId === cloId || c.cloName === cloId
+      (c) => c.cloProdiId === cloId || c.cloName === cloId,
     );
-    if (!cloItem || !Array.isArray(cloItem.asesmen) || cloItem.asesmen.length === 0) {
+    if (
+      !cloItem ||
+      !Array.isArray(cloItem.asesmen) ||
+      cloItem.asesmen.length === 0
+    ) {
       return null;
     }
 
@@ -592,7 +598,7 @@ export const getAllPenilaianBySidangRegistrationId = async ({
     sidangRegistration.revisiTugasAkhir &&
     sidangRegistration.revisiTugasAkhir.length > 0
       ? sidangRegistration.revisiTugasAkhir.find(
-          (r) => r.tglSetujuiUntukRevisi !== null
+          (r) => r.tglSetujuiUntukRevisi !== null,
         ) || null
       : null;
 
@@ -680,7 +686,7 @@ export const tutupSidang = async ({
   // 3. Pastikan yang menutup sidang adalah DOSEN PEMBIMBING 1
   if (sidangRegistration.dosenPembimbing1Id !== currentDosen.id) {
     const error = new Error(
-      "Hanya Dosen Pembimbing 1 yang memiliki hak akses untuk menutup sidang tugas akhir"
+      "Hanya Dosen Pembimbing 1 yang memiliki hak akses untuk menutup sidang tugas akhir",
     );
     error.statusCode = 403;
     throw error;
@@ -688,16 +694,14 @@ export const tutupSidang = async ({
 
   // 4. Pastikan sidang belum pernah ditutup sebelumnya
   const existingClosedRevisi = (sidangRegistration.revisiTugasAkhir || []).find(
-    (r) => r.tglSetujuiUntukRevisi !== null
+    (r) => r.tglSetujuiUntukRevisi !== null,
   );
   const existingBeritaAcara =
     sidangRegistration.beritaAcaraSidangTugasAkhirs &&
     sidangRegistration.beritaAcaraSidangTugasAkhirs.length > 0;
 
   if (existingClosedRevisi || existingBeritaAcara) {
-    const error = new Error(
-      "Sidang ini sudah ditutup sebelumnya"
-    );
+    const error = new Error("Sidang ini sudah ditutup sebelumnya");
     error.statusCode = 400;
     throw error;
   }
@@ -743,7 +747,7 @@ export const tutupSidang = async ({
 
   if (missingPenilai.length > 0) {
     const error = new Error(
-      `Sidang belum dapat ditutup karena dosen penilai berikut belum menyimpan penilaian: ${missingPenilai.join(", ")}`
+      `Sidang belum dapat ditutup karena dosen penilai berikut belum menyimpan penilaian: ${missingPenilai.join(", ")}`,
     );
     error.statusCode = 400;
     throw error;
@@ -772,6 +776,7 @@ export const tutupSidang = async ({
         deadlineRevisi: parsedDeadline,
         tglSetujuiUntukRevisi: new Date(),
         setujuiUntukRevisiId: currentDosen.id,
+        status: "IN_PROGRESS",
       },
     });
   }
@@ -780,4 +785,3 @@ export const tutupSidang = async ({
     revisiTugasAkhir: savedRevisi,
   };
 };
-

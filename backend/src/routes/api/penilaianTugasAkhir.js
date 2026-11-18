@@ -15,7 +15,7 @@ import {
 
 const router = express.Router();
 
-// 1. Rekap seluruh penilaian sidang dan kalkulasi berita acara
+// 1. Rekap seluruh penilaian sidang
 router.get(
   "/sidang-registration/:sidangRegistrationId",
   verifyToken,
