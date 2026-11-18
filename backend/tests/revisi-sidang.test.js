@@ -29,6 +29,7 @@ describe("Revisi Sidang Endpoints", () => {
     id: "dosen-p1-id",
     userId: "user-dosen-p1",
     name: "Dr. Pembimbing Satu, M.T.",
+    nip: "197501012000121001",
     kodeDosen: "DPS",
     deletedAt: null,
   };
@@ -37,6 +38,7 @@ describe("Revisi Sidang Endpoints", () => {
     id: "dosen-p2-id",
     userId: "user-dosen-p2",
     name: "Dr. Pembimbing Dua, M.Kom.",
+    nip: "198002022005012002",
     kodeDosen: "DPD",
     deletedAt: null,
   };
@@ -95,6 +97,9 @@ describe("Revisi Sidang Endpoints", () => {
       {
         id: "pen-1",
         dosenPenilaiId: "dosen-p1-id",
+        dosenPenilai: mockDosenP1,
+        peran: "dosenPembimbing1",
+        catatanRevisi: "Perbaiki BAB 4",
         bobotPenilai: 0.5,
         nilai: [
           {
@@ -210,6 +215,15 @@ describe("Revisi Sidang Endpoints", () => {
         tglSidang: expect.any(String),
         ruangan: "Ruang 101",
       });
+      expect(res.body.data.catatanRevisi).toEqual([
+        {
+          id: "dosen-p1-id",
+          name: "Dr. Pembimbing Satu, M.T.",
+          nip: "197501012000121001",
+          peran: "dosenPembimbing1",
+          catatan: "Perbaiki BAB 4",
+        },
+      ]);
     });
 
     it("Mahasiswa mengembalikan data: null jika belum ada revisi sidang", async () => {

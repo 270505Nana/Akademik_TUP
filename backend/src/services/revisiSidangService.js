@@ -160,6 +160,11 @@ export const getLatestRevisiSidangMahasiswa = async ({ user }) => {
           ruanganSidang: true,
           sidangPeriod: true,
           beritaAcaraSidangTugasAkhirs: { where: { deletedAt: null } },
+          penilaianTugasAkhir: {
+            where: { deletedAt: null },
+            include: { dosenPenilai: true },
+            orderBy: { createdAt: "asc" },
+          },
         },
       },
     },

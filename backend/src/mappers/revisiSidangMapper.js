@@ -42,6 +42,34 @@ export const mapRevisiSidangDetail = (revisi) => {
   const reg = revisi.sidangRegistration || {};
   const mhs = reg.mahasiswa || {};
 
+  const roleOrder = {
+    dosenPembimbing1: 1,
+    dosenPembimbing2: 2,
+    dosenPenguji1: 3,
+    dosenPenguji2: 4,
+  };
+
+  const catatanRevisi = (reg.penilaianTugasAkhir || [])
+    .map((p) => {
+      const dosen = p.dosenPenilai || {};
+      let peran = p.peran;
+      if (!peran) {
+        if (p.dosenPenilaiId === reg.dosenPembimbing1Id) peran = "dosenPembimbing1";
+        else if (p.dosenPenilaiId === reg.dosenPembimbing2Id) peran = "dosenPembimbing2";
+        else if (p.dosenPenilaiId === reg.dosenPenguji1Id) peran = "dosenPenguji1";
+        else if (p.dosenPenilaiId === reg.dosenPenguji2Id) peran = "dosenPenguji2";
+      }
+
+      return {
+        id: dosen.id || p.dosenPenilaiId,
+        name: dosen.name || "-",
+        nip: dosen.nip || "-",
+        peran: peran || "-",
+        catatan: p.catatanRevisi || "",
+      };
+    })
+    .sort((a, b) => (roleOrder[a.peran] || 99) - (roleOrder[b.peran] || 99));
+
   return {
     id: revisi.id,
     deadlineRevisi: revisi.deadlineRevisi,
@@ -75,6 +103,7 @@ export const mapRevisiSidangDetail = (revisi) => {
           ruangan: reg.ruanganSidang?.name || null,
         }
       : null,
+    catatanRevisi,
   };
 };
 

@@ -144,6 +144,17 @@ paths:
                     judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
                     tglSidang: "2026-11-15T09:00:00.000Z"
                     ruangan: Ruang Sidang 1
+                  catatanRevisi:
+                    - id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Budi Santoso
+                      nip: "197501012000121001"
+                      peran: dosenPembimbing1
+                      catatan: apa gitu
+                    - id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Siti Aminah
+                      nip: "198002022005012002"
+                      peran: dosenPenguji1
+                      catatan: apa gitu
               schema:
                 type: object
                 properties:
@@ -627,6 +638,27 @@ components:
               type: string
               nullable: true
               example: Ruang Sidang 1
+        catatanRevisi:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                example: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+              name:
+                type: string
+                example: Dr. Budi Santoso
+              nip:
+                type: string
+                example: "197501012000121001"
+              peran:
+                type: string
+                example: dosenPembimbing1
+              catatan:
+                type: string
+                example: apa gitu
 
   responses:
     UnauthorizedError:
