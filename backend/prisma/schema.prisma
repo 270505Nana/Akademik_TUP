@@ -518,8 +518,9 @@ model BerkasMahasiswa {
   category         String // SKL, Transkrip, Dokumen Validasi Skta, Formulir Penerbitan Skta
   filepath         String
   mahasiswa        Mahasiswa          @relation(fields: [mahasiswaId], references: [id], onDelete: Cascade)
-  mahasiswaId      String             @map("mahasiswa_id")
-  revisiTugasAkhir RevisiTugasAkhir[]
+  mahasiswaId                 String                        @map("mahasiswa_id")
+  revisiTugasAkhir            RevisiTugasAkhir[]
+  beritaAcaraSidangTugasAkhir BeritaAcaraSidangTugasAkhir[]
 
   @@index([mahasiswaId])
   @@index([category])
@@ -708,6 +709,11 @@ model BeritaAcaraSidangTugasAkhir {
   nilaiHuruf            String             @map("nilai_huruf") // Contoh: A / AB / B / BC / C / D / E
   justifikasi           String? // diisi jika nilaiAkhir berbeda dari hasil perhitungan
   isPublish             DateTime?          @map("is_publish") // kenapa datetime? supaya bisa 2 in 1
+  berkas                BerkasMahasiswa?   @relation(fields: [berkasId], references: [id], onDelete: SetNull)
+  berkasId              String?            @map("berkas_id")
 
+  @@index([sidangRegistrationId])
+  @@index([berkasId])
+  @@index([deletedAt])
   @@map("berita_acara_sidang_tugas_akhir")
 }

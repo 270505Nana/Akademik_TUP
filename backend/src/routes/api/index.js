@@ -27,6 +27,7 @@ import penilaianTugasAkhirRouter from './penilaianTugasAkhir.js';
 import approvalRequestRouter from './approvalRequest.js';
 import skemaPerhitungan from './skemaPerhitungan.js';
 import revisiSidangRouter from './revisiSidang.js';
+import beritaAcaraRouter from './beritaAcara.js';
 
 const router = express.Router();
 
@@ -58,5 +59,6 @@ router.use("/penilaian-tugas-akhir", penilaianTugasAkhirRouter);
 router.use("/approval-requests", approvalRequestRouter);
 router.use("/skema-perhitungan", skemaPerhitungan);
 router.use("/revisi-sidang", revisiSidangRouter);
+router.use("/berita-acara", beritaAcaraRouter);
 
 export default router;
