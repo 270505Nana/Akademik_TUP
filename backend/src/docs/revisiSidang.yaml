@@ -174,6 +174,85 @@ paths:
               example:
                 message: Data Mahasiswa tidak ditemukan
 
+  /api/revisi-sidang/{id}:
+    get:
+      summary: Get Detail Revisi Sidang by ID (Admin & Dosen Pembimbing 1)
+      description: |
+        Mengambil data detail revisi sidang tugas akhir berdasarkan ID.
+        - **Admin**: Dapat mengakses semua data revisi sidang.
+        - **Dosen**: Hanya dapat mengakses data revisi sidang jika bertindak sebagai Dosen Pembimbing 1 pada sidang tersebut.
+      tags:
+        - Revisi Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Revisi Tugas Akhir (UUID)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Data revisi sidang berhasil diambil
+          content:
+            application/json:
+              example:
+                message: Data revisi sidang berhasil diambil
+                data:
+                  id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  deadlineRevisi: "2026-11-30T23:59:59.000Z"
+                  tglSubmitRevisi: "2026-11-18T14:30:00.000Z"
+                  tglSetujuiHasilRevisi: "2026-11-20T10:00:00.000Z"
+                  isSubmitted: true
+                  isApproved: true
+                  hasBerkas: true
+                  berkasRevisi:
+                    id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Laporan_Revisi_Akhir.pdf
+                    category: Revisi Sidang
+                    filepath: uploads/berkas-revisi/uuid_Laporan_Revisi_Akhir.pdf
+                  mahasiswa:
+                    id: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Ahmad Dani
+                    nim: "1202200001"
+                    studyProgram: S1 Sistem Informasi
+                  sidang:
+                    id: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
+                    tglSidang: "2026-11-15T09:00:00.000Z"
+                    ruangan: Ruang Sidang 1
+                  catatanRevisi:
+                    - id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Budi Santoso
+                      nip: "197501012000121001"
+                      peran: dosenPembimbing1
+                      catatan: apa gitu
+                    - id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Siti Aminah
+                      nip: "198002022005012002"
+                      peran: dosenPenguji1
+                      catatan: apa gitu
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Data revisi sidang berhasil diambil
+                  data:
+                    $ref: "#/components/schemas/RevisiSidangDetail"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Data revisi sidang tidak ditemukan
+          content:
+            application/json:
+              example:
+                message: Data revisi sidang tidak ditemukan
+
   /api/revisi-sidang/{id}/submit:
     put:
       summary: Mahasiswa Submit Revisi Sidang

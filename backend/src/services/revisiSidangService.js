@@ -179,6 +179,73 @@ export const getLatestRevisiSidangMahasiswa = async ({ user }) => {
 };
 
 /**
+ * GET /api/revisi-sidang/:id
+ * Admin & Dosen Pembimbing 1: mengambil detail revisi sidang berdasarkan ID
+ */
+export const getRevisiSidangById = async ({ id, user }) => {
+  const revisi = await prisma.revisiTugasAkhir.findFirst({
+    where: { id, deletedAt: null },
+    include: {
+      berkasRevisi: true,
+      setujuiUntukRevisi: true,
+      setujuiHasilRevisi: true,
+      sidangRegistration: {
+        include: {
+          mahasiswa: { include: { studyProgram: true } },
+          dosenPembimbing1: true,
+          dosenPembimbing2: true,
+          dosenPenguji1: true,
+          dosenPenguji2: true,
+          ruanganSidang: true,
+          sidangPeriod: true,
+          beritaAcaraSidangTugasAkhirs: { where: { deletedAt: null } },
+          penilaianTugasAkhir: {
+            where: { deletedAt: null },
+            include: { dosenPenilai: true },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      },
+    },
+  });
+
+  if (!revisi) {
+    const error = new Error("Data revisi sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Hak akses:
+  // Admin bisa akses semua.
+  // Dosen hanya bisa akses jika dosen tersebut menjadi pembimbing 1.
+  if (user.role === "DOSEN") {
+    const currentDosen = await prisma.dosen.findUnique({
+      where: { userId: user.id, deletedAt: null },
+    });
+
+    if (!currentDosen) {
+      const error = new Error("Data Dosen tidak ditemukan");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (revisi.sidangRegistration?.dosenPembimbing1Id !== currentDosen.id) {
+      const error = new Error(
+        "Anda tidak memiliki hak akses untuk melihat revisi sidang ini karena Anda bukan Dosen Pembimbing 1"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+  } else if (user.role !== "ADMIN") {
+    const error = new Error("Anda tidak memiliki hak akses untuk endpoint ini");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return mapRevisiSidangDetail(revisi);
+};
+
+/**
  * 3. PUT /api/revisi-sidang/:id/submit
  * Mahasiswa: submit revisi, opsional kirim berkas revisi
  */

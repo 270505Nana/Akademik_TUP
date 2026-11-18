@@ -239,6 +239,64 @@ describe("Revisi Sidang Endpoints", () => {
     });
   });
 
+  describe("GET /api/revisi-sidang/:id", () => {
+    it("Admin berhasil mengambil detail revisi sidang berdasarkan id", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisi);
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Data revisi sidang berhasil diambil");
+      expect(res.body.data.id).toBe("revisi-1");
+      expect(res.body.data.mahasiswa).toBeDefined();
+      expect(res.body.data.catatanRevisi).toBeDefined();
+    });
+
+    it("Dosen Pembimbing 1 berhasil mengambil detail revisi sidang bimbingannya", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisi);
+      vi.spyOn(prisma.dosen, "findUnique").mockResolvedValue(mockDosenP1);
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1")
+        .set("Authorization", `Bearer ${dosenP1Token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Data revisi sidang berhasil diambil");
+      expect(res.body.data.id).toBe("revisi-1");
+    });
+
+    it("Dosen yang bukan Pembimbing 1 ditolak dengan 403 Forbidden", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisi);
+      vi.spyOn(prisma.dosen, "findUnique").mockResolvedValue(mockDosenP2);
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1")
+        .set("Authorization", `Bearer ${dosenP2Token}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it("Mengembalikan 404 jika revisi sidang tidak ditemukan", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(null);
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-unknown")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it("Mahasiswa ditolak dengan 403 Forbidden", async () => {
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1")
+        .set("Authorization", `Bearer ${mhsToken}`);
+
+      expect(res.status).toBe(403);
+    });
+  });
+
   describe("PUT /api/revisi-sidang/:id/submit", () => {
     it("Mahasiswa berhasil submit revisi tanpa berkas file (opsional)", async () => {
       vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue(mockMahasiswa);

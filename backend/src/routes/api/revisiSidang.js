@@ -10,6 +10,7 @@ import {
 import {
   getRevisiSidangList,
   getLatestRevisiSidangMahasiswa,
+  getRevisiSidangById,
   submitRevisiSidang,
   deleteBerkasRevisiSidang,
   verifyRevisiSidang,
@@ -40,6 +41,14 @@ router.get(
   verifyToken,
   authorize("MAHASISWA"),
   getLatestRevisiSidangMahasiswa,
+);
+
+// GET /api/revisi-sidang/:id (Admin & Dosen Pembimbing 1)
+router.get(
+  "/:id",
+  verifyToken,
+  authorize("ADMIN", "DOSEN"),
+  getRevisiSidangById,
 );
 
 // PUT /api/revisi-sidang/:id/submit (Mahasiswa)

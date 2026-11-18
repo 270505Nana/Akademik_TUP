@@ -26,6 +26,26 @@ export const getLatestRevisiSidangMahasiswa = asyncHandler(async (req, res) => {
   });
 });
 
+// GET /api/revisi-sidang/:id (Admin & Dosen Pembimbing 1)
+export const getRevisiSidangById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    res.status(400);
+    throw new Error("ID Revisi Sidang wajib diisi");
+  }
+
+  const data = await revisiSidangService.getRevisiSidangById({
+    id,
+    user: req.user,
+  });
+
+  res.status(200).json({
+    message: "Data revisi sidang berhasil diambil",
+    data,
+  });
+});
+
 // PUT /api/revisi-sidang/:id/submit (Mahasiswa)
 export const submitRevisiSidang = asyncHandler(async (req, res) => {
   const { id } = req.params;
