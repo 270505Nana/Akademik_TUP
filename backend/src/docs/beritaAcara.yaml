@@ -176,16 +176,15 @@ paths:
                         judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
                         tglSidang: "2026-11-15T09:00:00.000Z"
                         ruangan: Ruang Sidang 1
-                        dosenPembimbing1:
-                          id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      timPenilai:
+                        - id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                           name: Dr. Budi Santoso
                           nip: "197501012000121001"
-                        dosenPembimbing2: null
-                        dosenPenguji1:
-                          id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                          peran: dosenPembimbing1
+                        - id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                           name: Dr. Siti Aminah
                           nip: "198002022005012002"
-                        dosenPenguji2: null
+                          peran: dosenPenguji1
                       createdAt: "2026-11-18T10:00:00.000Z"
                       updatedAt: "2026-11-18T10:00:00.000Z"
                 belumTerbit:
@@ -255,16 +254,15 @@ paths:
                     judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
                     tglSidang: "2026-11-15T09:00:00.000Z"
                     ruangan: Ruang Sidang 1
-                    dosenPembimbing1:
-                      id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  timPenilai:
+                    - id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                       name: Dr. Budi Santoso
                       nip: "197501012000121001"
-                    dosenPembimbing2: null
-                    dosenPenguji1:
-                      id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      peran: dosenPembimbing1
+                    - id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                       name: Dr. Siti Aminah
                       nip: "198002022005012002"
-                    dosenPenguji2: null
+                      peran: dosenPenguji1
                   createdAt: "2026-11-18T10:00:00.000Z"
                   updatedAt: "2026-11-18T10:00:00.000Z"
               schema:
@@ -637,43 +635,18 @@ components:
                 ruangan:
                   type: string
                   nullable: true
-                dosenPembimbing1:
-                  type: object
-                  nullable: true
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    nip:
-                      type: string
-                dosenPembimbing2:
-                  type: object
-                  nullable: true
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    nip:
-                      type: string
-                dosenPenguji1:
-                  type: object
-                  nullable: true
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    nip:
-                      type: string
-                dosenPenguji2:
-                  type: object
-                  nullable: true
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    nip:
-                      type: string
+            timPenilai:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  nip:
+                    type: string
+                  peran:
+                    type: string
+                    example: dosenPembimbing1

@@ -53,6 +53,40 @@ export const mapBeritaAcaraDetail = (ba) => {
   const reg = ba.sidangRegistration || {};
   const mhs = reg.mahasiswa || {};
 
+  const timPenilai = [];
+  if (reg.dosenPembimbing1) {
+    timPenilai.push({
+      id: reg.dosenPembimbing1.id,
+      name: reg.dosenPembimbing1.name,
+      nip: reg.dosenPembimbing1.nip,
+      peran: "dosenPembimbing1",
+    });
+  }
+  if (reg.dosenPembimbing2) {
+    timPenilai.push({
+      id: reg.dosenPembimbing2.id,
+      name: reg.dosenPembimbing2.name,
+      nip: reg.dosenPembimbing2.nip,
+      peran: "dosenPembimbing2",
+    });
+  }
+  if (reg.dosenPenguji1) {
+    timPenilai.push({
+      id: reg.dosenPenguji1.id,
+      name: reg.dosenPenguji1.name,
+      nip: reg.dosenPenguji1.nip,
+      peran: "dosenPenguji1",
+    });
+  }
+  if (reg.dosenPenguji2) {
+    timPenilai.push({
+      id: reg.dosenPenguji2.id,
+      name: reg.dosenPenguji2.name,
+      nip: reg.dosenPenguji2.nip,
+      peran: "dosenPenguji2",
+    });
+  }
+
   return {
     id: ba.id,
     nilaiAkhir: ba.nilaiAkhir,
@@ -86,36 +120,9 @@ export const mapBeritaAcaraDetail = (ba) => {
             reg.judulTugasAkhirIndonesia || reg.judulTugasAkhirInggris || "-",
           tglSidang: reg.tglSidang,
           ruangan: reg.ruanganSidang?.name || null,
-          dosenPembimbing1: reg.dosenPembimbing1
-            ? {
-                id: reg.dosenPembimbing1.id,
-                name: reg.dosenPembimbing1.name,
-                nip: reg.dosenPembimbing1.nip,
-              }
-            : null,
-          dosenPembimbing2: reg.dosenPembimbing2
-            ? {
-                id: reg.dosenPembimbing2.id,
-                name: reg.dosenPembimbing2.name,
-                nip: reg.dosenPembimbing2.nip,
-              }
-            : null,
-          dosenPenguji1: reg.dosenPenguji1
-            ? {
-                id: reg.dosenPenguji1.id,
-                name: reg.dosenPenguji1.name,
-                nip: reg.dosenPenguji1.nip,
-              }
-            : null,
-          dosenPenguji2: reg.dosenPenguji2
-            ? {
-                id: reg.dosenPenguji2.id,
-                name: reg.dosenPenguji2.name,
-                nip: reg.dosenPenguji2.nip,
-              }
-            : null,
         }
       : null,
+    timPenilai,
     createdAt: ba.createdAt,
     updatedAt: ba.updatedAt,
   };

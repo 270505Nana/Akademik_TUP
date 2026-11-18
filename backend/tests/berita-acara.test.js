@@ -142,6 +142,20 @@ describe("Berita Acara Endpoints", () => {
       expect(res.body.message).toBe("Data berita acara sidang berhasil diambil");
       expect(res.body.data.id).toBe("ba-1-id");
       expect(res.body.data.nilaiAkhir).toBe("85.5");
+      expect(res.body.data.sidang).toEqual({
+        id: "reg-sidang-1",
+        judulTugasAkhir: "Aplikasi Monitoring",
+        tglSidang: mockSidangRegistration.tglSidang.toISOString(),
+        ruangan: "Ruang 101",
+      });
+      expect(res.body.data.timPenilai).toEqual([
+        {
+          id: "dosen-p1-id",
+          name: "Dr. Pembimbing Satu, M.T.",
+          nip: "197501012000121001",
+          peran: "dosenPembimbing1",
+        },
+      ]);
     });
 
     it("Returns 404 when berita acara not found", async () => {
@@ -168,6 +182,20 @@ describe("Berita Acara Endpoints", () => {
       expect(res.body.message).toBe("Data berita acara sidang mahasiswa berhasil diambil");
       expect(res.body.data.id).toBe("ba-1-id");
       expect(res.body.data.isPublished).toBe(true);
+      expect(res.body.data.sidang).toEqual({
+        id: "reg-sidang-1",
+        judulTugasAkhir: "Aplikasi Monitoring",
+        tglSidang: mockSidangRegistration.tglSidang.toISOString(),
+        ruangan: "Ruang 101",
+      });
+      expect(res.body.data.timPenilai).toEqual([
+        {
+          id: "dosen-p1-id",
+          name: "Dr. Pembimbing Satu, M.T.",
+          nip: "197501012000121001",
+          peran: "dosenPembimbing1",
+        },
+      ]);
     });
 
     it("Mahasiswa receives null data when berita acara not published or not found", async () => {
