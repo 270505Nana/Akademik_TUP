@@ -192,6 +192,7 @@ describe("Penilaian Tugas Akhir - Tutup Sidang & Locking Penilaian", () => {
       { expiresIn: "1h" }
     );
 
+    vi.spyOn(prisma.dosen, "findUnique").mockResolvedValue(mockDosenPembimbing1);
     vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue({
       ...mockSidangRegistration,
       ruanganSidang: { name: "Ruang Sidang 1" },
@@ -205,14 +206,13 @@ describe("Penilaian Tugas Akhir - Tutup Sidang & Locking Penilaian", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.message).toBe("Data rekap penilaian sidang berhasil diambil");
-    expect(res.body.data).toBeDefined();
-    expect(res.body.data.sidangRegistrationId).toBe("reg-sidang-123");
-    expect(res.body.data.beritaAcaraCalculation).toBeUndefined();
-    expect(res.body.data).toHaveProperty("isSidangClosed");
-    expect(res.body.data).toHaveProperty("revisiTugasAkhir");
-    expect(res.body.data.penilaianList).toBeDefined();
-    expect(res.body.data.penilaianList[0]).toHaveProperty("id", "pen-1");
+    expect(res.body.message).toBeUndefined();
+    expect(res.body.sidangRegistrationId).toBe("reg-sidang-123");
+    expect(res.body.beritaAcaraCalculation).toBeUndefined();
+    expect(res.body).toHaveProperty("isSidangClosed");
+    expect(res.body).toHaveProperty("revisiTugasAkhir");
+    expect(res.body.penilaian).toBeDefined();
+    expect(res.body.penilaian[0]).toHaveProperty("id", "pen-1");
   });
 
   it("endpoint GET /api/penilaian-tugas-akhir/sidang-registration/:id/me mengembalikan formulir template / penilaian dosen (HTTP 200)", async () => {
@@ -233,7 +233,11 @@ describe("Penilaian Tugas Akhir - Tutup Sidang & Locking Penilaian", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.sidangRegistrationId).toBe("reg-sidang-123");
-    expect(res.body.penilaiType).toBe("pembimbing");
+    expect(res.body.isSidangClosed).toBe(false);
+    expect(res.body.mahasiswa).toBeDefined();
+    expect(res.body.jadwalSidang).toBeDefined();
+    expect(res.body.penilaian).toBeDefined();
+    expect(res.body.penilaian.peran).toBe("dosenPembimbing1");
   });
 
   it("endpoint PUT /api/penilaian-tugas-akhir/sidang-registration/:id/me berhasil menyimpan penilaian (HTTP 200)", async () => {

@@ -19,13 +19,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Data rekap penilaian sidang berhasil diambil
-                  data:
-                    $ref: "#/components/schemas/RekapPenilaianData"
+                $ref: "#/components/schemas/RekapPenilaianData"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "403":
@@ -49,7 +43,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PenilaianDetail"
+                $ref: "#/components/schemas/PenilaianMeResponse"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "403":
@@ -456,6 +450,10 @@ components:
           type: string
           format: uuid
           example: d3b07384-d113-4944-9c88-c75c87243c22
+        isSidangClosed:
+          type: boolean
+          description: true jika sidang sudah ditutup oleh Dosen Pembimbing 1
+          example: false
         mahasiswa:
           type: object
           properties:
@@ -470,16 +468,8 @@ components:
               type: string
               example: "1202200001"
             studyProgram:
-              type: object
-              nullable: true
-              properties:
-                id:
-                  type: string
-                  format: uuid
-                  example: a9b8c7d6-e5f4-3a2b-1c0d-e9f8a7b6c5d4
-                name:
-                  type: string
-                  example: S1 Sistem Informasi
+              type: string
+              example: S1 Sistem Informasi
             judulTugasAkhir:
               type: string
               example: Rancang Bangun Sistem Monitoring Logistik Menggunakan IoT
@@ -506,55 +496,10 @@ components:
             isAllSubmitted:
               type: boolean
               example: true
-        penilaianList:
+        penilaian:
           type: array
           items:
-            type: object
-            properties:
-              id:
-                type: string
-                nullable: true
-                example: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
-              peran:
-                type: string
-                enum: [dosenPembimbing1, dosenPembimbing2, dosenPenguji1, dosenPenguji2]
-                example: dosenPembimbing1
-              bobotPenilai:
-                type: number
-                example: 0.6
-              isSubmitted:
-                type: boolean
-                example: true
-              dosen:
-                $ref: "#/components/schemas/DosenCompact"
-              catatanRevisi:
-                type: string
-                example: Perbaiki sitasi pada Bab 2 dan analisis performa pada Bab 4.
-              nilai:
-                type: array
-                nullable: true
-                items:
-                  $ref: "#/components/schemas/CloDetail"
-              skorPerClo:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    cloProdiId:
-                      type: string
-                      format: uuid
-                      example: c8a1b2c3-4d5e-6f7a-8b9c-0d1e2f3a4b5c
-                    cloName:
-                      type: string
-                      example: CLO 1
-                    skor:
-                      type: number
-                      nullable: true
-                      example: 86.0
-        isSidangClosed:
-          type: boolean
-          description: true jika sidang sudah ditutup oleh Dosen Pembimbing 1
-          example: false
+            $ref: "#/components/schemas/PenilaianItem"
         revisiTugasAkhir:
           type: object
           nullable: true
@@ -576,6 +521,113 @@ components:
               type: string
               format: uuid
               example: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+
+    PenilaianMeResponse:
+      type: object
+      properties:
+        sidangRegistrationId:
+          type: string
+          format: uuid
+          example: d3b07384-d113-4944-9c88-c75c87243c22
+        isSidangClosed:
+          type: boolean
+          example: false
+        mahasiswa:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: b1a2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+            name:
+              type: string
+              example: Ahmad Dani
+            nim:
+              type: string
+              example: "1202200001"
+            studyProgram:
+              type: string
+              example: S1 Sistem Informasi
+            judulTugasAkhir:
+              type: string
+              example: Rancang Bangun Sistem Monitoring Logistik Menggunakan IoT
+        jadwalSidang:
+          type: object
+          properties:
+            tglSidang:
+              type: string
+              format: date-time
+              example: 2026-11-20T09:00:00.000Z
+            ruangan:
+              type: string
+              nullable: true
+              example: Ruang Sidang 1
+        penilaian:
+          $ref: "#/components/schemas/PenilaianItem"
+
+    PenilaianItem:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+          format: uuid
+          example: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+        peran:
+          type: string
+          enum: [dosenPembimbing1, dosenPembimbing2, dosenPenguji1, dosenPenguji2]
+          example: dosenPembimbing1
+        bobotPenilai:
+          type: number
+          example: 0.6
+        isSubmitted:
+          type: boolean
+          example: true
+        dosen:
+          $ref: "#/components/schemas/DosenSimple"
+        catatanRevisi:
+          type: string
+          example: Perbaiki sitasi pada Bab 2 dan analisis performa pada Bab 4.
+        nilai:
+          type: array
+          items:
+            $ref: "#/components/schemas/CloDetail"
+        skorPerClo:
+          type: array
+          items:
+            type: object
+            properties:
+              cloProdiId:
+                type: string
+                format: uuid
+                example: c8a1b2c3-4d5e-6f7a-8b9c-0d1e2f3a4b5c
+              cloName:
+                type: string
+                example: CLO 1
+              skor:
+                type: number
+                nullable: true
+                example: 86.0
+
+    DosenSimple:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        name:
+          type: string
+          example: Dr. Ir. Ariyanto, M.T.
+        nip:
+          type: string
+          nullable: true
+          example: "198501012010121001"
+        kodeDosen:
+          type: string
+          nullable: true
+          example: ARD
 
   responses:
     UnauthorizedError:

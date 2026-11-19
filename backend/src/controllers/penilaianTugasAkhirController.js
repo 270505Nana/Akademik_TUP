@@ -6,7 +6,7 @@ import {
 } from "../mappers/penilaianTugasAkhirMapper.js";
 import * as penilaianTugasAkhirService from "../services/penilaianTugasAkhirService.js";
 
-// Get Penilaian Tugas Akhir by Sidang Registration ID
+// Get Penilaian Tugas Akhir by Sidang Registration ID (Dosen me)
 export const getPenilaianBySidangRegistrationId = asyncHandler(
   async (req, res) => {
     const { sidangRegistrationId } = req.params;
@@ -16,18 +16,18 @@ export const getPenilaianBySidangRegistrationId = asyncHandler(
       throw new Error("ID Pendaftaran Sidang wajib diisi");
     }
 
-    const penilaian =
+    const result =
       await penilaianTugasAkhirService.getPenilaianBySidangRegistrationId({
         sidangRegistrationId,
         userId: req.user.id,
         userRole: req.user.role,
       });
 
-    res.json(mapPenilaianTugasAkhir(penilaian));
+    res.status(200).json(result);
   },
 );
 
-// Get All Penilaian by Sidang Registration ID
+// Get All Penilaian by Sidang Registration ID (Rekap)
 export const getAllPenilaianBySidangRegistrationId = asyncHandler(
   async (req, res) => {
     const { sidangRegistrationId } = req.params;
@@ -44,10 +44,7 @@ export const getAllPenilaianBySidangRegistrationId = asyncHandler(
         userRole: req.user.role,
       });
 
-    res.json({
-      message: "Data rekap penilaian sidang berhasil diambil",
-      data: mapRekapPenilaianSidang(result),
-    });
+    res.status(200).json(result);
   },
 );
 
