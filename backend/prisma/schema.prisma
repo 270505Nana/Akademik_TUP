@@ -451,8 +451,6 @@ model YudisiumRegistration {
   pengajuanCumlaude            String?                      @map("pengajuan_cumlaude") // Non Cumlaude, Cumlaude, Summa Cumlaude
   skemaCumlaude                String?                      @map("skema_cumlaude") // Publikasi Jurnal, Pameran, Lomba, HKI
   evidenCumlaude               String?                      @map("eviden_cumlaude") @db.Text
-  predikat                     String?
-  statusKelulusan              String?                      @map("status_kelulusan")
   berminatWirausaha            Boolean?                     @map("berminat_wirausaha")
   dosenPembimbing1             Dosen?                       @relation("Pembimbing1YudisiumRegistrations", fields: [dosenPembimbing1Id], references: [id]) // Dosen Pembimbing 1
   dosenPembimbing1Id           String?                      @map("dosen_pembimbing_1_id") // di form yang baru tidak menyertakan Dospem 1
@@ -464,10 +462,12 @@ model YudisiumRegistration {
   yudisiumRegistrationPeriod   YudisiumPeriod?              @relation("YudisiumRegistrationPeriod", fields: [yudisiumRegistrationPeriodId], references: [id])
   yudisiumRegistrationPeriodId String?                      @map("yudisium_registration_period_id")
   // Setuju
-  pengajuanCumlaudeFinal       String?                      @map("pengajuan_cumlaude_final") // Non Cumlaude, Cumlaude, Summa Cumlaude
-  skemaCumlaudeFinal           String?                      @map("skema_cumlaude_final") // Publikasi Jurnal, Pameran, Lomba, HKI
   yudisiumPeriod               YudisiumPeriod?              @relation("YudisiumPeriod", fields: [yudisiumPeriodId], references: [id])
   yudisiumPeriodId             String?                      @map("yudisium_period_id")
+  pengajuanCumlaudeFinal       String?                      @map("pengajuan_cumlaude_final") // Non Cumlaude, Cumlaude, Summa Cumlaude
+  skemaCumlaudeFinal           String?                      @map("skema_cumlaude_final") // Publikasi Jurnal, Pameran, Lomba, HKI
+  predikat                     String?
+  statusKelulusan              String?                      @map("status_kelulusan")
   // Tolak Permohonan
   message                      String?
   isEdit                       DateTime?                    @map("is_edit")

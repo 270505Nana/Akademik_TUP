@@ -1136,6 +1136,8 @@ export const approveYudisiumRegistration = async (
     yudisiumRegistrationUploadIds,
     pengajuanCumlaudeFinal,
     skemaCumlaudeFinal,
+    predikat,
+    statusKelulusan,
     message,
   },
   req,
@@ -1216,6 +1218,18 @@ export const approveYudisiumRegistration = async (
       pengajuanCumlaudeFinal: finalPengajuanCumlaude,
       skemaCumlaudeFinal: finalSkemaCumlaude,
       status,
+      predikat:
+        typeof predikat === "string"
+          ? predikat.trim() || null
+          : predikat === null
+            ? null
+            : undefined,
+      statusKelulusan:
+        typeof statusKelulusan === "string"
+          ? statusKelulusan.trim() || null
+          : statusKelulusan === null
+            ? null
+            : undefined,
       message:
         typeof message === "string" && message.trim() !== ""
           ? message.trim()

@@ -138,6 +138,7 @@ export const approveYudisiumRegistration = asyncHandler(async (req, res) => {
     {
       id: req.params.id,
       ...req.body,
+      adminId: req.user.id,
     },
     req
   );
@@ -156,6 +157,7 @@ export const rejectYudisiumRegistration = asyncHandler(async (req, res) => {
     {
       id: req.params.id,
       ...req.body,
+      adminId: req.user.id,
     },
     req
   );

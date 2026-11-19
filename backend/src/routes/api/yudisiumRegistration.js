@@ -571,13 +571,17 @@ router.get(
  *           schema:
  *             type: object
  *             required:
- *               - adminId
  *               - yudisiumPeriodId
  *             properties:
- *               adminId:
- *                 type: string
  *               yudisiumPeriodId:
  *                 type: string
+ *                 description: ID periode yudisium tujuan (UUID)
+ *               predikat:
+ *                 type: string
+ *                 description: Predikat kelulusan yudisium (misal "MEMUASKAN", "SANGAT MEMUASKAN", "DENGAN PUJIAN") (opsional)
+ *               statusKelulusan:
+ *                 type: string
+ *                 description: Status kelulusan yudisium (misal "LULUS", "TIDAK LULUS") (opsional)
  *               message:
  *                 type: string
  *                 description: Pesan atau catatan persetujuan untuk mahasiswa (opsional)
@@ -632,20 +636,20 @@ router.put(
  *           schema:
  *             type: object
  *             required:
- *               - adminId
  *               - message
  *             properties:
- *               adminId:
- *                 type: string
  *               message:
  *                 type: string
+ *                 description: Pesan atau alasan penolakan/permintaan revisi
  *               isEdit:
  *                 type: string
  *                 format: date-time
+ *                 description: Tenggat waktu revisi jika mahasiswa diperkenankan mengedit (ISO 8601)
  *               yudisiumRegistrationUploadIds:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 description: Daftar ID berkas yang valid
  *     responses:
  *       200:
  *         description: Yudisium registration rejected / revision requested successfully
