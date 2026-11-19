@@ -276,14 +276,7 @@ export const submitSidangSchema = z
  * Schema untuk Approve Sidang Registration (PUT /api/sidang-registrations/:id/approve)
  */
 export const approveSidangSchema = z.object({
-  // Dilonggarkan seperti FK dosen & mahasiswa agar mendukung format ID lama (integer) maupun UUID
-  adminId: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
-    z
-      .string({ required_error: "ID staf akademik wajib diisi", invalid_type_error: "ID staf akademik harus berupa string" })
-      .trim()
-      .min(1, "ID staf akademik wajib diisi")
-  ),
+  adminId: z.string().trim().optional().nullable(),
   sidangPeriodId: z
     .string({ required_error: "ID periode sidang wajib diisi" })
     .trim()
@@ -301,14 +294,7 @@ export const approveSidangSchema = z.object({
  * Schema untuk Reject Sidang Registration (PUT /api/sidang-registrations/:id/reject)
  */
 export const rejectSidangSchema = z.object({
-  // Dilonggarkan seperti FK dosen & mahasiswa agar mendukung format ID lama (integer) maupun UUID
-  adminId: z.preprocess(
-    (val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val),
-    z
-      .string({ required_error: "ID staf akademik wajib diisi", invalid_type_error: "ID staf akademik harus berupa string" })
-      .trim()
-      .min(1, "ID staf akademik wajib diisi")
-  ),
+  adminId: z.string().trim().optional().nullable(),
   message: z
     .string({ required_error: "Pesan penolakan wajib diisi" })
     .trim()
