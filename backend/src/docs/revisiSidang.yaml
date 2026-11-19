@@ -63,6 +63,7 @@ paths:
           content:
             application/json:
               example:
+                message: Daftar revisi sidang berhasil diambil
                 data:
                   - id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                     status: IN_PROGRESS
@@ -97,6 +98,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: Daftar revisi sidang berhasil diambil
                   data:
                     type: array
                     items:
@@ -124,6 +128,7 @@ paths:
           content:
             application/json:
               example:
+                message: Data revisi sidang mahasiswa berhasil diambil
                 data:
                   id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                   status: SUBMITTED
@@ -162,6 +167,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: Data revisi sidang mahasiswa berhasil diambil
                   data:
                     $ref: "#/components/schemas/RevisiSidangDetail"
         "401":
@@ -200,6 +208,7 @@ paths:
           content:
             application/json:
               example:
+                message: Data revisi sidang berhasil diambil
                 data:
                   id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                   status: SUBMITTED
@@ -238,6 +247,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: Data revisi sidang berhasil diambil
                   data:
                     $ref: "#/components/schemas/RevisiSidangDetail"
         "401":
@@ -285,12 +297,21 @@ paths:
           description: Revisi sidang berhasil disubmit
           content:
             application/json:
+              example:
+                message: Revisi sidang berhasil disubmit
+                data:
+                  id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  status: SUBMITTED
+                  tglSubmitRevisi: "2026-11-18T14:30:00.000Z"
+                  berkasRevisiId: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
               schema:
                 type: object
                 properties:
                   message:
                     type: string
                     example: Revisi sidang berhasil disubmit
+                  data:
+                    type: object
         "400":
           description: Sidang belum ditutup atau revisi sudah disetujui sebelumnya
           content:
@@ -401,12 +422,23 @@ paths:
           description: Hasil revisi sidang berhasil diverifikasi dan Berita Acara telah diterbitkan
           content:
             application/json:
+              example:
+                message: Hasil revisi sidang berhasil diverifikasi dan Berita Acara telah diterbitkan
+                data:
+                  id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  sidangRegistrationId: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  nilaiAkhir: "85.5"
+                  keteranganLulus: Lulus
+                  nilaiHuruf: A
+                  justifikasi: null
               schema:
                 type: object
                 properties:
                   message:
                     type: string
                     example: Hasil revisi sidang berhasil diverifikasi dan Berita Acara telah diterbitkan
+                  data:
+                    type: object
         "400":
           description: Mahasiswa belum submit atau revisi sudah disetujui sebelumnya
           content:

@@ -55,6 +55,7 @@ paths:
           content:
             application/json:
               example:
+                message: Daftar berita acara sidang berhasil diambil
                 data:
                   - id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                     nilaiAkhir: "85.5"
@@ -96,6 +97,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: Daftar berita acara sidang berhasil diambil
                   data:
                     type: array
                     items:
@@ -146,6 +150,7 @@ paths:
                 terbit:
                   summary: Berita acara sudah terbit
                   value:
+                    message: Data berita acara sidang mahasiswa berhasil diambil
                     data:
                       id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                       nilaiAkhir: "85.5"
@@ -185,10 +190,14 @@ paths:
                 belumTerbit:
                   summary: Berita acara belum diterbitkan
                   value:
+                    message: Berita acara sidang belum diterbitkan atau belum tersedia
                     data: null
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: Data berita acara sidang mahasiswa berhasil diambil
                   data:
                     $ref: "#/components/schemas/BeritaAcaraDetailItem"
                     nullable: true
@@ -219,6 +228,7 @@ paths:
           content:
             application/json:
               example:
+                message: Data berita acara sidang berhasil diambil
                 data:
                   id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                   nilaiAkhir: "85.5"
@@ -258,6 +268,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: Data berita acara sidang berhasil diambil
                   data:
                     $ref: "#/components/schemas/BeritaAcaraDetailItem"
         "401":
@@ -327,12 +340,21 @@ paths:
             application/json:
               example:
                 message: Berita acara sidang berhasil diperbarui
+                data:
+                  id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  nilaiAkhir: "85.5"
+                  keteranganLulus: Lulus
+                  nilaiHuruf: A
+                  justifikasi: null
+                  isPublish: "2026-11-20T10:00:00.000Z"
               schema:
                 type: object
                 properties:
                   message:
                     type: string
                     example: Berita acara sidang berhasil diperbarui
+                  data:
+                    type: object
         "400":
           description: Input tidak valid
         "401":
@@ -380,12 +402,17 @@ paths:
             application/json:
               example:
                 message: Berkas berita acara sidang berhasil diunggah
+                data:
+                  id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  berkasId: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
               schema:
                 type: object
                 properties:
                   message:
                     type: string
                     example: Berkas berita acara sidang berhasil diunggah
+                  data:
+                    type: object
         "400":
           description: Berkas tidak valid atau file tidak disertakan
         "401":
@@ -507,12 +534,17 @@ paths:
             application/json:
               example:
                 message: Berita acara sidang berhasil dipublikasikan
+                data:
+                  id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  isPublish: "2026-11-20T10:00:00.000Z"
               schema:
                 type: object
                 properties:
                   message:
                     type: string
                     example: Berita acara sidang berhasil dipublikasikan
+                  data:
+                    type: object
         "400":
           description: Input tidak valid
         "401":

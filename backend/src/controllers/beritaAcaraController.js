@@ -9,7 +9,10 @@ export const getBeritaAcaraList = asyncHandler(async (req, res) => {
     query: req.query,
   });
 
-  res.status(200).json(result);
+  res.status(200).json({
+    message: "Daftar berita acara sidang berhasil diambil",
+    ...result,
+  });
 });
 
 // GET /api/berita-acara/:id (Admin)
@@ -24,7 +27,8 @@ export const getBeritaAcaraById = asyncHandler(async (req, res) => {
   const data = await beritaAcaraService.getBeritaAcaraById({ id });
 
   res.status(200).json({
-    data: data || null,
+    message: "Data berita acara sidang berhasil diambil",
+    data,
   });
 });
 
@@ -34,8 +38,16 @@ export const getLatestBeritaAcaraMahasiswa = asyncHandler(async (req, res) => {
     user: req.user,
   });
 
+  if (!data) {
+    return res.status(200).json({
+      message: "Berita acara sidang belum diterbitkan atau belum tersedia",
+      data: null,
+    });
+  }
+
   res.status(200).json({
-    data: data || null,
+    message: "Data berita acara sidang mahasiswa berhasil diambil",
+    data,
   });
 });
 
@@ -48,13 +60,14 @@ export const updateBeritaAcara = asyncHandler(async (req, res) => {
     throw new Error("ID Berita Acara wajib diisi");
   }
 
-  await beritaAcaraService.updateBeritaAcara({
+  const data = await beritaAcaraService.updateBeritaAcara({
     id,
     payload: req.body,
   });
 
   res.status(200).json({
     message: "Berita acara sidang berhasil diperbarui",
+    data,
   });
 });
 
@@ -67,13 +80,14 @@ export const uploadBerkasBeritaAcara = asyncHandler(async (req, res) => {
     throw new Error("ID Berita Acara wajib diisi");
   }
 
-  await beritaAcaraService.uploadBerkasBeritaAcara({
+  const data = await beritaAcaraService.uploadBerkasBeritaAcara({
     id,
     file: req.file,
   });
 
   res.status(200).json({
     message: "Berkas berita acara sidang berhasil diunggah",
+    data,
   });
 });
 
@@ -121,7 +135,7 @@ export const publishBeritaAcara = asyncHandler(async (req, res) => {
 
   const { isPublished } = req.body;
 
-  await beritaAcaraService.publishBeritaAcara({
+  const data = await beritaAcaraService.publishBeritaAcara({
     id,
     isPublished,
   });
@@ -130,5 +144,6 @@ export const publishBeritaAcara = asyncHandler(async (req, res) => {
     message: isPublished
       ? "Berita acara sidang berhasil dipublikasikan"
       : "Publikasi berita acara sidang berhasil dibatalkan",
+    data,
   });
 });

@@ -8,7 +8,10 @@ export const getRevisiSidangList = asyncHandler(async (req, res) => {
     query: req.query,
   });
 
-  res.status(200).json(result);
+  res.status(200).json({
+    message: "Daftar revisi sidang berhasil diambil",
+    ...result,
+  });
 });
 
 // GET /api/revisi-sidang/me (Mahasiswa)
@@ -18,7 +21,8 @@ export const getLatestRevisiSidangMahasiswa = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({
-    data: data || null,
+    message: "Data revisi sidang mahasiswa berhasil diambil",
+    data,
   });
 });
 
@@ -37,7 +41,8 @@ export const getRevisiSidangById = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({
-    data: data || null,
+    message: "Data revisi sidang berhasil diambil",
+    data,
   });
 });
 
@@ -50,7 +55,7 @@ export const submitRevisiSidang = asyncHandler(async (req, res) => {
     throw new Error("ID Revisi Sidang wajib diisi");
   }
 
-  await revisiSidangService.submitRevisiSidang({
+  const data = await revisiSidangService.submitRevisiSidang({
     id,
     user: req.user,
     file: req.file,
@@ -58,6 +63,7 @@ export const submitRevisiSidang = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     message: "Revisi sidang berhasil disubmit",
+    data,
   });
 });
 
@@ -70,12 +76,14 @@ export const deleteBerkasRevisiSidang = asyncHandler(async (req, res) => {
     throw new Error("ID Revisi Sidang wajib diisi");
   }
 
-  const result = await revisiSidangService.deleteBerkasRevisiSidang({
+  await revisiSidangService.deleteBerkasRevisiSidang({
     id,
     user: req.user,
   });
 
-  res.status(200).json(result);
+  res.status(200).json({
+    message: "Berkas revisi sidang berhasil dihapus",
+  });
 });
 
 // PUT /api/revisi-sidang/:id/verify (Dosen Pembimbing 1)
@@ -87,7 +95,7 @@ export const verifyRevisiSidang = asyncHandler(async (req, res) => {
     throw new Error("ID Revisi Sidang wajib diisi");
   }
 
-  await revisiSidangService.verifyRevisiSidang({
+  const data = await revisiSidangService.verifyRevisiSidang({
     id,
     user: req.user,
     payload: req.body,
@@ -95,5 +103,6 @@ export const verifyRevisiSidang = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     message: "Hasil revisi sidang berhasil diverifikasi dan Berita Acara telah diterbitkan",
+    data,
   });
 });

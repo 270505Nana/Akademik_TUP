@@ -207,7 +207,7 @@ export const updateBeritaAcara = async ({ id, payload }) => {
       : null;
   }
 
-  await prisma.beritaAcaraSidangTugasAkhir.update({
+  return await prisma.beritaAcaraSidangTugasAkhir.update({
     where: { id },
     data: updateData,
   });
@@ -278,7 +278,7 @@ export const uploadBerkasBeritaAcara = async ({ id, file }) => {
     },
   });
 
-  await prisma.beritaAcaraSidangTugasAkhir.update({
+  return await prisma.beritaAcaraSidangTugasAkhir.update({
     where: { id },
     data: {
       berkasId: newBerkas.id,
@@ -434,7 +434,7 @@ export const publishBeritaAcara = async ({ id, isPublished }) => {
     throw error;
   }
 
-  await prisma.beritaAcaraSidangTugasAkhir.update({
+  return await prisma.beritaAcaraSidangTugasAkhir.update({
     where: { id },
     data: {
       isPublish: isPublished ? existing.isPublish || new Date() : null,

@@ -336,7 +336,7 @@ export const submitRevisiSidang = async ({ id, user, file }) => {
     newBerkasId = newBerkas.id;
   }
 
-  await prisma.revisiTugasAkhir.update({
+  return await prisma.revisiTugasAkhir.update({
     where: { id },
     data: {
       tglSubmitRevisi: new Date(),
