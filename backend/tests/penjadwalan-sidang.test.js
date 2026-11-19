@@ -602,7 +602,7 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
       expect(findArgs.orderBy).toEqual({ createdAt: "desc" });
     });
 
-    it("harus menerapkan sort oldest ketika sortBy=oldest", async () => {
+    it("harus menerapkan sort oldest ketika sort=oldest", async () => {
       vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
       const findManySpy = vi
         .spyOn(prisma.sidangRegistration, "findMany")
@@ -611,13 +611,104 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
       await getPenjadwalanSidangList({
         user: { role: "ADMIN" },
         sidangPeriodId: "period-uuid-1",
-        sortBy: "oldest",
+        sort: "oldest",
         skip: 0,
         take: 10,
       });
 
       const findArgs = findManySpy.mock.calls[0][0];
       expect(findArgs.orderBy).toEqual({ createdAt: "asc" });
+    });
+
+    it("harus menerapkan filter skemaSidangFinal ketika skemaSidang diberikan", async () => {
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
+
+      await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        sidangPeriodId: "period-uuid-1",
+        skemaSidang: "Reguler",
+        skip: 0,
+        take: 10,
+      });
+
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.skemaSidangFinal).toEqual({
+        equals: "Reguler",
+        mode: "insensitive",
+      });
+    });
+
+    it("harus mendukung query parameter skemaSidang pada endpoint GET /api/penjadwalan-sidang", async () => {
+      const adminToken = jwt.sign(
+        { id: "admin-uuid", role: "ADMIN", email: "admin@univ.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue({ id: "period-1" });
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
+
+      const res = await request(app)
+        .get("/api/penjadwalan-sidang?skemaSidang=Capstone")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.skemaSidangFinal).toEqual({
+        equals: "Capstone",
+        mode: "insensitive",
+      });
+    });
+
+    it("secara default harus mengecualikan skemaSidangFinal = 'Non Sidang'", async () => {
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
+
+      await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        sidangPeriodId: "period-uuid-1",
+        skip: 0,
+        take: 10,
+      });
+
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.AND).toEqual(
+        expect.arrayContaining([
+          {
+            OR: [
+              { skemaSidangFinal: null },
+              {
+                NOT: {
+                  skemaSidangFinal: {
+                    equals: "Non Sidang",
+                    mode: "insensitive",
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      );
+    });
+
+    it("harus mengembalikan data kosong jika filter skemaSidang = 'Non Sidang'", async () => {
+      const result = await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        sidangPeriodId: "period-uuid-1",
+        skemaSidang: "Non Sidang",
+        skip: 0,
+        take: 10,
+      });
+
+      expect(result).toEqual({ total: 0, registrations: [] });
     });
   });
 });

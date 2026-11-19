@@ -16,9 +16,10 @@ const listPenjadwalanSidang = asyncHandler(async (req, res) => {
       dosen: req.dosen,
       sidangPeriodId: req.query.sidangPeriodId,
       search: req.query.search,
-      sortBy: req.query.sortBy,
+      sort: req.query.sort,
       status: req.query.status || req.query.statusPenjadwalan,
       statusPenjadwalan: req.query.statusPenjadwalan,
+      skemaSidang: req.query.skemaSidang,
       ...paginationParams,
     });
 
@@ -100,7 +101,7 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
 
   res.setHeader("Content-Type", "application/zip");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  
+
   stream.pipe(res);
 });
 
@@ -176,7 +177,7 @@ const togglePublishSidangPeriod = asyncHandler(async (req, res) => {
 // Upload Nota Dinas (Admin Only)
 const uploadNotaDinasController = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const fileData = req.file; 
+  const fileData = req.file;
 
   if (!fileData) {
     res.status(400);
