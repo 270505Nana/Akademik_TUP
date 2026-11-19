@@ -23,7 +23,10 @@ export const getPenilaianBySidangRegistrationId = asyncHandler(
         userRole: req.user.role,
       });
 
-    res.status(200).json(result);
+    res.status(200).json({
+      message: "Data penilaian tugas akhir berhasil diambil",
+      data: result,
+    });
   },
 );
 
@@ -44,7 +47,10 @@ export const getAllPenilaianBySidangRegistrationId = asyncHandler(
         userRole: req.user.role,
       });
 
-    res.status(200).json(result);
+    res.status(200).json({
+      message: "Data rekap penilaian sidang berhasil diambil",
+      data: result,
+    });
   },
 );
 
