@@ -3,6 +3,7 @@ import React from 'react';
 export default function CustomAlert({ type = 'error', title, message, style }) {
   const isSuccess = type === 'success';
   const isWarning = type === 'warning';
+  const isInfo = type === 'info';
 
   // Default Error Style
   let bgColor = '#FEF2F2';
@@ -17,6 +18,10 @@ export default function CustomAlert({ type = 'error', title, message, style }) {
     bgColor = '#FFFBEB';
     borderLeftColor = '#D97706';
     textColor = '#92400E';
+  } else if (isInfo) {
+    bgColor = '#EFF6FF';
+    borderLeftColor = '#2563EB';
+    textColor = '#1D4ED8';
   }
 
   return (

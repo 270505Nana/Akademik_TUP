@@ -1,11 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronRight, ChevronLeft, CheckCircle2, XCircle, User, Hash, BookOpen, GraduationCap, FileText, Calendar, MessageSquare, Clock, Check, Loader, AlertTriangle, Download } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, CheckCircle2, XCircle, User, Hash, BookOpen, GraduationCap, FileText, Calendar, MessageSquare, Clock, Check, Loader, AlertTriangle, Download, Languages, Link as LinkIcon, ExternalLink, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { downloadSidangRegistrationUpload, getSidangRegistrationById, approveSidangRegistration, rejectSidangRegistration, getTemplatesByCategory } from '../../../service/api';
-import { DOCUMENT_CONFIG, SECTIONS } from '../../../requirement/sidangDocument';
+import { downloadSidangRegistrationUpload, getSidangRegistrationById, approveSidangRegistration, rejectSidangRegistration, getTemplatesByCategory, adminEditSidangRegistration } from '../../../service/api';
+import { DOCUMENT_CONFIG, SECTIONS, getEffectiveSidangSchemeAndJalur } from '../../../requirement/sidangDocument';
 import { humanizeDocName } from '../../../utils/textHelper';
 
+const isLinkPaperUpload = (u) => {
+  if (!u) return false;
+  const slug = (u.category || u.templateCode || u.slug || '').toLowerCase();
+  const name = (u.officialName || u.name || '').toLowerCase();
+  return slug.includes('lampiran-link-paper') || name.includes('link paper');
+};
+
 const BERKAS_STATUS = { SESUAI: 'sesuai', BERMASALAH: 'bermasalah', UNCHECKED: 'unchecked' };
+
+const SKEMA_OPTIONS = [
+  { value: 'Sidang Reguler', label: 'Sidang Reguler', desc: 'Sidang presentasi tugas akhir secara reguler' },
+  { value: 'Non Sidang', label: 'Non Sidang', desc: 'Jalur kelulusan alternatif (Publikasi / HKI)' },
+];
+
+const JALUR_NON_SIDANG_OPTIONS = [
+  'Publikasi Jurnal',
+  'Proceeding International',
+  'HKI',
+];
 
 const SLUG_TO_NAME = Object.values(DOCUMENT_CONFIG)
   .flat()
@@ -76,57 +94,204 @@ const InfoCard = ({ label, value, icon: Icon, highlight }) => (
   </div>
 );
 
-const Step1 = ({ registration, prodiName }) => {
+const Step1 = ({ registration, prodiName, onEditSaved }) => {
   const s = registration?.mahasiswa || registration?.student || {};
   const r = registration || {};
   const dosenInfo = [r.dosenPembimbing1?.name, r.dosenPembimbing2?.name].filter(Boolean).join(' & ') || '-';
 
-  // Format Skema dan Jalur Non-Sidang
-  const rawScheme = r.skemaSidang || r.sidangScheme || 'Sidang Reguler';
+  // Format Skema dan Jalur Non-Sidang (prioritaskan keputusan final admin)
+  const { scheme: resolvedScheme, jalur: resolvedJalur } = getEffectiveSidangSchemeAndJalur(r);
+  const rawScheme = resolvedScheme || 'Sidang Reguler';
   const isNonSidang = rawScheme.toLowerCase().includes('non');
-  const jalurList = isNonSidang && Array.isArray(r.jalurNonSidang) && r.jalurNonSidang.length > 0
-    ? ` (${r.jalurNonSidang.join(', ')})`
+  const jalurList = isNonSidang && resolvedJalur.length > 0
+    ? ` (${resolvedJalur.join(', ')})`
     : '';
   const schemeDisplay = `${rawScheme}${jalurList}`;
   const judulIndonesia = r.judulTugasAkhirIndonesia || r.thesisTitleId || '-';
   const judulInggris = r.judulTugasAkhirInggris || r.thesisTitleEn || '';
 
+  // --- Edit state ---
+  const [isEditing, setIsEditing] = useState(false);
+  const [editProgram, setEditProgram] = useState('');
+  const [editJudulId, setEditJudulId] = useState('');
+  const [editJudulEn, setEditJudulEn] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState(null);
+  const [editSuccess, setEditSuccess] = useState(false);
+
+  useEffect(() => {
+    setEditProgram(r.program || '');
+    setEditJudulId(r.judulTugasAkhirIndonesia || r.thesisTitleId || '');
+    setEditJudulEn(r.judulTugasAkhirInggris || r.thesisTitleEn || '');
+    setIsEditing(false);
+    setEditError(null);
+    setEditSuccess(false);
+  }, [registration]);
+
+  const handleSaveEdit = async () => {
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      const originalProgram = r.program || '';
+      const originalJudulId = r.judulTugasAkhirIndonesia || r.thesisTitleId || '';
+      const originalJudulEn = r.judulTugasAkhirInggris || r.thesisTitleEn || '';
+
+      const payload = {};
+      if (editProgram !== originalProgram) payload.program = editProgram || null;
+      if (editJudulId !== originalJudulId) payload.judulTugasAkhirIndonesia = editJudulId || null;
+      if (editJudulEn !== originalJudulEn) payload.judulTugasAkhirInggris = editJudulEn || null;
+
+      if (Object.keys(payload).length === 0) {
+        setIsEditing(false);
+        return;
+      }
+
+      const updated = await adminEditSidangRegistration(r.id, payload);
+      setIsEditing(false);
+      setEditSuccess(true);
+      setTimeout(() => setEditSuccess(false), 3000);
+      if (onEditSaved) onEditSaved(updated);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Gagal menyimpan perubahan. Silakan coba lagi.';
+      setEditError(msg);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, marginBottom: 20 }}>
-        <User size={16} color={CLR.red} />
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#B91C1C', textTransform: 'uppercase', letterSpacing: 0.5 }}>Tahap 1: Informasi Pokok Mahasiswa</span>
+      {/* Header Tahap 1 + tombol Edit */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, marginBottom: 20, justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <User size={16} color={CLR.red} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#B91C1C', textTransform: 'uppercase', letterSpacing: 0.5 }}>Tahap 1: Informasi Mahasiswa</span>
+        </div>
+        {!isEditing && (
+          <button
+            onClick={() => setIsEditing(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, border: '1.5px solid #FECACA', background: '#fff', color: '#B91C1C', cursor: 'pointer' }}
+          >
+            <Pencil size={12} /> Edit Data
+          </button>
+        )}
       </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <InfoCard label="Nama Lengkap Mahasiswa" icon={User} value={s.name} />
-        <InfoCard label="Nomor Induk Mahasiswa (NIM)" icon={Hash} value={s.nim} />
+        <InfoCard label="Dosen Wali" icon={User} value={s.dosenWali?.name || r.dosenWali?.name || '-'} />
+        <InfoCard label="Nomor Telepon Mahasiswa" icon={Hash} value={s.phone || '-'} />
         <InfoCard label="Program Studi Terdaftar" icon={BookOpen} value={prodiName} />
+
+        {/* Program — editable */}
+        {isEditing ? (
+          <div style={{ background: '#F8FAFC', border: `1px solid ${CLR.red}`, borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: CLR.muted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Program</div>
+            <select
+              value={editProgram}
+              onChange={e => setEditProgram(e.target.value)}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 13, color: CLR.text }}
+            >
+              <option value="">— Pilih Program —</option>
+              <option value="Reguler">Reguler</option>
+              <option value="Alih Jenjang">Alih Jenjang</option>
+            </select>
+          </div>
+        ) : (
+          <InfoCard label="Program" icon={GraduationCap} value={r.program || '-'} />
+        )}
+
         <InfoCard label="Skema / Jalur Tugas Akhir" icon={GraduationCap} value={schemeDisplay} />
-        <div style={{ gridColumn: '1 / -1' }}>
-          <InfoCard
-            label="Status Test Bahasa"
-            icon={GraduationCap}
-            value={
-              r.lulusTesBahasa === true
-                ? "Sudah Memenuhi (≥450)"
-                : r.lulusTesBahasa === false
-                  ? "Belum Memenuhi"
-                  : "Belum Dipilih"
-            }
-          />
-        </div>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <InfoCard label="Judul Tugas Akhir (Indonesia)" icon={FileText} value={judulIndonesia} highlight />
-        </div>
-        {judulInggris && (
+
+        <InfoCard
+          label="Status Test Bahasa"
+          icon={Languages}
+          value={
+            r.lulusTesBahasa === true
+              ? "Sudah Memenuhi (≥450)"
+              : r.lulusTesBahasa === false
+                ? "Belum Memenuhi"
+                : "Belum Dipilih"
+          }
+        />
+        <InfoCard
+          label="Batas Akhir SKTA"
+          icon={Calendar}
+          value={r.sktaExpDate ? new Date(r.sktaExpDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+        />
+        <InfoCard label="Total SKS" icon={Hash} value={r.sks != null ? `${r.sks} SKS` : '-'} />
+
+        {/* Judul Indonesia — editable */}
+        {isEditing ? (
+          <div style={{ gridColumn: '1 / -1', background: '#F8FAFC', border: `1px solid ${CLR.red}`, borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: CLR.muted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Judul Tugas Akhir (Indonesia)</div>
+            <textarea
+              value={editJudulId}
+              onChange={e => setEditJudulId(e.target.value)}
+              rows={3}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 13, color: CLR.text, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
+        ) : (
+          <div style={{ gridColumn: '1 / -1' }}>
+            <InfoCard label="Judul Tugas Akhir (Indonesia)" icon={FileText} value={judulIndonesia} highlight />
+          </div>
+        )}
+
+        {/* Judul Inggris — editable (selalu tampil saat edit agar bisa diisi) */}
+        {isEditing ? (
+          <div style={{ gridColumn: '1 / -1', background: '#F8FAFC', border: `1px solid ${CLR.red}`, borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: CLR.muted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Judul Tugas Akhir (Inggris)</div>
+            <textarea
+              value={editJudulEn}
+              onChange={e => setEditJudulEn(e.target.value)}
+              rows={3}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 13, color: CLR.text, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
+        ) : judulInggris ? (
           <div style={{ gridColumn: '1 / -1' }}>
             <InfoCard label="Judul Tugas Akhir (Inggris)" icon={FileText} value={judulInggris} />
           </div>
-        )}
+        ) : null}
+
         <div style={{ gridColumn: '1 / -1' }}>
           <InfoCard label="Dosen Pembimbing" icon={User} value={dosenInfo} />
         </div>
       </div>
+
+      {/* Tombol Simpan/Batal + error saat mode edit */}
+      {isEditing && (
+        <div style={{ marginTop: 16 }}>
+          {editError && (
+            <div style={{ marginBottom: 10, padding: '10px 14px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 13, color: '#DC2626' }}>
+              {editError}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => { setIsEditing(false); setEditError(null); }}
+              disabled={isSavingEdit}
+              style={{ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, border: '1px solid #CBD5E1', background: '#fff', color: '#374151', cursor: 'pointer' }}
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleSaveEdit}
+              disabled={isSavingEdit}
+              style={{ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: 'none', background: CLR.red, color: '#fff', cursor: isSavingEdit ? 'not-allowed' : 'pointer', opacity: isSavingEdit ? 0.7 : 1 }}
+            >
+              {isSavingEdit ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Notifikasi sukses setelah simpan */}
+      {editSuccess && !isEditing && (
+        <div style={{ marginTop: 12, padding: '10px 14px', background: '#DCFCE7', border: '1px solid #BBF7D0', borderRadius: 8, fontSize: 13, color: '#166534', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle2 size={15} /> Data berhasil diperbarui.
+        </div>
+      )}
     </div>
   );
 };
@@ -181,14 +346,15 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
           const isActive = previewFile?.id === upload.id;
           const berkasName = getBerkasName(upload, templateMap);
           const isUploaded = upload.isUploaded !== false;
+          const isLink = isLinkPaperUpload(upload);
           return (
             <div key={upload.id} onClick={() => onPreview(upload)} style={{ padding: '8px 10px', cursor: 'pointer', background: isActive ? '#FEF2F2' : 'transparent', borderLeft: isActive ? `3px solid ${CLR.red}` : '3px solid transparent', transition: 'all 0.15s' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#374151', lineHeight: 1.3, marginBottom: 2 }}>{idx + 1}. {berkasName}</div>
                   {!isUploaded ? (
-                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>
-                      BELUM DIUNGGAH
+                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: isLink ? '#2563EB' : '#94A3B8' }}>
+                      {isLink ? 'OPSIONAL (BELUM DIISI)' : 'BELUM DIUNGGAH'}
                     </div>
                   ) : status !== BERKAS_STATUS.UNCHECKED && (
                     <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: status === BERKAS_STATUS.SESUAI ? CLR.green : '#DC2626' }}>
@@ -202,7 +368,7 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
                   ) : status === BERKAS_STATUS.BERMASALAH ? (
                     <XCircle size={14} color="#DC2626" />
                   ) : !isUploaded ? (
-                    <div style={{ width: 14, height: 14, borderRadius: '50%', border: '1.5px dashed #CBD5E1' }} title="Belum diunggah mahasiswa" />
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', border: isLink ? '1.5px dashed #93C5FD' : '1.5px dashed #CBD5E1' }} title={isLink ? "Opsional (belum diisi mahasiswa)" : "Belum diunggah mahasiswa"} />
                   ) : (
                     <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #D1D5DB' }} />
                   )}
@@ -217,7 +383,11 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
           <>
             <div style={{ padding: '8px 14px', borderBottom: `1px solid ${CLR.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FAFAFA', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-                <FileText size={13} color={CLR.red} flexShrink={0} />
+                {isLinkPaperUpload(previewFile) ? (
+                  <LinkIcon size={13} color={CLR.red} flexShrink={0} />
+                ) : (
+                  <FileText size={13} color={CLR.red} flexShrink={0} />
+                )}
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBerkasName(previewFile, templateMap)}</span>
               </div>
               <button onClick={() => previewFile.isUploaded !== false && onDownload(previewFile)} disabled={previewFile.isUploaded === false || loadingFileId === previewFile.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, padding: '3px 9px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#fff', border: `1px solid ${CLR.border}`, cursor: previewFile.isUploaded === false ? 'not-allowed' : 'pointer', opacity: previewFile.isUploaded === false ? 0.5 : 1, color: '#374151' }}>
@@ -226,23 +396,91 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
             </div>
             <div style={{ flex: 1, minHeight: 0, background: '#F8FAFC', overflow: 'auto', position: 'relative' }}>
               {previewFile.isUploaded === false ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, padding: 24, textAlign: 'center', color: '#64748B' }}>
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
-                    <FileText size={26} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                      Berkas Belum Diunggah
+                isLinkPaperUpload(previewFile) ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, padding: 24, textAlign: 'center', color: '#64748B' }}>
+                    <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+                      <LinkIcon size={26} />
                     </div>
-                    <div style={{ fontSize: 11, color: '#64748B', maxWidth: 320, lineHeight: 1.5 }}>
-                      Mahasiswa belum mengunggah dokumen <strong>{getBerkasName(previewFile, templateMap)}</strong>.
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', marginBottom: 4 }}>
+                        Link Paper Belum Diisi (Opsional)
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748B', maxWidth: 340, lineHeight: 1.5 }}>
+                        Mahasiswa belum mengisi link paper publikasi. Berkas ini bersifat opsional apabila publikasi paper belum terbit daring.
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, padding: 24, textAlign: 'center', color: '#64748B' }}>
+                    <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+                      <FileText size={26} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                        Berkas Belum Diunggah
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748B', maxWidth: 320, lineHeight: 1.5 }}>
+                        Mahasiswa belum mengunggah dokumen <strong>{getBerkasName(previewFile, templateMap)}</strong>.
+                      </div>
+                    </div>
+                  </div>
+                )
               ) : fileError ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#DC2626' }}>File Tidak Ditemukan.</span>
                 </div>
+              ) : isLinkPaperUpload(previewFile) ? (
+                previewFile.paperUrl ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32, boxSizing: 'border-box' }}>
+                    <div style={{ maxWidth: 540, width: '100%', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 12, padding: '24px 20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                        <LinkIcon size={24} />
+                      </div>
+                      <h4 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700, color: '#1E293B' }}>
+                        Tautan Paper Publikasi
+                      </h4>
+                      <p style={{ margin: '0 0 16px', fontSize: 12, color: '#64748B' }}>
+                        Tautan yang dilampirkan oleh mahasiswa untuk publikasi tugas akhir:
+                      </p>
+                      <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 14px', marginBottom: 18, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: 12, color: '#0F172A', textAlign: 'left', maxHeight: 90, overflowY: 'auto' }}>
+                        {previewFile.paperUrl}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = previewFile.paperUrl.startsWith('http://') || previewFile.paperUrl.startsWith('https://')
+                            ? previewFile.paperUrl
+                            : `https://${previewFile.paperUrl}`;
+                          window.open(target, '_blank', 'noopener,noreferrer');
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          background: '#2563EB',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          padding: '9px 18px',
+                          borderRadius: 8,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 6px rgba(37,99,235,0.2)',
+                          transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = '#1D4ED8')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = '#2563EB')}
+                      >
+                        <ExternalLink size={14} /> Buka Link Paper
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8, color: '#9CA3AF' }}>
+                    <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontSize: 12 }}>Memuat tautan...</span>
+                  </div>
+                )
               ) : previewFile.blobUrl ? (
                 previewFile.type === 'pdf' ? <iframe src={previewFile.blobUrl} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} title="Preview" /> : <img src={previewFile.blobUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', margin: 'auto', display: 'block', padding: 12 }} />
               ) : (
@@ -315,72 +553,221 @@ const Step3Revisi = ({ berkasStatuses, uploads, dueDate, setDueDate, message, se
   );
 };
 
-const Step3Approve = ({ periods, selectedPeriodId, onSelectPeriod, uploads }) => (
-  <div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, marginBottom: 20 }}>
-      <CheckCircle2 size={16} color={CLR.green} />
-      <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>Semua {uploads.length} berkas telah diverifikasi sesuai - pilih periode sidang untuk mahasiswa ini</span>
-    </div>
-    <div>
-      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}><Calendar size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Periode Sidang *</label>
-      {periods.length === 0 ? (
-        <div style={{ padding: '16px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8, fontSize: 13, color: '#92400E', display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={16} /> Belum ada periode sidang yang tersedia. Buat periode terlebih dahulu di menu Atur Periode.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {periods
-            .filter(p => new Date(p.endDate) >= new Date())
-            .map(p => {
-              const now = new Date();
-              const start = new Date(p.startDate);
-              const end = new Date(p.endDate);
-              const status = now >= start && now <= end ? 'Aktif'
-                : now < start ? 'Mendatang'
-                  : 'Selesai';
-              const statusColor = status === 'Aktif' ? CLR.green : status === 'Mendatang' ? '#1D4ED8' : CLR.sub;
-              const statusBg = status === 'Aktif' ? '#DCFCE7' : status === 'Mendatang' ? '#DBEAFE' : '#F1F5F9';
-              const isSelected = selectedPeriodId === p.id;
-              const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+const Step3Approve = ({
+  periods,
+  selectedPeriodId,
+  onSelectPeriod,
+  uploads,
+  schemeFinal,
+  onSelectScheme,
+  jalurNonSidangFinal,
+  onToggleJalur,
+}) => {
+  const isNonSidang = String(schemeFinal || '').toLowerCase().includes('non');
 
-              return (
-                <div
-                  key={p.id} onClick={() => onSelectPeriod(p.id)}
-                  style={{
-                    padding: '14px 16px', borderRadius: 10, cursor: 'pointer',
-                    border: `2px solid ${isSelected ? CLR.red : CLR.border}`,
-                    background: isSelected ? '#FEF2F2' : '#fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, marginBottom: 20 }}>
+        <CheckCircle2 size={16} color={CLR.green} />
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>Semua {uploads.length} berkas telah diverifikasi sesuai - tentukan skema final dan pilih periode sidang untuk mahasiswa ini</span>
+      </div>
+
+      {/* Pilihan Skema Sidang Final */}
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+          <GraduationCap size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Skema Sidang Final *
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {SKEMA_OPTIONS.map((opt) => {
+            const isSelected = schemeFinal === opt.value;
+            return (
+              <div
+                key={opt.value}
+                onClick={() => onSelectScheme(opt.value)}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  border: `2px solid ${isSelected ? CLR.red : CLR.border}`,
+                  background: isSelected ? '#FEF2F2' : '#fff',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <div style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  marginTop: 1,
+                  border: `2px solid ${isSelected ? CLR.red : '#D1D5DB'}`,
+                  background: isSelected ? CLR.red : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  {isSelected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: isSelected ? CLR.red : CLR.text }}>
+                    {opt.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: CLR.sub, marginTop: 2, lineHeight: 1.3 }}>
+                    {opt.desc}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Jalur Non-Sidang (jika skema Non Sidang) */}
+        {isNonSidang && (
+          <div style={{
+            marginTop: 12,
+            padding: '12px 14px',
+            background: '#F8FAFC',
+            borderRadius: 10,
+            border: '1px solid #E2E8F0',
+          }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: CLR.red, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+              Jalur Non-Sidang Final *
+            </label>
+            <div style={{ fontSize: 11, color: CLR.sub, marginBottom: 10 }}>
+              Pilih opsi jalur publikasi/HKI yang disetujui (dapat memilih lebih dari satu)
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {JALUR_NON_SIDANG_OPTIONS.map((opt) => {
+                const isChecked = Array.isArray(jalurNonSidangFinal) && jalurNonSidangFinal.includes(opt);
+                return (
+                  <div
+                    key={opt}
+                    onClick={() => onToggleJalur(opt)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: `1.5px solid ${isChecked ? CLR.red : '#CBD5E1'}`,
+                      background: isChecked ? '#FEF2F2' : '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      userSelect: 'none',
+                    }}
+                  >
                     <div style={{
-                      width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                      border: `2px solid ${isSelected ? CLR.red : '#D1D5DB'}`,
-                      background: isSelected ? CLR.red : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 16,
+                      height: 16,
+                      borderRadius: 4,
+                      border: `1.5px solid ${isChecked ? CLR.red : '#94A3B8'}`,
+                      background: isChecked ? CLR.red : '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
                     }}>
-                      {isSelected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />}
+                      {isChecked && <Check size={11} color="#fff" strokeWidth={3} />}
                     </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: CLR.text }}>{p.name}</div>
-                      <div style={{ fontSize: 11, color: CLR.sub, marginTop: 2 }}>
-                        {fmtDate(p.startDate)} — {fmtDate(p.endDate)}
+                    <span style={{
+                      fontSize: 12,
+                      fontWeight: isChecked ? 700 : 500,
+                      color: isChecked ? CLR.red : CLR.text,
+                    }}>
+                      {opt}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}><Calendar size={13} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Periode Sidang *</label>
+        {periods.length === 0 ? (
+          <div style={{ padding: '16px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8, fontSize: 13, color: '#92400E', display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={16} /> Belum ada periode sidang yang tersedia. Buat periode terlebih dahulu di menu Atur Periode.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {periods
+              .filter(p => new Date(p.endDate) >= new Date())
+              .map(p => {
+                const now = new Date();
+                const start = new Date(p.startDate);
+                const end = new Date(p.endDate);
+                const status = now >= start && now <= end ? 'Aktif'
+                  : now < start ? 'Mendatang'
+                    : 'Selesai';
+                const statusColor = status === 'Aktif' ? CLR.green : status === 'Mendatang' ? '#1D4ED8' : CLR.sub;
+                const statusBg = status === 'Aktif' ? '#DCFCE7' : status === 'Mendatang' ? '#DBEAFE' : '#F1F5F9';
+                const isSelected = selectedPeriodId === p.id;
+                const fmtDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                return (
+                  <div
+                    key={p.id} onClick={() => onSelectPeriod(p.id)}
+                    style={{
+                      padding: '14px 16px', borderRadius: 10, cursor: 'pointer',
+                      border: `2px solid ${isSelected ? CLR.red : CLR.border}`,
+                      background: isSelected ? '#FEF2F2' : '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{
+                        width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                        border: `2px solid ${isSelected ? CLR.red : '#D1D5DB'}`,
+                        background: isSelected ? CLR.red : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {isSelected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: CLR.text }}>{p.name}</div>
+                        <div style={{ fontSize: 11, color: CLR.sub, marginTop: 2 }}>
+                          {fmtDate(p.startDate)} — {fmtDate(p.endDate)}
+                        </div>
                       </div>
                     </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 9999, background: statusBg, color: statusColor }}>
+                      {status}
+                    </span>
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 9999, background: statusBg, color: statusColor }}>
-                    {status}
-                  </span>
-                </div>
-              );
-            })}
-        </div>
-      )}
+                );
+              })}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 //  VerifikasiBerkasModal (Main) 
+
+const getInitialScheme = (reg) => {
+  const raw = reg?.skemaSidangFinal || reg?.skemaSidang || reg?.sidangScheme || 'Sidang Reguler';
+  if (String(raw).toLowerCase().includes('non')) {
+    return 'Non Sidang';
+  }
+  return 'Sidang Reguler';
+};
+
+const getInitialJalur = (reg) => {
+  if (Array.isArray(reg?.jalurNonSidangFinal) && reg.jalurNonSidangFinal.length > 0) {
+    return reg.jalurNonSidangFinal;
+  }
+  if (typeof reg?.jalurNonSidangFinal === 'string' && reg.jalurNonSidangFinal.trim()) {
+    return reg.jalurNonSidangFinal.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  if (Array.isArray(reg?.jalurNonSidang) && reg.jalurNonSidang.length > 0) {
+    return reg.jalurNonSidang;
+  }
+  return [];
+};
 
 const VerifikasiBerkasModal = ({
   registration,
@@ -394,6 +781,10 @@ const VerifikasiBerkasModal = ({
   const [berkasStatuses, setBerkasStatuses] = useState({});
   const [previewFile, setPreviewFile] = useState(null);
   const [loadingFileId, setLoadingFileId] = useState(null);
+  // Ref untuk menandai bahwa berkas pertama belum di-auto-preview untuk registration saat ini
+  const initialPreviewDoneRef = React.useRef(false);
+  const [schemeFinal, setSchemeFinal] = useState(() => getInitialScheme(registration));
+  const [jalurNonSidangFinal, setJalurNonSidangFinal] = useState(() => getInitialJalur(registration));
   const [selectedPeriodId, setSelectedPeriodId] = useState(null);
   const [dueDate, setDueDate] = useState('');
   const [message, setMessage] = useState('');
@@ -407,12 +798,30 @@ const VerifikasiBerkasModal = ({
   const [loadingUploads, setLoadingUploads] = useState(false);
   const [fileError, setFileError] = useState(null);
   const [templateMap, setTemplateMap] = useState({});
+  // localRegistration: salinan lokal yang diperbarui saat admin edit Step1
+  const [localRegistration, setLocalRegistration] = useState(registration);
 
-  const m = registration?.mahasiswa || registration?.student;
+  useEffect(() => {
+    setLocalRegistration(registration);
+  }, [registration]);
+
+  const handleStep1EditSaved = (updatedReg) => {
+    setLocalRegistration(updatedReg);
+  };
+
+  const m = localRegistration?.mahasiswa || localRegistration?.student;
   const prodiName = m?.studyProgram?.name ?? '-';
   const periods = Object.values(periodMap ?? {});
 
   // Fetch daftar template berkas wajib, test bahasa, dan non-sidang aktif dari backend
+  const [decision, setDecision] = useState(null); // null | 'approve' | 'reject'
+
+  // Inisialisasi otomatis sebagai SARAN awal (bukan pemaksaan), supaya tetap membantu admin:
+  useEffect(() => {
+    if (step === 3 && decision === null) {
+      setDecision(hasBermasalah ? 'reject' : 'approve');
+    }
+  }, [step]);
   useEffect(() => {
     let isMounted = true;
     setLoadingTemplates(true);
@@ -424,11 +833,11 @@ const VerifikasiBerkasModal = ({
       categoriesToFetch.push("Sidang - Berkas Tes Bahasa (Belum)");
     }
 
-    const isNonSidang =
-      String(registration?.skemaSidang || registration?.sidangScheme || "").toLowerCase().includes("non");
+    const { scheme: effectiveScheme, jalur: effectiveJalur } = getEffectiveSidangSchemeAndJalur(registration);
+    const isNonSidang = String(effectiveScheme || "").toLowerCase().includes("non");
 
-    if (isNonSidang && Array.isArray(registration?.jalurNonSidang)) {
-      registration.jalurNonSidang.forEach((jalur) => {
+    if (isNonSidang && Array.isArray(effectiveJalur)) {
+      effectiveJalur.forEach((jalur) => {
         if (jalur === "Publikasi Jurnal") categoriesToFetch.push("Sidang - Evidence Non Sidang Publikasi Jurnal");
         else if (jalur === "Proceeding International") categoriesToFetch.push("Sidang - Evidence Non Sidang Proceeding International");
         else if (jalur === "HKI") categoriesToFetch.push("Sidang - Evidence Non Sidang HKI");
@@ -455,7 +864,13 @@ const VerifikasiBerkasModal = ({
         if (isMounted) setLoadingTemplates(false);
       });
     return () => { isMounted = false; };
-  }, [registration?.lulusTesBahasa, registration?.jalurNonSidang]);
+  }, [
+    registration?.lulusTesBahasa,
+    registration?.skemaSidang,
+    registration?.skemaSidangFinal,
+    registration?.jalurNonSidang,
+    registration?.jalurNonSidangFinal,
+  ]);
 
   // Fetch raw uploads dari registrasi sidang mahasiswa
   useEffect(() => {
@@ -470,6 +885,7 @@ const VerifikasiBerkasModal = ({
   }, [registration?.id]);
 
   useEffect(() => {
+    if (loadingTemplates) return;
     if (activeTemplates.length === 0 && rawUploads.length === 0) return;
 
     if (activeTemplates.length > 0) {
@@ -537,22 +953,35 @@ const VerifikasiBerkasModal = ({
     if (registration.message) setMessage(registration.message);
     const pId = registration.sidangPeriodId ?? null;
     if (pId) setSelectedPeriodId(pId);
+    setSchemeFinal(getInitialScheme(registration));
+    setJalurNonSidangFinal(getInitialJalur(registration));
   }, [registration]);
 
+  // Reset previewFile ke berkas pertama setiap kali registration berubah (modal dibuka untuk mahasiswa baru)
   useEffect(() => {
-    if (uploads.length > 0 && !previewFile) {
+    setPreviewFile(null);
+    initialPreviewDoneRef.current = false;
+  }, [registration?.id]);
+
+  useEffect(() => {
+    if (loadingUploads || loadingTemplates) return;
+    if (uploads.length > 0 && !initialPreviewDoneRef.current) {
+      initialPreviewDoneRef.current = true;
       handlePreview(uploads[0]);
     }
-  }, [uploads]);
+  }, [uploads, loadingUploads, loadingTemplates]);
 
   //  Derived values 
   const hasBermasalah = Object.values(berkasStatuses).some(v => v === BERKAS_STATUS.BERMASALAH);
-  const allChecked = uploads.length > 0 && uploads.every(u =>
-    berkasStatuses[u.id] === BERKAS_STATUS.SESUAI || berkasStatuses[u.id] === BERKAS_STATUS.BERMASALAH
-  );
-  const uncheckedCount = uploads.filter(u =>
-    !berkasStatuses[u.id] || berkasStatuses[u.id] === BERKAS_STATUS.UNCHECKED
-  ).length;
+  const allChecked = uploads.length > 0 && uploads.every(u => {
+    // Berkas link paper bersifat opsional, jika belum diunggah mahasiswa tidak perlu memblokir admin
+    if (!u.isUploaded && isLinkPaperUpload(u)) return true;
+    return berkasStatuses[u.id] === BERKAS_STATUS.SESUAI || berkasStatuses[u.id] === BERKAS_STATUS.BERMASALAH;
+  });
+  const uncheckedCount = uploads.filter(u => {
+    if (!u.isUploaded && isLinkPaperUpload(u)) return false;
+    return !berkasStatuses[u.id] || berkasStatuses[u.id] === BERKAS_STATUS.UNCHECKED;
+  }).length;
 
   const handleToggle = (uploadId, status) => {
     setBerkasStatuses(prev => ({
@@ -561,19 +990,38 @@ const VerifikasiBerkasModal = ({
     }));
   };
 
+  const handleToggleJalurFinal = (opt) => {
+    setJalurNonSidangFinal(prev => {
+      const list = Array.isArray(prev) ? prev : [];
+      if (list.includes(opt)) {
+        return list.filter(item => item !== opt);
+      }
+      return [...list, opt];
+    });
+  };
+
   const handlePreview = useCallback(async (upload) => {
     setPreviewFile(prev => prev?.id === upload.id ? prev : upload);
     setFileError(null);
-    if (!upload.isUploaded || upload.blobUrl) return;
+    if (!upload.isUploaded || upload.blobUrl || upload.paperUrl) return;
 
     setLoadingFileId(upload.id);
     try {
       const blob = await downloadSidangRegistrationUpload(upload.id);
-      const isPdf = blob.type.includes('pdf') || (upload.filename || '').toLowerCase().endsWith('.pdf');
-      const blobUrl = URL.createObjectURL(blob);
-      const enriched = { ...upload, blobUrl, type: isPdf ? 'pdf' : 'image' };
-      setPreviewFile(enriched);
-      setUploads(prev => prev.map(u => u.id === upload.id ? enriched : u));
+      const isLink = isLinkPaperUpload(upload);
+      if (isLink) {
+        const text = await blob.text();
+        const paperUrl = (text || '').trim();
+        const enriched = { ...upload, paperUrl, isLinkPaper: true, type: 'link' };
+        setPreviewFile(enriched);
+        setUploads(prev => prev.map(u => u.id === upload.id ? enriched : u));
+      } else {
+        const isPdf = blob.type.includes('pdf') || (upload.filename || '').toLowerCase().endsWith('.pdf');
+        const blobUrl = URL.createObjectURL(blob);
+        const enriched = { ...upload, blobUrl, type: isPdf ? 'pdf' : 'image' };
+        setPreviewFile(enriched);
+        setUploads(prev => prev.map(u => u.id === upload.id ? enriched : u));
+      }
     } catch (err) {
       console.error('Preview error:', err);
       setFileError('File Tidak Ditemukan.');
@@ -605,9 +1053,20 @@ const VerifikasiBerkasModal = ({
   const handleSubmit = async () => {
     setSubmitError(null);
 
+    // Gunakan profile.id (admin entity UUID) sebagai adminId.
+    // Fallback ke academicStaffId jika adminId tidak tersedia.
     const currentAdminId = adminId || academicStaffId;
     if (!currentAdminId) {
-      setSubmitError('ID staf akademik tidak ditemukan. Silakan login ulang.');
+      setSubmitError('ID staf akademik tidak ditemukan. Silakan logout dan login ulang.');
+      return;
+    }
+
+    // Validasi format UUID sebelum mengirim ke BE agar error terjadi di FE dengan pesan yang jelas
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const LEGACY_INT_REGEX = /^\d+$/;
+    const idString = String(currentAdminId);
+    if (!UUID_REGEX.test(idString) && !LEGACY_INT_REGEX.test(idString)) {
+      setSubmitError('ID staf akademik tidak valid. Pastikan data profil sudah dimuat — silakan logout dan login ulang.');
       return;
     }
 
@@ -615,6 +1074,12 @@ const VerifikasiBerkasModal = ({
       if (!dueDate) { setSubmitError('Batas waktu perbaikan wajib diisi.'); return; }
       if (!message.trim()) { setSubmitError('Catatan perbaikan untuk mahasiswa wajib diisi.'); return; }
     } else {
+      if (!schemeFinal) { setSubmitError('Pilih skema sidang final terlebih dahulu.'); return; }
+      const isNonSidangFinal = String(schemeFinal || '').toLowerCase().includes('non');
+      if (isNonSidangFinal && (!jalurNonSidangFinal || jalurNonSidangFinal.length === 0)) {
+        setSubmitError('Pilih minimal satu jalur non-sidang final.');
+        return;
+      }
       if (!selectedPeriodId) { setSubmitError('Pilih periode sidang terlebih dahulu.'); return; }
     }
 
@@ -633,9 +1098,12 @@ const VerifikasiBerkasModal = ({
           sidangRegistrationUploadIds: validUploadIds,
         });
       } else {
+        const isNonSidangFinal = String(schemeFinal || '').toLowerCase().includes('non');
         await approveSidangRegistration(registration.id, {
           adminId: currentAdminId,
           sidangPeriodId: selectedPeriodId,
+          skemaSidangFinal: schemeFinal,
+          jalurNonSidangFinal: isNonSidangFinal ? jalurNonSidangFinal.join(', ') : '',
           sidangRegistrationUploadIds: validUploadIds,
         });
       }
@@ -696,7 +1164,7 @@ const VerifikasiBerkasModal = ({
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ padding: '0 24px 24px' }}>
-                <Step1 registration={registration} prodiName={prodiName} />
+                <Step1 registration={localRegistration} prodiName={prodiName} onEditSaved={handleStep1EditSaved} />
               </motion.div>
             )}
             {step === 2 && (
@@ -706,19 +1174,29 @@ const VerifikasiBerkasModal = ({
             )}
             {step === 3 && (
               <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ padding: '0 24px 24px' }}>
-                {hasBermasalah ? <Step3Revisi berkasStatuses={berkasStatuses} uploads={uploads} dueDate={dueDate} setDueDate={setDueDate} message={message} setMessage={setMessage} templateMap={templateMap} /> : <Step3Approve periods={periods} selectedPeriodId={selectedPeriodId} onSelectPeriod={setSelectedPeriodId} uploads={uploads} />}
+                {hasBermasalah ? (
+                  <Step3Revisi berkasStatuses={berkasStatuses} uploads={uploads} dueDate={dueDate} setDueDate={setDueDate} message={message} setMessage={setMessage} templateMap={templateMap} />
+                ) : (
+                  <Step3Approve
+                    periods={periods}
+                    selectedPeriodId={selectedPeriodId}
+                    onSelectPeriod={setSelectedPeriodId}
+                    uploads={uploads}
+                    schemeFinal={schemeFinal}
+                    onSelectScheme={setSchemeFinal}
+                    jalurNonSidangFinal={jalurNonSidangFinal}
+                    onToggleJalur={handleToggleJalurFinal}
+                  />
+                )}
                 {submitError && <div style={{ marginTop: 16, padding: '10px 14px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 13, color: '#DC2626', display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={15} />{submitError}</div>}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-        <div style={{ padding: '16px 24px', borderTop: `1px solid ${CLR.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: '#FAFAFA' }}>
-          <div>
-            {step > 1 && <button onClick={() => setStep(s => s - 1)} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: `1px solid ${CLR.border}`, background: '#fff', color: '#374151', cursor: 'pointer' }}><ChevronLeft size={16} /> Kembali</button>}
-          </div>
+        <div style={{ padding: '16px 24px', borderTop: `1px solid ${CLR.border}`, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0, background: '#FAFAFA' }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             {step === 2 && uncheckedCount > 0 && <span style={{ fontSize: 11, color: CLR.orange, fontWeight: 600 }}>{uncheckedCount} berkas belum diverifikasi</span>}
-            <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: `1px solid ${CLR.border}`, background: '#fff', color: '#374151', cursor: 'pointer' }}>Batal</button>
+            {step > 1 && <button onClick={() => setStep(s => s - 1)} disabled={isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: `1px solid ${CLR.border}`, background: '#fff', color: '#374151', cursor: 'pointer' }}><ChevronLeft size={16} /> Kembali</button>}
             {step < 3 ? (
               <button onClick={step === 1 ? () => setStep(2) : () => { if (allChecked) setStep(3); }} disabled={step === 2 && !allChecked} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700, background: step === 2 && !allChecked ? '#E2E8F0' : step === 2 && hasBermasalah ? CLR.orange : CLR.red, color: step === 2 && !allChecked ? '#94A3B8' : '#fff', border: 'none', cursor: step === 2 && !allChecked ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
                 {step === 1 ? <> Langkah Selanjutnya: Periksa Berkas <ChevronRight size={16} /></> : hasBermasalah ? <> Lanjut: Set Revisi <ChevronRight size={16} /></> : <> Lanjut: Pilih Periode <ChevronRight size={16} /></>}

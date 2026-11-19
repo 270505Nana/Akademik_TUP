@@ -19,6 +19,12 @@ const FILTER_TABS = [
   { key: STATUS_YUDISIUM.PENDAFTARAN_DITERIMA, label: 'Pendaftaran Diterima' },
 ];
 
+const UNVERIFIED_STATUSES = [
+  STATUS_YUDISIUM.DALAM_PROSES,
+  STATUS_YUDISIUM.PERLU_REVISI,
+  STATUS_YUDISIUM.REVISI_DIPERBARUI,
+];
+
 const STATUS_SORT_ORDER = {
   [STATUS_YUDISIUM.DALAM_PROSES]         : 1,
   [STATUS_YUDISIUM.REVISI_DIPERBARUI]    : 2,
@@ -139,6 +145,173 @@ const ProdiFilterDropdown = ({ options, selected, onToggle, onClear }) => {
   );
 };
 
+const PeriodeFilterDropdown = ({ options, selected, onSelect, onClear }) => {
+  const [open, setOpen] = useState(false);
+  const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
+  const btnWrapRef = useRef(null);
+  const panelRef   = useRef(null);
+
+  const computePosition = useCallback(() => {
+    if (!btnWrapRef.current) return;
+    const rect = btnWrapRef.current.getBoundingClientRect();
+    setPanelPos({
+      top: rect.bottom + 6,
+      right: Math.max(8, window.innerWidth - rect.right),
+    });
+  }, []);
+
+  const handleToggleOpen = () => {
+    if (!open) computePosition();
+    setOpen(o => !o);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const clickedButton = btnWrapRef.current?.contains(e.target);
+      const clickedPanel   = panelRef.current?.contains(e.target);
+      if (!clickedButton && !clickedPanel) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const reposition = () => computePosition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [open, computePosition]);
+
+  const isActive = Boolean(selected);
+  const selectedPeriodObj = options.find(p => p.id === selected);
+
+  return (
+    <div className="vs-prodi-filter" ref={btnWrapRef}>
+      <button
+        type="button"
+        className={`vs-tab ${isActive ? 'active' : ''}`}
+        onClick={handleToggleOpen}
+        title={isActive ? `Periode: ${selectedPeriodObj?.name || 'Kustom'}` : 'Filter Periode Pendaftaran Yudisium'}
+      >
+        Periode
+        {isActive && (
+          <span
+            className="vs-tab-count"
+            style={{
+              maxWidth: 120,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'inline-block',
+              verticalAlign: 'bottom',
+            }}
+          >
+            ({selectedPeriodObj?.name || '1'})
+          </span>
+        )}
+        <ChevronDown size={12} style={{ marginLeft: 2 }} />
+      </button>
+
+      {open && createPortal(
+        <div
+          className="vs-prodi-panel"
+          ref={panelRef}
+          style={{ position: 'fixed', top: panelPos.top, right: panelPos.right, width: 290 }}
+        >
+          {options.length === 0 ? (
+            <div className="vs-prodi-empty">Belum ada data periode pendaftaran yudisium.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <label
+                className="vs-prodi-option"
+                style={{
+                  fontWeight: !selected ? 700 : 400,
+                  backgroundColor: !selected ? '#FEF2F2' : 'transparent',
+                  color: !selected ? '#C0182A' : '#374151',
+                  borderRadius: 6,
+                  padding: '6px 8px',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="yudisium-periode-radio"
+                  checked={!selected}
+                  onChange={() => {
+                    onClear();
+                    setOpen(false);
+                  }}
+                />
+                <span>Default (Periode Aktif/Terbaru)</span>
+              </label>
+
+              {options.map((p) => {
+                const isSelected = selected === p.id;
+                const periodLabel = p.name?.includes(p.period) ? p.name : `${p.name} ${p.period || ''}`.trim();
+                return (
+                  <label
+                    key={p.id}
+                    className="vs-prodi-option"
+                    style={{
+                      fontWeight: isSelected ? 700 : 400,
+                      backgroundColor: isSelected ? '#FEF2F2' : 'transparent',
+                      color: isSelected ? '#C0182A' : '#374151',
+                      borderRadius: 6,
+                      padding: '6px 8px',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="yudisium-periode-radio"
+                      checked={isSelected}
+                      onChange={() => {
+                        onSelect(p.id);
+                        setOpen(false);
+                      }}
+                    />
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      {periodLabel}
+                      {p.isOpen && (
+                        <span
+                          style={{
+                            fontSize: 9,
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            background: '#DCFCE7',
+                            color: '#166534',
+                            fontWeight: 700,
+                          }}
+                        >
+                          Aktif
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          {isActive && (
+            <div
+              className="vs-prodi-clear"
+              onClick={() => {
+                onClear();
+                setOpen(false);
+              }}
+            >
+              Reset ke default
+            </div>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+};
+
 const SortableHeader = ({ label, field, sort, onSort, style }) => {
   const isActive = sort.field === field;
   return (
@@ -155,18 +328,20 @@ const RegistrasiYudisium = () => {
   const { user, profile, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [registrations, setRegistrations] = useState([]);
-  const [periodMap,     setPeriodMap]     = useState({});
-  const [prodiMap,      setProdiMap]      = useState({});
+  const [registrations,     setRegistrations]     = useState([]);
+  const [periodMap,         setPeriodMap]         = useState({});
+  const [periodList,        setPeriodList]        = useState([]);
+  const [prodiMap,          setProdiMap]          = useState({});
 
-  const [loading,         setLoading]         = useState(true);
-  const [search,          setSearch]          = useState('');
-  const [searchDebounced, setSearchDebounced] = useState('');
-  const [filterStatus,    setFilterStatus]    = useState('');
-  const [selectedProdis,  setSelectedProdis]  = useState([]);
-  const [sort, setSort] = useState({ field: null, dir: 'asc' });
-  const [currentPage,     setCurrentPage]     = useState(1);
-  const [alert,           setAlert]           = useState({ show: false, type: '', title: '', message: '' });
+  const [loading,           setLoading]           = useState(true);
+  const [search,            setSearch]            = useState('');
+  const [searchDebounced,   setSearchDebounced]   = useState('');
+  const [filterStatus,      setFilterStatus]      = useState('');
+  const [selectedProdis,    setSelectedProdis]    = useState([]);
+  const [selectedPeriodId,  setSelectedPeriodId]  = useState('');
+  const [sort,              setSort]              = useState({ field: null, dir: 'asc' });
+  const [currentPage,       setCurrentPage]       = useState(1);
+  const [alert,             setAlert]             = useState({ show: false, type: '', title: '', message: '' });
 
   const [selectedReg, setSelectedReg] = useState(null);
 
@@ -177,19 +352,23 @@ const RegistrasiYudisium = () => {
 
   const handleModalSaved = useCallback(() => {
     setSelectedReg(null);
-    fetchAll();
+    fetchAll(selectedPeriodId);
     showAlert('success', 'Berhasil', 'Verifikasi berkas berhasil disimpan.');
-  }, [showAlert]);
+  }, [selectedPeriodId, showAlert]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search.trim().toLowerCase()), 300);
     return () => clearTimeout(t);
   }, [search]);
 
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (periodId = selectedPeriodId) => {
     setLoading(true);
     try {
-      const list    = await getAllYudisiumRegistrations();
+      const params = {};
+      if (periodId) {
+        params.yudisiumRegistrationPeriodId = periodId;
+      }
+      const list    = await getAllYudisiumRegistrations(params);
       const allList = list ?? [];
 
       const visible = allList.filter((r) => {
@@ -199,16 +378,30 @@ const RegistrasiYudisium = () => {
 
       const allPeriods = await getYudisiumPeriods().catch(() => []);
       const prdMap = {};
+      const regPeriods = [];
       (allPeriods ?? []).forEach(item => {
         if (!item) return;
         if (item.pendaftaran || item.pelaksanaan) {
-          if (item.pendaftaran?.id) prdMap[item.pendaftaran.id] = item.pendaftaran;
-          if (item.pelaksanaan?.id) prdMap[item.pelaksanaan.id] = item.pelaksanaan;
+          if (item.pendaftaran?.id) {
+            prdMap[item.pendaftaran.id] = item.pendaftaran;
+            if (!regPeriods.some(p => p.id === item.pendaftaran.id)) {
+              regPeriods.push(item.pendaftaran);
+            }
+          }
+          if (item.pelaksanaan?.id) {
+            prdMap[item.pelaksanaan.id] = item.pelaksanaan;
+          }
         } else if (item.id) {
           prdMap[item.id] = item;
+          if (!item.category || item.category.toLowerCase().includes('pendaftaran')) {
+            if (!regPeriods.some(p => p.id === item.id)) {
+              regPeriods.push(item);
+            }
+          }
         }
       });
       setPeriodMap(prdMap);
+      setPeriodList(regPeriods);
       
       const prMap = {};
       visible.forEach(r => {
@@ -225,10 +418,10 @@ const RegistrasiYudisium = () => {
     } finally {
       setLoading(false);
     }
-  }, [logout, showAlert]);
+  }, [selectedPeriodId, logout, showAlert]);
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') fetchAll();
+    if (user?.role === 'ADMIN') fetchAll('');
   }, [user]);
 
   const getStatus = useCallback((reg) => {
@@ -248,6 +441,18 @@ const RegistrasiYudisium = () => {
   }, []);
 
   const clearProdiFilter = useCallback(() => setSelectedProdis([]), []);
+
+  const handlePeriodChange = useCallback((periodId) => {
+    setSelectedPeriodId(periodId);
+    setCurrentPage(1);
+    fetchAll(periodId);
+  }, [fetchAll]);
+
+  const handlePeriodClear = useCallback(() => {
+    setSelectedPeriodId('');
+    setCurrentPage(1);
+    fetchAll('');
+  }, [fetchAll]);
 
   const getSubmitDate = useCallback((reg) =>
     reg.submittedAt ?? reg.yudisiumRegistrationUploads?.[0]?.createdAt ?? reg.createdAt ?? null,
@@ -271,8 +476,12 @@ const RegistrasiYudisium = () => {
         return name.includes(searchDebounced) || nim.includes(searchDebounced);
       })
       .filter(r => {
-        if (!filterStatus) return true;
-        return getStatus(r) === filterStatus;
+        const s = getStatus(r);
+        if (!filterStatus) {
+          // Tab "Semua" aktif (default): tampilkan HANYA data berstatus BELUM diverifikasi
+          return UNVERIFIED_STATUSES.includes(s);
+        }
+        return s === filterStatus;
       })
       .filter(r => {
         if (selectedProdis.length === 0) return true;
@@ -301,7 +510,7 @@ const RegistrasiYudisium = () => {
   const totalPages = Math.max(1, Math.ceil(filteredList.length / PAGE_SIZE));
   const paginated  = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus, selectedProdis]);
+  useEffect(() => setCurrentPage(1), [searchDebounced, filterStatus, selectedProdis, selectedPeriodId]);
 
   const countAll    = registrations.length;
   const countStatus = (s) => registrations.filter(r => getStatus(r) === s).length;
@@ -342,7 +551,7 @@ const RegistrasiYudisium = () => {
                     onChange={e => setSearch(e.target.value)}
                   />
                 </div>
-                <button className="vs-btn-refresh" onClick={fetchAll} title="Refresh data">
+                <button className="vs-btn-refresh" onClick={() => fetchAll(selectedPeriodId)} title="Refresh data">
                   <RefreshCw size={14} /> Refresh
                 </button>
               </div>
@@ -362,6 +571,12 @@ const RegistrasiYudisium = () => {
                   );
                 })}
                 <ProdiFilterDropdown options={PRODI_LIST} selected={selectedProdis} onToggle={toggleProdiFilter} onClear={clearProdiFilter} />
+                <PeriodeFilterDropdown
+                  options={periodList}
+                  selected={selectedPeriodId}
+                  onSelect={handlePeriodChange}
+                  onClear={handlePeriodClear}
+                />
               </div>
 
               <div className="vs-table-divider" />
@@ -398,7 +613,11 @@ const RegistrasiYudisium = () => {
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                             <GraduationCap size={36} color="#D1D5DB" />
                             <span style={{ fontSize: 13, color: '#9CA3AF' }}>
-                              {search ? 'Tidak ada hasil pencarian.' : 'Belum ada data registrasi yudisium.'}
+                              {search
+                                ? 'Tidak ada hasil pencarian.'
+                                : (!filterStatus && registrations.length > 0
+                                    ? 'Semua pendaftaran pada periode ini telah diverifikasi.'
+                                    : 'Belum ada data registrasi yudisium.')}
                             </span>
                           </div>
                         </td>
