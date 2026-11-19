@@ -9,10 +9,7 @@ export const getBeritaAcaraList = asyncHandler(async (req, res) => {
     query: req.query,
   });
 
-  res.status(200).json({
-    message: "Daftar berita acara sidang berhasil diambil",
-    ...result,
-  });
+  res.status(200).json(result);
 });
 
 // GET /api/berita-acara/:id (Admin)
@@ -27,8 +24,7 @@ export const getBeritaAcaraById = asyncHandler(async (req, res) => {
   const data = await beritaAcaraService.getBeritaAcaraById({ id });
 
   res.status(200).json({
-    message: "Data berita acara sidang berhasil diambil",
-    data,
+    data: data || null,
   });
 });
 
@@ -38,16 +34,8 @@ export const getLatestBeritaAcaraMahasiswa = asyncHandler(async (req, res) => {
     user: req.user,
   });
 
-  if (!data) {
-    return res.status(200).json({
-      message: "Berita acara sidang belum diterbitkan atau belum tersedia",
-      data: null,
-    });
-  }
-
   res.status(200).json({
-    message: "Data berita acara sidang mahasiswa berhasil diambil",
-    data,
+    data: data || null,
   });
 });
 

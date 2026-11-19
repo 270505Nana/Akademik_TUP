@@ -55,7 +55,6 @@ paths:
           content:
             application/json:
               example:
-                message: Daftar berita acara sidang berhasil diambil
                 data:
                   - id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                     nilaiAkhir: "85.5"
@@ -97,9 +96,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
-                    example: Daftar berita acara sidang berhasil diambil
                   data:
                     type: array
                     items:
@@ -150,7 +146,6 @@ paths:
                 terbit:
                   summary: Berita acara sudah terbit
                   value:
-                    message: Data berita acara sidang mahasiswa berhasil diambil
                     data:
                       id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                       nilaiAkhir: "85.5"
@@ -190,14 +185,10 @@ paths:
                 belumTerbit:
                   summary: Berita acara belum diterbitkan
                   value:
-                    message: Berita acara sidang belum diterbitkan atau belum tersedia
                     data: null
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
-                    example: Data berita acara sidang mahasiswa berhasil diambil
                   data:
                     $ref: "#/components/schemas/BeritaAcaraDetailItem"
                     nullable: true
@@ -228,7 +219,6 @@ paths:
           content:
             application/json:
               example:
-                message: Data berita acara sidang berhasil diambil
                 data:
                   id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                   nilaiAkhir: "85.5"
@@ -268,9 +258,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
-                    example: Data berita acara sidang berhasil diambil
                   data:
                     $ref: "#/components/schemas/BeritaAcaraDetailItem"
         "401":

@@ -112,7 +112,7 @@ describe("Berita Acara Endpoints", () => {
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Daftar berita acara sidang berhasil diambil");
+      expect(res.body.message).toBeUndefined();
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].id).toBe("ba-1-id");
       expect(res.body.data[0].nilaiHuruf).toBe("A");
@@ -139,7 +139,7 @@ describe("Berita Acara Endpoints", () => {
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Data berita acara sidang berhasil diambil");
+      expect(res.body.message).toBeUndefined();
       expect(res.body.data.id).toBe("ba-1-id");
       expect(res.body.data.nilaiAkhir).toBe("85.5");
       expect(res.body.data.sidang).toEqual({
@@ -179,7 +179,7 @@ describe("Berita Acara Endpoints", () => {
         .set("Authorization", `Bearer ${mhsToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Data berita acara sidang mahasiswa berhasil diambil");
+      expect(res.body.message).toBeUndefined();
       expect(res.body.data.id).toBe("ba-1-id");
       expect(res.body.data.isPublished).toBe(true);
       expect(res.body.data.sidang).toEqual({
@@ -208,7 +208,7 @@ describe("Berita Acara Endpoints", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data).toBeNull();
-      expect(res.body.message).toBe("Berita acara sidang belum diterbitkan atau belum tersedia");
+      expect(res.body.message).toBeUndefined();
     });
   });
 
