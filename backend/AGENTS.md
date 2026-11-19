@@ -22,7 +22,7 @@
 - Every query parameter supported in the controller must be documented in Swagger.
 - Document only the canonical parameter name and its valid schema/enum values.
 
-## Aturan Baru
+## Aturan Baru November 2026
 
 - Kalau bisa tidak perlu membuat mapper, jika sumber data hanya dari 1 model maka response bisa langsung dibentuk di controller atau service.
 - Gunakan Zod sebagai input validator.
@@ -30,3 +30,4 @@
 - Dokumentasi swagger sekarang ada di `src/docs/`.
 - Hindari kode yang redundant.
 - Pastikan contoh response yang ada di dokumentasi swagger sama dengan response yang dikembalikan.
+- Gunakan `prisma db push` untuk sinkronisasi schema ke database. **Hati-hati**: selalu review perubahan sebelum konfirmasi jika ada peringatan truncate/drop table.

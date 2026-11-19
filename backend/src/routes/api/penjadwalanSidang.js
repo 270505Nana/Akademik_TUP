@@ -60,10 +60,24 @@ const router = express.Router();
  *           default: newest
  *         description: Sort option (newest atau oldest berdasarkan createdAt)
  *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - "Pendaftaran Diterima"
+ *             - "Siap Sidang"
+ *             - "Penguji Ready"
+ *             - "Penjadwalan Ready"
+ *         description: Filter status pendaftaran / penjadwalan sidang (Penguji Ready & Penjadwalan Ready dihitung on the fly)
+ *       - in: query
  *         name: statusPenjadwalan
  *         schema:
  *           type: string
- *         description: Filter berdasarkan status penjadwalan (Penguji Ready, Penjadwalan Ready, Siap Sidang)
+ *           enum:
+ *             - "Penguji Ready"
+ *             - "Penjadwalan Ready"
+ *             - "Siap Sidang"
+ *         description: Alias filter penjadwalan sidang untuk backward compatibility
  *       - $ref: '#/components/parameters/pageQueryParam'
  *       - $ref: '#/components/parameters/limitQueryParam'
  *     responses:
@@ -125,10 +139,14 @@ const router = express.Router();
  *                       isInfoPenjadwalanReaded:
  *                         type: boolean
  *                         description: Status baca info penjadwalan oleh mahasiswa
+ *                       status:
+ *                         type: string
+ *                         description: Status utama pendaftaran sidang (Dalam Proses, Perlu Revisi, Revisi Diajukan, Pendaftaran Diterima, Siap Sidang)
+ *                         example: Siap Sidang
  *                       statusPenjadwalan:
  *                         type: string
  *                         nullable: true
- *                         description: Status kelengkapan penjadwalan
+ *                         description: Status kelengkapan penjadwalan (dihitung on the fly)
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:

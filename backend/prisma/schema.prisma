@@ -361,7 +361,6 @@ model SidangRegistration {
   isLocked                     Boolean                       @default(false) @map("is_locked") // untuk lock dosen supaya tidak bisa ubah data, tapi admin masih bisa
   isInfoPenjadwalanReaded      Boolean                       @default(false) @map("is_info_penjadwalan_readed")
   notaDinasUrl                 String?                       @map("nota_dinas_url")
-  statusPenjadwalan            String?                       @map("status_penjadwalan")
   // Tolak Permohonan
   message                      String?
   isEdit                       DateTime?                     @map("is_edit")
@@ -665,7 +664,7 @@ model RevisiTugasAkhir {
   deletedAt             DateTime?          @map("deleted_at")
   sidangRegistration    SidangRegistration @relation(fields: [sidangRegistrationId], references: [id], onDelete: Cascade)
   sidangRegistrationId  String             @map("sidang_registration_id")
-  status                String
+  status                String             @default("IN_PROGRESS")
   // Setujui Untuk Revisi
   deadlineRevisi        DateTime?          @map("deadline_revisi")
   tglSetujuiUntukRevisi DateTime?          @map("tgl_setujui_untuk_revisi")
@@ -706,7 +705,7 @@ model BeritaAcaraSidangTugasAkhir {
    * ]
    */
   nilaiAkhir            String             @map("nilai_akhir")
-  keteranganLulus       String             @map("keterangan_lulus") // Lulus / Lulus Bersyarat / Tidak Lulus
+  keteranganLulus       String             @default("Lulus") @map("keterangan_lulus") // Lulus / Lulus Bersyarat / Tidak Lulus
   nilaiHuruf            String             @map("nilai_huruf") // Contoh: A / AB / B / BC / C / D / E
   justifikasi           String? // diisi jika nilaiAkhir berbeda dari hasil perhitungan
   isPublish             DateTime?          @map("is_publish") // kenapa datetime? supaya bisa 2 in 1
