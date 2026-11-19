@@ -63,7 +63,6 @@ paths:
           content:
             application/json:
               example:
-                message: Daftar revisi sidang berhasil diambil
                 data:
                   - id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                     status: IN_PROGRESS
@@ -98,9 +97,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
-                    example: Daftar revisi sidang berhasil diambil
                   data:
                     type: array
                     items:
@@ -128,7 +124,6 @@ paths:
           content:
             application/json:
               example:
-                message: Data revisi sidang mahasiswa berhasil diambil
                 data:
                   id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                   status: SUBMITTED
@@ -167,9 +162,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
-                    example: Data revisi sidang mahasiswa berhasil diambil
                   data:
                     $ref: "#/components/schemas/RevisiSidangDetail"
         "401":
@@ -208,7 +200,6 @@ paths:
           content:
             application/json:
               example:
-                message: Data revisi sidang berhasil diambil
                 data:
                   id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
                   status: SUBMITTED
@@ -247,9 +238,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
-                    example: Data revisi sidang berhasil diambil
                   data:
                     $ref: "#/components/schemas/RevisiSidangDetail"
         "401":

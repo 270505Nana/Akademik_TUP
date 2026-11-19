@@ -8,10 +8,7 @@ export const getRevisiSidangList = asyncHandler(async (req, res) => {
     query: req.query,
   });
 
-  res.status(200).json({
-    message: "Daftar revisi sidang berhasil diambil",
-    ...result,
-  });
+  res.status(200).json(result);
 });
 
 // GET /api/revisi-sidang/me (Mahasiswa)
@@ -21,8 +18,7 @@ export const getLatestRevisiSidangMahasiswa = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({
-    message: "Data revisi sidang mahasiswa berhasil diambil",
-    data,
+    data: data || null,
   });
 });
 
@@ -41,8 +37,7 @@ export const getRevisiSidangById = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({
-    message: "Data revisi sidang berhasil diambil",
-    data,
+    data: data || null,
   });
 });
 

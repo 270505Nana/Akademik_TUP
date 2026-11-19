@@ -143,7 +143,7 @@ describe("Revisi Sidang Endpoints", () => {
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Daftar revisi sidang berhasil diambil");
+      expect(res.body.message).toBeUndefined();
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].id).toBe("revisi-1");
       expect(res.body.data[0].hasBerkas).toBe(false);
@@ -198,6 +198,7 @@ describe("Revisi Sidang Endpoints", () => {
         .set("Authorization", `Bearer ${mhsToken}`);
 
       expect(res.status).toBe(200);
+      expect(res.body.message).toBeUndefined();
       expect(res.body.data).toBeDefined();
       expect(res.body.data.id).toBe("revisi-1");
       expect(res.body.data.isSubmitted).toBe(false);
@@ -236,6 +237,7 @@ describe("Revisi Sidang Endpoints", () => {
         .set("Authorization", `Bearer ${mhsToken}`);
 
       expect(res.status).toBe(200);
+      expect(res.body.message).toBeUndefined();
       expect(res.body.data).toBeNull();
     });
   });
@@ -249,7 +251,7 @@ describe("Revisi Sidang Endpoints", () => {
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Data revisi sidang berhasil diambil");
+      expect(res.body.message).toBeUndefined();
       expect(res.body.data.id).toBe("revisi-1");
       expect(res.body.data.mahasiswa).toBeDefined();
       expect(res.body.data.catatanRevisi).toBeDefined();
@@ -268,7 +270,7 @@ describe("Revisi Sidang Endpoints", () => {
         .set("Authorization", `Bearer ${dosenP1Token}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Data revisi sidang berhasil diambil");
+      expect(res.body.message).toBeUndefined();
       expect(res.body.data.id).toBe("revisi-1");
       expect(res.body.data.status).toBe("SUBMITTED");
       expect(updateSpy).not.toHaveBeenCalled();
