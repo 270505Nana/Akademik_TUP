@@ -76,7 +76,7 @@ const router = express.Router();
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -171,7 +171,7 @@ router.get("/dashboard", verifyToken, getMahasiswaDashboard);
  *       400:
  *         description: User is not a mahasiswa
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -205,7 +205,7 @@ router.put(
  *       200:
  *         description: Mahasiswa data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:

@@ -11,9 +11,16 @@ import {
   generateJadwalBandungWorkbook,
 } from "../utils/penjadwalanSidangHelper.js";
 
-const hitungStatusPenjadwalan = (penguji1, penguji2, tglSidang, ruangan) => {
-  const adaPenguji = penguji1 && penguji2;
-  const adaJadwal = tglSidang && ruangan;
+export const resolveStatusSidang = (penguji1, penguji2, tglSidang, ruangan) => {
+  const adaPenguji = Boolean(penguji1 && penguji2);
+  const adaJadwal = Boolean(tglSidang && ruangan);
+
+  return adaPenguji && adaJadwal ? "Siap Sidang" : "Pendaftaran Diterima";
+};
+
+export const hitungStatusPenjadwalan = (penguji1, penguji2, tglSidang, ruangan) => {
+  const adaPenguji = Boolean(penguji1 && penguji2);
+  const adaJadwal = Boolean(tglSidang && ruangan);
 
   if (adaPenguji && adaJadwal) return "Siap Sidang";
   if (adaPenguji && !adaJadwal) return "Penguji Ready";
@@ -65,6 +72,7 @@ export const getPenjadwalanSidangList = async ({
   sortBy,
   skip,
   take,
+  status,
   statusPenjadwalan,
 }) => {
   let targetPeriodId = sidangPeriodId;
@@ -100,8 +108,39 @@ export const getPenjadwalanSidangList = async ({
     where.sidangPeriodId = targetPeriodId;
   }
 
-  if (statusPenjadwalan && statusPenjadwalan.trim() !== "") {
-    where.statusPenjadwalan = statusPenjadwalan;
+  const filterStatus = (status || statusPenjadwalan || "").trim();
+  if (filterStatus) {
+    if (filterStatus === "Siap Sidang") {
+      where.status = "Siap Sidang";
+    } else if (filterStatus === "Penguji Ready") {
+      where.dosenPenguji1Id = { not: null };
+      where.dosenPenguji2Id = { not: null };
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { tglSidang: null },
+            { ruanganSidangId: null },
+          ],
+        },
+      ];
+    } else if (filterStatus === "Penjadwalan Ready") {
+      where.tglSidang = { not: null };
+      where.ruanganSidangId = { not: null };
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { dosenPenguji1Id: null },
+            { dosenPenguji2Id: null },
+          ],
+        },
+      ];
+    } else if (filterStatus === "Pendaftaran Diterima") {
+      where.status = "Pendaftaran Diterima";
+    } else {
+      where.status = filterStatus;
+    }
   }
 
   if (user?.role === "DOSEN") {
@@ -244,7 +283,7 @@ export const setPengujiSidang = async ({
     }
   }
 
-  const statusBaru = hitungStatusPenjadwalan(
+  const statusBaru = resolveStatusSidang(
     dosenPenguji1Id,
     dosenPenguji2Id,
     registration.tglSidang, 
@@ -256,7 +295,7 @@ export const setPengujiSidang = async ({
     data: {
       dosenPenguji1Id,
       dosenPenguji2Id,
-      statusPenjadwalan: statusBaru,
+      status: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -396,8 +435,9 @@ export const batchSetPengujiSidang = async (items) => {
   return prisma.$transaction(async (tx) => {
     const results = [];
     for (const item of items) {
+      const reg = registrationMap.get(item.id);
 
-      const statusBaru = hitungStatusPenjadwalan(
+      const statusBaru = resolveStatusSidang(
         item.dosenPenguji1Id,
         item.dosenPenguji2Id,
         reg.tglSidang, 
@@ -409,7 +449,7 @@ export const batchSetPengujiSidang = async (items) => {
         data: {
           dosenPenguji1Id: item.dosenPenguji1Id,
           dosenPenguji2Id: item.dosenPenguji2Id,
-          statusPenjadwalan: statusBaru,
+          status: statusBaru,
           isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
@@ -470,7 +510,7 @@ export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
     throw error;
   }
 
-  const statusBaru = hitungStatusPenjadwalan(
+  const statusBaru = resolveStatusSidang(
     registration.dosenPenguji1Id, 
     registration.dosenPenguji2Id, 
     new Date(tglSidang), 
@@ -482,7 +522,7 @@ export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
     data: {
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
-      statusPenjadwalan: statusBaru,
+      status: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -588,7 +628,7 @@ export const batchSetJadwalSidang = async (items) => {
     for (const item of items) {
       const reg = registrationMap.get(item.id);
       
-      const statusBaru = hitungStatusPenjadwalan(
+      const statusBaru = resolveStatusSidang(
         reg.dosenPenguji1Id, 
         reg.dosenPenguji2Id, 
         new Date(item.tglSidang),
@@ -600,7 +640,7 @@ export const batchSetJadwalSidang = async (items) => {
         data: {
           tglSidang: new Date(item.tglSidang),
           ruanganSidangId: item.ruanganSidangId,
-          statusPenjadwalan: statusBaru,
+          status: statusBaru,
           isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
@@ -832,12 +872,12 @@ export const setPengujiJadwalSidang = async ({
     throw error;
   }
 
-  const statusBaru = hitungStatusPenjadwalan(
+  const statusBaru = resolveStatusSidang(
     dosenPenguji1Id,
     dosenPenguji2Id,
     new Date(tglSidang),
     ruanganSidangId
-  )
+  );
 
   return prisma.sidangRegistration.update({
     where: { id },
@@ -846,7 +886,7 @@ export const setPengujiJadwalSidang = async ({
       dosenPenguji2Id,
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
-      statusPenjadwalan: statusBaru,
+      status: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,

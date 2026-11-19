@@ -77,10 +77,12 @@ const swaggerOptions = {
       },
     },
   },
-  // Parse Swagger JSDoc from all route files
+  // Parse Swagger JSDoc from all route files and docs files
   apis: [
     path.join(__dirname, '../routes/*.js').replace(/\\/g, '/'),
     path.join(__dirname, '../routes/**/*.js').replace(/\\/g, '/'),
+    path.join(__dirname, '../docs/*.yaml').replace(/\\/g, '/'),
+    path.join(__dirname, '../docs/**/*.yaml').replace(/\\/g, '/'),
   ],
 };
 

@@ -63,11 +63,16 @@ const router = express.Router();
  *       200:
  *         description: CLO data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token or access denied
  */
-router.get("/", verifyToken, validate(listCloQuerySchema, "query"), getCloProdis);
+router.get(
+  "/",
+  verifyToken,
+  validate(listCloQuerySchema, "query"),
+  getCloProdis,
+);
 
 /**
  * @swagger
@@ -104,7 +109,7 @@ router.get("/", verifyToken, validate(listCloQuerySchema, "query"), getCloProdis
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
  *       404:
@@ -115,7 +120,7 @@ router.post(
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(createCloSchema),
-  createCloProdi
+  createCloProdi,
 );
 
 /**
@@ -137,7 +142,7 @@ router.post(
  *       200:
  *         description: CLO data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  *       404:
@@ -178,7 +183,7 @@ router.get("/:id", verifyToken, getCloProdiById);
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  *       404:
@@ -191,7 +196,7 @@ router.put(
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(updateCloSchema),
-  updateCloProdi
+  updateCloProdi,
 );
 
 /**
@@ -214,7 +219,7 @@ router.put(
  *       202:
  *         description: Delete approval request submitted successfully (Ketua Prodi)
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  *       404:
@@ -226,7 +231,7 @@ router.delete(
   "/:id",
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
-  deleteCloProdi
+  deleteCloProdi,
 );
 
 export default router;

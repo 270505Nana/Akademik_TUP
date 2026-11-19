@@ -21,7 +21,9 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
   // ===============================================================
   describe("Helper Masking Data Mahasiswa", () => {
     it("maskMahasiswaName: menyensor setiap kata kecuali huruf pertama", () => {
-      expect(maskMahasiswaName("Nizar Daffa Maulana")).toBe("N**** D**** M******");
+      expect(maskMahasiswaName("Nizar Daffa Maulana")).toBe(
+        "N**** D**** M******",
+      );
       expect(maskMahasiswaName("Putri")).toBe("P****");
       expect(maskMahasiswaName("A B C")).toBe("A B C");
       expect(maskMahasiswaName("")).toBe("");
@@ -48,13 +50,13 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
 
     it("melempar error 400 jika judul kosong atau hanya whitespace", async () => {
       await expect(cekKelompokCapstone({ judul: "" })).rejects.toThrowError(
-        "Parameter judul wajib diisi"
+        "Parameter judul wajib diisi",
       );
       await expect(cekKelompokCapstone({ judul: "   " })).rejects.toThrowError(
-        "Parameter judul wajib diisi"
+        "Parameter judul wajib diisi",
       );
       await expect(cekKelompokCapstone({})).rejects.toThrowError(
-        "Parameter judul wajib diisi"
+        "Parameter judul wajib diisi",
       );
     });
 
@@ -89,10 +91,16 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         },
       ];
 
-      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(activePeriod);
-      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue(mockRegistrations);
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(
+        activePeriod,
+      );
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue(mockRegistrations);
 
-      const result = await cekKelompokCapstone({ judul: "  Rancang Bangun IoT  " });
+      const result = await cekKelompokCapstone({
+        judul: "  Rancang Bangun IoT  ",
+      });
 
       expect(findManySpy).toHaveBeenCalledTimes(1);
       expect(findManySpy).toHaveBeenCalledWith(
@@ -104,7 +112,7 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
               mode: "insensitive",
             },
           }),
-        })
+        }),
       );
 
       expect(result).toEqual([
@@ -136,7 +144,9 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         },
       ];
 
-      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(activePeriod);
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(
+        activePeriod,
+      );
       const findManySpy = vi
         .spyOn(prisma.sidangRegistration, "findMany")
         .mockResolvedValueOnce([]) // Hasil pencarian judul Indonesia kosong
@@ -164,17 +174,21 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
 
     it("menolak request tanpa token autentikasi (401)", async () => {
       const res = await request(app).get(
-        "/api/sidang-registrations/cek-kelompok-capstone?judul=Sistem%20IoT"
+        "/api/sidang-registrations/cek-kelompok-capstone?judul=Sistem%20IoT",
       );
       expect(res.status).toBe(401);
-      expect(res.body.message).toBe("Token not found");
+      expect(res.body.message).toBe("Unauthorized");
     });
 
     it("menolak request jika query parameter judul tidak disertakan (400 Validation Error)", async () => {
       const token = jwt.sign(
-        { id: "user-uuid", role: "MAHASISWA", email: "user@telkomuniversity.ac.id" },
+        {
+          id: "user-uuid",
+          role: "MAHASISWA",
+          email: "user@telkomuniversity.ac.id",
+        },
         JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       const res = await request(app)
@@ -189,15 +203,19 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
             field: "judul",
             message: "Parameter judul wajib diisi",
           }),
-        ])
+        ]),
       );
     });
 
     it("dapat diakses oleh role MAHASISWA dan mengembalikan data berhasil (200 OK)", async () => {
       const token = jwt.sign(
-        { id: "mhs-uuid", role: "MAHASISWA", email: "mhs@student.telkomuniversity.ac.id" },
+        {
+          id: "mhs-uuid",
+          role: "MAHASISWA",
+          email: "mhs@student.telkomuniversity.ac.id",
+        },
         JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue({
@@ -216,7 +234,9 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
       ]);
 
       const res = await request(app)
-        .get("/api/sidang-registrations/cek-kelompok-capstone?judul=Rancang%20Bangun%20IoT")
+        .get(
+          "/api/sidang-registrations/cek-kelompok-capstone?judul=Rancang%20Bangun%20IoT",
+        )
         .set("Authorization", `Bearer ${token}`);
 
       expect(res.status).toBe(200);
@@ -245,15 +265,19 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         name: "Periode Sidang Semester Ganjil",
       };
 
-      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(activePeriodMock);
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(
+        activePeriodMock,
+      );
       vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
-      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([
-        {
-          id: "reg-1",
-          sidangRegistrationPeriodId: activePeriodMock.id,
-          mahasiswa: { user: { name: "Ahmad" } },
-        },
-      ]);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([
+          {
+            id: "reg-1",
+            sidangRegistrationPeriodId: activePeriodMock.id,
+            mahasiswa: { user: { name: "Ahmad" } },
+          },
+        ]);
 
       const result = await listSidangRegistrations({ query: {} });
 
@@ -267,7 +291,9 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
       });
 
       const findArgs = findManySpy.mock.calls[0][0];
-      expect(findArgs.where.sidangRegistrationPeriodId).toBe("active-sidang-period-uuid");
+      expect(findArgs.where.sidangRegistrationPeriodId).toBe(
+        "active-sidang-period-uuid",
+      );
       expect(result.data).toBeDefined();
     });
 
@@ -284,19 +310,25 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         .mockResolvedValueOnce(nearestPeriodMock);
 
       vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
-      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
 
       await listSidangRegistrations({ query: {} });
 
       expect(prisma.sidangPeriod.findFirst).toHaveBeenCalledTimes(2);
       const findArgs = findManySpy.mock.calls[0][0];
-      expect(findArgs.where.sidangRegistrationPeriodId).toBe("nearest-past-period-uuid");
+      expect(findArgs.where.sidangRegistrationPeriodId).toBe(
+        "nearest-past-period-uuid",
+      );
     });
 
     it("menggunakan filter sidangRegistrationPeriodId yang diberikan secara eksplisit", async () => {
       const findPeriodSpy = vi.spyOn(prisma.sidangPeriod, "findFirst");
       vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
-      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
 
       await listSidangRegistrations({
         query: { sidangRegistrationPeriodId: "custom-period-uuid" },
@@ -304,13 +336,17 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
 
       expect(findPeriodSpy).not.toHaveBeenCalled();
       const findArgs = findManySpy.mock.calls[0][0];
-      expect(findArgs.where.sidangRegistrationPeriodId).toBe("custom-period-uuid");
+      expect(findArgs.where.sidangRegistrationPeriodId).toBe(
+        "custom-period-uuid",
+      );
     });
 
     it("menggunakan filter sidangPeriodId (pelaksanaan) jika diberikan secara eksplisit", async () => {
       const findPeriodSpy = vi.spyOn(prisma.sidangPeriod, "findFirst");
       vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
-      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
 
       await listSidangRegistrations({
         query: { sidangPeriodId: "exec-sidang-period-uuid" },
@@ -323,9 +359,13 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
 
     it("endpoint GET /api/sidang-registrations mengembalikan response paginasi dengan filter periode", async () => {
       const token = jwt.sign(
-        { id: "admin-uuid", role: "ADMIN", email: "admin@telkomuniversity.ac.id" },
+        {
+          id: "admin-uuid",
+          role: "ADMIN",
+          email: "admin@telkomuniversity.ac.id",
+        },
         JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue({
@@ -367,7 +407,9 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         isOpen: true,
       };
 
-      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(activePeriod2);
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(
+        activePeriod2,
+      );
 
       vi.spyOn(prisma.sidangRegistration, "findUnique")
         .mockResolvedValueOnce({
@@ -383,11 +425,13 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         dosenWaliId: "dosen-wali-1",
       });
 
-      const updateSpy = vi.spyOn(prisma.sidangRegistration, "update").mockResolvedValue({
-        id: "reg-draft-1",
-        isDraft: true,
-        sidangRegistrationPeriodId: activePeriod2.id,
-      });
+      const updateSpy = vi
+        .spyOn(prisma.sidangRegistration, "update")
+        .mockResolvedValue({
+          id: "reg-draft-1",
+          isDraft: true,
+          sidangRegistrationPeriodId: activePeriod2.id,
+        });
 
       const result = await saveSidangRegistration({
         id: "reg-draft-1",
@@ -402,7 +446,7 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
             sidangRegistrationPeriodId: "period-2-active-uuid",
             dosenWaliId: "dosen-wali-1",
           }),
-        })
+        }),
       );
       expect(result.sidangRegistrationPeriodId).toBe("period-2-active-uuid");
     });
@@ -440,12 +484,21 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         lulusTesBahasa: true,
         skemaSidang: "Reguler",
         jalurNonSidang: [],
-        sidangRegistrationUploads: [{ category: "wajib-doc" }, { category: "bahasa-doc" }],
+        sidangRegistrationUploads: [
+          { category: "wajib-doc" },
+          { category: "bahasa-doc" },
+        ],
       };
 
-      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(existingDraftReg);
-      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(activePeriod2);
-      vi.spyOn(prisma.dokumenPersyaratanBerkas, "findMany").mockResolvedValue([]);
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(
+        existingDraftReg,
+      );
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(
+        activePeriod2,
+      );
+      vi.spyOn(prisma.dokumenPersyaratanBerkas, "findMany").mockResolvedValue(
+        [],
+      );
       vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue({
         id: "mhs-1",
         dosenWaliId: "dosen-wali-1",
@@ -453,16 +506,22 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
       vi.spyOn(prisma.dosen, "findUnique")
         .mockResolvedValueOnce({ id: "dos-1" })
         .mockResolvedValueOnce({ id: "dos-2" });
-      vi.spyOn(prisma.sidangRegistrationUpload, "findMany").mockResolvedValue([]);
-      vi.spyOn(prisma.sidangRegistrationUpload, "deleteMany").mockResolvedValue({ count: 0 });
+      vi.spyOn(prisma.sidangRegistrationUpload, "findMany").mockResolvedValue(
+        [],
+      );
+      vi.spyOn(prisma.sidangRegistrationUpload, "deleteMany").mockResolvedValue(
+        { count: 0 },
+      );
 
-      const updateSpy = vi.spyOn(prisma.sidangRegistration, "update").mockResolvedValue({
-        ...existingDraftReg,
-        isDraft: false,
-        status: "Dalam Proses",
-        sidangRegistrationPeriodId: activePeriod2.id,
-        submittedAt: new Date(),
-      });
+      const updateSpy = vi
+        .spyOn(prisma.sidangRegistration, "update")
+        .mockResolvedValue({
+          ...existingDraftReg,
+          isDraft: false,
+          status: "Dalam Proses",
+          sidangRegistrationPeriodId: activePeriod2.id,
+          submittedAt: new Date(),
+        });
 
       const submitPayload = {
         id: "reg-draft-1",
@@ -491,7 +550,7 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
             status: "Dalam Proses",
             dosenWaliId: "dosen-wali-1",
           }),
-        })
+        }),
       );
       expect(result.sidangRegistrationPeriodId).toBe("period-2-active-uuid");
       expect(result.status).toBe("Dalam Proses");
@@ -504,19 +563,25 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         sidangRegistrationPeriodId: "period-1-closed-uuid",
       };
 
-      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(existingDraftReg);
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(
+        existingDraftReg,
+      );
       vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(null);
 
-      await expect(submitSidangRegistration({ id: "reg-draft-1" })).rejects.toThrowError(
-        "Periode pendaftaran sidang ini sudah ditutup."
-      );
+      await expect(
+        submitSidangRegistration({ id: "reg-draft-1" }),
+      ).rejects.toThrowError("Periode pendaftaran sidang ini sudah ditutup.");
     });
 
     it("endpoint POST /api/sidang-registrations/submit berhasil mengalihkan periode 1 ke periode 2 (HTTP 200)", async () => {
       const token = jwt.sign(
-        { id: "mhs-uuid", role: "MAHASISWA", email: "mhs@student.telkomuniversity.ac.id" },
+        {
+          id: "mhs-uuid",
+          role: "MAHASISWA",
+          email: "mhs@student.telkomuniversity.ac.id",
+        },
         JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       const existingDraftReg = {
@@ -542,19 +607,25 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         sidangRegistrationUploads: [],
       };
 
-      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(existingDraftReg);
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(
+        existingDraftReg,
+      );
       vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue({
         id: "period-2-active-uuid",
         category: "pendaftaran",
         isOpen: true,
       });
-      vi.spyOn(prisma.dokumenPersyaratanBerkas, "findMany").mockResolvedValue([]);
+      vi.spyOn(prisma.dokumenPersyaratanBerkas, "findMany").mockResolvedValue(
+        [],
+      );
       vi.spyOn(prisma.mahasiswa, "findUnique").mockResolvedValue({
         id: "mhs-uuid",
         dosenWaliId: "dosen-wali-1",
       });
       vi.spyOn(prisma.dosen, "findUnique").mockResolvedValue({ id: "dos-1" });
-      vi.spyOn(prisma.sidangRegistrationUpload, "findMany").mockResolvedValue([]);
+      vi.spyOn(prisma.sidangRegistrationUpload, "findMany").mockResolvedValue(
+        [],
+      );
 
       vi.spyOn(prisma.sidangRegistration, "update").mockResolvedValue({
         ...existingDraftReg,
@@ -586,8 +657,12 @@ describe("Sidang Registration - Endpoint Cek Kelompok Capstone", () => {
         .send(submitBody);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("Sidang registration submitted successfully");
-      expect(res.body.data.sidangRegistrationPeriodId).toBe("period-2-active-uuid");
+      expect(res.body.message).toBe(
+        "Sidang registration submitted successfully",
+      );
+      expect(res.body.data.sidangRegistrationPeriodId).toBe(
+        "period-2-active-uuid",
+      );
       expect(res.body.data.isDraft).toBe(false);
     });
   });

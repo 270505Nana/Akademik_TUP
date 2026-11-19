@@ -3,6 +3,17 @@ import { mapRuangan } from "./ruanganMapper.js";
 
 export const mapPenjadwalanSidangToFrontend = (item) => {
   if (!item) return null;
+
+  const adaPenguji = Boolean(item.dosenPenguji1Id && item.dosenPenguji2Id);
+  const adaJadwal = Boolean(
+    item.tglSidang && (item.ruanganSidangId || item.ruanganSidang),
+  );
+
+  let statusPenjadwalan = null;
+  if (adaPenguji && adaJadwal) statusPenjadwalan = "Siap Sidang";
+  else if (adaPenguji && !adaJadwal) statusPenjadwalan = "Penguji Ready";
+  else if (!adaPenguji && adaJadwal) statusPenjadwalan = "Penjadwalan Ready";
+
   return {
     id: item.id,
     createdAt: item.createdAt,
@@ -20,7 +31,8 @@ export const mapPenjadwalanSidangToFrontend = (item) => {
     ruanganSidang: mapRuangan(item.ruanganSidang),
     isLocked: (item.isLocked || item.sidangPeriod?.isPublished) ?? false,
     notaDinasUrl: item.notaDinasUrl ?? null,
-    statusPenjadwalan: item.statusPenjadwalan ?? null,
+    status: item.status,
+    statusPenjadwalan,
     isPublished: item.sidangPeriod?.isPublished ?? false,
     isInfoPenjadwalanReaded: item.isInfoPenjadwalanReaded ?? false,
   };

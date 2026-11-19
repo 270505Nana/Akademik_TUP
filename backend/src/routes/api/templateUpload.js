@@ -93,7 +93,7 @@ const router = express.Router();
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       500:
@@ -103,7 +103,7 @@ router.get(
   "/",
   verifyToken,
   validate(listTemplateUploadQuerySchema, "query"),
-  listTemplateUploads
+  listTemplateUploads,
 );
 
 /**
@@ -160,7 +160,7 @@ router.get(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       500:
@@ -172,7 +172,7 @@ router.post(
   authorize("ADMIN"),
   upload("templates").single("templateFile"),
   validate(createTemplateUploadSchema),
-  createTemplateUpload
+  createTemplateUpload,
 );
 
 /**
@@ -236,7 +236,7 @@ router.get("/preview/:code", previewTemplateUpload);
  *       200:
  *         description: Template upload data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -306,7 +306,7 @@ router.get("/:code", verifyToken, findTemplateUploadByCode);
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -320,7 +320,7 @@ router.patch(
   authorize("ADMIN"),
   upload("templates").single("templateFile"),
   validate(updateTemplateUploadSchema),
-  updateTemplateUpload
+  updateTemplateUpload,
 );
 
 /**
@@ -342,7 +342,7 @@ router.patch(
  *       200:
  *         description: Template upload deleted successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -371,7 +371,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteTemplateUpload);
  *       200:
  *         description: Template publish status toggled successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -381,7 +381,7 @@ router.patch(
   "/:id/toggle-publish",
   verifyToken,
   authorize("ADMIN"),
-  togglePublishTemplate
+  togglePublishTemplate,
 );
 
 /**
@@ -403,7 +403,7 @@ router.patch(
  *       200:
  *         description: Template required status toggled successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -413,7 +413,7 @@ router.patch(
   "/:id/toggle-required",
   verifyToken,
   authorize("ADMIN"),
-  toggleRequiredTemplate
+  toggleRequiredTemplate,
 );
 
 export default router;

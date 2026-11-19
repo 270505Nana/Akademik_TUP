@@ -1,0 +1,793 @@
+tags:
+  - name: Revisi Sidang
+    description: Manajemen alur revisi sidang tugas akhir oleh mahasiswa dan dosen pembimbing 1
+
+paths:
+  /api/revisi-sidang:
+    get:
+      summary: Get All Revisi Sidang
+      description: |
+        Mengambil daftar revisi sidang tugas akhir dengan paginasi dan filter.
+        - **Admin**: Mengambil seluruh revisi sidang pada periode pelaksanaan sidang yang aktif (atau terakhir aktif secara default).
+        - **Dosen**: Mengambil revisi sidang pada periode pelaksanaan sidang terkait di mana dosen bertindak sebagai Dosen Pembimbing 1.
+      tags:
+        - Revisi Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sidangPeriodId
+          in: query
+          required: false
+          description: ID Periode Pelaksanaan Sidang (opsional, default ke periode aktif/terakhir aktif)
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          description: Filter status revisi sidang (IN_PROGRESS, SUBMITTED, APPROVED)
+          schema:
+            type: string
+            enum: [IN_PROGRESS, SUBMITTED, APPROVED]
+        - name: search
+          in: query
+          required: false
+          description: Pencarian berdasarkan nama mahasiswa, NIM, atau judul tugas akhir
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: Nomor halaman
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          description: Jumlah data per halaman
+          schema:
+            type: integer
+            default: 10
+        - name: sort
+          in: query
+          required: false
+          description: Urutan data berdasarkan waktu pembuatan (newest atau oldest, default newest)
+          schema:
+            type: string
+            enum: [newest, oldest]
+            default: newest
+      responses:
+        "200":
+          description: Daftar revisi sidang berhasil diambil
+          content:
+            application/json:
+              example:
+                message: Daftar revisi sidang berhasil diambil
+                data:
+                  - id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    status: IN_PROGRESS
+                    deadlineRevisi: "2026-11-30T23:59:59.000Z"
+                    tglSubmitRevisi: "2026-11-18T14:30:00.000Z"
+                    tglSetujuiHasilRevisi: "2026-11-20T10:00:00.000Z"
+                    isSubmitted: true
+                    isApproved: true
+                    hasBerkas: true
+                    mahasiswa:
+                      id: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Ahmad Dani
+                      nim: "1202200001"
+                      studyProgram: S1 Sistem Informasi
+                    sidang:
+                      id: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
+                      tglSidang: "2026-11-15T09:00:00.000Z"
+                      ruangan: Ruang Sidang 1
+                pagination:
+                  page: 1
+                  limit: 10
+                  total: 1
+                  totalPages: 1
+                selectedPeriod:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: Periode Pelaksanaan Sidang Ganjil 2026/2027
+                  period: "2026/2027"
+                  isOpen: true
+                  startDate: "2026-11-01T00:00:00.000Z"
+                  endDate: "2026-11-30T23:59:59.000Z"
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Daftar revisi sidang berhasil diambil
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RevisiSidangItem"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMetadata"
+                  selectedPeriod:
+                    $ref: "#/components/schemas/SidangPeriodCompact"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  /api/revisi-sidang/me:
+    get:
+      summary: Get Latest Revisi Sidang Mahasiswa Login (Me)
+      description: Mengambil data revisi sidang tugas akhir terbaru untuk mahasiswa yang sedang login.
+      tags:
+        - Revisi Sidang
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Data revisi sidang mahasiswa berhasil diambil
+          content:
+            application/json:
+              example:
+                message: Data revisi sidang mahasiswa berhasil diambil
+                data:
+                  id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  status: SUBMITTED
+                  deadlineRevisi: "2026-11-30T23:59:59.000Z"
+                  tglSubmitRevisi: "2026-11-18T14:30:00.000Z"
+                  tglSetujuiHasilRevisi: "2026-11-20T10:00:00.000Z"
+                  isSubmitted: true
+                  isApproved: true
+                  hasBerkas: true
+                  berkasRevisi:
+                    id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Laporan_Revisi_Akhir.pdf
+                    category: Revisi Sidang
+                    filepath: uploads/berkas-revisi/uuid_Laporan_Revisi_Akhir.pdf
+                  mahasiswa:
+                    id: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Ahmad Dani
+                    nim: "1202200001"
+                    studyProgram: S1 Sistem Informasi
+                  sidang:
+                    id: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
+                    tglSidang: "2026-11-15T09:00:00.000Z"
+                    ruangan: Ruang Sidang 1
+                  catatanRevisi:
+                    - id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Budi Santoso
+                      nip: "197501012000121001"
+                      peran: dosenPembimbing1
+                      catatan: apa gitu
+                    - id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Siti Aminah
+                      nip: "198002022005012002"
+                      peran: dosenPenguji1
+                      catatan: apa gitu
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Data revisi sidang mahasiswa berhasil diambil
+                  data:
+                    $ref: "#/components/schemas/RevisiSidangDetail"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Data mahasiswa tidak ditemukan
+          content:
+            application/json:
+              example:
+                message: Data Mahasiswa tidak ditemukan
+
+  /api/revisi-sidang/{id}:
+    get:
+      summary: Get Detail Revisi Sidang by ID (Admin & Dosen Pembimbing 1)
+      description: |
+        Mengambil data detail revisi sidang tugas akhir berdasarkan ID.
+        - **Admin**: Dapat mengakses semua data revisi sidang.
+        - **Dosen**: Hanya dapat mengakses data revisi sidang jika bertindak sebagai Dosen Pembimbing 1 pada sidang tersebut.
+      tags:
+        - Revisi Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Revisi Tugas Akhir (UUID)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Data revisi sidang berhasil diambil
+          content:
+            application/json:
+              example:
+                message: Data revisi sidang berhasil diambil
+                data:
+                  id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  status: SUBMITTED
+                  deadlineRevisi: "2026-11-30T23:59:59.000Z"
+                  tglSubmitRevisi: "2026-11-18T14:30:00.000Z"
+                  tglSetujuiHasilRevisi: "2026-11-20T10:00:00.000Z"
+                  isSubmitted: true
+                  isApproved: true
+                  hasBerkas: true
+                  berkasRevisi:
+                    id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Laporan_Revisi_Akhir.pdf
+                    category: Revisi Sidang
+                    filepath: uploads/berkas-revisi/uuid_Laporan_Revisi_Akhir.pdf
+                  mahasiswa:
+                    id: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Ahmad Dani
+                    nim: "1202200001"
+                    studyProgram: S1 Sistem Informasi
+                  sidang:
+                    id: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
+                    tglSidang: "2026-11-15T09:00:00.000Z"
+                    ruangan: Ruang Sidang 1
+                  catatanRevisi:
+                    - id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Budi Santoso
+                      nip: "197501012000121001"
+                      peran: dosenPembimbing1
+                      catatan: apa gitu
+                    - id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Siti Aminah
+                      nip: "198002022005012002"
+                      peran: dosenPenguji1
+                      catatan: apa gitu
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Data revisi sidang berhasil diambil
+                  data:
+                    $ref: "#/components/schemas/RevisiSidangDetail"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Data revisi sidang tidak ditemukan
+          content:
+            application/json:
+              example:
+                message: Data revisi sidang tidak ditemukan
+
+  /api/revisi-sidang/{id}/submit:
+    put:
+      summary: Mahasiswa Submit Revisi Sidang
+      description: |
+        Mahasiswa mengonfirmasi bahwa revisi telah diselesaikan. Mahasiswa dapat mengunggah berkas revisi (opsional).
+        Jika revisi sudah pernah disetujui oleh Dosen Pembimbing 1, maka data revisi tidak dapat diganti atau diubah lagi.
+      tags:
+        - Revisi Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Revisi Tugas Akhir (UUID)
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                berkasRevisi:
+                  type: string
+                  format: binary
+                  description: File dokumen revisi tugas akhir (PDF, opsional)
+      responses:
+        "200":
+          description: Revisi sidang berhasil disubmit
+          content:
+            application/json:
+              example:
+                message: Revisi sidang berhasil disubmit
+                data:
+                  id: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  status: SUBMITTED
+                  tglSubmitRevisi: "2026-11-18T14:30:00.000Z"
+                  berkasRevisiId: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Revisi sidang berhasil disubmit
+                  data:
+                    type: object
+        "400":
+          description: Sidang belum ditutup atau revisi sudah disetujui sebelumnya
+          content:
+            application/json:
+              examples:
+                belumDitutup:
+                  summary: Sidang belum ditutup
+                  value:
+                    message: Sidang belum ditutup oleh Dosen Pembimbing 1
+                sudahDisetujui:
+                  summary: Revisi sudah disetujui
+                  value:
+                    message: Revisi sidang sudah disetujui, data revisi tidak dapat diubah lagi
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Data revisi sidang tidak ditemukan
+          content:
+            application/json:
+              example:
+                message: Data revisi sidang tidak ditemukan
+
+  /api/revisi-sidang/{id}/berkas:
+    delete:
+      summary: Mahasiswa Hapus Berkas File Revisi
+      description: |
+        Menghapus berkas dokumen revisi yang telah diunggah oleh mahasiswa.
+        Jika revisi sudah disetujui oleh dosen pembimbing 1, berkas tidak dapat dihapus.
+      tags:
+        - Revisi Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Revisi Tugas Akhir (UUID)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Berkas revisi sidang berhasil dihapus
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Berkas revisi sidang berhasil dihapus
+        "400":
+          description: Validasi error atau berkas tidak dapat dihapus
+          content:
+            application/json:
+              examples:
+                sudahDisetujui:
+                  summary: Revisi sudah disetujui
+                  value:
+                    message: Revisi sidang sudah disetujui, berkas revisi tidak dapat dihapus
+                tidakAdaBerkas:
+                  summary: Berkas tidak ditemukan
+                  value:
+                    message: Tidak ada berkas revisi yang diunggah untuk sidang ini
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Data revisi sidang tidak ditemukan
+          content:
+            application/json:
+              example:
+                message: Data revisi sidang tidak ditemukan
+
+  /api/revisi-sidang/{id}/verify:
+    put:
+      summary: Dosen Verifikasi Hasil Revisi dan Terbitkan Berita Acara (Khusus Dosen Pembimbing 1)
+      description: |
+        Dosen Pembimbing 1 memverifikasi dan menyetujui hasil revisi mahasiswa.
+        Endpoint ini:
+        1. Mengisi data persetujuan hasil revisi (`tglSetujuiHasilRevisi` & `setujuiHasilRevisiId`).
+        2. Menghitung `skemaPerhitunganNilai` secara otomatis dari snapshot penilaian dosen-dosen penilai.
+        3. Membuat entitas `BeritaAcaraSidangTugasAkhir`.
+        Setelah disetujui, revisi dan nilai terkunci dan tidak dapat diubah lagi.
+      tags:
+        - Revisi Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Revisi Tugas Akhir (UUID)
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyRevisiInput"
+      responses:
+        "200":
+          description: Hasil revisi sidang berhasil diverifikasi dan Berita Acara telah diterbitkan
+          content:
+            application/json:
+              example:
+                message: Hasil revisi sidang berhasil diverifikasi dan Berita Acara telah diterbitkan
+                data:
+                  id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  sidangRegistrationId: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  nilaiAkhir: "85.5"
+                  keteranganLulus: Lulus
+                  nilaiHuruf: A
+                  justifikasi: null
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Hasil revisi sidang berhasil diverifikasi dan Berita Acara telah diterbitkan
+                  data:
+                    type: object
+        "400":
+          description: Mahasiswa belum submit atau revisi sudah disetujui sebelumnya
+          content:
+            application/json:
+              examples:
+                belumSubmit:
+                  summary: Mahasiswa belum submit revisi
+                  value:
+                    message: Mahasiswa belum melakukan submit revisi sidang
+                sudahDisetujui:
+                  summary: Revisi sudah disetujui
+                  value:
+                    message: Revisi sidang sudah disetujui sebelumnya dan tidak dapat diubah lagi
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          description: Akses ditolak (bukan Dosen Pembimbing 1)
+          content:
+            application/json:
+              example:
+                message: Hanya Dosen Pembimbing 1 yang memiliki hak akses untuk memverifikasi revisi sidang
+        "404":
+          description: Data revisi sidang tidak ditemukan
+          content:
+            application/json:
+              example:
+                message: Data revisi sidang tidak ditemukan
+
+components:
+  schemas:
+    VerifyRevisiInput:
+      type: object
+      required:
+        - nilaiAkhir
+        - keteranganLulus
+        - nilaiHuruf
+      properties:
+        nilaiAkhir:
+          type: string
+          example: "85.5"
+          description: Nilai akhir sidang (angka 0 - 100)
+        keteranganLulus:
+          type: string
+          example: Lulus
+          description: Status kelulusan (Lulus / Lulus Bersyarat / Tidak Lulus)
+        nilaiHuruf:
+          type: string
+          example: A
+          description: Nilai mutu huruf (A / AB / B / BC / C / D / E)
+        justifikasi:
+          type: string
+          nullable: true
+          example: Mahasiswa menyelesaikan seluruh revisi dengan sangat baik.
+
+    PaginationMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 1
+
+    SidangPeriodCompact:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        name:
+          type: string
+          example: Periode Pelaksanaan Sidang Ganjil 2026/2027
+        period:
+          type: string
+          example: 2026/2027
+        isOpen:
+          type: boolean
+          example: true
+        startDate:
+          type: string
+          format: date-time
+          example: 2026-11-01T00:00:00.000Z
+        endDate:
+          type: string
+          format: date-time
+          example: 2026-11-30T23:59:59.000Z
+
+    DosenCompactInfo:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        name:
+          type: string
+          example: Dr. Ir. Ariyanto, M.T.
+        kodeDosen:
+          type: string
+          nullable: true
+          example: ARD
+
+    BerkasRevisiCompact:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+        name:
+          type: string
+          example: Laporan_Revisi_Akhir.pdf
+        category:
+          type: string
+          example: Revisi Sidang
+        filepath:
+          type: string
+          example: uploads/berkas-revisi/uuid_Laporan_Revisi_Akhir.pdf
+
+    BeritaAcaraItem:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        sidangRegistrationId:
+          type: string
+          format: uuid
+          example: c1d2e3f4-a5b6-7c8d-9e0f-1a2b3c4d5e6f
+        skemaPerhitunganNilai:
+          type: array
+          description: Matriks perhitungan nilai per CLO yang diambil otomatis dari penilaian dosen
+          items:
+            type: object
+        nilaiAkhir:
+          type: string
+          example: "85.5"
+        nilaiHuruf:
+          type: string
+          example: A
+        keteranganLulus:
+          type: string
+          example: Lulus
+        justifikasi:
+          type: string
+          nullable: true
+          example: Mahasiswa menyelesaikan seluruh revisi dengan sangat baik.
+        createdAt:
+          type: string
+          format: date-time
+          example: 2026-11-20T10:00:00.000Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2026-11-20T10:00:00.000Z
+
+    RevisiSidangItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+        status:
+          type: string
+          enum: [IN_PROGRESS, SUBMITTED, APPROVED]
+          example: IN_PROGRESS
+        deadlineRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-30T23:59:59.000Z
+        tglSubmitRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-18T14:30:00.000Z
+        tglSetujuiHasilRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-20T10:00:00.000Z
+        isSubmitted:
+          type: boolean
+          example: true
+        isApproved:
+          type: boolean
+          example: true
+        hasBerkas:
+          type: boolean
+          example: true
+        mahasiswa:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+            name:
+              type: string
+              example: Ahmad Dani
+            nim:
+              type: string
+              example: "1202200001"
+            studyProgram:
+              type: string
+              example: S1 Sistem Informasi
+        sidang:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+            judulTugasAkhir:
+              type: string
+              example: Rancang Bangun Sistem Monitoring IoT
+            tglSidang:
+              type: string
+              format: date-time
+              nullable: true
+              example: 2026-11-15T09:00:00.000Z
+            ruangan:
+              type: string
+              nullable: true
+              example: Ruang Sidang 1
+
+    RevisiSidangDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: r1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+        status:
+          type: string
+          enum: [IN_PROGRESS, SUBMITTED, APPROVED]
+          example: SUBMITTED
+        deadlineRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-30T23:59:59.000Z
+        tglSubmitRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-18T14:30:00.000Z
+        tglSetujuiHasilRevisi:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-20T10:00:00.000Z
+        isSubmitted:
+          type: boolean
+          example: true
+        isApproved:
+          type: boolean
+          example: true
+        hasBerkas:
+          type: boolean
+          example: true
+        berkasRevisi:
+          $ref: "#/components/schemas/BerkasRevisiCompact"
+        mahasiswa:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+            name:
+              type: string
+              example: Ahmad Dani
+            nim:
+              type: string
+              example: "1202200001"
+            studyProgram:
+              type: string
+              example: S1 Sistem Informasi
+        sidang:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+            judulTugasAkhir:
+              type: string
+              example: Rancang Bangun Sistem Monitoring IoT
+            tglSidang:
+              type: string
+              format: date-time
+              nullable: true
+              example: 2026-11-15T09:00:00.000Z
+            ruangan:
+              type: string
+              nullable: true
+              example: Ruang Sidang 1
+        catatanRevisi:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                example: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+              name:
+                type: string
+                example: Dr. Budi Santoso
+              nip:
+                type: string
+                example: "197501012000121001"
+              peran:
+                type: string
+                example: dosenPembimbing1
+              catatan:
+                type: string
+                example: apa gitu
+
+  responses:
+    UnauthorizedError:
+      description: Token tidak valid atau tidak ditemukan
+      content:
+        application/json:
+          example:
+            message: Token not found
+
+    ForbiddenError:
+      description: Akses ditolak
+      content:
+        application/json:
+          example:
+            message: Access denied. Anda tidak memiliki hak akses untuk endpoint ini.

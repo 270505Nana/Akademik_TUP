@@ -1,0 +1,671 @@
+tags:
+  - name: Berita Acara
+    description: Manajemen Berita Acara Sidang Tugas Akhir oleh Admin, Mahasiswa, dan Dosen
+
+paths:
+  /api/berita-acara:
+    get:
+      summary: Get All Berita Acara
+      description: |
+        Mengambil daftar berita acara sidang tugas akhir oleh Admin.
+        Secara default mengambil seluruh berita acara pada periode pelaksanaan sidang yang aktif (atau terakhir aktif).
+      tags:
+        - Berita Acara
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sidangPeriodId
+          in: query
+          required: false
+          description: ID Periode Pelaksanaan Sidang (opsional, default ke periode aktif/terakhir aktif)
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          required: false
+          description: Pencarian berdasarkan nama mahasiswa, NIM, atau judul tugas akhir
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: Nomor halaman
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          description: Jumlah data per halaman
+          schema:
+            type: integer
+            default: 10
+        - name: sort
+          in: query
+          required: false
+          description: Urutan data berdasarkan waktu pembuatan (newest atau oldest, default newest)
+          schema:
+            type: string
+            enum: [newest, oldest]
+            default: newest
+      responses:
+        "200":
+          description: Daftar berita acara sidang berhasil diambil
+          content:
+            application/json:
+              example:
+                message: Daftar berita acara sidang berhasil diambil
+                data:
+                  - id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    nilaiAkhir: "85.5"
+                    keteranganLulus: Lulus
+                    nilaiHuruf: A
+                    justifikasi: null
+                    isPublished: true
+                    tglPublish: "2026-11-20T10:00:00.000Z"
+                    hasBerkas: true
+                    berkas:
+                      id: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Berita_Acara_Sidang_1202200001.pdf
+                      category: Berita Acara Sidang
+                      filepath: uploads/berkas-berita-acara/uuid_berita_acara.pdf
+                    mahasiswa:
+                      id: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Ahmad Dani
+                      nim: "1202200001"
+                      studyProgram: S1 Sistem Informasi
+                    sidang:
+                      id: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
+                      tglSidang: "2026-11-15T09:00:00.000Z"
+                      ruangan: Ruang Sidang 1
+                    createdAt: "2026-11-18T10:00:00.000Z"
+                    updatedAt: "2026-11-18T10:00:00.000Z"
+                pagination:
+                  page: 1
+                  limit: 10
+                  total: 1
+                  totalPages: 1
+                selectedPeriod:
+                  id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  name: Periode Pelaksanaan Sidang Ganjil 2026/2027
+                  period: "2026/2027"
+                  isOpen: true
+                  startDate: "2026-11-01T00:00:00.000Z"
+                  endDate: "2026-11-30T23:59:59.000Z"
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Daftar berita acara sidang berhasil diambil
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BeritaAcaraListItem"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+                  selectedPeriod:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      period:
+                        type: string
+                      isOpen:
+                        type: boolean
+                      startDate:
+                        type: string
+                        format: date-time
+                      endDate:
+                        type: string
+                        format: date-time
+        "401":
+          description: Tidak terautentikasi
+        "403":
+          description: Akses ditolak (Hanya Admin)
+
+  /api/berita-acara/me:
+    get:
+      summary: Get Latest Berita Acara Mahasiswa
+      description: |
+        Mengambil berita acara sidang tugas akhir terbaru milik mahasiswa yang sedang login.
+        Hanya mengembalikan data jika berita acara telah dipublikasikan (`isPublish != null`).
+        Jika belum dipublikasikan atau belum ada, mengembalikan status 200 dengan data null.
+      tags:
+        - Berita Acara
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Data berita acara sidang mahasiswa berhasil diambil atau informasi belum tersedia
+          content:
+            application/json:
+              examples:
+                terbit:
+                  summary: Berita acara sudah terbit
+                  value:
+                    message: Data berita acara sidang mahasiswa berhasil diambil
+                    data:
+                      id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      nilaiAkhir: "85.5"
+                      keteranganLulus: Lulus
+                      nilaiHuruf: A
+                      justifikasi: null
+                      isPublished: true
+                      tglPublish: "2026-11-20T10:00:00.000Z"
+                      skemaPerhitunganNilai: []
+                      hasBerkas: true
+                      berkas:
+                        id: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                        name: Berita_Acara_Sidang_1202200001.pdf
+                        category: Berita Acara Sidang
+                        filepath: uploads/berkas-berita-acara/uuid_berita_acara.pdf
+                      mahasiswa:
+                        id: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                        name: Ahmad Dani
+                        nim: "1202200001"
+                        studyProgram: S1 Sistem Informasi
+                      sidang:
+                        id: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                        judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
+                        tglSidang: "2026-11-15T09:00:00.000Z"
+                        ruangan: Ruang Sidang 1
+                      timPenilai:
+                        - id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                          name: Dr. Budi Santoso
+                          nip: "197501012000121001"
+                          peran: dosenPembimbing1
+                        - id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                          name: Dr. Siti Aminah
+                          nip: "198002022005012002"
+                          peran: dosenPenguji1
+                      createdAt: "2026-11-18T10:00:00.000Z"
+                      updatedAt: "2026-11-18T10:00:00.000Z"
+                belumTerbit:
+                  summary: Berita acara belum diterbitkan
+                  value:
+                    message: Berita acara sidang belum diterbitkan atau belum tersedia
+                    data: null
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Data berita acara sidang mahasiswa berhasil diambil
+                  data:
+                    $ref: "#/components/schemas/BeritaAcaraDetailItem"
+                    nullable: true
+        "401":
+          description: Tidak terautentikasi
+        "403":
+          description: Akses ditolak (Hanya Mahasiswa)
+
+  /api/berita-acara/{id}:
+    get:
+      summary: Get Berita Acara by ID
+      description: Mengambil data detail berita acara sidang tugas akhir berdasarkan ID oleh Admin.
+      tags:
+        - Berita Acara
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Berita Acara Sidang
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Data berita acara sidang berhasil diambil
+          content:
+            application/json:
+              example:
+                message: Data berita acara sidang berhasil diambil
+                data:
+                  id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  nilaiAkhir: "85.5"
+                  keteranganLulus: Lulus
+                  nilaiHuruf: A
+                  justifikasi: null
+                  isPublished: true
+                  tglPublish: "2026-11-20T10:00:00.000Z"
+                  skemaPerhitunganNilai: []
+                  hasBerkas: true
+                  berkas:
+                    id: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Berita_Acara_Sidang_1202200001.pdf
+                    category: Berita Acara Sidang
+                    filepath: uploads/berkas-berita-acara/uuid_berita_acara.pdf
+                  mahasiswa:
+                    id: m1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Ahmad Dani
+                    nim: "1202200001"
+                    studyProgram: S1 Sistem Informasi
+                  sidang:
+                    id: s1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                    judulTugasAkhir: Rancang Bangun Sistem Monitoring IoT
+                    tglSidang: "2026-11-15T09:00:00.000Z"
+                    ruangan: Ruang Sidang 1
+                  timPenilai:
+                    - id: d1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Budi Santoso
+                      nip: "197501012000121001"
+                      peran: dosenPembimbing1
+                    - id: d2a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Siti Aminah
+                      nip: "198002022005012002"
+                      peran: dosenPenguji1
+                  createdAt: "2026-11-18T10:00:00.000Z"
+                  updatedAt: "2026-11-18T10:00:00.000Z"
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Data berita acara sidang berhasil diambil
+                  data:
+                    $ref: "#/components/schemas/BeritaAcaraDetailItem"
+        "401":
+          description: Tidak terautentikasi
+        "403":
+          description: Akses ditolak (Hanya Admin)
+        "404":
+          description: Data berita acara sidang tidak ditemukan
+
+    put:
+      summary: Update Berita Acara by ID
+      description: Memperbarui nilai akhir, keterangan kelulusan, nilai huruf, justifikasi, dan status publikasi berita acara oleh Admin.
+      tags:
+        - Berita Acara
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Berita Acara Sidang
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example:
+              nilaiAkhir: "85.5"
+              keteranganLulus: Lulus
+              nilaiHuruf: A
+              justifikasi: null
+              isPublish: true
+            schema:
+              type: object
+              required:
+                - nilaiAkhir
+                - keteranganLulus
+                - nilaiHuruf
+              properties:
+                nilaiAkhir:
+                  type: string
+                  example: "85.5"
+                  description: Nilai akhir sidang (0-100)
+                keteranganLulus:
+                  type: string
+                  example: Lulus
+                  description: Keterangan kelulusan (Lulus / Lulus Bersyarat / Tidak Lulus)
+                nilaiHuruf:
+                  type: string
+                  example: A
+                  description: Konversi nilai huruf (A / AB / B / BC / C / D / E)
+                justifikasi:
+                  type: string
+                  nullable: true
+                  example: null
+                  description: Justifikasi jika nilai diubah secara khusus
+                isPublish:
+                  type: boolean
+                  example: true
+                  description: Opsional, set status publikasi berita acara
+      responses:
+        "200":
+          description: Berita acara sidang berhasil diperbarui
+          content:
+            application/json:
+              example:
+                message: Berita acara sidang berhasil diperbarui
+                data:
+                  id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  nilaiAkhir: "85.5"
+                  keteranganLulus: Lulus
+                  nilaiHuruf: A
+                  justifikasi: null
+                  isPublish: "2026-11-20T10:00:00.000Z"
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Berita acara sidang berhasil diperbarui
+                  data:
+                    type: object
+        "400":
+          description: Input tidak valid
+        "401":
+          description: Tidak terautentikasi
+        "403":
+          description: Akses ditolak (Hanya Admin)
+        "404":
+          description: Data berita acara sidang tidak ditemukan
+
+  /api/berita-acara/{id}/berkas:
+    put:
+      summary: Upload Berkas Berita Acara
+      description: |
+        Mengunggah berkas fisik berita acara sidang (PDF) oleh Admin.
+        Jika berkas berita acara sudah ada sebelumnya, berkas lama akan otomatis digantikan dan dihapus dari penyimpanan.
+      tags:
+        - Berita Acara
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Berita Acara Sidang
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File dokumen Berita Acara (maksimal 1 MB)
+      responses:
+        "200":
+          description: Berkas berita acara sidang berhasil diunggah
+          content:
+            application/json:
+              example:
+                message: Berkas berita acara sidang berhasil diunggah
+                data:
+                  id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  berkasId: f1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Berkas berita acara sidang berhasil diunggah
+                  data:
+                    type: object
+        "400":
+          description: Berkas tidak valid atau file tidak disertakan
+        "401":
+          description: Tidak terautentikasi
+        "403":
+          description: Akses ditolak (Hanya Admin)
+        "404":
+          description: Data berita acara sidang tidak ditemukan
+
+    delete:
+      summary: Delete Berkas Berita Acara
+      description: Menghapus file berkas fisik dan record berkas berita acara sidang oleh Admin.
+      tags:
+        - Berita Acara
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Berita Acara Sidang
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Berkas berita acara sidang berhasil dihapus
+          content:
+            application/json:
+              example:
+                message: Berkas berita acara sidang berhasil dihapus
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Berkas berita acara sidang berhasil dihapus
+        "400":
+          description: Tidak ada berkas berita acara yang diunggah
+        "401":
+          description: Tidak terautentikasi
+        "403":
+          description: Akses ditolak (Hanya Admin)
+        "404":
+          description: Data berita acara sidang tidak ditemukan
+
+  /api/berita-acara/{id}/berkas/download:
+    get:
+      summary: Download Berkas Berita Acara
+      description: |
+        Mengunduh berkas fisik berita acara sidang tugas akhir.
+        - **Admin**: Selalu memiliki akses unduh.
+        - **Mahasiswa**: Hanya dapat mengunduh berkas miliknya dan jika berita acara telah dipublikasikan (`isPublish != null`).
+        - **Dosen Terkait**: Dosen Pembimbing (1 & 2) dan Dosen Penguji (1 & 2) hanya dapat mengunduh jika berita acara telah dipublikasikan (`isPublish != null`).
+      tags:
+        - Berita Acara
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Berita Acara Sidang
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Mengunduh file berita acara secara langsung (binary download atau presigned redirect)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "302":
+          description: Redirect ke Presigned URL Cloudflare R2
+        "401":
+          description: Tidak terautentikasi
+        "403":
+          description: Berita acara belum diterbitkan atau pengguna tidak memiliki akses ke berkas ini
+        "404":
+          description: Data berita acara atau berkas fisik tidak ditemukan
+
+  /api/berita-acara/{id}/publish:
+    patch:
+      summary: Toggle Publish Berita Acara
+      description: Mengubah status publikasi berita acara sidang oleh Admin (true untuk mempublikasikan, false untuk membatalkan publikasi).
+      tags:
+        - Berita Acara
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Berita Acara Sidang
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example:
+              isPublished: true
+            schema:
+              type: object
+              required:
+                - isPublished
+              properties:
+                isPublished:
+                  type: boolean
+                  example: true
+                  description: Status publikasi berita acara
+      responses:
+        "200":
+          description: Status publikasi berita acara sidang berhasil diubah
+          content:
+            application/json:
+              example:
+                message: Berita acara sidang berhasil dipublikasikan
+                data:
+                  id: b1a2b3c4-d5e6-7a8b-9c0d-1e2f3a4b5c6d
+                  isPublish: "2026-11-20T10:00:00.000Z"
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Berita acara sidang berhasil dipublikasikan
+                  data:
+                    type: object
+        "400":
+          description: Input tidak valid
+        "401":
+          description: Tidak terautentikasi
+        "403":
+          description: Akses ditolak (Hanya Admin)
+        "404":
+          description: Data berita acara sidang tidak ditemukan
+
+components:
+  schemas:
+    BeritaAcaraListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nilaiAkhir:
+          type: string
+        keteranganLulus:
+          type: string
+        nilaiHuruf:
+          type: string
+        justifikasi:
+          type: string
+          nullable: true
+        isPublished:
+          type: boolean
+        tglPublish:
+          type: string
+          format: date-time
+          nullable: true
+        hasBerkas:
+          type: boolean
+        berkas:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            category:
+              type: string
+            filepath:
+              type: string
+        mahasiswa:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            nim:
+              type: string
+            studyProgram:
+              type: string
+              nullable: true
+        sidang:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            judulTugasAkhir:
+              type: string
+            tglSidang:
+              type: string
+              format: date-time
+              nullable: true
+            ruangan:
+              type: string
+              nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BeritaAcaraDetailItem:
+      allOf:
+        - $ref: "#/components/schemas/BeritaAcaraListItem"
+        - type: object
+          properties:
+            skemaPerhitunganNilai:
+              type: array
+              items:
+                type: object
+            sidang:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                judulTugasAkhir:
+                  type: string
+                tglSidang:
+                  type: string
+                  format: date-time
+                  nullable: true
+                ruangan:
+                  type: string
+                  nullable: true
+            timPenilai:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  nip:
+                    type: string
+                  peran:
+                    type: string
+                    example: dosenPembimbing1

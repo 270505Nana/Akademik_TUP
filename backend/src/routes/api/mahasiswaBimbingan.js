@@ -64,7 +64,7 @@ const router = express.Router();
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Dosen role required)
  *       404:
@@ -77,7 +77,7 @@ router.get(
   verifyToken,
   authorize("DOSEN"),
   validate(listMahasiswaBimbinganQuerySchema, "query"),
-  listMahasiswaBimbingan
+  listMahasiswaBimbingan,
 );
 
 export default router;

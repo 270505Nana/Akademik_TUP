@@ -82,7 +82,7 @@ import {
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -128,7 +128,7 @@ router.get(
  *       400:
  *         description: Validation error or duplicate name
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -161,7 +161,7 @@ router.post(
  *       200:
  *         description: Study program data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -203,7 +203,7 @@ router.get("/:id", verifyToken, findStudyProgramById);
  *       400:
  *         description: Validation error or duplicate name
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -236,7 +236,7 @@ router.put(
  *       200:
  *         description: Study program deleted successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -263,7 +263,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteStudyProgram);
  *       200:
  *         description: Study program status updated successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:

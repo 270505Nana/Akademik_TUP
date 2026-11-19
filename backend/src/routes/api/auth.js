@@ -86,7 +86,7 @@ router.post("/login", authRateLimiter, validate(loginSchema), login);
  *       200:
  *         description: User data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */

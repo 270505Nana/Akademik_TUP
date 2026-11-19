@@ -20,7 +20,7 @@ export const getSkemaPenilais = async ({
   const searchTerm = (search || "").trim();
   if (searchTerm) {
     where.OR = [
-      { type: { contains: searchTerm, mode: "insensitive" } },
+      { peran: { contains: searchTerm, mode: "insensitive" } },
     ];
   }
 
@@ -29,8 +29,8 @@ export const getSkemaPenilais = async ({
   const sortField = (sortBy || "createdAt").trim();
 
   let orderBy = { createdAt: orderDirection };
-  if (sortField === "type") {
-    orderBy = { type: orderDirection };
+  if (sortField === "peran") {
+    orderBy = { peran: orderDirection };
   } else if (sortField === "bobot") {
     orderBy = { bobot: orderDirection };
   } else if (sortField === "createdAt") {
@@ -77,7 +77,7 @@ export const getSkemaPenilaiById = async (id) => {
  * Membuat data Skema Penilai baru
  */
 export const createSkemaPenilai = async ({
-  type,
+  peran,
   bobot,
   studyProgramId,
 }) => {
@@ -93,7 +93,7 @@ export const createSkemaPenilai = async ({
 
   const skema = await prisma.skemaPenilaiProdi.create({
     data: {
-      type,
+      peran,
       bobot: typeof bobot === "number" ? bobot : parseFloat(bobot),
       studyProgramId,
     },
@@ -105,7 +105,7 @@ export const createSkemaPenilai = async ({
 /**
  * Memperbarui data Skema Penilai
  */
-export const updateSkemaPenilai = async (id, { type, bobot }) => {
+export const updateSkemaPenilai = async (id, { peran, bobot }) => {
   const existingSkema = await prisma.skemaPenilaiProdi.findUnique({
     where: { id },
   });
@@ -119,7 +119,7 @@ export const updateSkemaPenilai = async (id, { type, bobot }) => {
   const updatedSkema = await prisma.skemaPenilaiProdi.update({
     where: { id },
     data: {
-      type: type !== undefined ? type : existingSkema.type,
+      peran: peran !== undefined ? peran : existingSkema.peran,
       bobot:
         bobot !== undefined
           ? typeof bobot === "number"

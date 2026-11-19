@@ -44,7 +44,7 @@ const buildPenilaianTemplate = (cloList) => {
 // Helper untuk menyusun Hierarchical Snapshot dari input nilai dosen
 const buildPenilaianSnapshot = (cloList, nilaiInputList) => {
   const nilaiMap = new Map();
-  for (const item of (nilaiInputList || [])) {
+  for (const item of nilaiInputList || []) {
     nilaiMap.set(item.jenisAsesmenId, Number(item.nilai));
   }
 
@@ -78,7 +78,7 @@ const buildPenilaianSnapshot = (cloList, nilaiInputList) => {
 
   if (missingAsesmen.length > 0) {
     const error = new Error(
-      `Komponen asesmen berikut belum dinilai: ${missingAsesmen.join(", ")}`
+      `Komponen asesmen berikut belum dinilai: ${missingAsesmen.join(", ")}`,
     );
     error.statusCode = 400;
     throw error;
@@ -87,28 +87,66 @@ const buildPenilaianSnapshot = (cloList, nilaiInputList) => {
   return snapshot;
 };
 
-// Helper menentukan peran dosen (pembimbing / penguji) dan bobot penilai
-const resolvePenilaiInfo = async (dosenPenilaiId, sidangRegistration) => {
-  let type = null;
-  let penilaiType = null;
+// Helper format profil dosen sederhana untuk respons penilaian
+const formatDosenSimple = (dosen) => {
+  if (!dosen) return null;
+  return {
+    id: dosen.id,
+    name: dosen.name || "",
+    nip: dosen.nip || "",
+    kodeDosen: dosen.kodeDosen || null,
+  };
+};
 
-  if (dosenPenilaiId === sidangRegistration.dosenPembimbing1Id) {
-    type = "pembimbing_1";
-    penilaiType = "pembimbing";
-  } else if (dosenPenilaiId === sidangRegistration.dosenPembimbing2Id) {
-    type = "pembimbing_2";
-    penilaiType = "pembimbing";
-  } else if (dosenPenilaiId === sidangRegistration.dosenPenguji1Id) {
-    type = "penguji_1";
-    penilaiType = "penguji";
-  } else if (dosenPenilaiId === sidangRegistration.dosenPenguji2Id) {
-    type = "penguji_2";
-    penilaiType = "penguji";
+// Helper untuk menghitung skor terbobot per CLO dari snapshot penilaian dosen
+const hitungSkorCloDosen = (snapshotNilai, cloId) => {
+  if (!Array.isArray(snapshotNilai)) return null;
+  const cloItem = snapshotNilai.find(
+    (c) => c.cloProdiId === cloId || c.cloName === cloId,
+  );
+  if (
+    !cloItem ||
+    !Array.isArray(cloItem.asesmen) ||
+    cloItem.asesmen.length === 0
+  ) {
+    return null;
   }
 
-  if (!penilaiType) {
+  let totalBobot = 0;
+  let totalTertimbang = 0;
+  let anyFilled = false;
+
+  for (const a of cloItem.asesmen) {
+    if (a.nilai !== null && a.nilai !== undefined) {
+      anyFilled = true;
+      const b = Number(a.bobot) || 0;
+      const n = Number(a.nilai) || 0;
+      totalBobot += b;
+      totalTertimbang += b * n;
+    }
+  }
+
+  if (!anyFilled || totalBobot === 0) return null;
+  return Number((totalTertimbang / totalBobot).toFixed(2));
+};
+
+// Helper menentukan peran dosen dan bobot penilai
+const resolvePenilaiInfo = async (dosenPenilaiId, sidangRegistration) => {
+  let peran = null;
+
+  if (dosenPenilaiId === sidangRegistration.dosenPembimbing1Id) {
+    peran = "dosenPembimbing1";
+  } else if (dosenPenilaiId === sidangRegistration.dosenPembimbing2Id) {
+    peran = "dosenPembimbing2";
+  } else if (dosenPenilaiId === sidangRegistration.dosenPenguji1Id) {
+    peran = "dosenPenguji1";
+  } else if (dosenPenilaiId === sidangRegistration.dosenPenguji2Id) {
+    peran = "dosenPenguji2";
+  }
+
+  if (!peran) {
     const error = new Error(
-      "Dosen tidak terdaftar sebagai pembimbing atau penguji pada sidang ini"
+      "Dosen tidak terdaftar sebagai pembimbing atau penguji pada sidang ini",
     );
     error.statusCode = 403;
     throw error;
@@ -117,42 +155,47 @@ const resolvePenilaiInfo = async (dosenPenilaiId, sidangRegistration) => {
   const studyProgramId = sidangRegistration.mahasiswa?.studyProgramId;
   const hasMultiplePembimbing = Boolean(
     sidangRegistration.dosenPembimbing1Id &&
-      sidangRegistration.dosenPembimbing2Id
+    sidangRegistration.dosenPembimbing2Id,
   );
   const hasMultiplePenguji = Boolean(
-    sidangRegistration.dosenPenguji1Id &&
-      sidangRegistration.dosenPenguji2Id
+    sidangRegistration.dosenPenguji1Id && sidangRegistration.dosenPenguji2Id,
   );
 
   let bobotPenilai = 0.5;
 
-  // Jika pembimbing atau penguji hanya 1 orang, bobot adalah 100% (1.0)
-  if (penilaiType === "pembimbing" && !hasMultiplePembimbing) {
-    bobotPenilai = 1.0;
-  } else if (penilaiType === "penguji" && !hasMultiplePenguji) {
-    bobotPenilai = 1.0;
-  } else if (type && studyProgramId) {
-    // Jika terdapat 2 penilai, cek skema master data prodi
-    const skema = await prisma.skemaPenilaiProdi.findFirst({
-      where: {
-        studyProgramId,
-        type,
-        deletedAt: null,
-      },
-    });
+  const isPembimbing = peran.startsWith("dosenPembimbing");
+  const isPenguji = peran.startsWith("dosenPenguji");
 
-    if (skema && skema.bobot != null) {
-      bobotPenilai = Number(skema.bobot);
-    } else {
-      // Opsi A: Default jika tidak ditemukan di master data adalah 0.5 (50% - 50%)
+  // Jika pembimbing atau penguji hanya 1 orang, bobot adalah 100% (1.0)
+  if (isPembimbing && !hasMultiplePembimbing) {
+    bobotPenilai = 1.0;
+  } else if (isPenguji && !hasMultiplePenguji) {
+    bobotPenilai = 1.0;
+  } else if (studyProgramId) {
+    // Jika terdapat 2 penilai, cek skema master data prodi
+    try {
+      const skema = await prisma.skemaPenilaiProdi.findFirst({
+        where: {
+          studyProgramId,
+          peran,
+          deletedAt: null,
+        },
+      });
+
+      if (skema && skema.bobot != null) {
+        bobotPenilai = Number(skema.bobot);
+      } else {
+        bobotPenilai = 0.5;
+      }
+    } catch {
       bobotPenilai = 0.5;
     }
   }
 
-  return { type, penilaiType, bobotPenilai, studyProgramId };
+  return { peran, bobotPenilai, studyProgramId };
 };
 
-// Get Penilaian Tugas Akhir by Sidang Registration ID
+// Get Penilaian Tugas Akhir by Sidang Registration ID (Dosen me)
 export const getPenilaianBySidangRegistrationId = async ({
   sidangRegistrationId,
   userId,
@@ -160,7 +203,7 @@ export const getPenilaianBySidangRegistrationId = async ({
 }) => {
   if (userRole !== "DOSEN") {
     const error = new Error(
-      "Hanya dosen yang dapat mengakses penilaian tugas akhir"
+      "Hanya dosen yang dapat mengakses penilaian tugas akhir",
     );
     error.statusCode = 403;
     throw error;
@@ -177,33 +220,16 @@ export const getPenilaianBySidangRegistrationId = async ({
     throw error;
   }
 
-  // 1. Cek apakah penilaian sudah pernah disimpan di DB
-  const penilaian = await prisma.penilaianTugasAkhir.findUnique({
-    where: {
-      sidangRegistrationId_dosenPenilaiId: {
-        sidangRegistrationId,
-        dosenPenilaiId: currentDosen.id,
-      },
-    },
-    include: {
-      dosenPenilai: {
-        include: { user: true, studyProgram: true, researchGroup: true },
-      },
-      dosenKaprodi: {
-        include: { user: true, studyProgram: true, researchGroup: true },
-      },
-    },
-  });
-
-  if (penilaian && !penilaian.deletedAt) {
-    return penilaian;
-  }
-
-  // 2. Jika belum ada penilaian, kembalikan template kosong dari master data prodi
   const sidangRegistration = await prisma.sidangRegistration.findUnique({
     where: { id: sidangRegistrationId },
     include: {
-      mahasiswa: true,
+      mahasiswa: {
+        include: { studyProgram: true },
+      },
+      ruanganSidang: true,
+      revisiTugasAkhir: {
+        where: { deletedAt: null },
+      },
     },
   });
 
@@ -213,8 +239,10 @@ export const getPenilaianBySidangRegistrationId = async ({
     throw error;
   }
 
-  const { penilaiType, bobotPenilai, studyProgramId } =
-    await resolvePenilaiInfo(currentDosen.id, sidangRegistration);
+  const { peran, bobotPenilai, studyProgramId } = await resolvePenilaiInfo(
+    currentDosen.id,
+    sidangRegistration,
+  );
 
   if (!studyProgramId) {
     const error = new Error("Program studi mahasiswa tidak ditemukan");
@@ -223,19 +251,66 @@ export const getPenilaianBySidangRegistrationId = async ({
   }
 
   const cloList = await getMasterDataPenilaianProdi(studyProgramId);
+
+  // Cek apakah sidang sudah ditutup
+  const revisiTugasAkhir =
+    sidangRegistration.revisiTugasAkhir &&
+    sidangRegistration.revisiTugasAkhir.length > 0
+      ? sidangRegistration.revisiTugasAkhir.find(
+          (r) => r.tglSetujuiUntukRevisi !== null,
+        ) || null
+      : null;
+
+  const isSidangClosed = Boolean(revisiTugasAkhir);
+
+  // Cek apakah penilaian sudah pernah disimpan di DB
+  const existingPenilaian = await prisma.penilaianTugasAkhir.findUnique({
+    where: {
+      sidangRegistrationId_dosenPenilaiId: {
+        sidangRegistrationId,
+        dosenPenilaiId: currentDosen.id,
+      },
+    },
+  });
+
+  const isSubmitted = Boolean(existingPenilaian && !existingPenilaian.deletedAt);
   const template = buildPenilaianTemplate(cloList);
 
+  const skorPerClo = cloList.map((clo) => ({
+    cloProdiId: clo.id,
+    cloName: clo.name,
+    skor: isSubmitted ? hitungSkorCloDosen(existingPenilaian.nilai, clo.id) : null,
+  }));
+
+  const penilaianData = {
+    id: isSubmitted ? existingPenilaian.id : null,
+    peran: isSubmitted ? existingPenilaian.peran : peran,
+    bobotPenilai: isSubmitted ? Number(existingPenilaian.bobotPenilai) : bobotPenilai,
+    isSubmitted,
+    dosen: formatDosenSimple(currentDosen),
+    catatanRevisi: isSubmitted ? existingPenilaian.catatanRevisi || "" : "",
+    nilai: isSubmitted ? existingPenilaian.nilai : template,
+    skorPerClo,
+  };
+
   return {
-    id: null,
     sidangRegistrationId,
-    penilaiType,
-    bobotPenilai,
-    nilai: template,
-    catatanRevisi: "",
-    dosenPenilai: currentDosen,
-    dosenKaprodi: null,
-    createdAt: null,
-    updatedAt: null,
+    isSidangClosed,
+    mahasiswa: {
+      id: sidangRegistration.mahasiswa?.id || null,
+      name: sidangRegistration.mahasiswa?.name || "",
+      nim: sidangRegistration.mahasiswa?.nim || "",
+      studyProgram: sidangRegistration.mahasiswa?.studyProgram?.name || "",
+      judulTugasAkhir:
+        sidangRegistration.judulTugasAkhirIndonesia ||
+        sidangRegistration.judulTugasAkhirInggris ||
+        "-",
+    },
+    jadwalSidang: {
+      tglSidang: sidangRegistration.tglSidang,
+      ruangan: sidangRegistration.ruanganSidang?.name || null,
+    },
+    penilaian: penilaianData,
   };
 };
 
@@ -249,7 +324,7 @@ export const savePenilaianTugasAkhir = async ({
 }) => {
   if (userRole !== "DOSEN") {
     const error = new Error(
-      "Hanya dosen yang dapat melakukan penilaian tugas akhir"
+      "Hanya dosen yang dapat melakukan penilaian tugas akhir",
     );
     error.statusCode = 403;
     throw error;
@@ -281,14 +356,21 @@ export const savePenilaianTugasAkhir = async ({
     throw error;
   }
 
-  // Pastikan belum ada Berita Acara untuk sidang ini (sidang belum ditutup)
+  // Pastikan belum ada Berita Acara atau revisi aktif untuk sidang ini (sidang belum ditutup)
+  const existingRevisi = await prisma.revisiTugasAkhir.findFirst({
+    where: {
+      sidangRegistrationId,
+      tglSetujuiUntukRevisi: { not: null },
+      deletedAt: null,
+    },
+  });
   const existingBeritaAcara =
     await prisma.beritaAcaraSidangTugasAkhir.findFirst({
       where: { sidangRegistrationId, deletedAt: null },
     });
-  if (existingBeritaAcara) {
+  if (existingRevisi || existingBeritaAcara) {
     const error = new Error(
-      "Penilaian tidak dapat diubah karena sidang sudah ditutup dan Berita Acara telah diterbitkan"
+      "Penilaian tidak dapat diubah karena sidang sudah ditutup",
     );
     error.statusCode = 400;
     throw error;
@@ -297,7 +379,7 @@ export const savePenilaianTugasAkhir = async ({
   // Validasi waktu sidang: penilaian hanya boleh dilakukan saat atau setelah sidang dimulai
   if (!sidangRegistration.tglSidang) {
     const error = new Error(
-      "Penilaian belum dapat dilakukan karena sidang belum memiliki jadwal"
+      "Penilaian belum dapat dilakukan karena sidang belum memiliki jadwal",
     );
     error.statusCode = 400;
     throw error;
@@ -313,15 +395,17 @@ export const savePenilaianTugasAkhir = async ({
   const now = new Date();
   if (now < tglSidang) {
     const error = new Error(
-      "Penilaian belum dapat dilakukan karena sidang belum dimulai"
+      "Penilaian belum dapat dilakukan karena sidang belum dimulai",
     );
     error.statusCode = 400;
     throw error;
   }
 
   // Tentukan peran penilai dan bobot penilai
-  const { penilaiType, bobotPenilai, studyProgramId } =
-    await resolvePenilaiInfo(dosenPenilaiId, sidangRegistration);
+  const { peran, bobotPenilai, studyProgramId } = await resolvePenilaiInfo(
+    dosenPenilaiId,
+    sidangRegistration,
+  );
 
   if (!studyProgramId) {
     const error = new Error("Program studi mahasiswa tidak ditemukan");
@@ -333,7 +417,7 @@ export const savePenilaianTugasAkhir = async ({
   const cloList = await getMasterDataPenilaianProdi(studyProgramId);
   if (!cloList.length) {
     const error = new Error(
-      "CLO / Jenis Asesmen belum dikonfigurasi untuk Program Studi ini"
+      "CLO / Jenis Asesmen belum dikonfigurasi untuk Program Studi ini",
     );
     error.statusCode = 400;
     throw error;
@@ -354,14 +438,14 @@ export const savePenilaianTugasAkhir = async ({
       nilai: snapshot,
       catatanRevisi:
         catatanRevisi !== undefined ? catatanRevisi || "" : undefined,
-      penilaiType,
+      peran,
     },
     create: {
       bobotPenilai,
       nilai: snapshot,
       catatanRevisi: catatanRevisi || "",
       sidangRegistrationId,
-      penilaiType,
+      peran,
       dosenPenilaiId,
     },
     include: {
@@ -404,9 +488,11 @@ export const tentukanKeteranganKelulusan = (nilaiHuruf) => {
   return "Belum Lengkap";
 };
 
-// Get All Penilaian by Sidang Registration ID + Perhitungan Matriks Berita Acara
+// Get All Penilaian by Sidang Registration ID
 export const getAllPenilaianBySidangRegistrationId = async ({
   sidangRegistrationId,
+  userId,
+  userRole,
 }) => {
   // 1. Ambil data pendaftaran sidang beserta mahasiswa dan seluruh dosen penilai
   const sidangRegistration = await prisma.sidangRegistration.findUnique({
@@ -439,7 +525,7 @@ export const getAllPenilaianBySidangRegistrationId = async ({
           },
         },
       },
-      beritaAcaraSidangTugasAkhirs: {
+      revisiTugasAkhir: {
         where: { deletedAt: null },
       },
     },
@@ -449,6 +535,40 @@ export const getAllPenilaianBySidangRegistrationId = async ({
     const error = new Error("Pendaftaran sidang tidak ditemukan");
     error.statusCode = 404;
     throw error;
+  }
+
+  // 2. Validasi Hak Akses Dosen: hanya dosen yang terdaftar pada sidang ini (atau Kaprodi terkait) yang diizinkan
+  if (userRole === "DOSEN") {
+    const currentDosen = await prisma.dosen.findUnique({
+      where: { userId, deletedAt: null },
+    });
+
+    if (!currentDosen) {
+      const error = new Error("Data dosen tidak ditemukan");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const assignedDosenIds = [
+      sidangRegistration.dosenPembimbing1Id,
+      sidangRegistration.dosenPembimbing2Id,
+      sidangRegistration.dosenPenguji1Id,
+      sidangRegistration.dosenPenguji2Id,
+    ].filter(Boolean);
+
+    const isAssigned = assignedDosenIds.includes(currentDosen.id);
+    const isKaprodi =
+      Boolean(currentDosen.isKetuaProdi) &&
+      Boolean(currentDosen.studyProgramId) &&
+      currentDosen.studyProgramId === sidangRegistration.mahasiswa?.studyProgramId;
+
+    if (!isAssigned && !isKaprodi) {
+      const error = new Error(
+        "Akses ditolak. Anda tidak memiliki hak akses untuk melihat rekap penilaian sidang ini"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   const studyProgramId = sidangRegistration.mahasiswa?.studyProgramId;
@@ -462,12 +582,10 @@ export const getAllPenilaianBySidangRegistrationId = async ({
   const cloList = await getMasterDataPenilaianProdi(studyProgramId);
 
   const hasMultiplePembimbing = Boolean(
-    sidangRegistration.dosenPembimbing1 &&
-      sidangRegistration.dosenPembimbing2
+    sidangRegistration.dosenPembimbing1 && sidangRegistration.dosenPembimbing2,
   );
   const hasMultiplePenguji = Boolean(
-    sidangRegistration.dosenPenguji1 &&
-      sidangRegistration.dosenPenguji2
+    sidangRegistration.dosenPenguji1 && sidangRegistration.dosenPenguji2,
   );
 
   // 3. Ambil konfigurasi skema penilai prodi (digunakan untuk fallback preview jika penilai belum submit)
@@ -475,13 +593,14 @@ export const getAllPenilaianBySidangRegistrationId = async ({
     where: { studyProgramId, deletedAt: null },
   });
 
-  const getBobotDefaultPenilai = (role, penilaiType) => {
+  const getBobotDefaultPenilai = (peran) => {
     // Jika penilai tunggal -> bobot otomatis 100% (1.0)
-    if (penilaiType === "pembimbing" && !hasMultiplePembimbing) return 1.0;
-    if (penilaiType === "penguji" && !hasMultiplePenguji) return 1.0;
+    if (peran.startsWith("dosenPembimbing") && !hasMultiplePembimbing)
+      return 1.0;
+    if (peran.startsWith("dosenPenguji") && !hasMultiplePenguji) return 1.0;
 
-    // Cek master data skema penilai prodi mahasiswa (contoh: Bisdig punya aturan pembimbing_1 = 0.6)
-    const found = skemaPenilaiList.find((s) => s.type === role);
+    // Cek master data skema penilai prodi mahasiswa
+    const found = skemaPenilaiList.find((s) => s.peran === peran);
     if (found && found.bobot != null) {
       return Number(found.bobot);
     }
@@ -490,56 +609,25 @@ export const getAllPenilaianBySidangRegistrationId = async ({
     return 0.5;
   };
 
-  // 4. Ambil konfigurasi skema perhitungan nilai berita acara prodi (bobot Ra vs Rb per CLO)
-  const skemaPerhitunganList =
-    await prisma.skemaPerhitunganNilaiBeritaAcaraTugasAkhirProdi.findMany({
-      where: { studyProgramId, deletedAt: null },
-    });
-
-  const getBobotRaRbClo = (cloId) => {
-    const specific = skemaPerhitunganList.find((s) => s.cloProdiId === cloId);
-    if (specific) {
-      return {
-        bobotPembimbing: Number(specific.bobotRataRataPembimbing),
-        bobotPenguji: Number(specific.bobotRataRataPenguji),
-      };
-    }
-    const defaultProdi = skemaPerhitunganList.find(
-      (s) => s.cloProdiId === null
-    );
-    if (defaultProdi) {
-      return {
-        bobotPembimbing: Number(defaultProdi.bobotRataRataPembimbing),
-        bobotPenguji: Number(defaultProdi.bobotRataRataPenguji),
-      };
-    }
-    // Fallback default prodi umum (60% pembimbing, 40% penguji)
-    return { bobotPembimbing: 0.6, bobotPenguji: 0.4 };
-  };
-
   // 5. Susun daftar penilai yang ditugaskan pada sidang ini
   const assignedRoles = [
     {
-      role: "pembimbing_1",
-      penilaiType: "pembimbing",
+      peran: "dosenPembimbing1",
       dosen: sidangRegistration.dosenPembimbing1,
       defaultBobot: hasMultiplePembimbing ? 0.5 : 1.0,
     },
     {
-      role: "pembimbing_2",
-      penilaiType: "pembimbing",
+      peran: "dosenPembimbing2",
       dosen: sidangRegistration.dosenPembimbing2,
       defaultBobot: 0.5,
     },
     {
-      role: "penguji_1",
-      penilaiType: "penguji",
+      peran: "dosenPenguji1",
       dosen: sidangRegistration.dosenPenguji1,
       defaultBobot: hasMultiplePenguji ? 0.5 : 1.0,
     },
     {
-      role: "penguji_2",
-      penilaiType: "penguji",
+      peran: "dosenPenguji2",
       dosen: sidangRegistration.dosenPenguji2,
       defaultBobot: 0.5,
     },
@@ -554,42 +642,14 @@ export const getAllPenilaianBySidangRegistrationId = async ({
     existingPenilaianMap.set(p.dosenPenilaiId, p);
   }
 
-  // Helper untuk menghitung skor terbobot per CLO dari snapshot penilaian dosen
-  const hitungSkorCloDosen = (snapshotNilai, cloId) => {
-    if (!Array.isArray(snapshotNilai)) return null;
-    const cloItem = snapshotNilai.find(
-      (c) => c.cloProdiId === cloId || c.cloName === cloId
-    );
-    if (!cloItem || !Array.isArray(cloItem.asesmen) || cloItem.asesmen.length === 0) {
-      return null;
-    }
-
-    let totalBobot = 0;
-    let totalTertimbang = 0;
-    let anyFilled = false;
-
-    for (const a of cloItem.asesmen) {
-      if (a.nilai !== null && a.nilai !== undefined) {
-        anyFilled = true;
-        const b = Number(a.bobot) || 0;
-        const n = Number(a.nilai) || 0;
-        totalBobot += b;
-        totalTertimbang += b * n;
-      }
-    }
-
-    if (!anyFilled || totalBobot === 0) return null;
-    return Number((totalTertimbang / totalBobot).toFixed(2));
-  };
-
   // Susun detail penilaian untuk setiap penilai yang ditugaskan
-  const penilaianList = activePenilai.map((p) => {
+  const penilaian = activePenilai.map((p) => {
     const existing = existingPenilaianMap.get(p.dosen.id);
     const isSubmitted = Boolean(existing);
     const bobot =
       existing?.bobotPenilai != null
         ? Number(existing.bobotPenilai)
-        : getBobotDefaultPenilai(p.role, p.penilaiType);
+        : getBobotDefaultPenilai(p.peran);
 
     const skorPerClo = cloList.map((clo) => ({
       cloProdiId: clo.id,
@@ -598,160 +658,40 @@ export const getAllPenilaianBySidangRegistrationId = async ({
     }));
 
     return {
-      penilaiRole: p.role,
-      penilaiType: p.penilaiType,
+      id: existing?.id || null,
+      peran: existing?.peran || p.peran,
       bobotPenilai: bobot,
       isSubmitted,
-      penilaianId: existing?.id || null,
-      dosen: p.dosen,
+      dosen: formatDosenSimple(p.dosen),
       catatanRevisi: existing?.catatanRevisi || "",
-      nilai: isSubmitted ? existing.nilai : null,
+      nilai: isSubmitted ? existing.nilai : buildPenilaianTemplate(cloList),
       skorPerClo,
     };
   });
 
-  const submittedCount = penilaianList.filter((p) => p.isSubmitted).length;
+  const submittedCount = penilaian.filter((p) => p.isSubmitted).length;
   const isAllSubmitted =
-    penilaianList.length > 0 && submittedCount === penilaianList.length;
+    penilaian.length > 0 && submittedCount === penilaian.length;
 
-  // 6. Hitung skemaPerhitunganNilai untuk Berita Acara (Per CLO)
-  const p1 = penilaianList.find((p) => p.penilaiRole === "pembimbing_1");
-  const p2 = penilaianList.find((p) => p.penilaiRole === "pembimbing_2");
-  const u1 = penilaianList.find((p) => p.penilaiRole === "penguji_1");
-  const u2 = penilaianList.find((p) => p.penilaiRole === "penguji_2");
-
-  const wP1 = p1 ? p1.bobotPenilai : 0;
-  const wP2 = p2 ? p2.bobotPenilai : 0;
-  const totalWP = wP1 + wP2 || 1;
-
-  const wU1 = u1 ? u1.bobotPenilai : 0;
-  const wU2 = u2 ? u2.bobotPenilai : 0;
-  const totalWU = wU1 + wU2 || 1;
-
-  let totalNilaiAngka = 0;
-  let canCalculateTotal = isAllSubmitted && cloList.length > 0;
-
-  const skemaPerhitunganNilai = cloList.map((clo) => {
-    // Total bobot CLO terhadap nilai akhir (sum of bobot jenisAsesmen)
-    const bobotClo = Number(
-      (clo.jenisAsesmenClo || [])
-        .reduce((sum, a) => sum + (Number(a.bobot) || 0), 0)
-        .toFixed(2)
-    );
-
-    const { bobotPembimbing, bobotPenguji } = getBobotRaRbClo(clo.id);
-
-    // Ambil skor individual masing-masing dosen penilai untuk CLO ini
-    const scoreP1 = p1 ? hitungSkorCloDosen(p1.nilai, clo.id) : null;
-    const scoreP2 = p2 ? hitungSkorCloDosen(p2.nilai, clo.id) : null;
-    const scoreU1 = u1 ? hitungSkorCloDosen(u1.nilai, clo.id) : null;
-    const scoreU2 = u2 ? hitungSkorCloDosen(u2.nilai, clo.id) : null;
-
-    // Hitung Rata-rata Pembimbing (Ra)
-    let rataRataPembimbing = null;
-    if (p1 && p2) {
-      if (scoreP1 !== null && scoreP2 !== null) {
-        rataRataPembimbing = Number(
-          ((scoreP1 * wP1 + scoreP2 * wP2) / totalWP).toFixed(2)
-        );
-      }
-    } else if (p1 && scoreP1 !== null) {
-      rataRataPembimbing = scoreP1;
-    }
-
-    // Hitung Rata-rata Penguji (Rb)
-    let rataRataPenguji = null;
-    if (u1 && u2) {
-      if (scoreU1 !== null && scoreU2 !== null) {
-        rataRataPenguji = Number(
-          ((scoreU1 * wU1 + scoreU2 * wU2) / totalWU).toFixed(2)
-        );
-      }
-    } else if (u1 && scoreU1 !== null) {
-      rataRataPenguji = scoreU1;
-    }
-
-    // Hitung Nilai Hasil Perhitungan CLO = (Ra * bobotPembimbing) + (Rb * bobotPenguji)
-    let nilaiHasilPerhitungan = null;
-    let nilaiTertimbang = null;
-
-    if (rataRataPembimbing !== null && rataRataPenguji !== null) {
-      nilaiHasilPerhitungan = Number(
-        (
-          rataRataPembimbing * bobotPembimbing +
-          rataRataPenguji * bobotPenguji
-        ).toFixed(2)
-      );
-      nilaiTertimbang = Number((nilaiHasilPerhitungan * bobotClo).toFixed(2));
-      totalNilaiAngka += nilaiTertimbang;
-    } else {
-      canCalculateTotal = false;
-    }
-
-    return {
-      cloProdiId: clo.id,
-      cloName: clo.name,
-      deskripsi: clo.description,
-      bobotClo,
-      bobotPembimbing,
-      bobotPenguji,
-      nilaiPembimbing1: scoreP1,
-      nilaiPembimbing2: scoreP2,
-      rataRataPembimbing,
-      nilaiPenguji1: scoreU1,
-      nilaiPenguji2: scoreU2,
-      rataRataPenguji,
-      nilaiHasilPerhitungan,
-      nilaiTertimbang,
-    };
-  });
-
-  const finalTotalAngka = canCalculateTotal
-    ? Number(totalNilaiAngka.toFixed(2))
-    : null;
-
-  const calculatedNilaiHuruf = canCalculateTotal
-    ? konversiNilaiHuruf(finalTotalAngka)
-    : null;
-
-  const rekomendasiKeterangan = calculatedNilaiHuruf
-    ? tentukanKeteranganKelulusan(calculatedNilaiHuruf)
-    : null;
-
-  // 7. Cek apakah Berita Acara sudah terbit sebelumnya
-  const existingBeritaAcara =
-    sidangRegistration.beritaAcaraSidangTugasAkhirs &&
-    sidangRegistration.beritaAcaraSidangTugasAkhirs.length > 0
-      ? sidangRegistration.beritaAcaraSidangTugasAkhirs[0]
+  // 5. Ambil data revisi tugas akhir untuk mengetahui status penutupan sidang
+  const revisiTugasAkhir =
+    sidangRegistration.revisiTugasAkhir &&
+    sidangRegistration.revisiTugasAkhir.length > 0
+      ? sidangRegistration.revisiTugasAkhir.find(
+          (r) => r.tglSetujuiUntukRevisi !== null,
+        ) || null
       : null;
 
-  const isBeritaAcaraPublished = Boolean(existingBeritaAcara);
-
-  // 8. Kumpulkan catatan revisi dari semua dosen yang telah mengisi
-  const catatanRevisiList = penilaianList
-    .filter(
-      (p) => p.isSubmitted && p.catatanRevisi && p.catatanRevisi.trim() !== ""
-    )
-    .map((p) => ({
-      dosenId: p.dosen.id,
-      dosenName: p.dosen.name,
-      penilaiRole: p.penilaiRole,
-      penilaiType: p.penilaiType,
-      catatanRevisi: p.catatanRevisi,
-    }));
+  const isSidangClosed = Boolean(revisiTugasAkhir);
 
   return {
     sidangRegistrationId,
+    isSidangClosed,
     mahasiswa: {
-      id: sidangRegistration.mahasiswa?.id,
-      name: sidangRegistration.mahasiswa?.name,
-      nim: sidangRegistration.mahasiswa?.nim,
-      studyProgram: sidangRegistration.mahasiswa?.studyProgram
-        ? {
-            id: sidangRegistration.mahasiswa.studyProgram.id,
-            name: sidangRegistration.mahasiswa.studyProgram.name,
-          }
-        : null,
+      id: sidangRegistration.mahasiswa?.id || null,
+      name: sidangRegistration.mahasiswa?.name || "",
+      nim: sidangRegistration.mahasiswa?.nim || "",
+      studyProgram: sidangRegistration.mahasiswa?.studyProgram?.name || "",
       judulTugasAkhir:
         sidangRegistration.judulTugasAkhirIndonesia ||
         sidangRegistration.judulTugasAkhirInggris ||
@@ -766,31 +706,15 @@ export const getAllPenilaianBySidangRegistrationId = async ({
       submittedCount,
       isAllSubmitted,
     },
-    penilaianList,
-    beritaAcaraCalculation: {
-      isBeritaAcaraPublished,
-      beritaAcaraId: existingBeritaAcara?.id || null,
-      skemaPerhitunganNilai: isBeritaAcaraPublished
-        ? existingBeritaAcara.skemaPerhitunganNilai
-        : skemaPerhitunganNilai,
-      totalNilaiAngka: isBeritaAcaraPublished
-        ? Number(existingBeritaAcara.nilaiAkhir)
-        : finalTotalAngka,
-      nilaiAkhir: isBeritaAcaraPublished
-        ? Number(existingBeritaAcara.nilaiAkhir)
-        : finalTotalAngka,
-      nilaiHuruf: isBeritaAcaraPublished
-        ? existingBeritaAcara.nilaiHuruf
-        : calculatedNilaiHuruf,
-      keterangan: isBeritaAcaraPublished
-        ? existingBeritaAcara.keterangan
-        : null,
-      rekomendasiKeterangan,
-      justifikasi: isBeritaAcaraPublished
-        ? existingBeritaAcara.justifikasi
-        : null,
-      catatanRevisiList,
-    },
+    penilaian,
+    revisiTugasAkhir: revisiTugasAkhir
+      ? {
+          id: revisiTugasAkhir.id,
+          deadlineRevisi: revisiTugasAkhir.deadlineRevisi,
+          tglSetujuiUntukRevisi: revisiTugasAkhir.tglSetujuiUntukRevisi,
+          setujuiUntukRevisiId: revisiTugasAkhir.setujuiUntukRevisiId,
+        }
+      : null,
   };
 };
 
@@ -799,9 +723,6 @@ export const tutupSidang = async ({
   sidangRegistrationId,
   userId,
   deadlineRevisi,
-  keterangan,
-  nilaiAkhir,
-  justifikasi,
 }) => {
   // 1. Ambil data dosen dari userId (access token)
   const currentDosen = await prisma.dosen.findUnique({
@@ -826,6 +747,7 @@ export const tutupSidang = async ({
       dosenPenguji1: { include: { user: true } },
       dosenPenguji2: { include: { user: true } },
       penilaianTugasAkhir: { where: { deletedAt: null } },
+      revisiTugasAkhir: { where: { deletedAt: null } },
       beritaAcaraSidangTugasAkhirs: { where: { deletedAt: null } },
     },
   });
@@ -839,20 +761,22 @@ export const tutupSidang = async ({
   // 3. Pastikan yang menutup sidang adalah DOSEN PEMBIMBING 1
   if (sidangRegistration.dosenPembimbing1Id !== currentDosen.id) {
     const error = new Error(
-      "Hanya Dosen Pembimbing 1 yang memiliki hak akses untuk menutup sidang tugas akhir"
+      "Hanya Dosen Pembimbing 1 yang memiliki hak akses untuk menutup sidang tugas akhir",
     );
     error.statusCode = 403;
     throw error;
   }
 
   // 4. Pastikan sidang belum pernah ditutup sebelumnya
-  if (
+  const existingClosedRevisi = (sidangRegistration.revisiTugasAkhir || []).find(
+    (r) => r.tglSetujuiUntukRevisi !== null,
+  );
+  const existingBeritaAcara =
     sidangRegistration.beritaAcaraSidangTugasAkhirs &&
-    sidangRegistration.beritaAcaraSidangTugasAkhirs.length > 0
-  ) {
-    const error = new Error(
-      "Sidang ini sudah ditutup dan Berita Acara telah diterbitkan"
-    );
+    sidangRegistration.beritaAcaraSidangTugasAkhirs.length > 0;
+
+  if (existingClosedRevisi || existingBeritaAcara) {
+    const error = new Error("Sidang ini sudah ditutup sebelumnya");
     error.statusCode = 400;
     throw error;
   }
@@ -898,63 +822,13 @@ export const tutupSidang = async ({
 
   if (missingPenilai.length > 0) {
     const error = new Error(
-      `Sidang belum dapat ditutup karena dosen penilai berikut belum menyimpan penilaian: ${missingPenilai.join(", ")}`
+      `Sidang belum dapat ditutup karena dosen penilai berikut belum menyimpan penilaian: ${missingPenilai.join(", ")}`,
     );
     error.statusCode = 400;
     throw error;
   }
 
-  // 6. Hitung hasil kalkulasi nilai sidang dan skemaPerhitunganNilai Berita Acara
-  const rekapData = await getAllPenilaianBySidangRegistrationId({
-    sidangRegistrationId,
-  });
-
-  const {
-    skemaPerhitunganNilai,
-    totalNilaiAngka: calculatedScore,
-  } = rekapData.beritaAcaraCalculation;
-
-  if (calculatedScore === null || calculatedScore === undefined) {
-    const error = new Error(
-      "Kalkulasi nilai akhir sidang belum dapat dihitung secara lengkap"
-    );
-    error.statusCode = 400;
-    throw error;
-  }
-
-  // 7. Tentukan nilaiAkhir (angka): default adalah hasil perhitungan
-  let finalNilaiAngka = calculatedScore;
-  let isDifferent = false;
-
-  if (
-    nilaiAkhir !== undefined &&
-    nilaiAkhir !== null &&
-    String(nilaiAkhir).trim() !== ""
-  ) {
-    const customScore = Number(nilaiAkhir);
-    if (isNaN(customScore) || customScore < 0 || customScore > 100) {
-      const error = new Error("Nilai akhir harus berupa angka antara 0 dan 100");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (Math.abs(customScore - calculatedScore) >= 0.01) {
-      isDifferent = true;
-      if (!justifikasi || justifikasi.trim() === "") {
-        const error = new Error(
-          "Justifikasi wajib diisi apabila nilai akhir berbeda dari hasil perhitungan"
-        );
-        error.statusCode = 400;
-        throw error;
-      }
-    }
-    finalNilaiAngka = Number(customScore.toFixed(2));
-  }
-
-  // 8. Tentukan nilaiHuruf secara otomatis berdasarkan rubrik sidang
-  const nilaiHuruf = konversiNilaiHuruf(finalNilaiAngka);
-
-  // 9. Simpan atau perbarui RevisiTugasAkhir
+  // 6. Simpan atau perbarui RevisiTugasAkhir
   const parsedDeadline = new Date(deadlineRevisi);
   const existingRevisi = await prisma.revisiTugasAkhir.findFirst({
     where: { sidangRegistrationId, deletedAt: null },
@@ -977,32 +851,12 @@ export const tutupSidang = async ({
         deadlineRevisi: parsedDeadline,
         tglSetujuiUntukRevisi: new Date(),
         setujuiUntukRevisiId: currentDosen.id,
+        status: "IN_PROGRESS",
       },
     });
   }
 
-  // 10. Terbitkan BeritaAcaraSidangTugasAkhir
-  const beritaAcara = await prisma.beritaAcaraSidangTugasAkhir.create({
-    data: {
-      sidangRegistrationId,
-      skemaPerhitunganNilai,
-      nilaiAkhir: String(finalNilaiAngka),
-      nilaiHuruf,
-      keterangan,
-      justifikasi: isDifferent ? justifikasi.trim() : (justifikasi || null),
-    },
-    include: {
-      sidangRegistration: {
-        include: {
-          mahasiswa: { include: { studyProgram: true } },
-        },
-      },
-    },
-  });
-
   return {
-    beritaAcara,
     revisiTugasAkhir: savedRevisi,
   };
 };
-

@@ -37,7 +37,7 @@ const router = express.Router();
  *         name: search
  *         schema:
  *           type: string
- *         description: Search by type (e.g. pembimbing_1)
+ *         description: Search by peran (e.g. dosenPembimbing1)
  *       - in: query
  *         name: studyProgramId
  *         schema:
@@ -47,7 +47,7 @@ const router = express.Router();
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [type, bobot, createdAt]
+ *           enum: [peran, bobot, createdAt]
  *           default: createdAt
  *         description: Sort field
  *       - in: query
@@ -63,7 +63,7 @@ const router = express.Router();
  *       200:
  *         description: Skema Penilai data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -71,7 +71,7 @@ router.get(
   "/",
   verifyToken,
   validate(listSkemaPenilaiQuerySchema, "query"),
-  getSkemaPenilais
+  getSkemaPenilais,
 );
 
 /**
@@ -89,26 +89,28 @@ router.get(
  *           schema:
  *             type: object
  *             required:
- *               - type
+ *               - peran
  *               - bobot
  *               - studyProgramId
  *             properties:
- *               type:
+ *               peran:
  *                 type: string
- *                 example: pembimbing_1
+ *                 enum: [dosenPembimbing1, dosenPembimbing2, dosenPenguji1, dosenPenguji2]
+ *                 example: dosenPembimbing1
  *               bobot:
  *                 type: number
  *                 format: float
  *                 example: 0.6
  *               studyProgramId:
  *                 type: string
+ *                 format: uuid
  *     responses:
  *       201:
  *         description: Skema Penilai created successfully
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -119,7 +121,7 @@ router.post(
   verifyToken,
   authorize("ADMIN"),
   validate(createSkemaPenilaiSchema),
-  createSkemaPenilai
+  createSkemaPenilai,
 );
 
 /**
@@ -141,7 +143,7 @@ router.post(
  *       200:
  *         description: Skema Penilai data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Skema Penilai tidak ditemukan
  */
@@ -168,9 +170,10 @@ router.get("/:id", verifyToken, getSkemaPenilaiById);
  *           schema:
  *             type: object
  *             properties:
- *               type:
+ *               peran:
  *                 type: string
- *                 example: pembimbing_1
+ *                 enum: [dosenPembimbing1, dosenPembimbing2, dosenPenguji1, dosenPenguji2]
+ *                 example: dosenPembimbing1
  *               bobot:
  *                 type: number
  *                 format: float
@@ -181,7 +184,7 @@ router.get("/:id", verifyToken, getSkemaPenilaiById);
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
@@ -192,7 +195,7 @@ router.put(
   verifyToken,
   authorize("ADMIN"),
   validate(updateSkemaPenilaiSchema),
-  updateSkemaPenilai
+  updateSkemaPenilai,
 );
 
 /**
@@ -213,7 +216,7 @@ router.put(
  *       200:
  *         description: Skema Penilai deleted successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin only)
  *       404:
