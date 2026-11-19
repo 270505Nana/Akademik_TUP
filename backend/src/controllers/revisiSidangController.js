@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import * as revisiSidangService from "../services/revisiSidangService.js";
+import { serveDownload } from "../services/storageService.js";
 
 // GET /api/revisi-sidang (Admin & Dosen)
 export const getRevisiSidangList = asyncHandler(async (req, res) => {
@@ -105,4 +106,21 @@ export const verifyRevisiSidang = asyncHandler(async (req, res) => {
     message: "Hasil revisi sidang berhasil diverifikasi dan Berita Acara telah diterbitkan",
     data,
   });
+});
+
+// GET /api/revisi-sidang/:id/berkas/download (Admin, Dosen Pembimbing 1, Mahasiswa)
+export const downloadBerkasRevisiSidang = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    res.status(400);
+    throw new Error("ID Revisi Sidang wajib diisi");
+  }
+
+  const downloadInfo = await revisiSidangService.getDownloadBerkasRevisiSidang({
+    id,
+    user: req.user,
+  });
+
+  await serveDownload(res, downloadInfo);
 });

@@ -538,3 +538,81 @@ export const verifyRevisiSidang = async ({ id, user, payload }) => {
     }
   });
 };
+
+/**
+ * 6. GET /api/revisi-sidang/:id/berkas/download
+ * Download berkas dokumen revisi (Admin, Dosen Pembimbing 1, Mahasiswa)
+ */
+export const getDownloadBerkasRevisiSidang = async ({ id, user }) => {
+  const revisi = await prisma.revisiTugasAkhir.findFirst({
+    where: { id, deletedAt: null },
+    include: {
+      berkasRevisi: true,
+      sidangRegistration: {
+        include: {
+          mahasiswa: true,
+          dosenPembimbing1: true,
+        },
+      },
+    },
+  });
+
+  if (!revisi) {
+    const error = new Error("Data revisi sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!revisi.berkasRevisi || !revisi.berkasRevisi.filepath) {
+    const error = new Error("Berkas revisi sidang belum diunggah");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const userRole = user.role;
+
+  if (userRole === "ADMIN") {
+    // Admin selalu diizinkan
+  } else if (userRole === "MAHASISWA") {
+    if (revisi.sidangRegistration?.mahasiswa?.userId !== user.id) {
+      const error = new Error(
+        "Anda tidak memiliki hak akses untuk mengunduh berkas revisi sidang ini"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+  } else if (userRole === "DOSEN") {
+    const currentDosen = await prisma.dosen.findUnique({
+      where: { userId: user.id, deletedAt: null },
+    });
+
+    if (!currentDosen) {
+      const error = new Error("Data Dosen tidak ditemukan");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (revisi.sidangRegistration?.dosenPembimbing1Id !== currentDosen.id) {
+      const error = new Error(
+        "Anda tidak memiliki hak akses untuk mengunduh berkas revisi sidang ini karena Anda bukan Dosen Pembimbing 1"
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+  } else {
+    const error = new Error(
+      "Peran pengguna tidak memiliki hak akses untuk mengunduh berkas ini"
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const filename =
+    revisi.berkasRevisi.name ||
+    `Revisi_Sidang_${revisi.sidangRegistration?.mahasiswa?.nim || "dokumen"}.pdf`;
+
+  return {
+    filepath: revisi.berkasRevisi.filepath,
+    filename,
+  };
+};

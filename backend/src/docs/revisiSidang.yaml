@@ -389,6 +389,47 @@ paths:
               example:
                 message: Data revisi sidang tidak ditemukan
 
+  /api/revisi-sidang/{id}/berkas/download:
+    get:
+      summary: Download Berkas Revisi Sidang
+      description: |
+        Mengunduh berkas dokumen revisi sidang tugas akhir.
+        - **Admin**: Selalu memiliki akses unduh.
+        - **Dosen Pembimbing 1**: Dapat mengunduh berkas revisi mahasiswa bimbingannya.
+        - **Mahasiswa**: Dapat mengunduh berkas revisi miliknya sendiri.
+      tags:
+        - Revisi Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Revisi Tugas Akhir (UUID)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Mengunduh file dokumen revisi sidang secara langsung (binary download atau presigned redirect)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "302":
+          description: Redirect ke Presigned URL Cloudflare R2
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Data revisi sidang atau berkas fisik tidak ditemukan
+          content:
+            application/json:
+              example:
+                message: Berkas revisi sidang belum diunggah
+
   /api/revisi-sidang/{id}/verify:
     put:
       summary: Dosen Verifikasi Hasil Revisi dan Terbitkan Berita Acara (Khusus Dosen Pembimbing 1)

@@ -13,6 +13,7 @@ import {
   getRevisiSidangById,
   submitRevisiSidang,
   deleteBerkasRevisiSidang,
+  downloadBerkasRevisiSidang,
   verifyRevisiSidang,
 } from "../../controllers/revisiSidangController.js";
 
@@ -70,6 +71,14 @@ router.delete(
   verifyToken,
   authorize("MAHASISWA"),
   deleteBerkasRevisiSidang,
+);
+
+// GET /api/revisi-sidang/:id/berkas/download (Admin, Dosen Pembimbing 1, Mahasiswa)
+router.get(
+  "/:id/berkas/download",
+  verifyToken,
+  authorize("ADMIN", "DOSEN", "MAHASISWA"),
+  downloadBerkasRevisiSidang,
 );
 
 // PUT /api/revisi-sidang/:id/verify (Dosen Pembimbing 1)

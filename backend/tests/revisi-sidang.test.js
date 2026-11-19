@@ -476,6 +476,103 @@ describe("Revisi Sidang Endpoints", () => {
     });
   });
 
+  describe("GET /api/revisi-sidang/:id/berkas/download", () => {
+    const mockRevisiWithBerkas = {
+      ...mockRevisi,
+      berkasRevisiId: "berkas-1",
+      berkasRevisi: {
+        id: "berkas-1",
+        name: "Laporan_Revisi.pdf",
+        filepath: "uploads/berkas-revisi/test.pdf",
+      },
+    };
+
+    it("Admin berhasil mengunduh berkas revisi", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisiWithBerkas);
+      vi.spyOn(storageService, "serveDownload").mockImplementation((res) => {
+        return res.status(200).send("PDF content");
+      });
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1/berkas/download")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("Dosen Pembimbing 1 berhasil mengunduh berkas revisi", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisiWithBerkas);
+      vi.spyOn(prisma.dosen, "findUnique").mockResolvedValue(mockDosenP1);
+      vi.spyOn(storageService, "serveDownload").mockImplementation((res) => {
+        return res.status(200).send("PDF content");
+      });
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1/berkas/download")
+        .set("Authorization", `Bearer ${dosenP1Token}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("Dosen yang bukan Pembimbing 1 ditolak dengan 403 Forbidden", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisiWithBerkas);
+      vi.spyOn(prisma.dosen, "findUnique").mockResolvedValue(mockDosenP2);
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1/berkas/download")
+        .set("Authorization", `Bearer ${dosenP2Token}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain("Anda bukan Dosen Pembimbing 1");
+    });
+
+    it("Mahasiswa pemilik berhasil mengunduh berkas revisi", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisiWithBerkas);
+      vi.spyOn(storageService, "serveDownload").mockImplementation((res) => {
+        return res.status(200).send("PDF content");
+      });
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1/berkas/download")
+        .set("Authorization", `Bearer ${mhsToken}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("Mahasiswa lain ditolak dengan 403 Forbidden", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisiWithBerkas);
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1/berkas/download")
+        .set("Authorization", `Bearer ${otherMhsToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toBe("Anda tidak memiliki hak akses untuk mengunduh berkas revisi sidang ini");
+    });
+
+    it("Mengembalikan 404 jika revisi sidang tidak ditemukan", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(null);
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-unknown/berkas/download")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.message).toBe("Data revisi sidang tidak ditemukan");
+    });
+
+    it("Mengembalikan 404 jika berkas belum diunggah", async () => {
+      vi.spyOn(prisma.revisiTugasAkhir, "findFirst").mockResolvedValue(mockRevisi);
+
+      const res = await request(app)
+        .get("/api/revisi-sidang/revisi-1/berkas/download")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.message).toBe("Berkas revisi sidang belum diunggah");
+    });
+  });
+
   describe("PUT /api/revisi-sidang/:id/verify", () => {
     it("Dosen Pembimbing 1 berhasil memverifikasi hasil revisi dan menerbitkan Berita Acara", async () => {
       const submittedRevisi = {
