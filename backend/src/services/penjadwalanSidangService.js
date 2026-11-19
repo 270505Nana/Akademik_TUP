@@ -247,12 +247,15 @@ export const setPengujiSidang = async ({
   id,
   dosenPenguji1Id,
   dosenPenguji2Id,
+  user,
+  dosen,
 }) => {
   const registration = await prisma.sidangRegistration.findUnique({
     where: { id },
     include: {
       sidangPeriod: true,
       mahasiswa: true,
+      dosenPembimbing1: true,
     },
   });
 
@@ -260,6 +263,32 @@ export const setPengujiSidang = async ({
     const error = new Error("Pendaftaran sidang tidak ditemukan");
     error.statusCode = 404;
     throw error;
+  }
+
+  // Validasi otorisasi: Dosen (Ketua KK) hanya boleh menentukan penguji untuk mahasiswa dari Research Group yang sama dengan dospem 1
+  if (user?.role === "DOSEN") {
+    const currentDosen =
+      dosen ||
+      (await prisma.dosen.findUnique({
+        where: { userId: user.id, deletedAt: null },
+      }));
+
+    if (!currentDosen) {
+      const error = new Error("Data Dosen tidak ditemukan");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (
+      !registration.dosenPembimbing1 ||
+      registration.dosenPembimbing1.researchGroupId !== currentDosen.researchGroupId
+    ) {
+      const error = new Error(
+        "Anda tidak memiliki hak akses untuk menentukan dosen penguji mahasiswa di luar Kelompok Keahlian (Research Group) Anda",
+      );
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   // Catatan: Pengecekan isLocked & isPublished secara khusus membatasi role Dosen / Ketua KK
@@ -348,7 +377,7 @@ export const setPengujiSidang = async ({
 /**
  * Menentukan dosen penguji sidang untuk multiple pendaftaran (batch) (Ketua KK Only)
  */
-export const batchSetPengujiSidang = async (items) => {
+export const batchSetPengujiSidang = async (items, { user, dosen } = {}) => {
   const registrationIds = Array.from(new Set(items.map((item) => item.id)));
   const registrations = await prisma.sidangRegistration.findMany({
     where: {
@@ -370,6 +399,38 @@ export const batchSetPengujiSidang = async (items) => {
         `Pendaftaran sidang dengan ID ${id} tidak ditemukan`,
       );
       error.statusCode = 404;
+      throw error;
+    }
+  }
+
+  // Validasi otorisasi: Dosen (Ketua KK) hanya boleh menentukan penguji untuk mahasiswa dari Research Group yang sama dengan dospem 1
+  if (user?.role === "DOSEN") {
+    const currentDosen =
+      dosen ||
+      (await prisma.dosen.findUnique({
+        where: { userId: user.id, deletedAt: null },
+      }));
+
+    if (!currentDosen) {
+      const error = new Error("Data Dosen tidak ditemukan");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const unauthorizedRegs = registrations.filter(
+      (reg) =>
+        !reg.dosenPembimbing1 ||
+        reg.dosenPembimbing1.researchGroupId !== currentDosen.researchGroupId,
+    );
+
+    if (unauthorizedRegs.length > 0) {
+      const unauthorizedNames = unauthorizedRegs
+        .map((reg) => reg.mahasiswa?.name || reg.id)
+        .join(", ");
+      const error = new Error(
+        `Anda tidak memiliki hak akses untuk menentukan dosen penguji mahasiswa di luar Kelompok Keahlian (Research Group) Anda: ${unauthorizedNames}`,
+      );
+      error.statusCode = 403;
       throw error;
     }
   }

@@ -37,6 +37,8 @@ const setPengujiSidang = asyncHandler(async (req, res) => {
     id,
     dosenPenguji1Id,
     dosenPenguji2Id,
+    user: req.user,
+    dosen: req.dosen,
   });
 
   res.json({
@@ -48,7 +50,10 @@ const setPengujiSidang = asyncHandler(async (req, res) => {
 // Set Dosen Penguji Sidang Batch (Ketua KK Only)
 const batchSetPengujiSidang = asyncHandler(async (req, res) => {
   const updatedRegistrations =
-    await penjadwalanSidangService.batchSetPengujiSidang(req.body);
+    await penjadwalanSidangService.batchSetPengujiSidang(req.body, {
+      user: req.user,
+      dosen: req.dosen,
+    });
 
   res.json({
     message: "Dosen penguji sidang batch berhasil ditentukan",
