@@ -4,7 +4,7 @@ import Select from 'react-select';
 import { Info, MessageCircle, User, Phone, GraduationCap, UploadCloud, FileText, Download, AlertTriangle, FileBadge, CheckCircle, Loader, Clock, RefreshCw, AlertCircle, Menu, Eye } from 'lucide-react';
 import { useAuth }    from '../../context/AuthContext';
 import { useStudent } from '../../context/StudentContext';
-import api, { getLecturers, getSKTARequest, getAllSktaRequests, submitSKTARequest, submitFinalSKTARequest, downloadTemplate, downloadSK } from '../../service/api';
+import api, { getLecturers, getSKTARequest, getAllSktaRequests, submitFinalSKTARequest, downloadTemplate, downloadSK } from '../../service/api';
 import {
   determineSkStatus,
   getSubmissionMode,
@@ -561,7 +561,6 @@ const PengajuanSK = () => {
       e.dataTransfer.clearData();
     }
   };
-
   const handleSubmit = async () => {
     setSubmitError(null);
     if (submissionMode === 'blocked' || isReadOnlyForm) return;
@@ -593,17 +592,14 @@ const PengajuanSK = () => {
     const p2 = formData.kode2?.value ? String(formData.kode2.value) : null;
 
     try {
-      if (submissionMode === 'patch-revisi' || submissionMode === 'create-perpanjangan') {
+      if (submissionMode === 'patch-revisi') {
+        // MODE REVISI: Wajib menyertakan 'id' permohonan yang ditolak agar backend mengupdate record dengan izin isEdit aktif
         const activeRequestId = sktaRequestId ?? permohonan?.id;
+        const categoryString  = permohonan?.category || SKTA_CATEGORY.PERMOHONAN_BARU;
 
         const finalPayload = new FormData();
-        finalPayload.append('id', activeRequestId);
+        if (activeRequestId) finalPayload.append('id', activeRequestId);
         finalPayload.append('mahasiswaId', mahasiswaId);
-        
-        const categoryString = submissionMode === 'create-perpanjangan' 
-          ? SKTA_CATEGORY.PERPANJANGAN_SK 
-          : (permohonan?.category || SKTA_CATEGORY.PERMOHONAN_BARU);
-          
         finalPayload.append('category', categoryString);
         finalPayload.append('judulProposalIndonesia', formData.judulIndo.trim());
         finalPayload.append('judulProposalInggris', formData.judulInggris.trim());
@@ -612,29 +608,32 @@ const PengajuanSK = () => {
         if (actualFile) finalPayload.append('evidence', actualFile);
 
         await submitFinalSKTARequest(finalPayload);
-        
-        if (submissionMode === 'patch-revisi') {
-          setPageStatus('revision_sent');
-        } else {
-          setPageStatus('success');
-        }
+        setPageStatus('revision_sent');
+
+      } else if (submissionMode === 'create-perpanjangan') {
+        // MODE PERPANJANGAN: JANGAN kirim 'id' SK lama agar backend membuat record baru dengan category 'Perpanjangan SK'
+        const categoryString = SKTA_CATEGORY.PERPANJANGAN_SK;
+
+        const finalPayload = new FormData();
+        finalPayload.append('mahasiswaId', mahasiswaId);
+        finalPayload.append('category', categoryString);
+        finalPayload.append('judulProposalIndonesia', formData.judulIndo.trim());
+        finalPayload.append('judulProposalInggris', formData.judulInggris.trim());
+        if (p1) finalPayload.append('dosenPembimbing1Id', p1);
+        if (p2) finalPayload.append('dosenPembimbing2Id', p2);
+        if (actualFile) finalPayload.append('evidence', actualFile);
+
+        const res = await submitFinalSKTARequest(finalPayload);
+        const newSktaRequestId = res?.data?.id || res?.id;
+        if (newSktaRequestId) updateSktaRequestId(newSktaRequestId);
+
+        setPageStatus('success');
+
       } else {
+        // MODE PERMOHONAN BARU: Langsung hit POST final tanpa hit API draft dan tanpa 'id'
         const categoryString = SKTA_CATEGORY.PERMOHONAN_BARU;
 
-        const draftResult = await submitSKTARequest({
-          proposalTitleId:    formData.judulIndo.trim(),
-          proposalTitleEn:    formData.judulInggris.trim(),
-          studentId:          mahasiswaId,
-          dosenPembimbing1Id: p1,
-          dosenPembimbing2Id: p2,
-          category:           categoryString
-        });
-        
-        const newSktaRequestId = draftResult?.data?.id || draftResult?.id;
-        if (!newSktaRequestId) throw new Error("Gagal mendapatkan ID Permohonan dari server.");
-
         const finalPayload = new FormData();
-        finalPayload.append('id', newSktaRequestId);
         finalPayload.append('mahasiswaId', mahasiswaId);
         finalPayload.append('category', categoryString);
         finalPayload.append('judulProposalIndonesia', formData.judulIndo.trim());
@@ -643,13 +642,14 @@ const PengajuanSK = () => {
         if (p2) finalPayload.append('dosenPembimbing2Id', p2);
         if (actualFile) finalPayload.append('evidence', actualFile);
 
-        await submitFinalSKTARequest(finalPayload);
-        
-        updateSktaRequestId(newSktaRequestId);
+        const res = await submitFinalSKTARequest(finalPayload);
+        const newSktaRequestId = res?.data?.id || res?.id;
+        if (newSktaRequestId) updateSktaRequestId(newSktaRequestId);
+
         if (permohonan) {
           setPermohonan({ ...permohonan, category: categoryString });
         }
-        
+
         setPageStatus('success');
       }
     } catch (err) {
