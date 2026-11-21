@@ -63,7 +63,7 @@ const router = express.Router();
  *       200:
  *         description: Sub CLO retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token or access denied
  */
@@ -71,7 +71,7 @@ router.get(
   "/",
   verifyToken,
   validate(listSubcloQuerySchema, "query"),
-  getSubcloProdis
+  getSubcloProdis,
 );
 
 /**
@@ -109,7 +109,7 @@ router.get(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi prodi sama)
  *       404:
@@ -120,7 +120,7 @@ router.post(
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(createSubcloSchema),
-  createSubcloProdi
+  createSubcloProdi,
 );
 
 /**
@@ -142,7 +142,7 @@ router.post(
  *       200:
  *         description: Sub CLO retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  *       404:
@@ -183,7 +183,7 @@ router.get("/:id", verifyToken, getSubcloProdiById);
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  *       404:
@@ -196,7 +196,7 @@ router.put(
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(updateSubcloSchema),
-  updateSubcloProdi
+  updateSubcloProdi,
 );
 
 /**
@@ -219,7 +219,7 @@ router.put(
  *       202:
  *         description: Delete approval request submitted successfully (Ketua Prodi)
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  *       404:
@@ -231,7 +231,7 @@ router.delete(
   "/:id",
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
-  deleteSubcloProdi
+  deleteSubcloProdi,
 );
 
 export default router;

@@ -63,7 +63,7 @@ const router = express.Router();
  *       200:
  *         description: Data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  */
@@ -71,7 +71,7 @@ router.get(
   "/",
   verifyToken,
   validate(listSkemaPerhitunganQuerySchema, "query"),
-  getSkemaPerhitungans
+  getSkemaPerhitungans,
 );
 
 /**
@@ -115,7 +115,7 @@ router.get(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi)
  *       404:
@@ -128,7 +128,7 @@ router.post(
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(createSkemaSchema),
-  createSkemaPerhitungan
+  createSkemaPerhitungan,
 );
 
 /**
@@ -150,7 +150,7 @@ router.post(
  *       200:
  *         description: Data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied
  *       404:
@@ -192,7 +192,7 @@ router.get("/:id", verifyToken, getSkemaPerhitunganById);
  *       400:
  *         description: Validation error / Total kombinasi bobot harus 1
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi)
  *       404:
@@ -205,7 +205,7 @@ router.put(
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
   validate(updateSkemaSchema),
-  updateSkemaPerhitungan
+  updateSkemaPerhitungan,
 );
 
 /**
@@ -227,7 +227,7 @@ router.put(
  *       200:
  *         description: Skema Perhitungan Nilai berhasil dihapus / Permohonan berhasil diajukan
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Admin, Ketua KK, atau Ketua Prodi)
  *       404:
@@ -239,7 +239,7 @@ router.delete(
   "/:id",
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN_KAPRODI"),
-  deleteSkemaPerhitungan
+  deleteSkemaPerhitungan,
 );
 
 export default router;

@@ -247,3 +247,16 @@ export const setPengujiJadwalSidangSchema = z
     message: "Dosen penguji 1 dan dosen penguji 2 tidak boleh sama",
   });
 
+/**
+ * Schema untuk Query Parameter List Penjadwalan Sidang (GET /api/penjadwalan-sidang)
+ */
+export const listPenjadwalanSidangQuerySchema = z.object({
+  sidangPeriodId: z.string().trim().optional(),
+  search: z.string().trim().optional(),
+  sort: z.enum(["newest", "oldest"]).optional(),
+  status: z.string().trim().optional(),
+  statusPenjadwalan: z.string().trim().optional(),
+  skemaSidang: z.string().trim().optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
+});

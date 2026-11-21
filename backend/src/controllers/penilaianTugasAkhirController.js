@@ -6,7 +6,7 @@ import {
 } from "../mappers/penilaianTugasAkhirMapper.js";
 import * as penilaianTugasAkhirService from "../services/penilaianTugasAkhirService.js";
 
-// Get Penilaian Tugas Akhir by Sidang Registration ID
+// Get Penilaian Tugas Akhir by Sidang Registration ID (Dosen me)
 export const getPenilaianBySidangRegistrationId = asyncHandler(
   async (req, res) => {
     const { sidangRegistrationId } = req.params;
@@ -16,18 +16,21 @@ export const getPenilaianBySidangRegistrationId = asyncHandler(
       throw new Error("ID Pendaftaran Sidang wajib diisi");
     }
 
-    const penilaian =
+    const result =
       await penilaianTugasAkhirService.getPenilaianBySidangRegistrationId({
         sidangRegistrationId,
         userId: req.user.id,
         userRole: req.user.role,
       });
 
-    res.json(mapPenilaianTugasAkhir(penilaian));
+    res.status(200).json({
+      message: "Data penilaian tugas akhir berhasil diambil",
+      data: result,
+    });
   },
 );
 
-// Get All Penilaian by Sidang Registration ID + Kalkulasi Berita Acara
+// Get All Penilaian by Sidang Registration ID (Rekap)
 export const getAllPenilaianBySidangRegistrationId = asyncHandler(
   async (req, res) => {
     const { sidangRegistrationId } = req.params;
@@ -44,9 +47,9 @@ export const getAllPenilaianBySidangRegistrationId = asyncHandler(
         userRole: req.user.role,
       });
 
-    res.json({
-      message: "Data seluruh penilaian sidang dan kalkulasi berita acara berhasil diambil",
-      data: mapRekapPenilaianSidang(result),
+    res.status(200).json({
+      message: "Data rekap penilaian sidang berhasil diambil",
+      data: result,
     });
   },
 );
@@ -76,10 +79,10 @@ export const savePenilaianTugasAkhir = asyncHandler(async (req, res) => {
   });
 });
 
-// Menutup Sidang Tugas Akhir & Menerbitkan Berita Acara (Khusus Pembimbing 1)
+// Menutup Sidang Tugas Akhir & Menetapkan Batas Waktu Revisi (Khusus Pembimbing 1)
 export const tutupSidang = asyncHandler(async (req, res) => {
   const { sidangRegistrationId } = req.params;
-  const { deadlineRevisi, keterangan, nilaiAkhir, justifikasi } = req.body;
+  const { deadlineRevisi } = req.body;
 
   if (!sidangRegistrationId) {
     res.status(400);
@@ -90,13 +93,10 @@ export const tutupSidang = asyncHandler(async (req, res) => {
     sidangRegistrationId,
     userId: req.user.id,
     deadlineRevisi,
-    keterangan,
-    nilaiAkhir,
-    justifikasi,
   });
 
-  res.status(201).json({
-    message: "Sidang tugas akhir berhasil ditutup dan Berita Acara telah diterbitkan",
+  res.status(200).json({
+    message: "Sidang tugas akhir berhasil ditutup dan batas waktu revisi telah ditetapkan",
     data: mapTutupSidangResponse(result),
   });
 });

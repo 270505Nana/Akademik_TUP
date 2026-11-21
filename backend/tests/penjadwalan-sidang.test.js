@@ -31,7 +31,12 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
       expect(isCapstoneScheme({ skemaSidang: "Capstone" })).toBe(true);
       expect(isCapstoneScheme({ skemaSidang: "capstone project" })).toBe(true);
       expect(isCapstoneScheme({ skemaSidangFinal: "Capstone" })).toBe(true);
-      expect(isCapstoneScheme({ skemaSidang: "Reguler", skemaSidangFinal: "Capstone" })).toBe(true);
+      expect(
+        isCapstoneScheme({
+          skemaSidang: "Reguler",
+          skemaSidangFinal: "Capstone",
+        }),
+      ).toBe(true);
       expect(isCapstoneScheme({ skemaSidang: "Reguler" })).toBe(false);
       expect(isCapstoneScheme({ skemaSidang: "Non Sidang" })).toBe(false);
       expect(isCapstoneScheme(null)).toBe(false);
@@ -175,7 +180,9 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
 
       expect(() => {
         validateBatchJadwalInternalConflict(itemsWithMeta, ruanganMap);
-      }).toThrowError(/Ruangan Ruang A301 \(Gedung IoT\) dijadwalkan bersamaan/);
+      }).toThrowError(
+        /Ruangan Ruang A301 \(Gedung IoT\) dijadwalkan bersamaan/,
+      );
     });
 
     it("melempar error jika Capstone beda kelompok bentrok dosen dalam rentang 2 jam", () => {
@@ -310,7 +317,9 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
         mahasiswa: { name: "Rizky Mahasiswa" },
       };
 
-      vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([existingSidang]);
+      vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([
+        existingSidang,
+      ]);
 
       const result = await checkJadwalConflict({
         registrationId: "new-cap-2",
@@ -338,7 +347,9 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
         mahasiswa: { name: "Budi Santoso" },
       };
 
-      vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([existingSidang]);
+      vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([
+        existingSidang,
+      ]);
 
       const result = await checkJadwalConflict({
         registrationId: "new-cap-2",
@@ -352,7 +363,9 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
         },
       });
 
-      expect(result).toContain("Jadwal bentrok: Ruangan Lab A (Gedung 1) sudah terjadwal");
+      expect(result).toContain(
+        "Jadwal bentrok: Ruangan Lab A (Gedung 1) sudah terjadwal",
+      );
     });
   });
 
@@ -363,14 +376,14 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
     it("TC-SCH-GET-005: Menolak request tanpa token otentikasi (401)", async () => {
       const res = await request(app).get("/api/penjadwalan-sidang");
       expect(res.status).toBe(401);
-      expect(res.body.message).toBe("Token not found");
+      expect(res.body.message).toBe("Unauthorized");
     });
 
     it("TC-SCH-GET-006: Menolak akses role Mahasiswa (403)", async () => {
       const mhsToken = jwt.sign(
         { id: "mhs-uuid", role: "MAHASISWA", email: "mhs@student.ac.id" },
         JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       const res = await request(app)
@@ -400,16 +413,18 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
         mahasiswa: { name: "Budi" },
       };
 
-      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(mockReg);
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(
+        mockReg,
+      );
 
       await expect(
         setPengujiSidang({
           id: "reg-1",
           dosenPenguji1Id: "dospem-1",
           dosenPenguji2Id: "dosen-lain",
-        })
+        }),
       ).rejects.toThrow(
-        "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri"
+        "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri",
       );
     });
 
@@ -423,16 +438,18 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
         mahasiswa: { name: "Budi" },
       };
 
-      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(mockReg);
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(
+        mockReg,
+      );
 
       await expect(
         setPengujiSidang({
           id: "reg-1",
           dosenPenguji1Id: "dosen-lain",
           dosenPenguji2Id: "dospem-2",
-        })
+        }),
       ).rejects.toThrow(
-        "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri"
+        "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri",
       );
     });
 
@@ -448,7 +465,9 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
         },
       ];
 
-      vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue(mockRegistrations);
+      vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue(
+        mockRegistrations,
+      );
 
       await expect(
         batchSetPengujiSidang([
@@ -457,9 +476,9 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
             dosenPenguji1Id: "dospem-10",
             dosenPenguji2Id: "penguji-lain",
           },
-        ])
+        ]),
       ).rejects.toThrow(
-        /Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri/
+        /Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri/,
       );
     });
 
@@ -470,7 +489,9 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
         dosenPembimbing2Id: "dospem-2",
       };
 
-      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(mockReg);
+      vi.spyOn(prisma.sidangRegistration, "findUnique").mockResolvedValue(
+        mockReg,
+      );
 
       await expect(
         setPengujiJadwalSidang({
@@ -479,9 +500,9 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
           dosenPenguji2Id: "dosen-lain",
           tglSidang: "2026-11-20T09:00:00.000Z",
           ruanganSidangId: "room-1",
-        })
+        }),
       ).rejects.toThrow(
-        "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri"
+        "Dosen pembimbing tidak dapat ditugaskan sebagai dosen penguji mahasiswa bimbingannya sendiri",
       );
     });
   });
@@ -500,8 +521,14 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
     });
 
     it("harus menangani input null atau tidak valid secara aman", () => {
-      expect(formatWibDateTime(null)).toEqual({ formattedDate: "", formattedTime: "" });
-      expect(formatWibDateTime("invalid-date")).toEqual({ formattedDate: "", formattedTime: "" });
+      expect(formatWibDateTime(null)).toEqual({
+        formattedDate: "",
+        formattedTime: "",
+      });
+      expect(formatWibDateTime("invalid-date")).toEqual({
+        formattedDate: "",
+        formattedTime: "",
+      });
     });
   });
 
@@ -552,8 +579,12 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
     });
 
     it("harus menerapkan filter search dan sort newest secara default", async () => {
-      const countSpy = vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
-      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+      const countSpy = vi
+        .spyOn(prisma.sidangRegistration, "count")
+        .mockResolvedValue(1);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
 
       await getPenjadwalanSidangList({
         user: { role: "ADMIN" },
@@ -571,20 +602,113 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
       expect(findArgs.orderBy).toEqual({ createdAt: "desc" });
     });
 
-    it("harus menerapkan sort oldest ketika sortBy=oldest", async () => {
+    it("harus menerapkan sort oldest ketika sort=oldest", async () => {
       vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
-      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany").mockResolvedValue([]);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
 
       await getPenjadwalanSidangList({
         user: { role: "ADMIN" },
         sidangPeriodId: "period-uuid-1",
-        sortBy: "oldest",
+        sort: "oldest",
         skip: 0,
         take: 10,
       });
 
       const findArgs = findManySpy.mock.calls[0][0];
       expect(findArgs.orderBy).toEqual({ createdAt: "asc" });
+    });
+
+    it("harus menerapkan filter skemaSidangFinal ketika skemaSidang diberikan", async () => {
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(1);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
+
+      await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        sidangPeriodId: "period-uuid-1",
+        skemaSidang: "Reguler",
+        skip: 0,
+        take: 10,
+      });
+
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.skemaSidangFinal).toEqual({
+        equals: "Reguler",
+        mode: "insensitive",
+      });
+    });
+
+    it("harus mendukung query parameter skemaSidang pada endpoint GET /api/penjadwalan-sidang", async () => {
+      const adminToken = jwt.sign(
+        { id: "admin-uuid", role: "ADMIN", email: "admin@univ.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue({ id: "period-1" });
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
+
+      const res = await request(app)
+        .get("/api/penjadwalan-sidang?skemaSidang=Capstone")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.skemaSidangFinal).toEqual({
+        equals: "Capstone",
+        mode: "insensitive",
+      });
+    });
+
+    it("secara default harus mengecualikan skemaSidangFinal = 'Non Sidang'", async () => {
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
+
+      await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        sidangPeriodId: "period-uuid-1",
+        skip: 0,
+        take: 10,
+      });
+
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.AND).toEqual(
+        expect.arrayContaining([
+          {
+            OR: [
+              { skemaSidangFinal: null },
+              {
+                NOT: {
+                  skemaSidangFinal: {
+                    equals: "Non Sidang",
+                    mode: "insensitive",
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      );
+    });
+
+    it("harus mengembalikan data kosong jika filter skemaSidang = 'Non Sidang'", async () => {
+      const result = await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        sidangPeriodId: "period-uuid-1",
+        skemaSidang: "Non Sidang",
+        skip: 0,
+        take: 10,
+      });
+
+      expect(result).toEqual({ total: 0, registrations: [] });
     });
   });
 });

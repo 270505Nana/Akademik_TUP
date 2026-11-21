@@ -76,13 +76,18 @@ const router = express.Router();
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       500:
  *         description: Internal server error
  */
-router.get("/", verifyToken, validate(listSklQuerySchema, "query"), listSklUploads);
+router.get(
+  "/",
+  verifyToken,
+  validate(listSklQuerySchema, "query"),
+  listSklUploads,
+);
 
 /**
  * @swagger
@@ -103,7 +108,7 @@ router.get("/", verifyToken, validate(listSklQuerySchema, "query"), listSklUploa
  *       200:
  *         description: File downloaded successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or invalid token
  *       404:
@@ -132,7 +137,7 @@ router.get("/uploads/:id/download", verifyToken, downloadSklUpload);
  *       200:
  *         description: SKL upload details retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or invalid token
  *       404:
@@ -180,7 +185,7 @@ router.get("/:id", verifyToken, getSklUploadById);
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token or Access denied (Admin only)
  *       404:
@@ -194,7 +199,7 @@ router.post(
   authorize("ADMIN"),
   upload("skl").single("sklFile"),
   validate(createSklSchema),
-  createSklUpload
+  createSklUpload,
 );
 
 /**
@@ -236,7 +241,7 @@ router.post(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or invalid token (Admin only)
  *       404:
@@ -250,7 +255,7 @@ router.patch(
   authorize("ADMIN"),
   upload("skl").single("sklFile"),
   validate(updateSklSchema),
-  updateSklUpload
+  updateSklUpload,
 );
 
 /**
@@ -272,7 +277,7 @@ router.patch(
  *       200:
  *         description: SKL deleted successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or invalid token (Admin only)
  *       404:

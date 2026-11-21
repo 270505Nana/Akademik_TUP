@@ -5,11 +5,6 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
 
   const uploads = item.sidangRegistrationUploads || [];
 
-  let status = item.status;
-  if (status === "Pendaftaran Diterima" && item.sidangPeriod?.isOpen) {
-    status = "Siap Sidang";
-  }
-
   return {
     id: item.id,
     periodId: item.periodId,
@@ -38,7 +33,7 @@ export const mapSidangRegistrationToFrontend = (item, req) => {
     jalurNonSidangFinal: item.jalurNonSidangFinal,
     lulusTesBahasa: item.lulusTesBahasa,
     skorTesBahasa: item.skorTesBahasa,
-    status: status,
+    status: item.status,
     isDraft: item.isDraft,
     isLocked: (item.isLocked || item.sidangPeriod?.isPublished) ?? false,
     isPublished: item.sidangPeriod?.isPublished ?? false,

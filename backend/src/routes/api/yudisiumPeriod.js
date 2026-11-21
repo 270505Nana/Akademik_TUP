@@ -74,7 +74,7 @@ import {
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -106,7 +106,7 @@ router.get(
  *       404:
  *         description: Yudisium period not found
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -163,7 +163,7 @@ router.get("/:id", verifyToken, getYudisiumPeriodById);
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -227,7 +227,7 @@ router.post(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -260,7 +260,7 @@ router.put(
  *       404:
  *         description: Yudisium period not found
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */

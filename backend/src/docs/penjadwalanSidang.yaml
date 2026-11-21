@@ -1,0 +1,1057 @@
+tags:
+  - name: Penjadwalan Sidang
+    description: Endpoint untuk manajemen penjadwalan sidang, penentuan dosen penguji, dan publikasi jadwal sidang
+
+paths:
+  /api/penjadwalan-sidang:
+    get:
+      summary: Get all penjadwalan sidang (paginated)
+      description: |
+        Mengambil daftar pendaftaran sidang untuk penjadwalan.
+        - **Admin**: Dapat melihat seluruh data penjadwalan pada periode aktif (atau periode yang dipilih).
+        - **Dosen Ketua KK**: Hanya dapat melihat data penjadwalan di mana Dosen Pembimbing 1 berasal dari Research Group (KK) yang dipimpinnya.
+        - Pendaftaran dengan skema `Non Sidang` (`skemaSidangFinal = "Non Sidang"`) otomatis dikecualikan dari penjadwalan.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: sidangPeriodId
+          schema:
+            type: string
+            format: uuid
+          description: ID Periode Sidang. Jika dikosongkan, otomatis memfilter data pada periode sidang yang saat ini aktif.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Keyword pencarian untuk nama mahasiswa, NIM, atau judul tugas akhir
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [newest, oldest]
+            default: newest
+          description: Urutan data berdasarkan waktu pembuatan (newest atau oldest, default newest)
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - "Pendaftaran Diterima"
+              - "Siap Sidang"
+              - "Penguji Ready"
+              - "Penjadwalan Ready"
+          description: Filter status pendaftaran / penjadwalan sidang (Penguji Ready & Penjadwalan Ready dihitung on the fly)
+        - in: query
+          name: skemaSidang
+          schema:
+            type: string
+          description: Filter berdasarkan skema sidang final (skemaSidangFinal, contoh Reguler, Capstone, Sidang Khusus Prodi). Skema "Non Sidang" tidak ditampilkan pada endpoint ini.
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Nomor halaman
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Jumlah data per halaman
+      responses:
+        "200":
+          description: Penjadwalan sidang data retrieved successfully with pagination
+          content:
+            application/json:
+              example:
+                data:
+                  - id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    createdAt: "2026-11-10T08:00:00.000Z"
+                    updatedAt: "2026-11-10T09:00:00.000Z"
+                    mahasiswa:
+                      id: m1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      nim: "1202200001"
+                      kelasAsal: SI-44-01
+                      tahunAngkatan: 2022
+                      sks: 140
+                      ipk: 3.75
+                      tak: 45
+                      studyProgramId: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      dosenWaliId: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Ahmad Dani
+                      email: ahmaddani@student.telkomuniversity.ac.id
+                      phone: "081234567890"
+                      studyProgram:
+                        id: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                        name: S1 Sistem Informasi
+                        isActive: true
+                        facultyId: f1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    judulTugasAkhirIndonesia: Rancang Bangun Sistem Monitoring IoT
+                    judulTugasAkhirInggris: Design and Build of IoT Monitoring System
+                    skemaSidang: Reguler
+                    skemaSidangFinal: Reguler
+                    dosenPembimbing1:
+                      id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      nip: "197501012000121001"
+                      nidn: "0401017501"
+                      kodeDosen: DPS
+                      isKetuaKK: false
+                      isKetuaProdi: false
+                      isKepalaUrusanAkademik: false
+                      signature: null
+                      researchGroupId: rg-01
+                      studyProgramId: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      userId: u1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Pembimbing Satu, M.T.
+                      email: pembimbing1@telkomuniversity.ac.id
+                      phone: "081234567891"
+                      researchGroup:
+                        id: rg-01
+                        name: Enterprise Systems
+                        isActive: true
+                      studyProgram:
+                        id: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                        name: S1 Sistem Informasi
+                        isActive: true
+                        facultyId: f1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    dosenPembimbing2: null
+                    dosenPenguji1:
+                      id: d2a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      nip: "198002022005012002"
+                      nidn: "0402028001"
+                      kodeDosen: DPJ
+                      isKetuaKK: false
+                      isKetuaProdi: false
+                      isKepalaUrusanAkademik: false
+                      signature: null
+                      researchGroupId: rg-01
+                      studyProgramId: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      userId: u2a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Penguji Satu, M.Kom.
+                      email: penguji1@telkomuniversity.ac.id
+                      phone: "081234567892"
+                      researchGroup:
+                        id: rg-01
+                        name: Enterprise Systems
+                        isActive: true
+                      studyProgram:
+                        id: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                        name: S1 Sistem Informasi
+                        isActive: true
+                        facultyId: f1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    dosenPenguji2: null
+                    tglSidang: "2026-11-20T09:00:00.000Z"
+                    ruanganSidang:
+                      id: r1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Ruang 101
+                      gedung: Gedung Cacuk
+                      isActive: true
+                      createdAt: "2026-11-01T08:00:00.000Z"
+                      updatedAt: "2026-11-01T08:00:00.000Z"
+                      deletedAt: null
+                    isLocked: false
+                    notaDinasUrl: null
+                    status: Siap Sidang
+                    statusPenjadwalan: Siap Sidang
+                    isPublished: false
+                    isInfoPenjadwalanReaded: false
+                pagination:
+                  page: 1
+                  limit: 10
+                  total: 1
+                  totalPages: 1
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PenjadwalanSidangItem"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya Admin dan Dosen Ketua KK yang dapat mengakses)
+
+  /api/penjadwalan-sidang/{id}/toggle-lock:
+    patch:
+      summary: Toggle lock status of sidang registration (Admin only)
+      description: Mengunci atau membuka status penguncian sidang. Status isLocked ditujukan khusus untuk membatasi dosen/Ketua KK agar tidak dapat mengubah penguji setelah dikunci.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Sidang registration ID (UUID)
+      responses:
+        "200":
+          description: Status kunci pendaftaran sidang berhasil diperbarui
+          content:
+            application/json:
+              example:
+                message: Pendaftaran sidang berhasil dikunci
+                data:
+                  id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                  isLocked: true
+                  status: Siap Sidang
+                  statusPenjadwalan: Siap Sidang
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Pendaftaran sidang berhasil dikunci
+                  data:
+                    $ref: "#/components/schemas/PenjadwalanSidangItem"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya admin yang dapat mengakses)
+        "404":
+          description: Sidang registration not found
+
+  /api/penjadwalan-sidang/period/{sidangPeriodId}/toggle-publish:
+    patch:
+      summary: Toggle publish status of sidang period to mahasiswa (Admin only)
+      description: Mempublikasikan atau membatalkan publikasi seluruh jadwal sidang pada periode tertentu kepada mahasiswa.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: sidangPeriodId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID Periode Sidang (UUID)
+      responses:
+        "200":
+          description: Status publikasi jadwal sidang untuk periode ini berhasil diperbarui
+          content:
+            application/json:
+              example:
+                message: Jadwal sidang untuk periode ini berhasil dipublikasikan ke mahasiswa
+                data:
+                  id: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                  name: Periode Sidang Semester Ganjil 2026/2027
+                  academicYear: "2026/2027"
+                  semester: GANJIL
+                  startDate: "2026-11-01T00:00:00.000Z"
+                  endDate: "2026-11-30T23:59:59.000Z"
+                  category: pendaftaran
+                  isOpen: true
+                  isPublished: true
+                  createdAt: "2026-10-15T08:00:00.000Z"
+                  updatedAt: "2026-11-19T08:00:00.000Z"
+                  deletedAt: null
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Jadwal sidang untuk periode ini berhasil dipublikasikan ke mahasiswa
+                  data:
+                    type: object
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya admin yang dapat mengakses)
+        "404":
+          description: Periode sidang tidak ditemukan
+
+  /api/penjadwalan-sidang/{id}/toggle-read-info-penjadwalan:
+    patch:
+      summary: Tandai info penjadwalan sidang telah dibaca (Mahasiswa only)
+      description: Digunakan oleh mahasiswa untuk menandai bahwa ia telah membaca info penjadwalan sidang terbaru (hanya satu arah, membuat isInfoPenjadwalanReaded menjadi true).
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Sidang registration ID (UUID)
+      responses:
+        "200":
+          description: Info penjadwalan sidang berhasil ditandai sudah dibaca
+          content:
+            application/json:
+              example:
+                message: Info penjadwalan sidang berhasil ditandai sudah dibaca
+                data:
+                  id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                  isInfoPenjadwalanReaded: true
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Info penjadwalan sidang berhasil ditandai sudah dibaca
+                  data:
+                    $ref: "#/components/schemas/PenjadwalanSidangItem"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya mahasiswa pemilik pendaftaran yang dapat mengakses)
+        "404":
+          description: Sidang registration not found atau jadwal belum dipublikasikan
+
+  /api/penjadwalan-sidang/export:
+    get:
+      summary: Export data jadwal sidang
+      description: Mengunduh arsip ZIP yang berisi file Excel jadwal sidang (Format Awal dan Format Bandung).
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: sidangPeriodId
+          schema:
+            type: string
+            format: uuid
+          description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor jadwal pada periode sidang yang saat ini aktif.
+      responses:
+        "200":
+          description: Berhasil mengunduh file ZIP jadwal sidang
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya Admin dan Dosen Ketua KK yang dapat mengakses)
+
+  /api/penjadwalan-sidang/set-penguji/batch:
+    put:
+      summary: Set dosen penguji sidang batch (Ketua KK only)
+      description: Menentukan dosen penguji secara massal. Dosen pembimbing tidak dapat menjadi dosen penguji. Tindakan dibatasi jika pendaftaran dikunci atau periode telah dipublikasikan.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/BatchSetPengujiItem"
+      responses:
+        "200":
+          description: Dosen penguji sidang batch berhasil ditentukan
+          content:
+            application/json:
+              example:
+                message: Dosen penguji sidang batch berhasil ditentukan
+                data:
+                  - id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    dosenPenguji1:
+                      id: d2a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Dr. Penguji Satu, M.Kom.
+                      nip: "198002022005012002"
+                    dosenPenguji2: null
+                    statusPenjadwalan: Penguji Ready
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Dosen penguji sidang batch berhasil ditentukan
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PenjadwalanSidangItem"
+        "400":
+          description: Validation error / Jadwal bentrok / Sidang terkunci / Penguji merangkap pembimbing
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya dosen dengan status Ketua KK yang dapat mengakses)
+        "404":
+          description: Sidang registration or dosen not found
+
+  /api/penjadwalan-sidang/set-jadwal/batch:
+    put:
+      summary: Set jadwal sidang batch (Admin only)
+      description: Menentukan jadwal sidang secara massal oleh Admin. Admin tidak dibatasi oleh isLocked.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/BatchSetJadwalItem"
+      responses:
+        "200":
+          description: Jadwal sidang batch berhasil ditentukan
+          content:
+            application/json:
+              example:
+                message: Jadwal sidang batch berhasil ditentukan
+                data:
+                  - id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    tglSidang: "2026-11-20T09:00:00.000Z"
+                    ruanganSidang:
+                      id: r1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      name: Ruang 101
+                    statusPenjadwalan: Penjadwalan Ready
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Jadwal sidang batch berhasil ditentukan
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PenjadwalanSidangItem"
+        "400":
+          description: Validation error / Jadwal bentrok
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya admin yang dapat mengakses)
+        "404":
+          description: Sidang registration or ruangan not found
+
+  /api/penjadwalan-sidang/{id}/set-penguji:
+    put:
+      summary: Set dosen penguji sidang (Ketua KK only)
+      description: Menentukan dosen penguji satu pendaftaran sidang oleh Ketua KK. Dosen pembimbing tidak dapat menjadi dosen penguji. Tindakan ditolak jika sidang terkunci atau telah dipublikasikan.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Sidang registration ID (UUID)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetPengujiInput"
+      responses:
+        "200":
+          description: Dosen penguji sidang berhasil ditentukan
+          content:
+            application/json:
+              example:
+                message: Dosen penguji sidang berhasil ditentukan
+                data:
+                  id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                  dosenPenguji1:
+                    id: d2a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Dr. Penguji Satu, M.Kom.
+                    nip: "198002022005012002"
+                  dosenPenguji2: null
+                  statusPenjadwalan: Penguji Ready
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Dosen penguji sidang berhasil ditentukan
+                  data:
+                    $ref: "#/components/schemas/PenjadwalanSidangItem"
+        "400":
+          description: Validation error / Sidang terkunci / Penguji merangkap pembimbing
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya dosen dengan status Ketua KK yang dapat mengakses)
+        "404":
+          description: Sidang registration or dosen not found
+
+  /api/penjadwalan-sidang/{id}/set-jadwal:
+    put:
+      summary: Set jadwal sidang (Admin only)
+      description: Menentukan jadwal sidang satu pendaftaran oleh Admin. Admin tidak dibatasi oleh isLocked.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Sidang registration ID (UUID)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetJadwalInput"
+      responses:
+        "200":
+          description: Jadwal sidang berhasil ditentukan
+          content:
+            application/json:
+              example:
+                message: Jadwal sidang berhasil ditentukan
+                data:
+                  id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                  tglSidang: "2026-11-20T09:00:00.000Z"
+                  ruanganSidang:
+                    id: r1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Ruang 101
+                  statusPenjadwalan: Penjadwalan Ready
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Jadwal sidang berhasil ditentukan
+                  data:
+                    $ref: "#/components/schemas/PenjadwalanSidangItem"
+        "400":
+          description: Validation error / Jadwal bentrok
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya admin yang dapat mengakses)
+        "404":
+          description: Sidang registration or ruangan not found
+
+  /api/penjadwalan-sidang/{id}/set-penguji-jadwal:
+    put:
+      summary: Set dosen penguji dan jadwal sidang sekaligus (Admin only)
+      description: Menentukan dosen penguji dan jadwal sidang sekaligus oleh Admin. Admin tidak dibatasi oleh isLocked, namun dosen penguji tidak boleh sama dengan dosen pembimbing.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Sidang registration ID (UUID)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetPengujiJadwalInput"
+      responses:
+        "200":
+          description: Dosen penguji dan jadwal sidang berhasil ditentukan
+          content:
+            application/json:
+              example:
+                message: Dosen penguji dan jadwal sidang berhasil ditentukan
+                data:
+                  id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                  dosenPenguji1:
+                    id: d2a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Dr. Penguji Satu, M.Kom.
+                    nip: "198002022005012002"
+                  dosenPenguji2: null
+                  tglSidang: "2026-11-20T09:00:00.000Z"
+                  ruanganSidang:
+                    id: r1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    name: Ruang 101
+                  status: Siap Sidang
+                  statusPenjadwalan: Siap Sidang
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Dosen penguji dan jadwal sidang berhasil ditentukan
+                  data:
+                    $ref: "#/components/schemas/PenjadwalanSidangItem"
+        "400":
+          description: Validation error / Jadwal bentrok / Penguji merangkap pembimbing
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya admin yang dapat mengakses)
+        "404":
+          description: Sidang registration, dosen, atau ruangan not found
+
+  /api/penjadwalan-sidang/{id}/nota-dinas:
+    post:
+      summary: Upload Nota Dinas (Admin only)
+      description: Mengunggah file Nota Dinas untuk pendaftaran sidang. Hanya dapat dilakukan jika jadwal sidang sudah di-lock.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Sidang registration ID (UUID)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - notaDinasFile
+              properties:
+                notaDinasFile:
+                  type: string
+                  format: binary
+                  description: File PDF Nota Dinas
+      responses:
+        "201":
+          description: Nota Dinas berhasil diunggah
+          content:
+            application/json:
+              example:
+                message: Nota Dinas berhasil diunggah
+                data:
+                  id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                  notaDinasUrl: uploads/nota-dinas/uuid_nota_dinas.pdf
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Nota Dinas berhasil diunggah
+                  data:
+                    $ref: "#/components/schemas/PenjadwalanSidangItem"
+        "400":
+          description: Jadwal sidang belum di-lock atau file tidak dilampirkan
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya admin yang dapat mengakses)
+        "404":
+          description: Pendaftaran sidang tidak ditemukan
+
+components:
+  schemas:
+    SetPengujiInput:
+      type: object
+      required:
+        - dosenPenguji1Id
+        - dosenPenguji2Id
+      properties:
+        dosenPenguji1Id:
+          type: string
+          format: uuid
+          description: ID dosen penguji 1 (UUID)
+        dosenPenguji2Id:
+          type: string
+          format: uuid
+          description: ID dosen penguji 2 (UUID)
+
+    BatchSetPengujiItem:
+      type: object
+      required:
+        - id
+        - dosenPenguji1Id
+        - dosenPenguji2Id
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Sidang registration ID (UUID)
+        dosenPenguji1Id:
+          type: string
+          format: uuid
+          description: ID dosen penguji 1 (UUID)
+        dosenPenguji2Id:
+          type: string
+          format: uuid
+          description: ID dosen penguji 2 (UUID)
+
+    SetJadwalInput:
+      type: object
+      required:
+        - tglSidang
+        - ruanganSidangId
+      properties:
+        tglSidang:
+          type: string
+          format: date-time
+          description: Tanggal dan waktu pelaksanaan sidang (ISO 8601)
+        ruanganSidangId:
+          type: string
+          format: uuid
+          description: ID ruangan sidang (UUID)
+
+    BatchSetJadwalItem:
+      type: object
+      required:
+        - id
+        - tglSidang
+        - ruanganSidangId
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Sidang registration ID (UUID)
+        tglSidang:
+          type: string
+          format: date-time
+          description: Tanggal dan waktu pelaksanaan sidang (ISO 8601)
+        ruanganSidangId:
+          type: string
+          format: uuid
+          description: ID ruangan sidang (UUID)
+
+    SetPengujiJadwalInput:
+      type: object
+      required:
+        - dosenPenguji1Id
+        - dosenPenguji2Id
+        - tglSidang
+        - ruanganSidangId
+      properties:
+        dosenPenguji1Id:
+          type: string
+          format: uuid
+          description: ID dosen penguji 1 (UUID)
+        dosenPenguji2Id:
+          type: string
+          format: uuid
+          description: ID dosen penguji 2 (UUID)
+        tglSidang:
+          type: string
+          format: date-time
+          description: Tanggal dan waktu pelaksanaan sidang (ISO 8601)
+        ruanganSidangId:
+          type: string
+          format: uuid
+          description: ID ruangan sidang (UUID)
+
+    PenjadwalanSidangItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        createdAt:
+          type: string
+          format: date-time
+          example: 2026-11-10T08:00:00.000Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2026-11-10T09:00:00.000Z
+        mahasiswa:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Ahmad Dani
+            nim:
+              type: string
+              example: "1202200001"
+            kelasAsal:
+              type: string
+              example: SI-44-01
+            tahunAngkatan:
+              type: integer
+              example: 2022
+            sks:
+              type: integer
+              example: 140
+            ipk:
+              type: number
+              example: 3.75
+            tak:
+              type: integer
+              example: 45
+            studyProgramId:
+              type: string
+              format: uuid
+            dosenWaliId:
+              type: string
+              format: uuid
+            email:
+              type: string
+              example: ahmaddani@student.telkomuniversity.ac.id
+            phone:
+              type: string
+              nullable: true
+              example: "081234567890"
+            studyProgram:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  example: S1 Sistem Informasi
+                isActive:
+                  type: boolean
+                  example: true
+                facultyId:
+                  type: string
+                  format: uuid
+        judulTugasAkhirIndonesia:
+          type: string
+          nullable: true
+          example: Rancang Bangun Sistem Monitoring IoT
+        judulTugasAkhirInggris:
+          type: string
+          nullable: true
+          example: Design and Build of IoT Monitoring System
+        skemaSidang:
+          type: string
+          nullable: true
+          example: Reguler
+        skemaSidangFinal:
+          type: string
+          nullable: true
+          example: Reguler
+        dosenPembimbing1:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Dr. Pembimbing Satu, M.T.
+            nip:
+              type: string
+              example: "197501012000121001"
+            nidn:
+              type: string
+              example: "0401017501"
+            kodeDosen:
+              type: string
+              example: DPS
+            isKetuaKK:
+              type: boolean
+              example: false
+            isKetuaProdi:
+              type: boolean
+              example: false
+            isKepalaUrusanAkademik:
+              type: boolean
+              example: false
+            signature:
+              type: string
+              nullable: true
+            researchGroupId:
+              type: string
+              format: uuid
+            studyProgramId:
+              type: string
+              format: uuid
+            userId:
+              type: string
+              format: uuid
+            email:
+              type: string
+              example: pembimbing1@telkomuniversity.ac.id
+            phone:
+              type: string
+              nullable: true
+              example: "081234567891"
+            researchGroup:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  example: Enterprise Systems
+                isActive:
+                  type: boolean
+                  example: true
+            studyProgram:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  example: S1 Sistem Informasi
+                isActive:
+                  type: boolean
+                  example: true
+                facultyId:
+                  type: string
+                  format: uuid
+        dosenPembimbing2:
+          type: object
+          nullable: true
+        dosenPenguji1:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Dr. Penguji Satu, M.Kom.
+            nip:
+              type: string
+              example: "198002022005012002"
+            nidn:
+              type: string
+              example: "0402028001"
+            kodeDosen:
+              type: string
+              example: DPJ
+            isKetuaKK:
+              type: boolean
+              example: false
+            isKetuaProdi:
+              type: boolean
+              example: false
+            isKepalaUrusanAkademik:
+              type: boolean
+              example: false
+            signature:
+              type: string
+              nullable: true
+            researchGroupId:
+              type: string
+              format: uuid
+            studyProgramId:
+              type: string
+              format: uuid
+            userId:
+              type: string
+              format: uuid
+            email:
+              type: string
+              example: penguji1@telkomuniversity.ac.id
+            phone:
+              type: string
+              nullable: true
+              example: "081234567892"
+            researchGroup:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  example: Enterprise Systems
+                isActive:
+                  type: boolean
+                  example: true
+            studyProgram:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  example: S1 Sistem Informasi
+                isActive:
+                  type: boolean
+                  example: true
+                facultyId:
+                  type: string
+                  format: uuid
+        dosenPenguji2:
+          type: object
+          nullable: true
+        tglSidang:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-11-20T09:00:00.000Z
+        ruanganSidang:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: r1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+            name:
+              type: string
+              example: Ruang 101
+            gedung:
+              type: string
+              example: Gedung Cacuk
+            isActive:
+              type: boolean
+              example: true
+            createdAt:
+              type: string
+              format: date-time
+              example: 2026-11-01T08:00:00.000Z
+            updatedAt:
+              type: string
+              format: date-time
+              example: 2026-11-01T08:00:00.000Z
+            deletedAt:
+              type: string
+              nullable: true
+        isLocked:
+          type: boolean
+          example: false
+        notaDinasUrl:
+          type: string
+          nullable: true
+          example: null
+        status:
+          type: string
+          example: Siap Sidang
+        statusPenjadwalan:
+          type: string
+          nullable: true
+          example: Siap Sidang
+        isPublished:
+          type: boolean
+          example: false
+        isInfoPenjadwalanReaded:
+          type: boolean
+          example: false

@@ -83,11 +83,16 @@ const router = express.Router();
  *       400:
  *         description: Validation error pada query parameters
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
-router.get("/", verifyToken, validate(listDosenQuerySchema, "query"), listDosens);
+router.get(
+  "/",
+  verifyToken,
+  validate(listDosenQuerySchema, "query"),
+  listDosens,
+);
 
 /**
  * @swagger
@@ -141,7 +146,7 @@ router.get("/", verifyToken, validate(listDosenQuerySchema, "query"), listDosens
  *       400:
  *         description: Validation error pada query parameters
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -192,7 +197,7 @@ router.get("/dashboard", verifyToken, getDosenDashboard);
  *       400:
  *         description: File tanda tangan wajib diunggah
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Dosen only)
  *       404:
@@ -220,7 +225,7 @@ router.post(
  *       200:
  *         description: Tanda tangan berhasil dihapus
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Dosen only)
  *       404:
@@ -287,7 +292,7 @@ router.delete("/signature", verifyToken, authorize("DOSEN"), deleteSignature);
  *       400:
  *         description: User is not a dosen
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or Invalid token
  *       404:
@@ -322,7 +327,7 @@ router.put(
  *       200:
  *         description: Dosen data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -351,7 +356,7 @@ router.get("/:id", verifyToken, findDosenById);
  *       200:
  *         description: Toggle Ketua KK status successful
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied or Invalid token
  *       404:
@@ -359,6 +364,11 @@ router.get("/:id", verifyToken, findDosenById);
  *       500:
  *         description: Internal server error
  */
-router.patch("/:id/toggle-ketua-kk", verifyToken, authorize("ADMIN"), toggleKetuaKK);
+router.patch(
+  "/:id/toggle-ketua-kk",
+  verifyToken,
+  authorize("ADMIN"),
+  toggleKetuaKK,
+);
 
 export default router;

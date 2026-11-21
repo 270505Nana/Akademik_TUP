@@ -177,11 +177,7 @@ export const submitYudisiumSchema = z
  * Schema untuk Approve Yudisium Registration (PUT /api/yudisium-registrations/:id/approve)
  */
 export const approveYudisiumSchema = z.object({
-  adminId: z.preprocess((val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val), z
-    .string({ required_error: "ID staf akademik wajib diisi" })
-    .trim()
-    .min(1, "ID staf akademik wajib diisi")
-  ),
+  adminId: z.string().trim().optional().nullable(),
   yudisiumPeriodId: z
     .string({ required_error: "ID periode yudisium wajib diisi" })
     .trim()
@@ -189,6 +185,9 @@ export const approveYudisiumSchema = z.object({
     .uuid("ID periode yudisium tidak valid"),
   pengajuanCumlaudeFinal: z.string().trim().optional().nullable(),
   skemaCumlaudeFinal: z.string().trim().optional().nullable(),
+  predikat: z.string().trim().optional().nullable(),
+  statusKelulusan: z.string().trim().optional().nullable(),
+  message: z.string().trim().optional().nullable(),
   yudisiumRegistrationUploadIds: z
     .array(z.string().uuid("ID berkas tidak valid"))
     .optional()
@@ -199,11 +198,7 @@ export const approveYudisiumSchema = z.object({
  * Schema untuk Reject / Request Revision Yudisium Registration (PUT /api/yudisium-registrations/:id/reject)
  */
 export const rejectYudisiumSchema = z.object({
-  adminId: z.preprocess((val) => (val === "" || val === null || val === undefined ? undefined : typeof val === "number" ? String(val) : typeof val === "string" ? val.trim() : val), z
-    .string({ required_error: "ID staf akademik wajib diisi" })
-    .trim()
-    .min(1, "ID staf akademik wajib diisi")
-  ),
+  adminId: z.string().trim().optional().nullable(),
   message: z
     .string({ required_error: "Pesan penolakan wajib diisi" })
     .trim()

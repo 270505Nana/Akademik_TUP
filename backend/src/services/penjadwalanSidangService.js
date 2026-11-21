@@ -11,14 +11,26 @@ import {
   generateJadwalBandungWorkbook,
 } from "../utils/penjadwalanSidangHelper.js";
 
-const hitungStatusPenjadwalan = (penguji1, penguji2, tglSidang, ruangan) => {
-  const adaPenguji = penguji1 && penguji2;
-  const adaJadwal = tglSidang && ruangan;
+export const resolveStatusSidang = (penguji1, penguji2, tglSidang, ruangan) => {
+  const adaPenguji = Boolean(penguji1 && penguji2);
+  const adaJadwal = Boolean(tglSidang && ruangan);
+
+  return adaPenguji && adaJadwal ? "Siap Sidang" : "Pendaftaran Diterima";
+};
+
+export const hitungStatusPenjadwalan = (
+  penguji1,
+  penguji2,
+  tglSidang,
+  ruangan,
+) => {
+  const adaPenguji = Boolean(penguji1 && penguji2);
+  const adaJadwal = Boolean(tglSidang && ruangan);
 
   if (adaPenguji && adaJadwal) return "Siap Sidang";
   if (adaPenguji && !adaJadwal) return "Penguji Ready";
   if (!adaPenguji && adaJadwal) return "Penjadwalan Ready";
-  
+
   return null;
 };
 
@@ -62,10 +74,12 @@ export const getPenjadwalanSidangList = async ({
   dosen,
   sidangPeriodId,
   search,
-  sortBy,
+  sort,
   skip,
   take,
+  status,
   statusPenjadwalan,
+  skemaSidang,
 }) => {
   let targetPeriodId = sidangPeriodId;
 
@@ -100,8 +114,64 @@ export const getPenjadwalanSidangList = async ({
     where.sidangPeriodId = targetPeriodId;
   }
 
-  if (statusPenjadwalan && statusPenjadwalan.trim() !== "") {
-    where.statusPenjadwalan = statusPenjadwalan;
+  if (
+    skemaSidang &&
+    typeof skemaSidang === "string" &&
+    skemaSidang.trim() !== ""
+  ) {
+    if (skemaSidang.trim().toLowerCase() === "non sidang") {
+      return { total: 0, registrations: [] };
+    }
+    where.skemaSidangFinal = {
+      equals: skemaSidang.trim(),
+      mode: "insensitive",
+    };
+  } else {
+    where.AND = [
+      ...(where.AND || []),
+      {
+        OR: [
+          { skemaSidangFinal: null },
+          {
+            NOT: {
+              skemaSidangFinal: {
+                equals: "Non Sidang",
+                mode: "insensitive",
+              },
+            },
+          },
+        ],
+      },
+    ];
+  }
+
+  const filterStatus = (status || statusPenjadwalan || "").trim();
+  if (filterStatus) {
+    if (filterStatus === "Siap Sidang") {
+      where.status = "Siap Sidang";
+    } else if (filterStatus === "Penguji Ready") {
+      where.dosenPenguji1Id = { not: null };
+      where.dosenPenguji2Id = { not: null };
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [{ tglSidang: null }, { ruanganSidangId: null }],
+        },
+      ];
+    } else if (filterStatus === "Penjadwalan Ready") {
+      where.tglSidang = { not: null };
+      where.ruanganSidangId = { not: null };
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [{ dosenPenguji1Id: null }, { dosenPenguji2Id: null }],
+        },
+      ];
+    } else if (filterStatus === "Pendaftaran Diterima") {
+      where.status = "Pendaftaran Diterima";
+    } else {
+      where.status = filterStatus;
+    }
   }
 
   if (user?.role === "DOSEN") {
@@ -130,9 +200,21 @@ export const getPenjadwalanSidangList = async ({
       ...(where.AND || []),
       {
         OR: [
-          { judulTugasAkhirIndonesia: { contains: searchTerm, mode: "insensitive" } },
-          { judulTugasAkhirInggris: { contains: searchTerm, mode: "insensitive" } },
-          { mahasiswa: { name: { contains: searchTerm, mode: "insensitive" } } },
+          {
+            judulTugasAkhirIndonesia: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+          {
+            judulTugasAkhirInggris: {
+              contains: searchTerm,
+              mode: "insensitive",
+            },
+          },
+          {
+            mahasiswa: { name: { contains: searchTerm, mode: "insensitive" } },
+          },
           { mahasiswa: { nim: { contains: searchTerm, mode: "insensitive" } } },
         ],
       },
@@ -140,7 +222,7 @@ export const getPenjadwalanSidangList = async ({
   }
 
   // Sorting: newest (desc) atau oldest (asc) berdasarkan createdAt sesuai standar /api/sidang-registrations
-  const sortParam = (sortBy || "").toLowerCase().trim();
+  const sortParam = (sort || "").toLowerCase().trim();
   const orderBy =
     sortParam === "oldest" ? { createdAt: "asc" } : { createdAt: "desc" };
 
@@ -165,12 +247,15 @@ export const setPengujiSidang = async ({
   id,
   dosenPenguji1Id,
   dosenPenguji2Id,
+  user,
+  dosen,
 }) => {
   const registration = await prisma.sidangRegistration.findUnique({
     where: { id },
     include: {
       sidangPeriod: true,
       mahasiswa: true,
+      dosenPembimbing1: true,
     },
   });
 
@@ -178,6 +263,32 @@ export const setPengujiSidang = async ({
     const error = new Error("Pendaftaran sidang tidak ditemukan");
     error.statusCode = 404;
     throw error;
+  }
+
+  // Validasi otorisasi: Dosen (Ketua KK) hanya boleh menentukan penguji untuk mahasiswa dari Research Group yang sama dengan dospem 1
+  if (user?.role === "DOSEN") {
+    const currentDosen =
+      dosen ||
+      (await prisma.dosen.findUnique({
+        where: { userId: user.id, deletedAt: null },
+      }));
+
+    if (!currentDosen) {
+      const error = new Error("Data Dosen tidak ditemukan");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (
+      !registration.dosenPembimbing1 ||
+      registration.dosenPembimbing1.researchGroupId !== currentDosen.researchGroupId
+    ) {
+      const error = new Error(
+        "Anda tidak memiliki hak akses untuk menentukan dosen penguji mahasiswa di luar Kelompok Keahlian (Research Group) Anda",
+      );
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   // Catatan: Pengecekan isLocked & isPublished secara khusus membatasi role Dosen / Ketua KK
@@ -244,11 +355,11 @@ export const setPengujiSidang = async ({
     }
   }
 
-  const statusBaru = hitungStatusPenjadwalan(
+  const statusBaru = resolveStatusSidang(
     dosenPenguji1Id,
     dosenPenguji2Id,
-    registration.tglSidang, 
-    registration.ruanganSidangId 
+    registration.tglSidang,
+    registration.ruanganSidangId,
   );
 
   return prisma.sidangRegistration.update({
@@ -256,7 +367,7 @@ export const setPengujiSidang = async ({
     data: {
       dosenPenguji1Id,
       dosenPenguji2Id,
-      statusPenjadwalan: statusBaru,
+      status: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -266,7 +377,7 @@ export const setPengujiSidang = async ({
 /**
  * Menentukan dosen penguji sidang untuk multiple pendaftaran (batch) (Ketua KK Only)
  */
-export const batchSetPengujiSidang = async (items) => {
+export const batchSetPengujiSidang = async (items, { user, dosen } = {}) => {
   const registrationIds = Array.from(new Set(items.map((item) => item.id)));
   const registrations = await prisma.sidangRegistration.findMany({
     where: {
@@ -288,6 +399,38 @@ export const batchSetPengujiSidang = async (items) => {
         `Pendaftaran sidang dengan ID ${id} tidak ditemukan`,
       );
       error.statusCode = 404;
+      throw error;
+    }
+  }
+
+  // Validasi otorisasi: Dosen (Ketua KK) hanya boleh menentukan penguji untuk mahasiswa dari Research Group yang sama dengan dospem 1
+  if (user?.role === "DOSEN") {
+    const currentDosen =
+      dosen ||
+      (await prisma.dosen.findUnique({
+        where: { userId: user.id, deletedAt: null },
+      }));
+
+    if (!currentDosen) {
+      const error = new Error("Data Dosen tidak ditemukan");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const unauthorizedRegs = registrations.filter(
+      (reg) =>
+        !reg.dosenPembimbing1 ||
+        reg.dosenPembimbing1.researchGroupId !== currentDosen.researchGroupId,
+    );
+
+    if (unauthorizedRegs.length > 0) {
+      const unauthorizedNames = unauthorizedRegs
+        .map((reg) => reg.mahasiswa?.name || reg.id)
+        .join(", ");
+      const error = new Error(
+        `Anda tidak memiliki hak akses untuk menentukan dosen penguji mahasiswa di luar Kelompok Keahlian (Research Group) Anda: ${unauthorizedNames}`,
+      );
+      error.statusCode = 403;
       throw error;
     }
   }
@@ -396,12 +539,13 @@ export const batchSetPengujiSidang = async (items) => {
   return prisma.$transaction(async (tx) => {
     const results = [];
     for (const item of items) {
+      const reg = registrationMap.get(item.id);
 
-      const statusBaru = hitungStatusPenjadwalan(
+      const statusBaru = resolveStatusSidang(
         item.dosenPenguji1Id,
         item.dosenPenguji2Id,
-        reg.tglSidang, 
-        reg.ruanganSidangId 
+        reg.tglSidang,
+        reg.ruanganSidangId,
       );
 
       const updated = await tx.sidangRegistration.update({
@@ -409,7 +553,7 @@ export const batchSetPengujiSidang = async (items) => {
         data: {
           dosenPenguji1Id: item.dosenPenguji1Id,
           dosenPenguji2Id: item.dosenPenguji2Id,
-          statusPenjadwalan: statusBaru,
+          status: statusBaru,
           isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
@@ -470,11 +614,11 @@ export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
     throw error;
   }
 
-  const statusBaru = hitungStatusPenjadwalan(
-    registration.dosenPenguji1Id, 
-    registration.dosenPenguji2Id, 
-    new Date(tglSidang), 
-    ruanganSidangId 
+  const statusBaru = resolveStatusSidang(
+    registration.dosenPenguji1Id,
+    registration.dosenPenguji2Id,
+    new Date(tglSidang),
+    ruanganSidangId,
   );
 
   return prisma.sidangRegistration.update({
@@ -482,7 +626,7 @@ export const setJadwalSidang = async ({ id, tglSidang, ruanganSidangId }) => {
     data: {
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
-      statusPenjadwalan: statusBaru,
+      status: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -587,12 +731,12 @@ export const batchSetJadwalSidang = async (items) => {
     const results = [];
     for (const item of items) {
       const reg = registrationMap.get(item.id);
-      
-      const statusBaru = hitungStatusPenjadwalan(
-        reg.dosenPenguji1Id, 
-        reg.dosenPenguji2Id, 
+
+      const statusBaru = resolveStatusSidang(
+        reg.dosenPenguji1Id,
+        reg.dosenPenguji2Id,
         new Date(item.tglSidang),
-        item.ruanganSidangId 
+        item.ruanganSidangId,
       );
 
       const updated = await tx.sidangRegistration.update({
@@ -600,7 +744,7 @@ export const batchSetJadwalSidang = async (items) => {
         data: {
           tglSidang: new Date(item.tglSidang),
           ruanganSidangId: item.ruanganSidangId,
-          statusPenjadwalan: statusBaru,
+          status: statusBaru,
           isInfoPenjadwalanReaded: false,
         },
         include: penjadwalanSidangInclude,
@@ -695,14 +839,18 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
   });
 
   archive.pipe(stream);
-  archive.append(Buffer.from(bufferAwal), { name: "Jadwal_Sidang_Format_Awal.xlsx" });
-  archive.append(Buffer.from(bufferBandung), { name: "Jadwal_Sidang_Format_Bandung.xlsx" });
-  
+  archive.append(Buffer.from(bufferAwal), {
+    name: "Jadwal_Sidang_Format_Awal.xlsx",
+  });
+  archive.append(Buffer.from(bufferBandung), {
+    name: "Jadwal_Sidang_Format_Bandung.xlsx",
+  });
+
   await archive.finalize();
 
   const baseFilename = generateJadwalSidangFilename(selectedPeriod);
-  const zipFilename = baseFilename.endsWith(".xlsx") 
-    ? baseFilename.replace(".xlsx", ".zip") 
+  const zipFilename = baseFilename.endsWith(".xlsx")
+    ? baseFilename.replace(".xlsx", ".zip")
     : `${baseFilename}.zip`;
 
   return { stream, filename: zipFilename };
@@ -725,7 +873,7 @@ export const toggleLockSidangRegistration = async (id) => {
 
   const updateData = {
     isLocked: !registration.isLocked,
-  }
+  };
 
   if (registration.isLocked) {
     updateData.notaDinasUrl = null;
@@ -832,12 +980,12 @@ export const setPengujiJadwalSidang = async ({
     throw error;
   }
 
-  const statusBaru = hitungStatusPenjadwalan(
+  const statusBaru = resolveStatusSidang(
     dosenPenguji1Id,
     dosenPenguji2Id,
     new Date(tglSidang),
-    ruanganSidangId
-  )
+    ruanganSidangId,
+  );
 
   return prisma.sidangRegistration.update({
     where: { id },
@@ -846,7 +994,7 @@ export const setPengujiJadwalSidang = async ({
       dosenPenguji2Id,
       tglSidang: new Date(tglSidang),
       ruanganSidangId,
-      statusPenjadwalan: statusBaru,
+      status: statusBaru,
       isInfoPenjadwalanReaded: false,
     },
     include: penjadwalanSidangInclude,
@@ -938,7 +1086,9 @@ export const uploadNotaDinas = async ({ id, fileData }) => {
 
   // Validasi: Pastikan jadwal sudah di-lock sebelum upload nota dinas
   if (!registration.isLocked) {
-    const error = new Error("Jadwal sidang belum di-lock (final). Nota dinas tidak dapat diunggah.");
+    const error = new Error(
+      "Jadwal sidang belum di-lock (final). Nota dinas tidak dapat diunggah.",
+    );
     error.statusCode = 400;
     throw error;
   }

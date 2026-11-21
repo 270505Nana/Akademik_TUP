@@ -116,7 +116,7 @@ import {
  *                 pagination:
  *                   $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  */
@@ -145,7 +145,7 @@ router.get(
  *       200:
  *         description: Berhasil mengunduh file Excel
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Access denied (Hanya admin yang dapat mengakses)
  */
@@ -176,7 +176,7 @@ router.get(
  *       200:
  *         description: Yudisium registration data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -203,7 +203,7 @@ router.get("/:id", verifyToken, getYudisiumRegistrationById);
  *       200:
  *         description: Yudisium registration data retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -287,7 +287,7 @@ router.get(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -383,7 +383,7 @@ router.post(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -418,7 +418,7 @@ router.post(
  *       200:
  *         description: Yudisium registration deleted successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -426,7 +426,12 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.delete("/:id", verifyToken, authorize("ADMIN"), deleteYudisiumRegistration);
+router.delete(
+  "/:id",
+  verifyToken,
+  authorize("ADMIN"),
+  deleteYudisiumRegistration,
+);
 
 /**
  * @swagger
@@ -472,7 +477,7 @@ router.delete("/:id", verifyToken, authorize("ADMIN"), deleteYudisiumRegistratio
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Yudisium registration not found
  *       500:
@@ -505,7 +510,7 @@ router.post(
  *       200:
  *         description: Uploaded files retrieved successfully
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -532,7 +537,7 @@ router.get("/:id/uploads", verifyToken, getYudisiumRegistrationFiles);
  *       200:
  *         description: File download
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       403:
  *         description: Invalid token
  *       404:
@@ -566,13 +571,20 @@ router.get(
  *           schema:
  *             type: object
  *             required:
- *               - adminId
  *               - yudisiumPeriodId
  *             properties:
- *               adminId:
- *                 type: string
  *               yudisiumPeriodId:
  *                 type: string
+ *                 description: ID periode yudisium tujuan (UUID)
+ *               predikat:
+ *                 type: string
+ *                 description: Predikat kelulusan yudisium (misal "MEMUASKAN", "SANGAT MEMUASKAN", "DENGAN PUJIAN") (opsional)
+ *               statusKelulusan:
+ *                 type: string
+ *                 description: Status kelulusan yudisium (misal "LULUS", "TIDAK LULUS") (opsional)
+ *               message:
+ *                 type: string
+ *                 description: Pesan atau catatan persetujuan untuk mahasiswa (opsional)
  *               pengajuanCumlaudeFinal:
  *                 type: string
  *                 description: Status pengajuan cumlaude final yang disetujui (opsional)
@@ -590,7 +602,7 @@ router.get(
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Registration, admin or period not found
  */
@@ -624,27 +636,27 @@ router.put(
  *           schema:
  *             type: object
  *             required:
- *               - adminId
  *               - message
  *             properties:
- *               adminId:
- *                 type: string
  *               message:
  *                 type: string
+ *                 description: Pesan atau alasan penolakan/permintaan revisi
  *               isEdit:
  *                 type: string
  *                 format: date-time
+ *                 description: Tenggat waktu revisi jika mahasiswa diperkenankan mengedit (ISO 8601)
  *               yudisiumRegistrationUploadIds:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 description: Daftar ID berkas yang valid
  *     responses:
  *       200:
  *         description: Yudisium registration rejected / revision requested successfully
  *       400:
  *         description: Validation error
  *       401:
- *         description: Token not found
+ *         description: Unauthorized
  *       404:
  *         description: Registration or admin not found
  */

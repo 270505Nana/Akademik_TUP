@@ -16,8 +16,10 @@ const listPenjadwalanSidang = asyncHandler(async (req, res) => {
       dosen: req.dosen,
       sidangPeriodId: req.query.sidangPeriodId,
       search: req.query.search,
-      sortBy: req.query.sortBy,
+      sort: req.query.sort,
+      status: req.query.status || req.query.statusPenjadwalan,
       statusPenjadwalan: req.query.statusPenjadwalan,
+      skemaSidang: req.query.skemaSidang,
       ...paginationParams,
     });
 
@@ -35,6 +37,8 @@ const setPengujiSidang = asyncHandler(async (req, res) => {
     id,
     dosenPenguji1Id,
     dosenPenguji2Id,
+    user: req.user,
+    dosen: req.dosen,
   });
 
   res.json({
@@ -46,7 +50,10 @@ const setPengujiSidang = asyncHandler(async (req, res) => {
 // Set Dosen Penguji Sidang Batch (Ketua KK Only)
 const batchSetPengujiSidang = asyncHandler(async (req, res) => {
   const updatedRegistrations =
-    await penjadwalanSidangService.batchSetPengujiSidang(req.body);
+    await penjadwalanSidangService.batchSetPengujiSidang(req.body, {
+      user: req.user,
+      dosen: req.dosen,
+    });
 
   res.json({
     message: "Dosen penguji sidang batch berhasil ditentukan",
@@ -99,7 +106,7 @@ const exportJadwalSidang = asyncHandler(async (req, res) => {
 
   res.setHeader("Content-Type", "application/zip");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  
+
   stream.pipe(res);
 });
 
@@ -175,7 +182,7 @@ const togglePublishSidangPeriod = asyncHandler(async (req, res) => {
 // Upload Nota Dinas (Admin Only)
 const uploadNotaDinasController = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const fileData = req.file; 
+  const fileData = req.file;
 
   if (!fileData) {
     res.status(400);

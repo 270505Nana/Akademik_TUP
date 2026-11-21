@@ -9,7 +9,7 @@ export const mapPenilaianTugasAkhir = (penilaian) => {
     nilai: Array.isArray(penilaian.nilai) ? penilaian.nilai : [],
     catatanRevisi: penilaian.catatanRevisi || "",
     sidangRegistrationId: penilaian.sidangRegistrationId,
-    penilaiType: penilaian.penilaiType,
+    peran: penilaian.peran,
     dosenPenilai: penilaian.dosenPenilai ? mapDosen(penilaian.dosenPenilai) : null,
     dosenKaprodi: penilaian.dosenKaprodi ? mapDosen(penilaian.dosenKaprodi) : null,
   };
@@ -45,9 +45,8 @@ export const mapBeritaAcara = (beritaAcara) => {
   };
 };
 
-export const mapTutupSidangResponse = ({ beritaAcara, revisiTugasAkhir }) => {
+export const mapTutupSidangResponse = ({ revisiTugasAkhir }) => {
   return {
-    beritaAcara: mapBeritaAcara(beritaAcara),
     revisiTugasAkhir: revisiTugasAkhir
       ? {
           id: revisiTugasAkhir.id,
