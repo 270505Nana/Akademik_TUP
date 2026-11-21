@@ -5,6 +5,9 @@ import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert  from '../../components/common/CustomAlert';
 import { getSidangPeriods, createSidangPeriod, updateSidangPeriod } from '../../service/api';
 
+// --- IMPORT EXTERNAL CSS ---
+import '../../style/css/admin/aturperiode.css';
+
 const toArray = (raw) => {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
@@ -58,20 +61,12 @@ const checkGroupStatus = (group) => {
   };
 };
 
-const getBadgeProps = (stat, type) => {
-  if (!stat) return { text: '-', bg: 'bg-gray' };
-  if (stat === 'Aktif') return { text: type === 'pend' ? 'Buka' : 'Berjalan', bg: 'bg-blue' };
-  if (stat === 'Mendatang') return { text: 'Mendatang', bg: 'bg-gray' };
-  if (stat === 'Selesai') return { text: type === 'pend' ? 'Tutup' : 'Selesai', bg: 'bg-red' };
-  return { text: 'Nonaktif', bg: 'bg-red' };
-};
-
 const getStatusTextProps = (stat, type) => {
-  if (!stat) return { text: 'Belum dijadwalkan', color: '#94A3B8' };
-  if (stat === 'Aktif') return { text: type === 'pend' ? 'Pendaftaran Dibuka' : 'Sidang Berjalan', color: '#16A34A' };
-  if (stat === 'Mendatang') return { text: type === 'pend' ? 'Pendaftaran Mendatang' : 'Sidang Mendatang', color: '#64748B' };
-  if (stat === 'Selesai') return { text: type === 'pend' ? 'Pendaftaran Ditutup' : 'Sidang Selesai', color: '#991B1B' };
-  return { text: 'Nonaktif', color: '#991B1B' };
+  if (!stat) return { text: 'Belum dijadwalkan', className: 'aps-status-text-muted' };
+  if (stat === 'Aktif') return { text: type === 'pend' ? 'Pendaftaran Dibuka' : 'Sidang Berjalan', className: 'aps-status-text-green' };
+  if (stat === 'Mendatang') return { text: type === 'pend' ? 'Pendaftaran Mendatang' : 'Sidang Mendatang', className: 'aps-status-text-muted' };
+  if (stat === 'Selesai') return { text: type === 'pend' ? 'Pendaftaran Ditutup' : 'Sidang Selesai', className: 'aps-status-text-red' };
+  return { text: 'Nonaktif', className: 'aps-status-text-red' };
 };
 
 const formatDate = (dateStr) => {
@@ -96,6 +91,17 @@ const getDuration = (start, end) => {
   return Math.ceil((e - s) / (1000 * 3600 * 24));
 };
 
+// Prioritaskan nama kustom dari BE (pendaftaran.name / sidang.name), fallback ke format Semester/Tahun Ajaran
+const getDisplayPeriodName = (group) => {
+  if (!group) return '-';
+  const customName = (group.pendaftaran?.name || group.sidang?.name || '').trim();
+  if (customName) return customName;
+  if (group.semester && group.semester !== 'Umum') {
+    return `Semester ${group.semester} ${group.period}`;
+  }
+  return `Tahun Ajaran ${group.period || ''}`;
+};
+
 const AturPeriodeSidang = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [periods,     setPeriods]     = useState([]);
@@ -113,7 +119,7 @@ const AturPeriodeSidang = () => {
   });
 
   const [editingGroup, setEditingGroup] = useState(null);
-  const [editForm, setEditForm] = useState({ pendaftaran: null, sidang: null });
+  const [editForm, setEditForm] = useState({ name: '', pendaftaran: null, sidang: null });
   const [alert, setAlert] = useState({ show: false, type: 'success', title: '', message: '' });
 
   const showAlert = useCallback((type, title, message) => {
@@ -155,7 +161,8 @@ const AturPeriodeSidang = () => {
       const nameLower = (p.name || '').toLowerCase();
       const semester = nameLower.includes('genap') ? 'Genap' : (nameLower.includes('ganjil') ? 'Ganjil' : 'Umum');
       const periodVal = p.period || '';
-      const groupKey = `${periodVal}-${semester}`;
+      const normalizedNameKey = (p.name || '').trim().toLowerCase();
+      const groupKey = normalizedNameKey ? `${periodVal}-${normalizedNameKey}` : `${periodVal}-${semester}`;
 
       if (!map[groupKey]) {
         map[groupKey] = { id: groupKey, period: periodVal, semester, pendaftaran: null, sidang: null };
@@ -195,7 +202,7 @@ const AturPeriodeSidang = () => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(g => {
-        const nameMatch = (g.pendaftaran?.name || g.sidang?.name || '').toLowerCase().includes(q);
+        const nameMatch = getDisplayPeriodName(g).toLowerCase().includes(q);
         const periodMatch = (g.period || '').toLowerCase().includes(q);
         return nameMatch || periodMatch;
       });
@@ -218,8 +225,6 @@ const AturPeriodeSidang = () => {
   const pStatMain = activeGroup?.pendaftaran ? getStatus(activeGroup.pendaftaran.startDate, activeGroup.pendaftaran.endDate, activeGroup.pendaftaran.isOpen) : null;
   const sStatMain = activeGroup?.sidang ? getStatus(activeGroup.sidang.startDate, activeGroup.sidang.endDate, activeGroup.sidang.isOpen) : null;
 
-  const badgePendMain = getBadgeProps(pStatMain, 'pend');
-  const badgeSidangMain = getBadgeProps(sStatMain, 'sidang');
   const textPendMain = getStatusTextProps(pStatMain, 'pend');
   const textSidangMain = getStatusTextProps(sStatMain, 'sidang');
 
@@ -247,15 +252,6 @@ const AturPeriodeSidang = () => {
         showAlert('error', 'Validasi Gagal', `Data Pendaftaran Sidang rujukan tidak valid atau tidak ditemukan.`); 
         return; 
       }
-      
-      const pendEndDate = new Date(pend.endDate).getTime();
-      const sidangStartDate = new Date(form.startDate).getTime();
-      const diffDays = (sidangStartDate - pendEndDate) / (1000 * 3600 * 24);
-      
-      if (diffDays < 14) { 
-        showAlert('error', 'Pelanggaran Aturan', `Jadwal Pelaksanaan Sidang wajib berjarak MINIMAL 14 HARI setelah penutupan Pendaftaran (${formatDate(pend.endDate)}).`); 
-        return; 
-      }
     }
 
     setSubmitting(true);
@@ -267,7 +263,6 @@ const AturPeriodeSidang = () => {
       let autoOpen = now >= startObj && now <= endObj;
       let autoOpenPrevented = false;
 
-      // CEK OVERLAP: Jika harusnya autoOpen, pastikan tidak ada grup lain yang sedang aktif
       if (autoOpen) {
         const hasOtherActive = groupedPeriods.some(g => g.pendaftaran?.isOpen || g.sidang?.isOpen);
         if (hasOtherActive) {
@@ -277,9 +272,9 @@ const AturPeriodeSidang = () => {
       }
 
       await createSidangPeriod({
-        name: form.name,
+        name: form.name.trim(),
         category: form.category,
-        period: form.period,
+        period: form.period.trim(),
         startDate: startObj.toISOString(),
         endDate: endObj.toISOString(),
         isOpen: autoOpen
@@ -302,7 +297,6 @@ const AturPeriodeSidang = () => {
   const handleToggleActive = async (group, currentToggleState) => {
     const isTurningOn = !currentToggleState;
     
-    // PROTEKSI SILANG: Jika ingin menghidupkan periode, pastikan tidak ada periode lain yang sedang ON
     if (isTurningOn) {
       const hasOtherActive = groupedPeriods.some(g => g.id !== group.id && (g.pendaftaran?.isOpen || g.sidang?.isOpen));
       if (hasOtherActive) {
@@ -315,7 +309,9 @@ const AturPeriodeSidang = () => {
     try {
       if (group.pendaftaran) {
         await updateSidangPeriod(group.pendaftaran.id, {
-          ...group.pendaftaran, 
+          name: group.pendaftaran.name,
+          category: group.pendaftaran.category || 'pendaftaran',
+          period: group.pendaftaran.period,
           startDate: new Date(`${group.pendaftaran.startDate}T00:00:00.000Z`).toISOString(),
           endDate: new Date(`${group.pendaftaran.endDate}T23:59:59.000Z`).toISOString(),
           isOpen: isTurningOn 
@@ -323,7 +319,9 @@ const AturPeriodeSidang = () => {
       }
       if (group.sidang) {
         await updateSidangPeriod(group.sidang.id, {
-          ...group.sidang, 
+          name: group.sidang.name,
+          category: group.sidang.category || 'pelaksanaan',
+          period: group.sidang.period,
           startDate: new Date(`${group.sidang.startDate}T00:00:00.000Z`).toISOString(),
           endDate: new Date(`${group.sidang.endDate}T23:59:59.000Z`).toISOString(),
           isOpen: isTurningOn 
@@ -341,6 +339,7 @@ const AturPeriodeSidang = () => {
   const openEditModal = (group) => {
     setEditingGroup(group);
     setEditForm({
+      name: group.pendaftaran?.name || group.sidang?.name || '',
       pendaftaran: group.pendaftaran ? { ...group.pendaftaran, startDate: formatDateForInput(group.pendaftaran.startDate), endDate: formatDateForInput(group.pendaftaran.endDate) } : null,
       sidang: group.sidang ? { ...group.sidang, startDate: formatDateForInput(group.sidang.startDate), endDate: formatDateForInput(group.sidang.endDate) } : null,
     });
@@ -349,6 +348,12 @@ const AturPeriodeSidang = () => {
 
   const handleUpdateGroup = async (e) => {
     e.preventDefault();
+
+    const trimmedName = (editForm.name || '').trim();
+    if (!trimmedName) {
+      showAlert('error', 'Validasi', 'Nama periode tidak boleh kosong.');
+      return;
+    }
 
     if (editForm.pendaftaran) {
       const pErr = validateDates(editForm.pendaftaran.startDate, editForm.pendaftaran.endDate);
@@ -359,36 +364,32 @@ const AturPeriodeSidang = () => {
       if (sErr) { showAlert('error', 'Validasi Sidang', sErr); return; }
     }
 
-    if (editForm.pendaftaran && editForm.sidang) {
-      const pEnd = new Date(editForm.pendaftaran.endDate).getTime();
-      const sStart = new Date(editForm.sidang.startDate).getTime();
-      const diffDays = (sStart - pEnd) / (1000 * 3600 * 24);
-      
-      if (diffDays < 14) {
-        showAlert('error', 'Pelanggaran Aturan', 'Masa Pelaksanaan Sidang wajib berjarak MINIMAL 14 HARI setelah masa pendaftaran ditutup.');
-        return;
-      }
-    }
-
     setSubmitting(true);
     try {
+      // Sementara di-handle di FE: update nama pada kategori pendaftaran & pelaksanaan sekaligus agar sinkron
       if (editForm.pendaftaran) {
         await updateSidangPeriod(editForm.pendaftaran.id, {
-          ...editForm.pendaftaran,
+          name: trimmedName,
+          category: editForm.pendaftaran.category || 'pendaftaran',
+          period: editForm.pendaftaran.period,
           startDate: new Date(`${editForm.pendaftaran.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${editForm.pendaftaran.endDate}T23:59:59.000Z`).toISOString()
+          endDate: new Date(`${editForm.pendaftaran.endDate}T23:59:59.000Z`).toISOString(),
+          isOpen: Boolean(editForm.pendaftaran.isOpen),
         });
       }
       if (editForm.sidang) {
         await updateSidangPeriod(editForm.sidang.id, {
-          ...editForm.sidang,
+          name: trimmedName,
+          category: editForm.sidang.category || 'pelaksanaan',
+          period: editForm.sidang.period,
           startDate: new Date(`${editForm.sidang.startDate}T00:00:00.000Z`).toISOString(),
-          endDate: new Date(`${editForm.sidang.endDate}T23:59:59.000Z`).toISOString()
+          endDate: new Date(`${editForm.sidang.endDate}T23:59:59.000Z`).toISOString(),
+          isOpen: Boolean(editForm.sidang.isOpen),
         });
       }
-      showAlert('success', 'Berhasil', `Periode TA ${editingGroup.period} telah diperbarui.`);
+      showAlert('success', 'Berhasil', `Periode "${trimmedName}" telah diperbarui.`);
       setIsEditModalOpen(false);
-      fetchPeriods();
+      await fetchPeriods();
     } catch (err) {
       showAlert('error', 'Gagal', err.response?.data?.message || 'Gagal memperbarui periode.');
     } finally { setSubmitting(false); }
@@ -397,171 +398,114 @@ const AturPeriodeSidang = () => {
   const availableGroupsForSidang = groupedPeriods.filter(g => g.pendaftaran && !g.sidang);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F8FAFC', margin: 0, padding: 0 }}>
-      <style>{`
-        body, html { margin: 0; padding: 0; background-color: #F8FAFC; }
-        .main-content-area { margin-left: var(--sidebar-width, 260px); width: calc(100% - var(--sidebar-width, 260px)); display: flex; flex-direction: column; min-height: 100vh; }
-        .zoom-wrapper { zoom: 0.8; width: 100%; display: flex; flex-direction: column; flex: 1; }
-        .top-bar-red { width: 100%; box-sizing: border-box; background-color: #C0182A; height: 80px; display: flex; align-items: center; padding: 0 40px; color: white; }
-        .content-container { padding: 32px 40px 60px; width: 100%; box-sizing: border-box; }
-
-        .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
-        .summary-card { background-color: #fff; border: 1px solid #E2E8F0; border-radius: 16px; padding: 20px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; }
-        .summary-card.main-active { position: relative; overflow: hidden; background-color: #fff; border: 1px solid #E2E8F0; }
-        .summary-card.main-active::before { content: ''; position: absolute; top: -60px; right: -40px; width: 180px; height: 180px; background-color: #FFF1F2; border-radius: 50%; z-index: 0; }
-        .summary-card.main-active > div { position: relative; z-index: 1; }
-
-        .badge-pill { padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
-        .bg-green { background-color: #DCFCE7; color: #166534; }
-        .bg-gray { background-color: #F1F5F9; color: #475569; }
-        .bg-blue { background-color: #DBEAFE; color: #1E40AF; }
-        .bg-red { background-color: #FEE2E2; color: #991B1B; }
-
-        .btn-add { background-color: #C0182A; color: #fff; padding: 10px 20px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; }
-        .btn-add:hover { background-color: #9F1222; }
-
-        .filter-bar-container { display: flex; justify-content: space-between; align-items: center; background-color: #fff; padding: 12px; border-radius: 16px; border: 1px solid #E2E8F0; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
-        .filter-tabs { display: flex; gap: 8px; overflow-x: auto; }
-        .filter-btn { padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; border: none; background-color: transparent; color: #64748B; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
-        .filter-btn.active { background-color: #C0182A; color: #fff; }
-        
-        .search-view-wrap { display: flex; align-items: center; gap: 12px; }
-        .search-box { position: relative; display: flex; align-items: center; }
-        .search-box input { padding: 8px 16px 8px 36px; border-radius: 99px; border: 1px solid #E2E8F0; font-size: 13px; outline: none; width: 200px; transition: 0.2s; }
-        .search-box input:focus { border-color: #C0182A; width: 240px; }
-        .search-icon { position: absolute; left: 12px; color: #94A3B8; }
-
-        .pc-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #64748B; cursor: pointer; }
-        .toggle-switch { width: 36px; height: 20px; border-radius: 20px; background-color: #E2E8F0; position: relative; transition: 0.3s; }
-        .toggle-switch.on { background-color: #1E293B; }
-        .toggle-switch::after { content: ''; position: absolute; width: 14px; height: 14px; background-color: #fff; border-radius: 50%; top: 3px; left: 3px; transition: 0.2s; }
-        .toggle-switch.on::after { left: 19px; }
-
-        .table-wrap { background-color: #fff; border: 1px solid #E2E8F0; border-radius: 16px; overflow: hidden; }
-        .data-table { width: 100%; border-collapse: collapse; }
-        .data-table th { background-color: #F8FAFC; padding: 16px; text-align: left; font-size: 12px; font-weight: 800; color: #475569; border-bottom: 1px solid #E2E8F0; }
-        .data-table td { padding: 16px; font-size: 13px; border-bottom: 1px solid #F1F5F9; color: #1E293B; vertical-align: middle; }
-        .action-btns { display: flex; gap: 8px; align-items: center; }
-        .action-btns button { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #CBD5E1; background-color: #fff; color: #475569; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; padding: 0; margin: 0; }
-        .action-btns button:hover { border-color: #C0182A; color: #C0182A; background-color: #FEF2F2; }
-
-        @media (max-width: 991.98px) {
-          .main-content-area { margin-left: 0; width: 100%; }
-          .zoom-wrapper { zoom: 1; }
-          .top-bar-red { display: none; }
-          .dashboard-grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
-
+    <div className="aps-page-root">
       <SidebarAdmin isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="main-content-area">
-        <div className="mobile-menu-bar" style={{ display: 'none', height: 60, backgroundColor: '#C0182A', alignItems: 'center', padding: '0 16px', color: '#fff' }}>
-          <button onClick={() => setSidebarOpen(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#fff' }}><Menu size={24} /></button>
-          <span style={{ fontSize: 18, fontWeight: 800, marginLeft: 16 }}>SIMTA</span>
+      <div className="aps-main-content">
+        <div className="aps-mobile-bar">
+          <button onClick={() => setSidebarOpen(true)} className="aps-mobile-menu-btn"><Menu size={24} /></button>
+          <span className="aps-mobile-brand">SIMTA</span>
         </div>
 
-        <div className="zoom-wrapper">
-          <div className="top-bar-red">
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Kelola Periode Sidang</h1>
+        <div className="aps-zoom-wrapper">
+          <div className="aps-top-bar-red">
+            <h1>Kelola Periode Sidang</h1>
           </div>
 
-          <div className="content-container">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
-              <div>
-                <h2 style={{ margin: '0 0 8px 0', fontSize: 28, fontWeight: 800, color: '#0F172A' }}>Atur Periode & Jadwal Sidang</h2>
-                <p style={{ margin: 0, color: '#64748B', fontSize: 15 }}>Konfigurasi terpadu masa pendaftaran mahasiswa dan pelaksanaan sidang.</p>
+          <div className="aps-content-container">
+            <div className="aps-header-row">
+              <div className="aps-header-title">
+                <h2>Atur Periode & Jadwal Sidang</h2>
+                <p>Konfigurasi terpadu masa pendaftaran mahasiswa dan pelaksanaan sidang.</p>
               </div>
-              <button className="btn-add" onClick={() => setIsCreateModalOpen(true)}>
+              <button className="aps-btn-add" onClick={() => setIsCreateModalOpen(true)}>
                 <Plus size={18} /> Tambah Periode Baru
               </button>
             </div>
 
             {activeGroup && (
-              <div className="dashboard-grid">
-                <div className="summary-card main-active">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1 }}>PERIODE AKTIF UTAMA</span>
-                    <span className={`badge-pill ${isActiveMain ? 'bg-green' : (isDoneMain ? 'bg-gray' : 'bg-red')}`}>
-                      {isActiveMain && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#16A34A', marginRight: 4 }}/>} 
+              <div className="aps-dashboard-grid">
+                <div className="aps-summary-card main-active">
+                  <div className="aps-summary-header">
+                    <span className="aps-summary-label">PERIODE AKTIF UTAMA</span>
+                    <span className={`aps-badge-pill ${isActiveMain ? 'aps-bg-green' : (isDoneMain ? 'aps-bg-gray' : 'aps-bg-red')}`}>
+                      {isActiveMain && <span className="aps-dot-green"/>} 
                       {isActiveMain ? 'Aktif' : isDoneMain ? 'Selesai' : 'Mendatang/Nonaktif'}
                     </span>
                   </div>
                   <div>
-                    <h3 style={{ margin: '0 0 8px 0', fontSize: 22, fontWeight: 800, color: '#0F172A' }}>
-                      {activeGroup.semester !== 'Umum' ? `Semester ${activeGroup.semester} ${activeGroup.period}` : (activeGroup.pendaftaran?.name || activeGroup.sidang?.name || `Tahun Ajaran ${activeGroup.period}`)}
+                    <h3 className="aps-summary-title">
+                      {getDisplayPeriodName(activeGroup)}
                     </h3>
-                    <p style={{ margin: 0, fontSize: 13, color: '#64748B' }}>Periode sidang Tugas Akhir Telkom University.</p>
+                    <p className="aps-summary-subtitle">Periode sidang Tugas Akhir Telkom University.</p>
                   </div>
                 </div>
 
-                <div className="summary-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1 }}>MASA PENDAFTARAN</span>
-                    <span className={`badge-pill ${pStatMain === 'Aktif' ? 'bg-blue' : (pStatMain === 'Mendatang' ? 'bg-gray' : 'bg-red')}`}>
+                <div className="aps-summary-card">
+                  <div className="aps-summary-header">
+                    <span className="aps-summary-label">MASA PENDAFTARAN</span>
+                    <span className={`aps-badge-pill ${pStatMain === 'Aktif' ? 'aps-bg-blue' : (pStatMain === 'Mendatang' ? 'aps-bg-gray' : 'aps-bg-red')}`}>
                       {pStatMain === 'Aktif' ? 'Buka' : (pStatMain === 'Mendatang' ? 'Mendatang' : 'Tutup')}
                     </span>
                   </div>
                   {activeGroup.pendaftaran ? (
                     <div>
-                      <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 800, color: '#1E293B' }}>
+                      <h3 className="aps-summary-title-sm">
                         {formatDate(activeGroup.pendaftaran.startDate)} – {formatDate(activeGroup.pendaftaran.endDate)}
                       </h3>
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#3B82F6', backgroundColor: '#EFF6FF', padding: '4px 8px', borderRadius: 6 }}>Durasi: {getDuration(activeGroup.pendaftaran.startDate, activeGroup.pendaftaran.endDate)} Hari</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: textPendMain.color }}>{textPendMain.text}</span>
+                      <div className="aps-summary-info">
+                        <span className="aps-tag-blue">Durasi: {getDuration(activeGroup.pendaftaran.startDate, activeGroup.pendaftaran.endDate)} Hari</span>
+                        <span className={`aps-status-text ${textPendMain.className}`}>{textPendMain.text}</span>
                       </div>
                     </div>
-                  ) : <p style={{ margin: 0, fontSize: 13, color: '#94A3B8' }}>Belum dijadwalkan</p>}
+                  ) : <p className="aps-empty-inline">Belum dijadwalkan</p>}
                 </div>
 
-                <div className="summary-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1 }}>MASA PELAKSANAAN SIDANG</span>
-                    <span className={`badge-pill ${sStatMain === 'Aktif' ? 'bg-blue' : (sStatMain === 'Mendatang' ? 'bg-gray' : 'bg-red')}`}>
+                <div className="aps-summary-card">
+                  <div className="aps-summary-header">
+                    <span className="aps-summary-label">MASA PELAKSANAAN SIDANG</span>
+                    <span className={`aps-badge-pill ${sStatMain === 'Aktif' ? 'aps-bg-blue' : (sStatMain === 'Mendatang' ? 'aps-bg-gray' : 'aps-bg-red')}`}>
                       {sStatMain === 'Aktif' ? 'Berjalan' : (sStatMain === 'Mendatang' ? 'Mendatang' : 'Selesai')}
                     </span>
                   </div>
                   {activeGroup.sidang ? (
                     <div>
-                      <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 800, color: '#1E293B' }}>
+                      <h3 className="aps-summary-title-sm">
                         {formatDate(activeGroup.sidang.startDate)} – {formatDate(activeGroup.sidang.endDate)}
                       </h3>
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#9333EA', backgroundColor: '#FAF5FF', padding: '4px 8px', borderRadius: 6 }}>Durasi: {getDuration(activeGroup.sidang.startDate, activeGroup.sidang.endDate)} Hari</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: textSidangMain.color }}>{textSidangMain.text}</span>
+                      <div className="aps-summary-info">
+                        <span className="aps-tag-purple">Durasi: {getDuration(activeGroup.sidang.startDate, activeGroup.sidang.endDate)} Hari</span>
+                        <span className={`aps-status-text ${textSidangMain.className}`}>{textSidangMain.text}</span>
                       </div>
                     </div>
-                  ) : <p style={{ margin: 0, fontSize: 13, color: '#94A3B8' }}>Belum dijadwalkan</p>}
+                  ) : <p className="aps-empty-inline">Belum dijadwalkan</p>}
                 </div>
               </div>
             )}
 
-            <div className="filter-bar-container">
-              <div className="filter-tabs">
-                <button className={`filter-btn ${activeFilter === 'Semua Periode' ? 'active' : ''}`} onClick={() => setActiveFilter('Semua Periode')}>
-                  Semua Periode <span style={{ backgroundColor: activeFilter === 'Semua Periode' ? '#fff' : '#F1F5F9', color: activeFilter === 'Semua Periode' ? '#C0182A' : '#64748B', padding: '2px 6px', borderRadius: 20, marginLeft: 6, fontSize: 11 }}>{groupedPeriods.length}</span>
+            <div className="aps-filter-bar">
+              <div className="aps-filter-tabs">
+                <button className={`aps-filter-btn ${activeFilter === 'Semua Periode' ? 'active' : ''}`} onClick={() => setActiveFilter('Semua Periode')}>
+                  Semua Periode <span className={`aps-filter-count ${activeFilter === 'Semua Periode' ? 'active' : 'inactive'}`}>{groupedPeriods.length}</span>
                 </button>
-                <button className={`filter-btn ${activeFilter === 'Periode Aktif' ? 'active' : ''}`} onClick={() => setActiveFilter('Periode Aktif')}>Periode Aktif</button>
-                <button className={`filter-btn ${activeFilter === 'Pendaftaran Dibuka' ? 'active' : ''}`} onClick={() => setActiveFilter('Pendaftaran Dibuka')}>Pendaftaran Dibuka</button>
-                <button className={`filter-btn ${activeFilter === 'Pelaksanaan Sidang' ? 'active' : ''}`} onClick={() => setActiveFilter('Pelaksanaan Sidang')}>Pelaksanaan Sidang</button>
-                <button className={`filter-btn ${activeFilter === 'Akan Datang' ? 'active' : ''}`} onClick={() => setActiveFilter('Akan Datang')}>Akan Datang</button>
+                <button className={`aps-filter-btn ${activeFilter === 'Periode Aktif' ? 'active' : ''}`} onClick={() => setActiveFilter('Periode Aktif')}>Periode Aktif</button>
+                <button className={`aps-filter-btn ${activeFilter === 'Pendaftaran Dibuka' ? 'active' : ''}`} onClick={() => setActiveFilter('Pendaftaran Dibuka')}>Pendaftaran Dibuka</button>
+                <button className={`aps-filter-btn ${activeFilter === 'Pelaksanaan Sidang' ? 'active' : ''}`} onClick={() => setActiveFilter('Pelaksanaan Sidang')}>Pelaksanaan Sidang</button>
+                <button className={`aps-filter-btn ${activeFilter === 'Akan Datang' ? 'active' : ''}`} onClick={() => setActiveFilter('Akan Datang')}>Akan Datang</button>
               </div>
-              <div className="search-view-wrap">
-                <div className="search-box">
-                  <Search className="search-icon" size={16} />
-                  <input type="text" placeholder="Cari nama periode..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                </div>
+              <div className="aps-search-box">
+                <Search className="aps-search-icon" size={16} />
+                <input type="text" placeholder="Cari nama periode..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             </div>
 
             {loading ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Memuat data...</div>
+              <div className="aps-loading-state">Memuat data...</div>
             ) : filteredGroups.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Tidak ada periode yang ditemukan.</div>
+              <div className="aps-empty-state">Tidak ada periode yang ditemukan.</div>
             ) : (
-              <div className="table-wrap">
-                <table className="data-table">
+              <div className="aps-table-wrap">
+                <table className="aps-data-table">
                   <thead>
                     <tr>
                       <th>Nama Periode</th>
@@ -573,48 +517,48 @@ const AturPeriodeSidang = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredGroups.map((group, idx) => {
+                    {filteredGroups.map((group) => {
                       const { isActive, isDone } = checkGroupStatus(group);
                       const pStat = group.pendaftaran ? getStatus(group.pendaftaran.startDate, group.pendaftaran.endDate, group.pendaftaran.isOpen) : null;
                       const sStat = group.sidang ? getStatus(group.sidang.startDate, group.sidang.endDate, group.sidang.isOpen) : null;
                       
-                      const mainName = group.semester !== 'Umum' ? `Semester ${group.semester} ${group.period}` : (group.pendaftaran?.name || group.sidang?.name || `Tahun Ajaran ${group.period}`);
+                      const mainName = getDisplayPeriodName(group);
                       const isToggleOn = Boolean(group.pendaftaran?.isOpen || group.sidang?.isOpen);
 
                       return (
-                        <tr key={idx}>
+                        <tr key={group.id}>
                           <td>
-                            <div style={{ fontWeight: 800, fontSize: 14, color: '#0F172A', marginBottom: 4 }}>{mainName}</div>
-                            <div style={{ fontSize: 12, color: '#64748B' }}>Tahun Ajaran {group.period}</div>
+                            <div className="aps-cell-title">{mainName}</div>
+                            <div className="aps-cell-subtitle">Tahun Ajaran {group.period}</div>
                           </td>
                           <td>
                             {group.pendaftaran ? (
                               <>
-                                <div style={{ fontWeight: 700, marginBottom: 4 }}>{formatDate(group.pendaftaran.startDate)} — {formatDate(group.pendaftaran.endDate)}</div>
-                                <div style={{ fontSize: 11, color: '#3B82F6', fontWeight: 600 }}>{getDuration(group.pendaftaran.startDate, group.pendaftaran.endDate)} Hari ({pStat})</div>
+                                <div className="aps-date-main">{formatDate(group.pendaftaran.startDate)} - {formatDate(group.pendaftaran.endDate)}</div>
+                                <div className="aps-date-sub-blue">{getDuration(group.pendaftaran.startDate, group.pendaftaran.endDate)} Hari ({pStat})</div>
                               </>
-                            ) : <span style={{ color: '#94A3B8', fontSize: 12 }}>Belum dikonfigurasi</span>}
+                            ) : <span className="aps-unconfigured-text">Belum dikonfigurasi</span>}
                           </td>
                           <td>
                             {group.sidang ? (
                               <>
-                                <div style={{ fontWeight: 700, color: '#4C1D95', marginBottom: 4 }}>{formatDate(group.sidang.startDate)} — {formatDate(group.sidang.endDate)}</div>
-                                <div style={{ fontSize: 11, color: '#7C3AED', fontWeight: 600 }}>{getDuration(group.sidang.startDate, group.sidang.endDate)} Hari ({sStat})</div>
+                                <div className="aps-date-main-purple">{formatDate(group.sidang.startDate)} - {formatDate(group.sidang.endDate)}</div>
+                                <div className="aps-date-sub-purple">{getDuration(group.sidang.startDate, group.sidang.endDate)} Hari ({sStat})</div>
                               </>
-                            ) : <span style={{ color: '#94A3B8', fontSize: 12 }}>Belum dikonfigurasi</span>}
+                            ) : <span className="aps-unconfigured-text">Belum dikonfigurasi</span>}
                           </td>
                           <td>
-                            <span style={{ padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, backgroundColor: isActive ? '#DCFCE7' : isDone ? '#F1F5F9' : '#DBEAFE', color: isActive ? '#166534' : isDone ? '#475569' : '#1E40AF' }}>
+                            <span className={`aps-flow-badge ${isActive ? 'aps-bg-green' : isDone ? 'aps-bg-gray' : 'aps-bg-blue'}`}>
                               {isActive ? 'Sedang Berjalan' : isDone ? 'Periode Selesai' : 'Mendatang'}
                             </span>
                           </td>
                           <td>
-                            <div className="pc-toggle" style={{ justifyContent: 'flex-start', opacity: submitting ? 0.5 : 1, pointerEvents: submitting ? 'none' : 'auto' }} onClick={() => handleToggleActive(group, isToggleOn)}>
-                              <div className={`toggle-switch ${isToggleOn ? 'on' : ''}`} />
+                            <div className={`aps-pc-toggle ${submitting ? 'is-disabled' : ''}`} onClick={() => !submitting && handleToggleActive(group, isToggleOn)}>
+                              <div className={`aps-toggle-switch ${isToggleOn ? 'on' : ''}`} />
                             </div>
                           </td>
                           <td>
-                            <div className="action-btns">
+                            <div className="aps-action-btns">
                               <button title="Lihat Detail" onClick={() => alert('Fitur Detail Mahasiswa akan segera hadir!')}><Eye size={16} /></button>
                               <button title="Edit Periode" onClick={() => openEditModal(group)}><Edit3 size={16} /></button>
                             </div>
@@ -630,21 +574,21 @@ const AturPeriodeSidang = () => {
         </div>
       </div>
 
-      {/* MODAL CREATE DENGAN FITUR RELASI OTOMATIS */}
+      {/* MODAL CREATE */}
       <AnimatePresence>
         {isCreateModalOpen && (
-          <div className="modal-overlay" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.5)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <motion.div className="modal-container" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 550 }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Tambah Jadwal Baru</h3>
-                <button onClick={() => setIsCreateModalOpen(false)} style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}><X size={20} color="#64748B"/></button>
+          <div className="aps-modal-overlay">
+            <motion.div className="aps-modal-container" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
+              <div className="aps-modal-header">
+                <h3>Tambah Jadwal Baru</h3>
+                <button onClick={() => setIsCreateModalOpen(false)} className="aps-modal-close-btn"><X size={20} /></button>
               </div>
-              <div style={{ padding: 24 }}>
+              <div className="aps-modal-body">
                 <form id="createForm" onSubmit={handleCreate}>
-                  <div style={{ display: 'grid', gap: 16 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>KATEGORI *</label>
-                      <select className="form-control" value={form.category} onChange={e => setForm({...form, category: e.target.value, name: '', period: ''})} style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }}>
+                  <div className="aps-form-stack">
+                    <div className="aps-form-group">
+                      <label className="aps-form-label">KATEGORI *</label>
+                      <select className="aps-form-control" value={form.category} onChange={e => setForm({...form, category: e.target.value, name: '', period: ''})}>
                         <option value="pendaftaran">Pendaftaran Sidang</option>
                         <option value="pelaksanaan">Pelaksanaan Sidang</option>
                       </select>
@@ -652,57 +596,61 @@ const AturPeriodeSidang = () => {
 
                     {form.category === 'pendaftaran' ? (
                       <>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>TAHUN AJARAN *</label>
-                          <input type="text" placeholder="Contoh: 2026/2027" value={form.period} onChange={e => setForm({...form, period: e.target.value})} style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }} />
+                        <div className="aps-form-group">
+                          <label className="aps-form-label">TAHUN AJARAN *</label>
+                          <input type="text" placeholder="Contoh: 2026/2027" value={form.period} onChange={e => setForm({...form, period: e.target.value})} className="aps-form-control" />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>NAMA JUDUL PERIODE *</label>
-                          <input type="text" placeholder="Contoh: Semester Ganjil 2026/2027" value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }} />
+                        <div className="aps-form-group">
+                          <label className="aps-form-label">NAMA JUDUL PERIODE *</label>
+                          <input type="text" placeholder="Contoh: Periode Sidang Gelombang 1 2026/2027" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="aps-form-control" />
                         </div>
                       </>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>PILIH MASA PENDAFTARAN REFERENSI *</label>
+                      <div className="aps-form-group">
+                        <label className="aps-form-label">PILIH MASA PENDAFTARAN REFERENSI *</label>
                         {availableGroupsForSidang.length > 0 ? (
-                          <select className="form-control" onChange={e => {
+                          <select className="aps-form-control" onChange={e => {
                               const sel = availableGroupsForSidang.find(g => g.id === e.target.value);
                               if (sel?.pendaftaran) setForm({...form, name: sel.pendaftaran.name, period: sel.period});
-                            }} style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }}>
+                            }}>
                             <option value="">-- Silakan Pilih --</option>
                             {availableGroupsForSidang.map(g => (
                               <option key={g.id} value={g.id}>
-                                {g.semester !== 'Umum'
-                                  ? `Semester ${g.semester} ${g.period}`
-                                  : (g.pendaftaran?.name || `Tahun Ajaran ${g.period}`)
-                                }
+                                {getDisplayPeriodName(g)} ({g.period})
                               </option>
                             ))}
                           </select>
                         ) : (
-                          <div style={{ padding: '12px 16px', backgroundColor: '#FEF2F2', color: '#991B1B', borderRadius: 8, fontSize: 13, fontWeight: 600, border: '1px solid #FECACA' }}>
+                          <div className="aps-error-box">
                             Semua Pendaftaran sudah memiliki jadwal Sidang, atau belum ada Pendaftaran sama sekali. Buat "Pendaftaran Sidang" baru terlebih dahulu!
                           </div>
                         )}
                       </div>
                     )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>TANGGAL MULAI *</label>
-                        <input type="date" value={form.startDate} onChange={e => setForm({...form, startDate: e.target.value})} style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }} />
+                    <div className="aps-form-grid-2">
+                      <div className="aps-form-group">
+                        <label className="aps-form-label">TANGGAL MULAI *</label>
+                        <input type="date" value={form.startDate} onChange={e => setForm({...form, startDate: e.target.value})} className="aps-form-control" />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>TANGGAL SELESAI *</label>
-                        <input type="date" value={form.endDate} min={form.startDate || undefined} onChange={e => setForm({...form, endDate: e.target.value})} style={{ padding: '10px 14px', border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }} />
+                      <div className="aps-form-group">
+                        <label className="aps-form-label">TANGGAL SELESAI *</label>
+                        <input type="date" value={form.endDate} min={form.startDate || undefined} onChange={e => setForm({...form, endDate: e.target.value})} className="aps-form-control" />
                       </div>
                     </div>
                   </div>
                 </form>
               </div>
-              <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                <button onClick={() => setIsCreateModalOpen(false)} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #CBD5E1', backgroundColor: '#fff', fontWeight: 600, cursor: 'pointer' }}>Batal</button>
-                <button type="submit" form="createForm" disabled={submitting || ((form.category === 'pelaksanaan') && availableGroupsForSidang.length === 0)} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: ((form.category === 'pelaksanaan') && availableGroupsForSidang.length === 0) ? '#94A3B8' : '#C0182A', color: '#fff', fontWeight: 700, cursor: ((form.category === 'pelaksanaan') && availableGroupsForSidang.length === 0) ? 'not-allowed' : 'pointer' }}>{submitting ? 'Menyimpan...' : 'Simpan'}</button>
+              <div className="aps-modal-footer">
+                <button onClick={() => setIsCreateModalOpen(false)} className="aps-btn-secondary">Batal</button>
+                <button
+                  type="submit"
+                  form="createForm"
+                  disabled={submitting || ((form.category === 'pelaksanaan') && availableGroupsForSidang.length === 0)}
+                  className="aps-btn-primary-modal"
+                >
+                  {submitting ? 'Menyimpan...' : 'Simpan'}
+                </button>
               </div>
             </motion.div>
           </div>
@@ -712,49 +660,61 @@ const AturPeriodeSidang = () => {
       {/* MODAL EDIT */}
       <AnimatePresence>
         {isEditModalOpen && (
-          <div className="modal-overlay" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.5)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <motion.div className="modal-container" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 650 }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Edit Jadwal (TA {editingGroup?.period})</h3>
-                <button onClick={() => setIsEditModalOpen(false)} style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}><X size={20} color="#64748B"/></button>
+          <div className="aps-modal-overlay">
+            <motion.div className="aps-modal-container modal-lg" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
+              <div className="aps-modal-header">
+                <h3>Edit Jadwal (TA {editingGroup?.period})</h3>
+                <button onClick={() => setIsEditModalOpen(false)} className="aps-modal-close-btn"><X size={20} /></button>
               </div>
-              <div style={{ padding: 24, maxHeight: '60vh', overflowY: 'auto' }}>
+              <div className="aps-modal-body scrollable">
                 <form id="editGroupForm" onSubmit={handleUpdateGroup}>
+                  <div className="aps-form-group aps-mb-24">
+                    <label className="aps-form-label">NAMA JUDUL PERIODE *</label>
+                    <input 
+                      type="text" 
+                      value={editForm.name || ''} 
+                      onChange={e => setEditForm({...editForm, name: e.target.value})} 
+                      className="aps-form-control"
+                      placeholder="Contoh: Periode Sidang Gelombang 1 2026/2027"
+                      required
+                    />
+                  </div>
+
                   {editForm.pendaftaran && (
-                    <div style={{ marginBottom: 24, padding: 16, border: '1px solid #BFDBFE', borderRadius: 12, backgroundColor: '#EFF6FF' }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: 8 }}><Calendar size={16}/> Masa Pendaftaran</h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <label style={{ fontSize: 11, fontWeight: 700, color: '#1E3A8A' }}>TANGGAL MULAI</label>
-                          <input type="date" value={editForm.pendaftaran.startDate} onChange={e => setEditForm({...editForm, pendaftaran: {...editForm.pendaftaran, startDate: e.target.value}})} style={{ padding: '8px 12px', border: '1px solid #93C5FD', borderRadius: 6, outline: 'none' }} />
+                    <div className="aps-edit-section-blue">
+                      <h4 className="aps-section-title-blue"><Calendar size={16}/> Masa Pendaftaran</h4>
+                      <div className="aps-form-grid-2">
+                        <div className="aps-form-group">
+                          <label className="aps-label-blue">TANGGAL MULAI</label>
+                          <input type="date" value={editForm.pendaftaran.startDate} onChange={e => setEditForm({...editForm, pendaftaran: {...editForm.pendaftaran, startDate: e.target.value}})} className="aps-input-blue" />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <label style={{ fontSize: 11, fontWeight: 700, color: '#1E3A8A' }}>TANGGAL SELESAI</label>
-                          <input type="date" value={editForm.pendaftaran.endDate} min={editForm.pendaftaran.startDate} onChange={e => setEditForm({...editForm, pendaftaran: {...editForm.pendaftaran, endDate: e.target.value}})} style={{ padding: '8px 12px', border: '1px solid #93C5FD', borderRadius: 6, outline: 'none' }} />
+                        <div className="aps-form-group">
+                          <label className="aps-label-blue">TANGGAL SELESAI</label>
+                          <input type="date" value={editForm.pendaftaran.endDate} min={editForm.pendaftaran.startDate} onChange={e => setEditForm({...editForm, pendaftaran: {...editForm.pendaftaran, endDate: e.target.value}})} className="aps-input-blue" />
                         </div>
                       </div>
                     </div>
                   )}
                   {editForm.sidang && (
-                    <div style={{ padding: 16, border: '1px solid #E9D5FF', borderRadius: 12, backgroundColor: '#FAF5FF' }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#6B21A8', display: 'flex', alignItems: 'center', gap: 8 }}><Clock size={16}/> Masa Pelaksanaan Sidang</h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <label style={{ fontSize: 11, fontWeight: 700, color: '#581C87' }}>TANGGAL MULAI</label>
-                          <input type="date" value={editForm.sidang.startDate} onChange={e => setEditForm({...editForm, sidang: {...editForm.sidang, startDate: e.target.value}})} style={{ padding: '8px 12px', border: '1px solid #D8B4FE', borderRadius: 6, outline: 'none' }} />
+                    <div className="aps-edit-section-purple">
+                      <h4 className="aps-section-title-purple"><Clock size={16}/> Masa Pelaksanaan Sidang</h4>
+                      <div className="aps-form-grid-2">
+                        <div className="aps-form-group">
+                          <label className="aps-label-purple">TANGGAL MULAI</label>
+                          <input type="date" value={editForm.sidang.startDate} onChange={e => setEditForm({...editForm, sidang: {...editForm.sidang, startDate: e.target.value}})} className="aps-input-purple" />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <label style={{ fontSize: 11, fontWeight: 700, color: '#581C87' }}>TANGGAL SELESAI</label>
-                          <input type="date" value={editForm.sidang.endDate} min={editForm.sidang.startDate} onChange={e => setEditForm({...editForm, sidang: {...editForm.sidang, endDate: e.target.value}})} style={{ padding: '8px 12px', border: '1px solid #D8B4FE', borderRadius: 6, outline: 'none' }} />
+                        <div className="aps-form-group">
+                          <label className="aps-label-purple">TANGGAL SELESAI</label>
+                          <input type="date" value={editForm.sidang.endDate} min={editForm.sidang.startDate} onChange={e => setEditForm({...editForm, sidang: {...editForm.sidang, endDate: e.target.value}})} className="aps-input-purple" />
                         </div>
                       </div>
                     </div>
                   )}
                 </form>
               </div>
-              <div style={{ padding: '16px 24px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                <button onClick={() => setIsEditModalOpen(false)} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #CBD5E1', backgroundColor: '#fff', fontWeight: 600, cursor: 'pointer' }}>Batal</button>
-                <button type="submit" form="editGroupForm" disabled={submitting} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: '#C0182A', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>{submitting ? 'Menyimpan...' : 'Simpan Perubahan'}</button>
+              <div className="aps-modal-footer">
+                <button onClick={() => setIsEditModalOpen(false)} className="aps-btn-secondary">Batal</button>
+                <button type="submit" form="editGroupForm" disabled={submitting} className="aps-btn-primary-modal">{submitting ? 'Menyimpan...' : 'Simpan Perubahan'}</button>
               </div>
             </motion.div>
           </div>
@@ -763,8 +723,8 @@ const AturPeriodeSidang = () => {
 
       <AnimatePresence>
         {alert.show && (
-          <motion.div className="alert-overlay" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }} style={{ position: 'fixed', top: 24, right: 24, zIndex: 99999 }}>
-            <CustomAlert type={alert.type} title={alert.title} message={alert.message} style={{ margin: 0, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+          <motion.div initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }} className="aps-alert-floating">
+            <CustomAlert type={alert.type} title={alert.title} message={alert.message} />
           </motion.div>
         )}
       </AnimatePresence>
