@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Save, Edit3, LayoutPanelLeft, Menu, X, RefreshCw, Calendar, Clock, AlertTriangle, Eye, Plus, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
-import CustomAlert  from '../../components/common/CustomAlert';
+import CustomAlert from '../../components/common/CustomAlert';
 import { getYudisiumPeriods, createYudisiumPeriod, updateYudisiumPeriod } from '../../service/api';
-
-// --- IMPORT EXTERNAL CSS ---
 import '../../style/css/admin/aturperiode.css';
 
 const toArray = (raw) => {
@@ -23,9 +22,9 @@ const normalizeDates = (p) => {
 const getStatus = (start, end, isOpen) => {
   if (!start || !end) return null;
   const now = new Date();
-  const s   = new Date(`${start}T00:00:00`);
-  const e   = new Date(`${end}T23:59:59`);
-  
+  const s = new Date(`${start}T00:00:00`);
+  const e = new Date(`${end}T23:59:59`);
+
   if (now < s) return 'Mendatang';
   if (now > e) return 'Selesai';
   return isOpen ? 'Aktif' : 'Nonaktif';
@@ -34,10 +33,10 @@ const getStatus = (start, end, isOpen) => {
 const checkGroupStatus = (group) => {
   if (!group) return { isActive: false, isDone: false };
   const hasOpenToggle = group.pendaftaran?.isOpen || group.yudisium?.isOpen;
-  
+
   let s = null;
   let e = null;
-  
+
   if (group.pendaftaran) {
     s = new Date(`${group.pendaftaran.startDate}T00:00:00`);
     e = new Date(`${group.pendaftaran.endDate}T23:59:59`);
@@ -48,13 +47,13 @@ const checkGroupStatus = (group) => {
     if (!s || ys < s) s = ys;
     if (!e || ye > e) e = ye;
   }
-  
+
   if (!s || !e) return { isActive: false, isDone: false };
-  
+
   const now = new Date();
   const isTimeActive = now >= s && now <= e;
   const isDone = now > e;
-  
+
   return {
     isActive: hasOpenToggle && isTimeActive,
     isDone: isDone
@@ -92,7 +91,6 @@ const getDuration = (start, end) => {
   return diffDays >= 0 ? diffDays + 1 : 0;
 };
 
-// Prioritaskan nama kustom dari BE (pendaftaran.name / yudisium.name), fallback ke format Semester/Tahun Ajaran
 const getDisplayPeriodName = (group) => {
   if (!group) return '-';
   const customName = (group.pendaftaran?.name || group.yudisium?.name || '').trim();
@@ -104,19 +102,20 @@ const getDisplayPeriodName = (group) => {
 };
 
 const AturPeriodeYudisium = () => {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [periods,     setPeriods]     = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [submitting,  setSubmitting]  = useState(false);
-  
+  const [periods, setPeriods] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen,   setIsEditModalOpen]   = useState(false);
-  
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('Semua Periode');
-  
-  const [form, setForm] = useState({ 
-    name: '', category: 'pendaftaran', period: '', startDate: '', endDate: '' 
+
+  const [form, setForm] = useState({
+    name: '', category: 'pendaftaran', period: '', startDate: '', endDate: ''
   });
 
   const [editingGroup, setEditingGroup] = useState(null);
@@ -131,9 +130,9 @@ const AturPeriodeYudisium = () => {
   const fetchPeriods = useCallback(async () => {
     setLoading(true);
     try {
-      const raw  = await getYudisiumPeriods();
+      const raw = await getYudisiumPeriods();
       const list = toArray(raw);
-      
+
       const flatList = [];
       list.forEach((item) => {
         if (!item) return;
@@ -168,7 +167,7 @@ const AturPeriodeYudisium = () => {
       if (!map[groupKey]) {
         map[groupKey] = { id: groupKey, period: periodVal, semester, pendaftaran: null, yudisium: null };
       }
-      
+
       const catLower = (p.category || '').toLowerCase();
       if (catLower.includes('pendaftaran')) {
         map[groupKey].pendaftaran = p;
@@ -229,7 +228,6 @@ const AturPeriodeYudisium = () => {
   const textPendMain = getStatusTextProps(pStatMain, 'pend');
   const textYudisiumMain = getStatusTextProps(yStatMain, 'yudisium');
 
-  // Mengizinkan tanggal mulai === tanggal selesai (durasi 1 hari), hanya melarang tanggal selesai sebelum tanggal mulai
   const validateDates = (start, end) => {
     const s = new Date(`${start}T00:00:00`).getTime();
     const e = new Date(`${end}T00:00:00`).getTime();
@@ -242,16 +240,16 @@ const AturPeriodeYudisium = () => {
     if (!form.name.trim() || !form.startDate || !form.endDate || !form.category || !form.period.trim()) {
       showAlert('error', 'Validasi', 'Harap lengkapi semua bidang input.'); return;
     }
-    
+
     const dateError = validateDates(form.startDate, form.endDate);
     if (dateError) { showAlert('error', 'Validasi Tanggal', dateError); return; }
 
     if (form.category === 'pelaksanaan') {
       const pend = periods.find(p => (p?.category === 'pendaftaran') && p?.period === form.period && p?.name === form.name);
 
-      if (!pend) { 
-        showAlert('error', 'Validasi Gagal', `Data Pendaftaran Yudisium rujukan tidak valid atau tidak ditemukan.`); 
-        return; 
+      if (!pend) {
+        showAlert('error', 'Validasi Gagal', `Data Pendaftaran Yudisium rujukan tidak valid atau tidak ditemukan.`);
+        return;
       }
     }
 
@@ -260,7 +258,7 @@ const AturPeriodeYudisium = () => {
       const startObj = new Date(`${form.startDate}T00:00:00.000Z`);
       const endObj = new Date(`${form.endDate}T23:59:59.000Z`);
       const now = new Date();
-      
+
       let autoOpen = now >= startObj && now <= endObj;
       let autoOpenPrevented = false;
 
@@ -280,13 +278,13 @@ const AturPeriodeYudisium = () => {
         endDate: endObj.toISOString(),
         isOpen: autoOpen
       });
-      
+
       if (autoOpenPrevented) {
         showAlert('success', 'Berhasil', 'Jadwal disimpan. Status diset Nonaktif karena masih ada periode lain yang sedang aktif.');
       } else {
         showAlert('success', 'Berhasil', 'Data periode yudisium telah berhasil disimpan.');
       }
-      
+
       setForm({ name: '', category: 'pendaftaran', period: '', startDate: '', endDate: '' });
       setIsCreateModalOpen(false);
       fetchPeriods();
@@ -297,7 +295,7 @@ const AturPeriodeYudisium = () => {
 
   const handleToggleActive = async (group, currentToggleState) => {
     const isTurningOn = !currentToggleState;
-    
+
     if (isTurningOn) {
       const hasOtherActive = groupedPeriods.some(g => g.id !== group.id && (g.pendaftaran?.isOpen || g.yudisium?.isOpen));
       if (hasOtherActive) {
@@ -315,7 +313,7 @@ const AturPeriodeYudisium = () => {
           period: group.pendaftaran.period,
           startDate: new Date(`${group.pendaftaran.startDate}T00:00:00.000Z`).toISOString(),
           endDate: new Date(`${group.pendaftaran.endDate}T23:59:59.000Z`).toISOString(),
-          isOpen: isTurningOn 
+          isOpen: isTurningOn
         });
       }
       if (group.yudisium) {
@@ -325,7 +323,7 @@ const AturPeriodeYudisium = () => {
           period: group.yudisium.period,
           startDate: new Date(`${group.yudisium.startDate}T00:00:00.000Z`).toISOString(),
           endDate: new Date(`${group.yudisium.endDate}T23:59:59.000Z`).toISOString(),
-          isOpen: isTurningOn 
+          isOpen: isTurningOn
         });
       }
       await fetchPeriods();
@@ -345,6 +343,23 @@ const AturPeriodeYudisium = () => {
       yudisium: group.yudisium ? { ...group.yudisium, startDate: formatDateForInput(group.yudisium.startDate), endDate: formatDateForInput(group.yudisium.endDate) } : null,
     });
     setIsEditModalOpen(true);
+  };
+
+  const handleViewDetail = (group) => {
+    const params = new URLSearchParams();
+    if (group?.yudisium?.id) params.set('yudisiumPeriodId', group.yudisium.id);
+    if (group?.pendaftaran?.id) params.set('yudisiumRegistrationPeriodId', group.pendaftaran.id);
+    const displayName = getDisplayPeriodName(group);
+    if (displayName && displayName !== '-') params.set('name', displayName);
+    if (group?.period) params.set('period', group.period);
+
+    const queryString = params.toString();
+    navigate(
+      queryString
+        ? `/akademik/atur-periode/yudisium/detail?${queryString}`
+        : '/akademik/atur-periode/yudisium/detail',
+      { state: { periodGroup: group } }
+    );
   };
 
   const handleUpdateGroup = async (e) => {
@@ -367,7 +382,6 @@ const AturPeriodeYudisium = () => {
 
     setSubmitting(true);
     try {
-      // Sementara di-handle di FE: update nama pada kategori pendaftaran & pelaksanaan sekaligus agar sinkron
       if (editForm.pendaftaran) {
         await updateYudisiumPeriod(editForm.pendaftaran.id, {
           name: trimmedName,
@@ -430,7 +444,7 @@ const AturPeriodeYudisium = () => {
                   <div className="aps-summary-header">
                     <span className="aps-summary-label">PERIODE AKTIF UTAMA</span>
                     <span className={`aps-badge-pill ${isActiveMain ? 'aps-bg-green' : (isDoneMain ? 'aps-bg-gray' : 'aps-bg-red')}`}>
-                      {isActiveMain && <span className="aps-dot-green"/>} 
+                      {isActiveMain && <span className="aps-dot-green"/>}
                       {isActiveMain ? 'Aktif' : isDoneMain ? 'Selesai' : 'Mendatang/Nonaktif'}
                     </span>
                   </div>
@@ -522,7 +536,7 @@ const AturPeriodeYudisium = () => {
                       const { isActive, isDone } = checkGroupStatus(group);
                       const pStat = group.pendaftaran ? getStatus(group.pendaftaran.startDate, group.pendaftaran.endDate, group.pendaftaran.isOpen) : null;
                       const yStat = group.yudisium ? getStatus(group.yudisium.startDate, group.yudisium.endDate, group.yudisium.isOpen) : null;
-                      
+
                       const mainName = getDisplayPeriodName(group);
                       const isToggleOn = Boolean(group.pendaftaran?.isOpen || group.yudisium?.isOpen);
 
@@ -560,7 +574,7 @@ const AturPeriodeYudisium = () => {
                           </td>
                           <td>
                             <div className="aps-action-btns">
-                              <button title="Lihat Detail" onClick={() => alert('Fitur Detail Mahasiswa akan segera hadir!')}><Eye size={16} /></button>
+                              <button title="Lihat Detail Mahasiswa" onClick={() => handleViewDetail(group)}><Eye size={16} /></button>
                               <button title="Edit Periode" onClick={() => openEditModal(group)}><Edit3 size={16} /></button>
                             </div>
                           </td>
@@ -575,7 +589,6 @@ const AturPeriodeYudisium = () => {
         </div>
       </div>
 
-      {/* MODAL CREATE */}
       <AnimatePresence>
         {isCreateModalOpen && (
           <div className="aps-modal-overlay">
@@ -658,7 +671,6 @@ const AturPeriodeYudisium = () => {
         )}
       </AnimatePresence>
 
-      {/* MODAL EDIT */}
       <AnimatePresence>
         {isEditModalOpen && (
           <div className="aps-modal-overlay">
@@ -671,10 +683,10 @@ const AturPeriodeYudisium = () => {
                 <form id="editGroupForm" onSubmit={handleUpdateGroup}>
                   <div className="aps-form-group aps-mb-24">
                     <label className="aps-form-label">NAMA JUDUL PERIODE *</label>
-                    <input 
-                      type="text" 
-                      value={editForm.name || ''} 
-                      onChange={e => setEditForm({...editForm, name: e.target.value})} 
+                    <input
+                      type="text"
+                      value={editForm.name || ''}
+                      onChange={e => setEditForm({...editForm, name: e.target.value})}
                       className="aps-form-control"
                       placeholder="Contoh: Periode Yudisium Gelombang 1 2026/2027"
                       required
