@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Save, Edit3, LayoutPanelLeft, Menu, X, RefreshCw, Calendar, Clock, AlertTriangle, Eye, Plus, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
 import CustomAlert  from '../../components/common/CustomAlert';
 import { getSidangPeriods, createSidangPeriod, updateSidangPeriod } from '../../service/api';
-
-// --- IMPORT EXTERNAL CSS ---
 import '../../style/css/admin/aturperiode.css';
 
 const toArray = (raw) => {
@@ -91,7 +90,6 @@ const getDuration = (start, end) => {
   return Math.ceil((e - s) / (1000 * 3600 * 24));
 };
 
-// Prioritaskan nama kustom dari BE (pendaftaran.name / sidang.name), fallback ke format Semester/Tahun Ajaran
 const getDisplayPeriodName = (group) => {
   if (!group) return '-';
   const customName = (group.pendaftaran?.name || group.sidang?.name || '').trim();
@@ -103,6 +101,7 @@ const getDisplayPeriodName = (group) => {
 };
 
 const AturPeriodeSidang = () => {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [periods,     setPeriods]     = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -366,7 +365,6 @@ const AturPeriodeSidang = () => {
 
     setSubmitting(true);
     try {
-      // Sementara di-handle di FE: update nama pada kategori pendaftaran & pelaksanaan sekaligus agar sinkron
       if (editForm.pendaftaran) {
         await updateSidangPeriod(editForm.pendaftaran.id, {
           name: trimmedName,
@@ -393,6 +391,12 @@ const AturPeriodeSidang = () => {
     } catch (err) {
       showAlert('error', 'Gagal', err.response?.data?.message || 'Gagal memperbarui periode.');
     } finally { setSubmitting(false); }
+  };
+
+  const handleOpenDetail = (group) => {
+    navigate('/akademik/atur-periode/sidang/detail', {
+      state: { periodGroup: group },
+    });
   };
 
   const availableGroupsForSidang = groupedPeriods.filter(g => g.pendaftaran && !g.sidang);
@@ -559,7 +563,7 @@ const AturPeriodeSidang = () => {
                           </td>
                           <td>
                             <div className="aps-action-btns">
-                              <button title="Lihat Detail" onClick={() => alert('Fitur Detail Mahasiswa akan segera hadir!')}><Eye size={16} /></button>
+                              <button title="Lihat Detail Mahasiswa" onClick={() => handleOpenDetail(group)}><Eye size={16} /></button>
                               <button title="Edit Periode" onClick={() => openEditModal(group)}><Edit3 size={16} /></button>
                             </div>
                           </td>

@@ -21,6 +21,7 @@ import PengajuanSK from "./pages/mahasiswa/pengajuanSK";
 import PembaruanSK from "./pages/mahasiswa/pembaruanSK";
 import PermohonanSK from "./pages/admin/permohonanSK";
 import AturPeriodeSidang from "./pages/admin/aturperiodesidang";
+import DetailMahasiswaPeriodeSidang from "./pages/admin/detailmhsperiodesidang";
 import AturPeriodeYudisium from "./pages/admin/aturperiodeyudisium";
 import AturBerkas          from "./pages/admin/KelolaBerkas";
 import UploadSKL           from "./pages/admin/UploadSKL";             
@@ -210,6 +211,14 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["ADMIN"]}>
                 <AturPeriodeSidang />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/akademik/atur-periode/sidang/detail"
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <DetailMahasiswaPeriodeSidang />
               </ProtectedRoute>
             }
           />
