@@ -23,6 +23,7 @@ import {
   toggleReadInfoPenjadwalan,
   togglePublishSidangPeriod,
   uploadNotaDinasController,
+  getNotaDinasController,
 } from "../../controllers/penjadwalanSidangController.js";
 
 const router = express.Router();
@@ -111,6 +112,14 @@ router.put(
   authorize("ADMIN"),
   validate(setPengujiJadwalSidangSchema),
   setPengujiJadwalSidang,
+);
+
+// GET /api/penjadwalan-sidang/:id/nota-dinas
+router.get(
+  "/:id/nota-dinas",
+  verifyToken,
+  authorize("ADMIN", "DOSEN_KETUAKK", "DOSEN"),
+  getNotaDinasController,
 );
 
 // POST /api/penjadwalan-sidang/:id/nota-dinas
