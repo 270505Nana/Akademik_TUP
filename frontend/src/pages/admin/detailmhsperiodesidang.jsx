@@ -38,7 +38,6 @@ const formatDate = (dateStr) => {
   });
 };
 
-//berdasarkan skemaSidang / jalurNonSidang agar terkelompok Reguler / Capstone / Non-Sidang
 const resolveJalurSidang = (item) => {
   const jalurNon = (
     item?.jalurNonSidangFinal ||
@@ -157,6 +156,7 @@ const DetailMahasiswaPeriodeSidang = ({
   onSelectStudent: propOnSelectStudent = null,
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState(false);
   const [registrations, setRegistrations] = useState([]);
   const [prodiMap, setProdiMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -250,6 +250,7 @@ const DetailMahasiswaPeriodeSidang = ({
       });
 
       let regList = Array.from(mergedMap.values());
+
       if (candidateIds.length > 0) {
         regList = regList.filter((item) => {
           const assignedSidangPeriodId =
@@ -440,7 +441,11 @@ const DetailMahasiswaPeriodeSidang = ({
   const hasActiveBreakdownFilter = selectedProdi !== 'Semua' || selectedJalur !== 'Semua';
 
   return (
-    <div className="dmp-page-root">
+    <div
+      className={`dmp-page-root dmp-compact-layout ${
+        sidebarHidden ? 'dmp-sidebar-hidden' : ''
+      }`}
+    >
       <SidebarAdmin isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="dmp-main-content">
@@ -450,14 +455,25 @@ const DetailMahasiswaPeriodeSidang = ({
             onClick={() => setSidebarOpen(true)}
             className="dmp-mobile-menu-btn"
           >
-            <Menu size={24} />
+            <Menu size={22} />
           </button>
           <span className="dmp-mobile-brand">SIMTA</span>
         </div>
 
         <div className="dmp-zoom-wrapper">
           <div className="dmp-top-bar-red">
-            <h1>Detail Mahasiswa Periode Sidang</h1>
+            <div className="dmp-top-bar-left">
+              <button
+                type="button"
+                className="dmp-burger-btn"
+                onClick={() => setSidebarHidden((prev) => !prev)}
+                title={sidebarHidden ? 'Tampilkan Sidebar' : 'Sembunyikan Sidebar'}
+                aria-label={sidebarHidden ? 'Tampilkan Sidebar' : 'Sembunyikan Sidebar'}
+              >
+                <Menu size={18} />
+              </button>
+              <h1>Detail Mahasiswa Periode Sidang</h1>
+            </div>
             <span className="dmp-top-bar-pill">{periodTitle}</span>
           </div>
 
@@ -468,12 +484,11 @@ const DetailMahasiswaPeriodeSidang = ({
               <span className="current">Detail Mahasiswa</span>
             </div>
 
-            {/* Header Konteks Periode */}
             <div className="dmp-period-banner">
               <div className="dmp-period-left">
                 <div className="dmp-period-title-row">
                   <button type="button" className="dmp-btn-back" onClick={handleBack}>
-                    <ArrowLeft size={15} /> Kembali
+                    <ArrowLeft size={14} /> Kembali
                   </button>
                   <h2 className="dmp-period-title">{periodTitle}</h2>
                 </div>
@@ -481,19 +496,19 @@ const DetailMahasiswaPeriodeSidang = ({
                 <div className="dmp-period-meta">
                   {periodContext?.period && (
                     <span className="dmp-meta-item">
-                      <GraduationCap size={15} /> TA {periodContext.period}
+                      <GraduationCap size={13} /> TA {periodContext.period}
                     </span>
                   )}
                   {periodContext?.pendaftaran && (
                     <span className="dmp-meta-item">
-                      <Calendar size={15} /> Pendaftaran:{' '}
+                      <Calendar size={13} /> Pendaftaran:{' '}
                       {formatDate(periodContext.pendaftaran.startDate)} –{' '}
                       {formatDate(periodContext.pendaftaran.endDate)}
                     </span>
                   )}
                   {periodContext?.sidang && (
                     <span className="dmp-meta-item">
-                      <Clock size={15} /> Pelaksanaan Sidang:{' '}
+                      <Clock size={13} /> Pelaksanaan Sidang:{' '}
                       {formatDate(periodContext.sidang.startDate)} –{' '}
                       {formatDate(periodContext.sidang.endDate)}
                     </span>
@@ -508,7 +523,7 @@ const DetailMahasiswaPeriodeSidang = ({
                   onClick={fetchData}
                   disabled={loading}
                 >
-                  <RefreshCw size={15} /> {loading ? 'Memuat...' : 'Refresh Data'}
+                  <RefreshCw size={13} /> {loading ? 'Memuat...' : 'Refresh Data'}
                 </button>
               </div>
             </div>
@@ -518,7 +533,7 @@ const DetailMahasiswaPeriodeSidang = ({
                 <div className="dmp-kpi-top">
                   <span className="dmp-kpi-label">TOTAL PENDAFTAR</span>
                   <span className="dmp-kpi-icon total">
-                    <Users size={17} />
+                    <Users size={15} />
                   </span>
                 </div>
                 <div className="dmp-kpi-value">{metrics.total}</div>
@@ -529,7 +544,7 @@ const DetailMahasiswaPeriodeSidang = ({
                 <div className="dmp-kpi-top">
                   <span className="dmp-kpi-label">SIAP SIDANG / DITERIMA</span>
                   <span className="dmp-kpi-icon verified">
-                    <CheckCircle2 size={17} />
+                    <CheckCircle2 size={15} />
                   </span>
                 </div>
                 <div className="dmp-kpi-value">{metrics.siapSidang}</div>
@@ -542,7 +557,7 @@ const DetailMahasiswaPeriodeSidang = ({
                 <div className="dmp-kpi-top">
                   <span className="dmp-kpi-label">MENUNGGU VERIFIKASI</span>
                   <span className="dmp-kpi-icon pending">
-                    <Hourglass size={17} />
+                    <Hourglass size={15} />
                   </span>
                 </div>
                 <div className="dmp-kpi-value">{metrics.menungguVerifikasi}</div>
@@ -555,7 +570,7 @@ const DetailMahasiswaPeriodeSidang = ({
                 <div className="dmp-kpi-top">
                   <span className="dmp-kpi-label">PERLU REVISI</span>
                   <span className="dmp-kpi-icon revision">
-                    <AlertCircle size={17} />
+                    <AlertCircle size={15} />
                   </span>
                 </div>
                 <div className="dmp-kpi-value">{metrics.perluRevisi}</div>
@@ -670,11 +685,10 @@ const DetailMahasiswaPeriodeSidang = ({
               </div>
             </div>
 
-            {/* Filter & Pencarian Tabel */}
             <div className="dmp-filter-panel">
               <div className="dmp-toolbar-row">
                 <div className="dmp-search-wrap">
-                  <Search className="dmp-search-icon" size={16} />
+                  <Search className="dmp-search-icon" size={14} />
                   <input
                     type="text"
                     className="dmp-search-input"
@@ -729,7 +743,6 @@ const DetailMahasiswaPeriodeSidang = ({
               </div>
             </div>
 
-            {/* Tabel Data Mahasiswa */}
             <div className="dmp-table-wrap">
               {loading ? (
                 <div className="dmp-empty-box">
@@ -737,7 +750,7 @@ const DetailMahasiswaPeriodeSidang = ({
                 </div>
               ) : filteredRows.length === 0 ? (
                 <div className="dmp-empty-box">
-                  <GraduationCap size={32} color="#94A3B8" />
+                  <GraduationCap size={28} color="#94A3B8" />
                   <span className="dmp-empty-title">
                     Tidak ada data pendaftaran mahasiswa yang sesuai dengan filter.
                   </span>
@@ -786,7 +799,7 @@ const DetailMahasiswaPeriodeSidang = ({
                             onClick={() => handleViewStudent(row)}
                             title="Lihat Detail Pendaftaran"
                           >
-                            <Eye size={14} /> Detail
+                            <Eye size={13} /> Detail
                           </button>
                         </td>
                       </tr>

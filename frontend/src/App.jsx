@@ -23,16 +23,17 @@ import PermohonanSK from "./pages/admin/permohonanSK";
 import AturPeriodeSidang from "./pages/admin/aturperiodesidang";
 import DetailMahasiswaPeriodeSidang from "./pages/admin/detailmhsperiodesidang";
 import AturPeriodeYudisium from "./pages/admin/aturperiodeyudisium";
-import AturBerkas          from "./pages/admin/KelolaBerkas";
-import UploadSKL           from "./pages/admin/UploadSKL";             
-import UploadTranskrip     from "./pages/admin/UploadTranskrip";             
-import RegistrasiSidang    from "./pages/admin/RegistrasiSidang";  
-import RegistrasiYudisium  from "./pages/admin/RegistrasiYudisium";           
-import ProtectedRoute      from "./components/common/protectedRoute";
-import PendaftaranSidang   from "./pages/mahasiswa/pendaftaransidang";
+import DetailMahasiswaPeriodeYudisium from "./pages/admin/detailmhsperiodeyudisium";
+import AturBerkas from "./pages/admin/KelolaBerkas";
+import UploadSKL from "./pages/admin/UploadSKL";
+import UploadTranskrip from "./pages/admin/UploadTranskrip";
+import RegistrasiSidang from "./pages/admin/RegistrasiSidang";
+import RegistrasiYudisium from "./pages/admin/RegistrasiYudisium";
+import ProtectedRoute from "./components/common/protectedRoute";
+import PendaftaranSidang from "./pages/mahasiswa/pendaftaransidang";
 import PendaftaranYudisium from "./pages/mahasiswa/pendaftaranyudisium";
 import UnduhBerkasKelulusan from "./pages/mahasiswa/UnduhBerkasKelulusan";
-import KelolaDataDosen      from "./pages/admin/keloladatadosen";
+import KelolaDataDosen from "./pages/admin/keloladatadosen";
 import PenjadwalanSidangAdmin from "./pages/admin/penjadwalansidang";
 import KelolaPusatInformasi from "./pages/admin/PusatInformasi";
 
@@ -53,7 +54,6 @@ const App = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* Lengkapi Data */}
           <Route
             path="/lengkapi-data"
             element={
@@ -63,7 +63,6 @@ const App = () => {
             }
           />
 
-          {/* Mahasiswa */}
           <Route
             path="/mahasiswa/dashboard"
             element={
@@ -132,7 +131,6 @@ const App = () => {
             }
           />
 
-          {/* Dosen */}
           <Route
             path="/dosen/dashboard"
             element={
@@ -142,7 +140,6 @@ const App = () => {
             }
           />
 
-          {/* TAMBAHAN ROUTE KELOLA CLO (Hanya DOSEN / Kaprodi yang bisa akses) */}
           <Route
             path="/dosen/kelola-clo"
             element={
@@ -197,7 +194,6 @@ const App = () => {
             }
           />
 
-          {/* Admin */}
           <Route
             path="/akademik/dashboard"
             element={
@@ -227,6 +223,14 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["ADMIN"]}>
                 <AturPeriodeYudisium />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/akademik/atur-periode/yudisium/detail"
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <DetailMahasiswaPeriodeYudisium />
               </ProtectedRoute>
             }
           />
@@ -301,7 +305,6 @@ const App = () => {
             }
           />
 
-          {/* 403 Forbidden */}
           <Route
             path="/forbidden"
             element={
