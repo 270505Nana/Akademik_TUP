@@ -606,6 +606,55 @@ paths:
           description: Sidang registration, dosen, atau ruangan not found
 
   /api/penjadwalan-sidang/{id}/nota-dinas:
+    get:
+      summary: Get Nota Dinas pendaftaran sidang
+      description: Mengambil data URL atau pratinjau file PDF Nota Dinas. Dapat diakses oleh Admin, Ketua KK, dan Dosen yang terlibat dalam sidang tersebut.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Sidang registration ID (UUID)
+        - in: query
+          name: preview
+          required: false
+          schema:
+            type: boolean
+          description: Jika true, langsung menampilkan file PDF Nota Dinas
+      responses:
+        "200":
+          description: Data atau file Nota Dinas berhasil diambil
+          content:
+            application/json:
+              example:
+                message: Data Nota Dinas berhasil diambil
+                data:
+                  id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                  notaDinasUrl: uploads/nota-dinas/uuid_nota_dinas.pdf
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Data Nota Dinas berhasil diambil
+                  data:
+                    $ref: "#/components/schemas/PenjadwalanSidangItem"
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied
+        "404":
+          description: Pendaftaran sidang atau Nota Dinas tidak ditemukan
     post:
       summary: Upload Nota Dinas (Admin only)
       description: Mengunggah file Nota Dinas untuk pendaftaran sidang. Hanya dapat dilakukan jika jadwal sidang sudah di-lock.
