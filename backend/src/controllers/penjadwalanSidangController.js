@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import asyncHandler from "express-async-handler";
 import {
   getPaginationParams,
@@ -200,6 +202,47 @@ const uploadNotaDinasController = asyncHandler(async (req, res) => {
   });
 });
 
+// Get Nota Dinas
+const getNotaDinasController = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const registration = await penjadwalanSidangService.getNotaDinas({
+    id,
+    user: req.user,
+    dosen: req.dosen,
+  });
+
+  // Jika query ?preview=true dikirim, langsung tampilkan/stream file PDF-nya
+  if (req.query.preview === "true") {
+    const fileUrl = registration.notaDinasUrl;
+
+    if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+      return res.redirect(fileUrl);
+    }
+
+    const filePath = path.resolve(fileUrl);
+    if (!fs.existsSync(filePath)) {
+      res.status(404);
+      throw new Error("File fisik Nota Dinas tidak ditemukan di server");
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="Nota_Dinas_${registration.mahasiswa?.nim || registration.id}.pdf"`,
+    );
+    return res.sendFile(filePath);
+  }
+
+  res.json({
+    message: "Data Nota Dinas berhasil diambil",
+    data: {
+      ...mapPenjadwalanSidangToFrontend(registration),
+      notaDinasUrl: registration.notaDinasUrl,
+    },
+  });
+});
+
 export {
   listPenjadwalanSidang,
   setPengujiSidang,
@@ -212,4 +255,5 @@ export {
   toggleReadInfoPenjadwalan,
   togglePublishSidangPeriod,
   uploadNotaDinasController,
+  getNotaDinasController,
 };

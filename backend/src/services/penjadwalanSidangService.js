@@ -1102,3 +1102,60 @@ export const uploadNotaDinas = async ({ id, fileData }) => {
     include: penjadwalanSidangInclude,
   });
 };
+
+/**
+ * Mengambil data Nota Dinas berdasarkan ID pendaftaran sidang
+ */
+export const getNotaDinas = async ({ id, user, dosen }) => {
+  const registration = await prisma.sidangRegistration.findUnique({
+    where: { id },
+    include: penjadwalanSidangInclude,
+  });
+
+  if (!registration || registration.deletedAt) {
+    const error = new Error("Pendaftaran sidang tidak ditemukan");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Jika yang mengakses adalah DOSEN biasa (bukan Admin & bukan Ketua KK),
+  // pastikan dosen tersebut merupakan pembimbing atau penguji di sidang ini
+  if (user?.role === "DOSEN" && !dosen?.isKetuaKK) {
+    const currentDosen =
+      dosen ||
+      (await prisma.dosen.findUnique({
+        where: { userId: user.id, deletedAt: null },
+      }));
+
+    if (!currentDosen) {
+      const error = new Error("Data Dosen tidak ditemukan");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const involvedDosenIds = [
+      registration.dosenPembimbing1Id,
+      registration.dosenPembimbing2Id,
+      registration.dosenPenguji1Id,
+      registration.dosenPenguji2Id,
+    ].filter(Boolean);
+
+    if (!involvedDosenIds.includes(currentDosen.id)) {
+      const error = new Error(
+        "Anda tidak memiliki akses untuk melihat Nota Dinas sidang ini",
+      );
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+
+  if (!registration.notaDinasUrl) {
+    const error = new Error(
+      "Nota Dinas belum diunggah untuk pendaftaran sidang ini",
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return registration;
+};
