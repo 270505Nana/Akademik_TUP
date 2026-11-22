@@ -10,6 +10,7 @@ import {
   generateJadwalSidangWorkbook,
   generateJadwalSidangFilename,
   generateJadwalBandungWorkbook,
+  getActiveOrUpcomingPelaksanaanSidangPeriod,
 } from "../utils/penjadwalanSidangHelper.js";
 
 export const resolveStatusSidang = (penguji1, penguji2, tglSidang, ruangan) => {
@@ -91,18 +92,13 @@ export const getPenjadwalanSidangList = async ({
   ) {
     targetPeriodId = targetPeriodId.trim();
   } else {
-    const activePeriod =
-      (await prisma.sidangPeriod.findFirst({
-        where: { isOpen: true, category: "pendaftaran", deletedAt: null },
-        orderBy: { updatedAt: "desc" },
-      })) ||
-      (await prisma.sidangPeriod.findFirst({
-        where: { category: "pendaftaran", deletedAt: null },
-        orderBy: { endDate: "desc" },
-      }));
+    const activePeriod = await getActiveOrUpcomingPelaksanaanSidangPeriod();
 
     if (activePeriod) {
       targetPeriodId = activePeriod.id;
+    } else {
+      // Jika periode sudah lewat semua dan tidak ada periode aktif/mendatang, tampilkan kosong
+      return { total: 0, registrations: [] };
     }
   }
 
@@ -773,15 +769,7 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
       where: { id: targetPeriodId, deletedAt: null },
     });
   } else {
-    selectedPeriod =
-      (await prisma.sidangPeriod.findFirst({
-        where: { isOpen: true, deletedAt: null },
-        orderBy: { updatedAt: "desc" },
-      })) ||
-      (await prisma.sidangPeriod.findFirst({
-        where: { deletedAt: null },
-        orderBy: { endDate: "desc" },
-      }));
+    selectedPeriod = await getActiveOrUpcomingPelaksanaanSidangPeriod();
 
     if (selectedPeriod) {
       targetPeriodId = selectedPeriod.id;
@@ -817,11 +805,13 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
     };
   }
 
-  const jadwalList = await prisma.sidangRegistration.findMany({
-    where: whereClause,
-    include: penjadwalanSidangInclude,
-    orderBy: { tglSidang: "asc" },
-  });
+  const jadwalList = targetPeriodId
+    ? await prisma.sidangRegistration.findMany({
+        where: whereClause,
+        include: penjadwalanSidangInclude,
+        orderBy: { tglSidang: "asc" },
+      })
+    : [];
 
   // Workbook Format Awal
   const workbookAwal = generateJadwalSidangWorkbook(jadwalList);

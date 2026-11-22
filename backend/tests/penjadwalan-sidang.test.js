@@ -710,5 +710,75 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
 
       expect(result).toEqual({ total: 0, registrations: [] });
     });
+
+    it("harus mencari periode pelaksanaan aktif secara default jika sidangPeriodId tidak diberikan", async () => {
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
+      const findFirstPeriodSpy = vi
+        .spyOn(prisma.sidangPeriod, "findFirst")
+        .mockResolvedValue({ id: "period-pelaksanaan-aktif", category: "pelaksanaan", isOpen: true });
+
+      await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        skip: 0,
+        take: 10,
+      });
+
+      expect(findFirstPeriodSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ category: "pelaksanaan" }),
+        }),
+      );
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.sidangPeriodId).toBe("period-pelaksanaan-aktif");
+    });
+
+    it("harus fallback ke periode pelaksanaan mendatang jika tidak ada periode aktif", async () => {
+      vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
+      const findManySpy = vi
+        .spyOn(prisma.sidangRegistration, "findMany")
+        .mockResolvedValue([]);
+      const findFirstPeriodSpy = vi
+        .spyOn(prisma.sidangPeriod, "findFirst")
+        .mockResolvedValueOnce(null) // isOpen: true -> null
+        .mockResolvedValueOnce({
+          id: "period-pelaksanaan-upcoming",
+          category: "pelaksanaan",
+          startDate: new Date(Date.now() + 86400000),
+        });
+
+      await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        skip: 0,
+        take: 10,
+      });
+
+      expect(findFirstPeriodSpy).toHaveBeenCalledTimes(2);
+      expect(findFirstPeriodSpy.mock.calls[1][0]).toEqual(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            category: "pelaksanaan",
+            startDate: expect.any(Object),
+          }),
+          orderBy: { startDate: "asc" },
+        }),
+      );
+      const findArgs = findManySpy.mock.calls[0][0];
+      expect(findArgs.where.sidangPeriodId).toBe("period-pelaksanaan-upcoming");
+    });
+
+    it("harus mengembalikan data kosong jika seluruh periode pelaksanaan sudah lewat dan tidak ada periode aktif/mendatang", async () => {
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue(null);
+
+      const result = await getPenjadwalanSidangList({
+        user: { role: "ADMIN" },
+        skip: 0,
+        take: 10,
+      });
+
+      expect(result).toEqual({ total: 0, registrations: [] });
+    });
   });
 });
