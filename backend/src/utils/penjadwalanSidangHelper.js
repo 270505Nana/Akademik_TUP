@@ -387,3 +387,48 @@ export const generateJadwalSidangFilename = (selectedPeriod) => {
   const namaPeriode = sanitizePart(selectedPeriod.name);
   return `TAPA_Sidang_${tahunAjaran}_${namaPeriode}.xlsx`;
 };
+
+/**
+ * Mencari periode pelaksanaan sidang yang aktif (isOpen: true) atau yang mendatang (upcoming) terdekat
+ */
+export const getActiveOrUpcomingPelaksanaanSidangPeriod = async () => {
+  const now = new Date();
+
+  // 1. Cari periode pelaksanaan yang saat ini aktif/dibuka
+  const active = await prisma.sidangPeriod.findFirst({
+    where: {
+      category: "pelaksanaan",
+      isOpen: true,
+      deletedAt: null,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  if (active) return active;
+
+  // 2. Fallback: Cari periode pelaksanaan mendatang (upcoming) yang paling dekat (startDate terdekat)
+  const upcoming =
+    (await prisma.sidangPeriod.findFirst({
+      where: {
+        category: "pelaksanaan",
+        startDate: { gte: now },
+        deletedAt: null,
+      },
+      orderBy: { startDate: "asc" },
+    })) ||
+    (await prisma.sidangPeriod.findFirst({
+      where: {
+        category: "pelaksanaan",
+        endDate: { gte: now },
+        deletedAt: null,
+      },
+      orderBy: { startDate: "asc" },
+    }));
+
+  if (upcoming) return upcoming;
+
+  // 3. Jika semua periode sudah lewat dan tidak ada yang aktif, kembalikan null
+  return null;
+};
+
+export const getActiveOrLatestPelaksanaanSidangPeriod = getActiveOrUpcomingPelaksanaanSidangPeriod;
