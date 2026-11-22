@@ -1,5 +1,8 @@
-import fs from "fs";
-import path from "path";
+import {
+  servePreview,
+  getPresignedUrl,
+  isR2Driver,
+} from "../services/storageService.js";
 import asyncHandler from "express-async-handler";
 import {
   getPaginationParams,
@@ -212,33 +215,30 @@ const getNotaDinasController = asyncHandler(async (req, res) => {
     dosen: req.dosen,
   });
 
-  // Jika query ?preview=true dikirim, langsung tampilkan/stream file PDF-nya
+  const filename = `Nota_Dinas_${registration.mahasiswa?.nim || registration.id}.pdf`;
+
   if (req.query.preview === "true") {
-    const fileUrl = registration.notaDinasUrl;
-
-    if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
-      return res.redirect(fileUrl);
-    }
-
-    const filePath = path.resolve(fileUrl);
-    if (!fs.existsSync(filePath)) {
-      res.status(404);
-      throw new Error("File fisik Nota Dinas tidak ditemukan di server");
-    }
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="Nota_Dinas_${registration.mahasiswa?.nim || registration.id}.pdf"`,
-    );
-    return res.sendFile(filePath);
+    return servePreview(res, {
+      filepath: registration.notaDinasUrl,
+      filename,
+      mimeType: "application/pdf",
+    });
   }
+
+  const previewUrl = isR2Driver()
+    ? await getPresignedUrl(registration.notaDinasUrl, {
+        downloadFilename: filename,
+        inline: true,
+        contentType: "application/pdf",
+      })
+    : `${req.protocol}://${req.get("host")}/api/penjadwalan-sidang/${id}/nota-dinas?preview=true`;
 
   res.json({
     message: "Data Nota Dinas berhasil diambil",
     data: {
       ...mapPenjadwalanSidangToFrontend(registration),
       notaDinasUrl: registration.notaDinasUrl,
+      previewUrl,
     },
   });
 });
