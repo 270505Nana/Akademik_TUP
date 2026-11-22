@@ -384,9 +384,9 @@ const Step2 = ({ uploads, berkasStatuses, onToggle, previewFile, onPreview, onDo
             <div style={{ padding: '8px 14px', borderBottom: `1px solid ${CLR.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FAFAFA', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                 {isLinkPaperUpload(previewFile) ? (
-                  <LinkIcon size={13} color={CLR.red} flexShrink={0} />
+                  <LinkIcon size={13} color={CLR.red} style={{ flexShrink: 0 }} />
                 ) : (
-                  <FileText size={13} color={CLR.red} flexShrink={0} />
+                  <FileText size={13} color={CLR.red} style={{ flexShrink: 0 }} />
                 )}
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBerkasName(previewFile, templateMap)}</span>
               </div>
@@ -811,7 +811,7 @@ const VerifikasiBerkasModal = ({
 
   const m = localRegistration?.mahasiswa || localRegistration?.student;
   const prodiName = m?.studyProgram?.name ?? '-';
-  const periods = Object.values(periodMap ?? {});
+  const periods = Object.values(periodMap ?? {}).filter(p => p?.category === 'pelaksanaan');
 
   // Fetch daftar template berkas wajib, test bahasa, dan non-sidang aktif dari backend
   const [decision, setDecision] = useState(null); // null | 'approve' | 'reject'

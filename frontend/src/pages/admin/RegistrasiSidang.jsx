@@ -457,13 +457,19 @@ const RegistrasiSidang = () => {
         if (!item) return;
         if (item.pendaftaran || item.pelaksanaan) {
           if (item.pendaftaran?.id) {
-            prdMap[item.pendaftaran.id] = item.pendaftaran;
+            prdMap[item.pendaftaran.id] = {
+              ...item.pendaftaran,
+              category: item.pendaftaran.category || 'pendaftaran',
+            };
             if (!regPeriods.some(p => p.id === item.pendaftaran.id)) {
               regPeriods.push(item.pendaftaran);
             }
           }
           if (item.pelaksanaan?.id) {
-            prdMap[item.pelaksanaan.id] = item.pelaksanaan;
+            prdMap[item.pelaksanaan.id] = {
+              ...item.pelaksanaan,
+              category: item.pelaksanaan.category || 'pelaksanaan',
+            };
           }
         } else if (item.id) {
           prdMap[item.id] = item;

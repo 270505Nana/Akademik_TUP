@@ -1,8 +1,9 @@
 import '../../style/css/admin/penjadwalansidang.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, Filter, Lock, Unlock, Menu,
-  ChevronLeft, ChevronRight, Save, AlertTriangle, RotateCcw, Settings
+  ChevronLeft, ChevronRight, Save, AlertTriangle, RotateCcw, Settings,
+  Upload, FileText, Paperclip, Eye, Edit
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SidebarAdmin from '../../components/sidebar/SidebarAdmin';
@@ -15,8 +16,107 @@ import {
   getAllRuangan, 
   setJadwalSidangAdmin, 
   setJadwalSidangBatchAdmin,
-  toggleLockJadwalAdmin 
+  toggleLockJadwalAdmin,
+  uploadNotaDinas
 } from '../../service/api';
+import NotaDinasModal from '../../components/common/NotaDinasModal';
+
+const MAX_NOTA_SIZE = 5 * 1024 * 1024;
+
+const NotaDinasCell = ({ item, uploadingId, onUpload, onView }) => {
+  const fileInputRef = useRef(null);
+  const isUploading = uploadingId === item.id;
+
+  if (!item.isLocked) {
+    return <span className="nd-hint">Kunci jadwal terlebih dahulu</span>;
+  }
+
+  if (item.notaDinasUrl) {
+    return (
+      <div className="nd-cell">
+        <button 
+          className="nd-btn-link-pdf" 
+          onClick={() => onView(item)} 
+          title="Lihat PDF Nota Dinas"
+        >
+          <Eye size={13} /> Lihat PDF
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="nd-cell">
+      <button
+        className="nd-btn nd-btn--primary"
+        onClick={() => { if (fileInputRef.current) fileInputRef.current.click(); }}
+        disabled={isUploading}
+        title="Unggah Nota Dinas"
+      >
+        {isUploading ? 'Mengunggah...' : <><Upload size={13} /> Unggah</>}
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        hidden
+        onChange={(e) => { const f = e.target.files[0]; if (f) onUpload(item, f); e.target.value = ''; }}
+      />
+    </div>
+  );
+};
+
+const AksiCell = ({ item, isEdited, isLocked, isUploading, onSave, onCancel, onToggleLock, onUpload }) => {
+  const editFileInputRef = useRef(null);
+  const canEditNota = item.isLocked && !!item.notaDinasUrl;
+
+  if (isEdited) {
+    return (
+      <div className="ps-action-buttons">
+        <button onClick={() => onCancel(item.id)} className="ps-btn-cancel" title="Batal">
+          <RotateCcw size={14} />
+        </button>
+        <button onClick={() => onSave(item.id)} className="ps-btn-save-sm" title="Simpan">
+          Simpan
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ps-action-buttons">
+      <button
+        onClick={() => {
+          if (editFileInputRef.current) editFileInputRef.current.click();
+        }}
+        disabled={!canEditNota || isUploading}
+        className={`ps-btn-edit ${canEditNota ? 'active' : 'disabled'}`}
+        title={canEditNota ? "Ganti Nota Dinas" : "Kunci jadwal dan unggah nota dinas terlebih dahulu untuk mengganti"}
+      >
+        <Edit size={14} />
+      </button>
+      <input
+        ref={editFileInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files[0];
+          if (f) onUpload(item, f);
+          e.target.value = '';
+        }}
+      />
+      <button 
+        onClick={() => onToggleLock(item)}
+        disabled={!item.isLocked && item.statusPenjadwalan !== 'Siap Sidang'} 
+        className={`ps-btn-lock ${isLocked ? 'locked' : 'unlocked'}`}
+        title={isLocked ? "Terbuka untuk diubah" : "Kunci dari perubahan"}
+      >
+        {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+      </button>
+    </div>
+  );
+};
 
 export default function PenjadwalanSidang() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -39,6 +139,8 @@ export default function PenjadwalanSidang() {
 
   // STATE UNTUK MODAL KELOLA RUANGAN
   const [isRuanganModalOpen, setIsRuanganModalOpen] = useState(false);
+  const [uploadingId, setUploadingId] = useState(null);
+  const [notaDinasPreview, setNotaDinasPreview] = useState(null);
 
   const showAlert = (type, title, message) => {
     setAlert({ show: true, type, title, message });
@@ -208,6 +310,50 @@ export default function PenjadwalanSidang() {
     fetchData(newPage);
   };
 
+  const patchRow = (updated) => {
+    setData(prev => prev.map(item => item.id === updated.id ? { ...item, ...updated } : item));
+  };
+
+  const handleToggleLockNota = async (item) => {
+    if (item.isLocked && item.notaDinasUrl) {
+      const ok = window.confirm('Membuka kunci akan menghapus nota dinas yang sudah diunggah. Lanjutkan?');
+      if (!ok) return;
+    }
+    try {
+      const res = await toggleLockJadwalAdmin(item.id);
+      patchRow(res.data);
+      showAlert('success', 'Berhasil', res.message || 'Status kunci berhasil diubah.');
+    } catch (error) {
+      showAlert('error', 'Gagal', error.response?.data?.message || 'Gagal mengubah status kunci.');
+    }
+  };
+
+  const handleUploadNota = async (item, file) => {
+    const isValidType = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isValidType) {
+      showAlert('error', 'Format Tidak Valid', 'Hanya file PDF yang diizinkan.');
+      return;
+    }
+    if (file.size > MAX_NOTA_SIZE) {
+      showAlert('error', 'File Terlalu Besar', 'Ukuran file maksimal 5 MB.');
+      return;
+    }
+    setUploadingId(item.id);
+    try {
+      const res = await uploadNotaDinas(item.id, file);
+      patchRow(res.data);
+      showAlert('success', 'Berhasil', 'Nota dinas berhasil diunggah.');
+    } catch (error) {
+      showAlert('error', 'Gagal', error.response?.data?.message || 'Gagal mengunggah nota dinas.');
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const handleViewNota = (item) => {
+    setNotaDinasPreview(item);
+  };
+
   const draftCount = Object.keys(drafts).length;
 
   return (
@@ -290,14 +436,15 @@ export default function PenjadwalanSidang() {
                         <th className="col-tanggal">Tanggal</th>
                         <th className="col-waktu">Waktu</th>
                         <th className="col-ruang">Ruangan</th>
+                        <th className="col-nota">Nota Dinas</th>
                         <th className="col-aksi text-center">Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
                       {loading ? (
-                        <tr><td colSpan="9" className="text-center ps-py-6">Memuat data...</td></tr>
+                        <tr><td colSpan="10" className="text-center ps-py-6">Memuat data...</td></tr>
                       ) : data.length === 0 ? (
-                        <tr><td colSpan="9" className="text-center ps-py-6">Tidak ada data ditemukan.</td></tr>
+                        <tr><td colSpan="10" className="text-center ps-py-6">Tidak ada data ditemukan.</td></tr>
                       ) : (
                         data.map((item, idx) => {
                           const isPengujiLengkap = item.dosenPenguji1 && item.dosenPenguji2;
@@ -372,28 +519,26 @@ export default function PenjadwalanSidang() {
                                 </select>
                               </td>
 
+                              <td className="col-nota">
+                                <NotaDinasCell
+                                  item={item}
+                                  uploadingId={uploadingId}
+                                  onUpload={handleUploadNota}
+                                  onView={handleViewNota}
+                                />
+                              </td>
+
                               <td className="text-center">
-                                <div className="ps-action-buttons">
-                                  {isEdited ? (
-                                    <>
-                                      <button onClick={() => handleCancelRow(item.id)} className="ps-btn-cancel" title="Batal">
-                                        <RotateCcw size={14} />
-                                      </button>
-                                      <button onClick={() => handleSaveRow(item.id)} className="ps-btn-save-sm" title="Simpan">
-                                        Simpan
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button 
-                                      onClick={() => handleToggleLock(item.id)}
-                                      disabled={!item.tglSidang} 
-                                      className={`ps-btn-lock ${isLocked ? 'locked' : 'unlocked'}`}
-                                      title={isLocked ? "Terbuka untuk diubah" : "Kunci dari perubahan"}
-                                    >
-                                      {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
-                                    </button>
-                                  )}
-                                </div>
+                                <AksiCell
+                                  item={item}
+                                  isEdited={isEdited}
+                                  isLocked={isLocked}
+                                  isUploading={uploadingId === item.id}
+                                  onSave={handleSaveRow}
+                                  onCancel={handleCancelRow}
+                                  onToggleLock={handleToggleLockNota}
+                                  onUpload={handleUploadNota}
+                                />
                               </td>
                             </tr>
                           );
@@ -423,6 +568,13 @@ export default function PenjadwalanSidang() {
         isOpen={isRuanganModalOpen} 
         onClose={handleCloseRuanganModal} 
       />
+
+      {notaDinasPreview && (
+        <NotaDinasModal
+          item={notaDinasPreview}
+          onClose={() => setNotaDinasPreview(null)}
+        />
+      )}
 
       <AnimatePresence>
         {alert.show && (
