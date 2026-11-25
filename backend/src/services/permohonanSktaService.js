@@ -70,6 +70,24 @@ export const validateSktaFile = (file) => {
   }
 };
 
+/**
+ * Menghapus file evidence hanya jika tidak lagi direferensikan oleh permohonan SKTA lain
+ */
+const deleteEvidenceIfUnused = async (filepath, excludeId) => {
+  if (!filepath) return;
+  const otherRef = await prisma.permohonanSkta.findFirst({
+    where: {
+      id: { not: excludeId },
+      evidenceUploadPath: filepath,
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+  if (!otherRef) {
+    await deleteFile(filepath);
+  }
+};
+
 export const verifyMahasiswaOwnership = async (mahasiswaIdOrUserId, currentUser) => {
   if (!currentUser || currentUser.role?.toUpperCase() !== "MAHASISWA") {
     return true;
@@ -490,7 +508,7 @@ export const saveDraftPermohonanSkta = async ({
 
       newlyUploadedEvidence = uploadedEvidence.filepath;
       if (existing.evidenceUploadPath) {
-        await deleteFile(existing.evidenceUploadPath);
+        await deleteEvidenceIfUnused(existing.evidenceUploadPath, id);
       }
       updateData.evidenceUploadPath = uploadedEvidence.filepath;
       newlyUploadedEvidence = uploadedEvidence.filepath;
@@ -566,7 +584,7 @@ export const saveDraftPermohonanSkta = async ({
         });
 
         if (existing.evidenceUploadPath) {
-          await deleteFile(existing.evidenceUploadPath);
+          await deleteEvidenceIfUnused(existing.evidenceUploadPath, existing.id);
         }
         updateData.evidenceUploadPath = uploadedEvidence.filepath;
       }
@@ -770,9 +788,27 @@ export const submitPermohonanSkta = async ({
     });
 
     if (existingRecord.evidenceUploadPath) {
-      await deleteFile(existingRecord.evidenceUploadPath);
+      await deleteEvidenceIfUnused(existingRecord.evidenceUploadPath, id);
     }
     evidenceUploadPath = uploadedEvidence.filepath;
+  }
+
+  if (!evidenceUploadPath && category === "Perpanjangan SK") {
+    const previousSktaWithEvidence = await prisma.permohonanSkta.findFirst({
+      where: {
+        mahasiswaId,
+        isDraft: false,
+        deletedAt: null,
+        evidenceUploadPath: { not: null },
+        id: { not: id },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { evidenceUploadPath: true },
+    });
+
+    if (previousSktaWithEvidence?.evidenceUploadPath) {
+      evidenceUploadPath = previousSktaWithEvidence.evidenceUploadPath;
+    }
   }
 
   if (!evidenceUploadPath) {
@@ -901,7 +937,7 @@ export const updatePermohonanSktaData = async (
     });
 
     if (permohonan.evidenceUploadPath) {
-      await deleteFile(permohonan.evidenceUploadPath);
+      await deleteEvidenceIfUnused(permohonan.evidenceUploadPath, id);
     }
     updateData.evidenceUploadPath = uploadedEvidence.filepath;
   }
