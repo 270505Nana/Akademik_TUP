@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Download, Eye, ChevronLeft, ChevronRight, Menu, ChevronDown, Check, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import {
+  Search,
+  Download,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  ChevronDown,
+  Check,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import SidebarAdmin    from '../../components/sidebar/SidebarAdmin';
@@ -62,12 +74,12 @@ const PermohonanSK = () => {
 
   const showAlert = (type, title, message) => {
     setAlert({ show: true, type, title, message });
-    setTimeout(() => setAlert(p => ({ ...p, show: false })), 4000);
+    setTimeout(() => setAlert((p) => ({ ...p, show: false })), 4000);
   };
 
   useEffect(() => {
     getStudyPrograms()
-      .then(data => setProdiList(Array.isArray(data) ? data : []))
+      .then((data) => setProdiList(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
 
@@ -76,9 +88,9 @@ const PermohonanSK = () => {
     try {
       const res = await getAllSktaRequests();
       const dataList = res?.data ?? res ?? [];
-      
+
       const uniqueLatestRequests = new Map();
-      dataList.forEach(item => {
+      dataList.forEach((item) => {
         const sid = item.studentId ?? item.mahasiswaId ?? item.student?.id ?? item.mahasiswa?.id;
         if (!uniqueLatestRequests.has(sid)) {
           uniqueLatestRequests.set(sid, item);
@@ -88,22 +100,23 @@ const PermohonanSK = () => {
       const enriched = await Promise.all(
         Array.from(uniqueLatestRequests.values()).map(async (req) => {
           const sid = req.studentId ?? req.mahasiswaId ?? req.student?.id ?? req.mahasiswa?.id;
-          
+
           const [rawResp, uploadsRaw] = await Promise.all([
             getSktaResponseByRequestId(req.id).catch(() => null),
-            getSktaResponseUploadByStudentId(sid).catch(() => null)
+            getSktaResponseUploadByStudentId(sid).catch(() => null),
           ]);
 
           const sktaResponse = unwrapResponse(rawResp);
           const skUploads = uploadsRaw?.data ?? uploadsRaw ?? [];
           const prodiName = req.mahasiswa?.studyProgram?.name ?? req.student?.studyProgram?.name ?? '-';
-          
-          const tanggal = req.sktaRequestUploads?.[0]?.createdAt ??
-                          skUploads?.[0]?.createdAt ??
-                          sktaResponse?.createdAt ??
-                          req.createdAt ??
-                          req.updatedAt ??
-                          null;
+
+          const tanggal =
+            req.sktaRequestUploads?.[0]?.createdAt ??
+            skUploads?.[0]?.createdAt ??
+            sktaResponse?.createdAt ??
+            req.createdAt ??
+            req.updatedAt ??
+            null;
 
           return { ...req, studentId: sid, sktaResponse, skUploads, prodiName, tanggal };
         })
@@ -120,9 +133,9 @@ const PermohonanSK = () => {
 
   useEffect(() => {
     if (user?.role === 'ADMIN') fetchRequests();
-  }, [user]); 
+  }, [user]);
 
-  const getStatus = r => determineStatus(r.sktaResponse, r.skUploads, r);
+  const getStatus = (r) => determineStatus(r.sktaResponse, r.skUploads, r);
 
   const STATUS_SORT_PRIORITY = {
     'dalam-proses'   : 1,
@@ -132,45 +145,52 @@ const PermohonanSK = () => {
   };
 
   const handleSort = (field) => {
-    setSort(prev => {
-      if (prev.field !== field) return { field, dir: 'asc' };   
-      if (prev.dir === 'asc')   return { field, dir: 'desc' };  
-      return { field: null, dir: 'asc' };                        
+    setSort((prev) => {
+      if (prev.field !== field) return { field, dir: 'asc' };
+      if (prev.dir === 'asc') return { field, dir: 'desc' };
+      return { field: null, dir: 'asc' };
     });
   };
 
-  const filteredSorted = useMemo(() => (
-    [...requests]
-      .filter(r => {
-        if (!searchDebounced) return true;
-        const name = (r.mahasiswa?.name || r.student?.name || '').toLowerCase();
-        const nim  = (r.mahasiswa?.nim || r.student?.nim  || '').toLowerCase();
-        return name.includes(searchDebounced) || nim.includes(searchDebounced);
-      })
-      .filter(r => !filterProdi  || r.prodiName === filterProdi)
-      .filter(r => !filterStatus || getStatus(r) === filterStatus)
-      .sort((a, b) => {
-        if (sort.field === 'name') {
-          const na = (a.mahasiswa?.name || a.student?.name || '').toLowerCase();
-          const nb = (b.mahasiswa?.name || b.student?.name || '').toLowerCase();
-          const cmp = na.localeCompare(nb, 'id');
-          return sort.dir === 'asc' ? cmp : -cmp;
-        }
-        if (sort.field === 'prodi') {
-          const pa = (a.prodiName || '').toLowerCase();
-          const pb = (b.prodiName || '').toLowerCase();
-          const cmp = pa.localeCompare(pb, 'id');
-          return sort.dir === 'asc' ? cmp : -cmp;
-        }
-        if (sort.field === 'status') {
-          const pa = STATUS_SORT_PRIORITY[getStatus(a)] || 99;
-          const pb = STATUS_SORT_PRIORITY[getStatus(b)] || 99;
-          return sort.dir === 'asc' ? pa - pb : pb - pa;
-        }
-        const order = { 'mengirim-revisi': 1, 'dalam-proses': 2, 'belum-terbit': 3, 'sudah-terbit': 4 };
-        return (order[getStatus(a)] || 99) - (order[getStatus(b)] || 99);
-      })
-  ), [requests, searchDebounced, filterProdi, filterStatus, sort]);
+  const filteredSorted = useMemo(
+    () =>
+      [...requests]
+        .filter((r) => {
+          if (!searchDebounced) return true;
+          const name = (r.mahasiswa?.name || r.student?.name || '').toLowerCase();
+          const nim  = (r.mahasiswa?.nim || r.student?.nim || '').toLowerCase();
+          return name.includes(searchDebounced) || nim.includes(searchDebounced);
+        })
+        .filter((r) => !filterProdi || r.prodiName === filterProdi)
+        .filter((r) => !filterStatus || getStatus(r) === filterStatus)
+        .sort((a, b) => {
+          if (sort.field === 'name') {
+            const na = (a.mahasiswa?.name || a.student?.name || '').toLowerCase();
+            const nb = (b.mahasiswa?.name || b.student?.name || '').toLowerCase();
+            const cmp = na.localeCompare(nb, 'id');
+            return sort.dir === 'asc' ? cmp : -cmp;
+          }
+          if (sort.field === 'prodi') {
+            const pa = (a.prodiName || '').toLowerCase();
+            const pb = (b.prodiName || '').toLowerCase();
+            const cmp = pa.localeCompare(pb, 'id');
+            return sort.dir === 'asc' ? cmp : -cmp;
+          }
+          if (sort.field === 'status') {
+            const pa = STATUS_SORT_PRIORITY[getStatus(a)] || 99;
+            const pb = STATUS_SORT_PRIORITY[getStatus(b)] || 99;
+            return sort.dir === 'asc' ? pa - pb : pb - pa;
+          }
+          const order = {
+            'mengirim-revisi': 1,
+            'dalam-proses'   : 2,
+            'belum-terbit'   : 3,
+            'sudah-terbit'   : 4,
+          };
+          return (order[getStatus(a)] || 99) - (order[getStatus(b)] || 99);
+        }),
+    [requests, searchDebounced, filterProdi, filterStatus, sort]
+  );
 
   const totalPages = Math.ceil(filteredSorted.length / PAGE_SIZE) || 1;
   const paginated  = filteredSorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -190,7 +210,7 @@ const PermohonanSK = () => {
   const handleOpenUnifiedModal = async (item, initialStep = 1) => {
     setSelectedVerifikasi(null);
     setExistingResponse(null);
-    
+
     const studentId = item.studentId ?? item.mahasiswaId ?? item.student?.id;
     if (!studentId) return showAlert('error', 'Error', 'Student ID tidak ditemukan');
 
@@ -199,7 +219,7 @@ const PermohonanSK = () => {
         getSktaResponseByRequestId(item.id).catch(() => null),
         getSktaResponseUploadByStudentId(studentId).catch(() => null),
         getSKTARequest(studentId).catch(() => null),
-        getEvidenceUploadsByStudentId(studentId).catch(() => [])
+        getEvidenceUploadsByStudentId(studentId).catch(() => []),
       ]);
 
       const unwrapped = unwrapResponse(rawResp);
@@ -210,7 +230,7 @@ const PermohonanSK = () => {
         ...item,
         sktaRequest: reqData,
         evidenceUploads: evUploads,
-        initialStep: initialStep
+        initialStep,
       });
     } catch (err) {
       console.error(err);
@@ -227,7 +247,10 @@ const PermohonanSK = () => {
     if (!user?.id) return showAlert('error', 'Error', 'Staf Akademik ID tidak ditemukan');
     try {
       const permohonanId = payload.selectedPermohonan.id;
-      const mhsName = payload.selectedPermohonan.mahasiswa?.name || payload.selectedPermohonan.student?.name || 'Mahasiswa';
+      const mhsName =
+        payload.selectedPermohonan.mahasiswa?.name ||
+        payload.selectedPermohonan.student?.name ||
+        'Mahasiswa';
 
       if (payload.actionType === 'reject') {
         await rejectPermohonanSK(permohonanId, {
@@ -263,26 +286,32 @@ const PermohonanSK = () => {
 
       <div className="sk-main-content">
         <div className="mobile-menu-bar">
-          <button onClick={() => setSidebarOpen(true)} className="mobile-menu-btn">
+          <button type="button" onClick={() => setSidebarOpen(true)} className="mobile-menu-btn">
             <Menu size={20} />
           </button>
           <span className="mobile-menu-title">SIMTA</span>
         </div>
 
-        <div className="page-wrapper" style={{ minWidth: 0, width: '100%', overflowX: 'auto', margin: 0, padding: 0, zoom: 0.9 }}>
-          <div className="top-bar-red" style={{ overflow: 'hidden', margin: 0 }}>
-            <h1 style={{ margin: 0 }}>Layanan SK TA</h1>
+        <div className="page-wrapper">
+          <div className="top-bar-red">
+            <h1>Layanan SK TA</h1>
           </div>
 
           <div className="content-container">
             <h2 className="page-title">Permohonan SK TA</h2>
 
             <section className="card-main">
-              <div className="card-body" style={{ paddingBottom: 0 }}>
+              <div className="card-body sk-card-body-filter">
                 <div className="sk-filter-bar">
                   <div className="sk-search-wrap">
                     <span className="sk-search-icon"><Search size={15} /></span>
-                    <input type="text" className="sk-search-input" placeholder="Cari Nama atau NIM..." value={search} onChange={e => setSearch(e.target.value)} />
+                    <input
+                      type="text"
+                      className="sk-search-input"
+                      placeholder="Cari Nama atau NIM..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
                   </div>
                 </div>
 
@@ -295,21 +324,33 @@ const PermohonanSK = () => {
                       { key: 'belum-terbit', label: 'Belum Terbit' },
                       { key: 'sudah-terbit', label: 'Sudah Terbit' },
                     ].map(({ key, label }) => {
-                      const count = key === '' ? requests.length : requests.filter(r => getStatus(r) === key).length;
+                      const count =
+                        key === ''
+                          ? requests.length
+                          : requests.filter((r) => getStatus(r) === key).length;
                       return (
-                        <button key={key} className={`sk-status-tab ${filterStatus === key ? 'active' : ''}`} onClick={() => setFilterStatus(key)}>
+                        <button
+                          key={key}
+                          type="button"
+                          className={`sk-status-tab ${filterStatus === key ? 'active' : ''}`}
+                          onClick={() => setFilterStatus(key)}
+                        >
                           {label} <span className="sk-tab-count">({count})</span>
                         </button>
                       );
                     })}
-                    <div className="sk-prodi-dropdown" ref={prodiDropdownRef} style={{ marginLeft: 6 }}>
+
+                    <div className="sk-prodi-dropdown" ref={prodiDropdownRef}>
                       <button
                         type="button"
                         className={`sk-prodi-dropdown-trigger ${filterProdi ? 'active' : ''}`}
-                        onClick={() => setProdiDropdownOpen(o => !o)}
+                        onClick={() => setProdiDropdownOpen((o) => !o)}
                       >
                         <span>{filterProdi || 'Semua Prodi'}</span>
-                        <ChevronDown size={14} style={{ transform: prodiDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                        <ChevronDown
+                          size={14}
+                          className={`sk-prodi-chevron ${prodiDropdownOpen ? 'open' : ''}`}
+                        />
                       </button>
 
                       <AnimatePresence>
@@ -323,16 +364,22 @@ const PermohonanSK = () => {
                           >
                             <div
                               className={`sk-prodi-dropdown-option ${!filterProdi ? 'selected' : ''}`}
-                              onClick={() => { setFilterProdi(''); setProdiDropdownOpen(false); }}
+                              onClick={() => {
+                                setFilterProdi('');
+                                setProdiDropdownOpen(false);
+                              }}
                             >
                               <span>Semua Prodi</span>
                               {!filterProdi && <Check size={14} />}
                             </div>
-                            {prodiList.map(p => (
+                            {prodiList.map((p) => (
                               <div
                                 key={p.id}
                                 className={`sk-prodi-dropdown-option ${filterProdi === p.name ? 'selected' : ''}`}
-                                onClick={() => { setFilterProdi(p.name); setProdiDropdownOpen(false); }}
+                                onClick={() => {
+                                  setFilterProdi(p.name);
+                                  setProdiDropdownOpen(false);
+                                }}
                               >
                                 <span>{p.name}</span>
                                 {filterProdi === p.name && <Check size={14} />}
@@ -345,7 +392,11 @@ const PermohonanSK = () => {
                   </div>
 
                   <div className="sk-toolbar-actions">
-                    <button className="btn-export-sk sm" onClick={() => showAlert('success', 'Export', 'Data sedang disiapkan...')}>
+                    <button
+                      type="button"
+                      className="btn-export-sk sm"
+                      onClick={() => showAlert('success', 'Export', 'Data sedang disiapkan...')}
+                    >
                       <Download size={14} /> Expor SK TA MHS
                     </button>
                   </div>
@@ -358,50 +409,55 @@ const PermohonanSK = () => {
                 <table className="sk-table">
                   <thead>
                     <tr>
-                      <th style={{ width: 48 }}>NO</th>
-                      <th
-                        style={{ cursor: 'pointer', userSelect: 'none' }}
-                        onClick={() => handleSort('name')}
-                      >
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <th className="sk-th-no text-center">NO</th>
+                      <th className="sk-th-sortable" onClick={() => handleSort('name')}>
+                        <span className="sk-th-sort-inner">
                           MAHASISWA
                           {sort.field === 'name'
-                            ? (sort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)
-                            : <ArrowUpDown size={11} color="#CBD5E1" />}
+                            ? sort.dir === 'asc'
+                              ? <ArrowUp size={11} />
+                              : <ArrowDown size={11} />
+                            : <ArrowUpDown size={11} className="sk-sort-idle" />}
                         </span>
                       </th>
-                      <th
-                        style={{ cursor: 'pointer', userSelect: 'none' }}
-                        onClick={() => handleSort('prodi')}
-                      >
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <th className="sk-th-sortable" onClick={() => handleSort('prodi')}>
+                        <span className="sk-th-sort-inner">
                           PRODI
                           {sort.field === 'prodi'
-                            ? (sort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)
-                            : <ArrowUpDown size={11} color="#CBD5E1" />}
+                            ? sort.dir === 'asc'
+                              ? <ArrowUp size={11} />
+                              : <ArrowDown size={11} />
+                            : <ArrowUpDown size={11} className="sk-sort-idle" />}
                         </span>
                       </th>
-                      <th style={{ textAlign: 'center' }}>EVIDENCE & VERIFIKASI DATA</th>
-                      <th style={{ textAlign: 'center' }}>KATEGORI</th>
-                      <th
-                        style={{ textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
-                        onClick={() => handleSort('status')}
-                      >
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <th className="text-center">EVIDENCE & VERIFIKASI DATA</th>
+                      <th className="text-center">KATEGORI</th>
+                      <th className="text-center sk-th-sortable" onClick={() => handleSort('status')}>
+                        <span className="sk-th-sort-inner">
                           STATUS BERKAS
                           {sort.field === 'status'
-                            ? (sort.dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)
-                            : <ArrowUpDown size={11} color="#CBD5E1" />}
+                            ? sort.dir === 'asc'
+                              ? <ArrowUp size={11} />
+                              : <ArrowDown size={11} />
+                            : <ArrowUpDown size={11} className="sk-sort-idle" />}
                         </span>
                       </th>
-                      <th style={{ textAlign: 'center' }}>AKSI</th>
+                      <th className="text-center">AKSI</th>
                     </tr>
                   </thead>
-                 <tbody>
+                  <tbody>
                     {loading ? (
-                      <tr><td colSpan={7} className="text-center py-12">Memuat data...</td></tr>
+                      <tr>
+                        <td colSpan={7} className="sk-table-state-cell">
+                          Memuat data...
+                        </td>
+                      </tr>
                     ) : paginated.length === 0 ? (
-                      <tr><td colSpan={7} className="text-center py-12">Tidak ada data sesuai filter</td></tr>
+                      <tr>
+                        <td colSpan={7} className="sk-table-state-cell">
+                          Tidak ada data sesuai filter
+                        </td>
+                      </tr>
                     ) : (
                       paginated.map((item, idx) => {
                         const student = item.mahasiswa || item.student || {};
@@ -410,43 +466,49 @@ const PermohonanSK = () => {
 
                         return (
                           <tr key={item.id}>
-                            <td className="text-center">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
+                            <td className="text-center">
+                              {(currentPage - 1) * PAGE_SIZE + idx + 1}
+                            </td>
                             <td>
-                              <div className="sk-mhs-name">{student.name || `Mahasiswa ID ${item.studentId ?? item.mahasiswaId ?? item.student?.id}`}</div>
+                              <div className="sk-mhs-name">
+                                {student.name || `Mahasiswa ID ${item.studentId ?? item.mahasiswaId ?? item.student?.id}`}
+                              </div>
                               <div className="sk-mhs-nim">{student.nim || '-'}</div>
                             </td>
-                            <td><span className="sk-prodi-text">{item.prodiName}</span></td>
+                            <td>
+                              <span className="sk-prodi-text" title={item.prodiName}>
+                                {item.prodiName}
+                              </span>
+                            </td>
                             <td className="text-center">
-                              <button className="btn-evidence" onClick={() => handleOpenUnifiedModal(item, 1)}>
+                              <button
+                                type="button"
+                                className="btn-evidence"
+                                onClick={() => handleOpenUnifiedModal(item, 1)}
+                              >
                                 <Eye size={13} /> Evidence
                               </button>
                             </td>
                             <td className="text-center">
-                              <span style={{ 
-                                display: 'inline-block',
-                                whiteSpace: 'nowrap',
-                                fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 999, 
-                                backgroundColor: isPerpanjangan ? '#F5F3FF' : '#F0FDF4', 
-                                color: isPerpanjangan ? '#7C3AED' : '#16A34A', 
-                                border: `1px solid ${isPerpanjangan ? '#DDD6FE' : '#BBF7D0'}` 
-                              }}>
+                              <span className={`sk-category-badge ${isPerpanjangan ? 'perpanjangan' : 'baru'}`}>
                                 {item.category || 'Permohonan Baru'}
                               </span>
                             </td>
-                            <td style={{ textAlign: 'center' }}>
+                            <td className="text-center">
                               <StatusBadge status={status} />
                             </td>
                             <td className="text-center action-buttons">
-                              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                              <div className="sk-action-inner">
                                 {status === 'sudah-terbit' ? (
                                   <button
+                                    type="button"
                                     className="btn-export-sk sm"
                                     onClick={() => setFormulirItem(item)}
                                   >
                                     Export FormulirSKTA
                                   </button>
                                 ) : (
-                                  <span style={{ color: '#9CA3AF', fontSize: '11.5px', fontStyle: 'italic' }}>—</span>
+                                  <span className="sk-action-empty">—</span>
                                 )}
                               </div>
                             </td>
@@ -464,15 +526,30 @@ const PermohonanSK = () => {
                     Menampilkan {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredSorted.length)} dari {filteredSorted.length} data
                   </span>
                   <div className="sk-pagination">
-                    <button className="btn-page" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                    <button
+                      type="button"
+                      className="btn-page"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => p - 1)}
+                    >
                       <ChevronLeft size={14} />
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                      <button key={p} className={`btn-page ${p === currentPage ? 'active' : ''}`} onClick={() => setCurrentPage(p)}>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`btn-page ${p === currentPage ? 'active' : ''}`}
+                        onClick={() => setCurrentPage(p)}
+                      >
                         {p}
                       </button>
                     ))}
-                    <button className="btn-page" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                    <button
+                      type="button"
+                      className="btn-page"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => p + 1)}
+                    >
                       <ChevronRight size={14} />
                     </button>
                   </div>
@@ -503,42 +580,14 @@ const PermohonanSK = () => {
         )}
       </AnimatePresence>
 
-      <style>{`
-        .sk-page-root { display: flex; min-height: 100vh; background: #F8FAFC; }
-        .sk-main-content { flex: 1; min-width: 0; overflow-x: hidden; display: flex; flex-direction: column; }
-        #sidebar ~ .sk-main-content, .sk-main-content { margin-left: 240px; padding: 0; transition: margin-left 0.3s ease; }
-        @media (max-width: 991.98px) { .sk-main-content { margin-left: 0 !important; } }
-        .sk-main-content .page-wrapper { flex: 1; min-width: 0; width: 100%; margin-left: 0 !important; }
-        .sk-main-content .page-wrapper, .sk-main-content .top-bar-red { margin-top: 0 !important; padding-top: 0 !important; }
-        .action-buttons { vertical-align: middle; }
-        html, body, #root { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
-        .sk-page-root { width: 100%; }
-        .sk-main-content, .sk-main-content .page-wrapper, .sk-main-content .content-container, .sk-main-content .top-bar-red, .sk-main-content .card-main { width: 100% !important; max-width: none !important; box-sizing: border-box; overflow: visible !important; }
-        .sk-main-content .card-body, .sk-toolbar-row, .sk-status-tabs { overflow: visible !important; }
-        .sk-status-tabs { align-items: center; overflow: visible; }
-        .sk-prodi-dropdown-panel { max-width: min(240px, calc(100vw - 32px)); }
-        .sk-prodi-dropdown { position: relative; flex-shrink: 0; }
-        .sk-prodi-dropdown-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 140px; padding: 6px 10px; border-radius: 999px; border: 1.5px solid #E2E8F0; background: #fff; font-size: 12px; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-        .sk-prodi-dropdown-trigger:hover { border-color: #CBD5E1; background: #F8FAFC; }
-        .sk-prodi-dropdown-trigger.active { border-color: #C0182A; color: #C0182A; background: #FFF1F2; }
-        .sk-prodi-dropdown-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .sk-prodi-dropdown-panel { position: absolute; top: calc(100% + 6px); left: 0; right: auto; z-index: 40; width: max-content; min-width: 180px; max-width: 240px; max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid #E2E8F0; border-radius: 10px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12); padding: 5px; }
-        .sk-prodi-dropdown-option { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 7px; font-size: 12px; font-weight: 500; color: #334155; cursor: pointer; transition: background 0.12s; line-height: 1.35; }
-        .sk-prodi-dropdown-option:hover { background: #F8FAFC; }
-        .sk-prodi-dropdown-option.selected { background: #FFF1F2; color: #C0182A; font-weight: 700; }
-        .sk-prodi-dropdown-option svg { flex-shrink: 0; color: #C0182A; }
-        
-        /* STYLING BARU UNTUK BADGE MENGIRIM REVISI */
-        .sk-badge.mengirim-revisi {
-          background-color: #EEF2FF;
-          color: #4F46E5;
-          border: 1px solid #C7D2FE;
-        }
-      `}</style>
-
       <AnimatePresence>
         {alert.show && (
-          <motion.div className="alert-overlay" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }}>
+          <motion.div
+            className="alert-overlay"
+            initial={{ x: 300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 300, opacity: 0 }}
+          >
             <CustomAlert type={alert.type} title={alert.title} message={alert.message} />
           </motion.div>
         )}

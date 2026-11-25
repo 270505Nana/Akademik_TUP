@@ -79,14 +79,31 @@ export const getSKTARequest = async (studentId) => {
   }
 };
 
-export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, studentId, mahasiswaId, dosenPembimbing1Id, dosenPembimbing2Id, researchGroupId, evidence, category }) => {
+export const submitSKTARequest = async ({
+  id,
+  proposalTitleId,
+  proposalTitleEn,
+  studentId,
+  mahasiswaId,
+  dosenPembimbing1Id,
+  dosenPembimbing2Id,
+  researchGroupId,
+  evidence,
+  category,
+}) => {
   const formData = new FormData();
 
+  if (id) formData.append("id", String(id));
   if (proposalTitleId) formData.append("judulProposalIndonesia", proposalTitleId);
   if (proposalTitleEn) formData.append("judulProposalInggris", proposalTitleEn);
-  
-  formData.append("mahasiswaId", String(mahasiswaId || studentId)); 
-  
+
+  formData.append("mahasiswaId", String(mahasiswaId || studentId));
+
+  // Wajib kirim category di dalam FormData (req.body) agar backend tidak fallback ke "Permohonan Baru"
+  if (category) {
+    formData.append("category", String(category));
+  }
+
   // Ambil .value jika dikirim dalam bentuk objek react-select
   const d1 = dosenPembimbing1Id?.value ?? dosenPembimbing1Id;
   const d2 = dosenPembimbing2Id?.value ?? dosenPembimbing2Id;
@@ -94,11 +111,10 @@ export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, stud
   if (d1) formData.append("dosenPembimbing1Id", String(d1));
   if (d2) formData.append("dosenPembimbing2Id", String(d2));
   if (researchGroupId) formData.append("researchGroupId", String(researchGroupId));
-  
   if (evidence) formData.append("evidence", evidence);
-  
-  const endpoint = category 
-    ? `/api/permohonan-skta?category=${encodeURIComponent(category)}` 
+
+  const endpoint = category
+    ? `/api/permohonan-skta?category=${encodeURIComponent(category)}`
     : "/api/permohonan-skta";
 
   const response = await api.post(endpoint, formData, {
@@ -143,35 +159,6 @@ export const getSKTAResponse = async (sktaRequestId) => {
 };
 
 // ------------------------------------------- DOSEN -------------------------------------------
-// export const getLecturers = async (params = {}) => {
-//   const safeParams = {
-//     limit: 99, 
-//     ...params
-//   };
-
-//   delete safeParams.sortBy;
-//   delete safeParams.sortOrder;
-//   delete safeParams.pagination;
-
-//   try {
-//     const response = await api.get("/api/dosen", { params: safeParams });
-//     const data = response.data?.data ?? response.data;
-    
-//     let list = Array.isArray(data) ? data : (data?.data || []);
-
-//     list.sort((a, b) => {
-//       const nameA = (a.user?.name || a.name || a.nama || "").toLowerCase();
-//       const nameB = (b.user?.name || b.name || b.nama || "").toLowerCase();
-//       return nameA.localeCompare(nameB);
-//     });
-
-//     return list;
-//   } catch (error) {
-//     console.error("API getLecturers error:", error.response?.data || error.message);
-//     return [];
-//   }
-// };
-
 export const getLecturerData = async (userId) => {
   const response = await api.get(`/api/dosen/${userId}`);
   return response.data;
@@ -207,7 +194,6 @@ export const setPengujiSidang = async (id, payload) => {
   return response.data;
 };
 
-
 export const setPengujiSidangBatch = async (payload) => {
   const response = await api.put('/api/penjadwalan-sidang/set-penguji/batch', payload);
   return response.data;
@@ -241,6 +227,7 @@ export const updateResearchGroup = async (id, payload) => {
   const response = await api.put(`/api/research-groups/${id}`, payload);
   return response.data?.data ?? response.data;
 };
+
 export const deleteResearchGroup = async (id) => {
   const response = await api.delete(`/api/research-groups/${id}`);
   return response.data;
@@ -491,7 +478,7 @@ export const approveYudisiumRegistration = async (registrationId, payload) => {
 
 export const rejectYudisiumRegistration = async (registrationId, payload) => {
   const response = await api.put(`/api/yudisium-registrations/${registrationId}/reject`, payload);
-  return response.data?.data ?? response. data;
+  return response.data?.data ?? response.data;
 };
 
 export const downloadYudisiumRegistrationUpload = async (uploadId) => {
@@ -500,13 +487,6 @@ export const downloadYudisiumRegistrationUpload = async (uploadId) => {
 };
 
 // ------------------------------------------- SIDANG ADMIN -------------------------------------------
-/**
- * Mengambil daftar pendaftaran sidang dari backend.
- * @param {Object} params - Query params opsional (page, limit, search, studyProgramId, status, dll.)
- *   Gunakan { limit: 'all', pagination: 'false' } untuk mengambil semua data sekaligus
- *   (untuk halaman dosen yang melakukan filter di sisi klien).
- * @returns {Promise<{ data: Array, pagination: Object } | Array>}
- */
 export const getAllSidangRegistrations = async (params = {}) => {
   const response = await api.get('/api/sidang-registrations', { params });
   return response.data;
@@ -593,7 +573,6 @@ export const rejectSidangRegistration = async (registrationId, payload) => {
 };
 
 // ----------------------------------------- PENJADWALAN SIDANG ADMIN -----------------------------------------
-
 export const setJadwalSidangAdmin = async (id, payload) => {
   const response = await api.put(`/api/penjadwalan-sidang/${id}/set-jadwal`, payload);
   return response.data;
@@ -608,7 +587,6 @@ export const toggleLockJadwalAdmin = async (id) => {
   const response = await api.patch(`/api/penjadwalan-sidang/${id}/toggle-lock`);
   return response.data;
 };
-
 
 // ------------------------------------------- ETC-------------------------------------------
 export const getLecturers = async (params = { limit: 100, sortBy: "name" }) => {
@@ -637,10 +615,9 @@ export const getAllLecturers = async (params = { sortBy: "name" }) => {
 
   return firstData;
 };
+
 export const getFaculties = async () =>
   api.get("/api/faculties", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
-// export const getStudyPrograms = async () =>
-//   api.get("/api/study-programs", { params: { limit: 'all' } }).then((r) => r.data?.data ?? r.data);
 
 export const getStudyPrograms = async (params = {}) => {
   const safeParams = { ...params };
@@ -676,7 +653,6 @@ export const updateSidangPeriod = async (id, payload) => {
   const response = await api.put(`/api/sidang-periods/${id}`, payload);
   return response.data?.data ?? response.data;
 };
-
 
 // ---------------------------------------- YUDISIUM PERIODS -------------------------------------------
 export const getYudisiumPeriods = async (params = '') => {
@@ -768,14 +744,12 @@ export const generateDokumenValidasiSkta = async (permohonanId) => {
 };
 
 // ------------------------------------------- YUDISIUM REGISTRATIONS (ADMIN) -------------------------------------------
-
 export const getYudisiumRegistrations = async (params = {}) => {
   const response = await api.get('/api/yudisium-registrations', { params });
   return response.data?.data ?? response.data;
 };
 
 // ------------------------------------------- SKL UPLOAD (ADMIN) -------------------------------------------
-
 export const listSklUploads = async (params = {}) => {
   const response = await api.get('/api/skl', { params });
   return response.data;
@@ -800,7 +774,6 @@ export const downloadSklFile = async (uploadId) => {
 };
 
 // ------------------------------------------- TRANSKRIP UPLOAD (ADMIN) -------------------------------------------
-
 export const listTranskripUploads = async (params = {}) => {
   const response = await api.get('/api/transkrip', { params });
   return response.data;
@@ -825,7 +798,6 @@ export const downloadTranskripFile = async (uploadId) => {
 };
 
 // ------------------------------------------- MAHASISWA SKL & TRANSKRIP -------------------------------------------
-
 export const getMySklUpload = async (mahasiswaId) => {
   if (!mahasiswaId) return null;
 
@@ -851,7 +823,6 @@ export const getMyTranskripUpload = async (mahasiswaId) => {
 };
 
 // ------------------------------------------- DOSEN: MAHASISWA BIMBINGAN -------------------------------------------
-
 export const getMahasiswaBimbingan = async (params = {}) => {
   const cleanParams = {};
   if (params.search && params.search.trim() !== '') cleanParams.search = params.search.trim();
@@ -870,13 +841,11 @@ export const getDosenDashboard = async () => {
 };
 
 // ------------------------------------------- TEMPLATE MANAGEMENT (CRUD) -------------------------------------------
-
 export const getAllTemplates = async (params = {}) => {
   const response = await api.get('/api/templates', { params });
   return response.data?.data ?? response.data;
 };
 
-// Menambah template persyaratan baru
 export const createTemplate = async (payload) => {
   const formData = new FormData();
   formData.append("name", payload.name);
@@ -894,7 +863,6 @@ export const createTemplate = async (payload) => {
   return response.data?.data ?? response.data;
 };
 
-// Memperbarui template persyaratan
 export const updateTemplate = async (id, payload) => {
   const formData = new FormData();
   
@@ -913,38 +881,32 @@ export const updateTemplate = async (id, payload) => {
   return response.data?.data ?? response.data;
 };
 
-// Menghapus template 
 export const deleteTemplate = async (id) => {
   const response = await api.delete(`/api/templates/${id}`);
   return response.data;
 };
 
-// Toggle Publish Status
 export const toggleTemplatePublish = async (id) => {
   const response = await api.patch(`/api/templates/${id}/toggle-publish`);
   return response.data?.data ?? response.data; 
 };
 
-// Toggle Required Status
 export const toggleTemplateRequired = async (id) => {
   const response = await api.patch(`/api/templates/${id}/toggle-required`);
   return response.data?.data ?? response.data;
 };
 
-//  Blob  Preview Template
 export const getTemplatePreview = async (code) => {
   const response = await api.get(`/api/templates/preview/${code}`, { responseType: 'blob' });
   return response.data;
 };
 
-//  Blob  Download Template
 export const downloadTemplateFile = async (code) => {
   const response = await api.get(`/api/templates/download/${code}`, { responseType: 'blob' });
   return response.data;
 };
 
 // ------------------------------------------- PUSAT INFORMASI (CRUD) -------------------------------------------
-
 export const getAllPusatInformasi = async (params = {}) => {
   const response = await api.get('/api/pusat-informasi', { params });
   return response.data;
@@ -981,7 +943,6 @@ export const getPusatInformasiPublic = async () => {
 };
 
 // ------------------------------------------- KELOLA RUANGAN (CRUD) -------------------------------------------
-
 export const getAllRuangan = async (params = {}) => {
   const response = await api.get('/api/ruangan', { params });
   return response.data?.data ?? response.data;
@@ -1002,14 +963,7 @@ export const deleteRuangan = async (id) => {
   return response.data;
 };
 
-
 // ------------------------------------------- MANAJEMEN CLO -------------------------------------------
-
-// export const getCLOs = async (params = {}) => {
-//   const response = await api.get('/api/clo', { params });
-//   return response.data?.data ?? response.data;
-// };
-
 export const getCLOs = async (params = {}) => {
   const safeParams = { ...params };
   if (safeParams.limit === 'all' || safeParams.limit > 100) safeParams.limit = 100;
@@ -1037,6 +991,7 @@ export const deleteCLO = async (id) => {
   const response = await api.delete(`/api/clo/${id}`);
   return response.data;
 };
+
 // ----------------- SUB CLO -----------------
 export const getSubCLOs = async (params) => {
   const response = await api.get('/api/subclo', { params });
@@ -1044,7 +999,6 @@ export const getSubCLOs = async (params) => {
 };
 
 export const createSubCLO = async (payload) => {
-  // Payload: { name, description, cloProdiId }
   const response = await api.post('/api/subclo', payload);
   return response.data;
 };
@@ -1066,7 +1020,6 @@ export const getJenisAsesmen = async (params) => {
 };
 
 export const createJenisAsesmen = async (payload) => {
-  // Payload: { content, bobot, cloProdiId }
   const response = await api.post('/api/jenis-asesmen', payload);
   return response.data;
 };
