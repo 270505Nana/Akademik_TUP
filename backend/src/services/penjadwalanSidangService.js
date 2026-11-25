@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { uploadFile, deleteFile } from "./storageService.js";
 import { ZipArchive } from "archiver";
 import { PassThrough } from "stream";
 import {
@@ -9,6 +10,7 @@ import {
   generateJadwalSidangWorkbook,
   generateJadwalSidangFilename,
   generateJadwalBandungWorkbook,
+  getActiveOrUpcomingPelaksanaanSidangPeriod,
 } from "../utils/penjadwalanSidangHelper.js";
 
 export const resolveStatusSidang = (penguji1, penguji2, tglSidang, ruangan) => {
@@ -90,18 +92,13 @@ export const getPenjadwalanSidangList = async ({
   ) {
     targetPeriodId = targetPeriodId.trim();
   } else {
-    const activePeriod =
-      (await prisma.sidangPeriod.findFirst({
-        where: { isOpen: true, category: "pendaftaran", deletedAt: null },
-        orderBy: { updatedAt: "desc" },
-      })) ||
-      (await prisma.sidangPeriod.findFirst({
-        where: { category: "pendaftaran", deletedAt: null },
-        orderBy: { endDate: "desc" },
-      }));
+    const activePeriod = await getActiveOrUpcomingPelaksanaanSidangPeriod();
 
     if (activePeriod) {
       targetPeriodId = activePeriod.id;
+    } else {
+      // Jika periode sudah lewat semua dan tidak ada periode aktif/mendatang, tampilkan kosong
+      return { total: 0, registrations: [] };
     }
   }
 
@@ -772,15 +769,7 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
       where: { id: targetPeriodId, deletedAt: null },
     });
   } else {
-    selectedPeriod =
-      (await prisma.sidangPeriod.findFirst({
-        where: { isOpen: true, deletedAt: null },
-        orderBy: { updatedAt: "desc" },
-      })) ||
-      (await prisma.sidangPeriod.findFirst({
-        where: { deletedAt: null },
-        orderBy: { endDate: "desc" },
-      }));
+    selectedPeriod = await getActiveOrUpcomingPelaksanaanSidangPeriod();
 
     if (selectedPeriod) {
       targetPeriodId = selectedPeriod.id;
@@ -816,11 +805,13 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
     };
   }
 
-  const jadwalList = await prisma.sidangRegistration.findMany({
-    where: whereClause,
-    include: penjadwalanSidangInclude,
-    orderBy: { tglSidang: "asc" },
-  });
+  const jadwalList = targetPeriodId
+    ? await prisma.sidangRegistration.findMany({
+        where: whereClause,
+        include: penjadwalanSidangInclude,
+        orderBy: { tglSidang: "asc" },
+      })
+    : [];
 
   // Workbook Format Awal
   const workbookAwal = generateJadwalSidangWorkbook(jadwalList);
@@ -876,6 +867,9 @@ export const toggleLockSidangRegistration = async (id) => {
   };
 
   if (registration.isLocked) {
+    if (registration.notaDinasUrl) {
+      await deleteFile(registration.notaDinasUrl);
+    }
     updateData.notaDinasUrl = null;
   }
 
@@ -1069,10 +1063,6 @@ export const togglePublishSidangPeriod = async (sidangPeriodId) => {
   });
 };
 
-/**
- * Upload Nota Dinas (Admin Only)
- * Hanya dapat diunggah jika status jadwal sidang sudah di-lock (isLocked: true)
- */
 export const uploadNotaDinas = async ({ id, fileData }) => {
   const registration = await prisma.sidangRegistration.findUnique({
     where: { id },
@@ -1093,16 +1083,27 @@ export const uploadNotaDinas = async ({ id, fileData }) => {
     throw error;
   }
 
-  // Simpan path file nota dinas ke kolom notaDinasUrl pada SidangRegistration
+  const uploaded = await uploadFile({
+    buffer: fileData.buffer,
+    originalname: fileData.originalname,
+    folder: "nota-dinas",
+    mimetype: fileData.mimetype,
+  });
+
+  // Hapus file lama di R2/storage jika admin mengunggah ulang Nota Dinas
+  if (registration.notaDinasUrl) {
+    await deleteFile(registration.notaDinasUrl);
+  }
+
+  // Simpan path/key file nota dinas ke kolom notaDinasUrl pada SidangRegistration
   return prisma.sidangRegistration.update({
     where: { id },
     data: {
-      notaDinasUrl: fileData.path, // Path file dari multer
+      notaDinasUrl: uploaded.filepath,
     },
     include: penjadwalanSidangInclude,
   });
 };
-
 /**
  * Mengambil data Nota Dinas berdasarkan ID pendaftaran sidang
  */
