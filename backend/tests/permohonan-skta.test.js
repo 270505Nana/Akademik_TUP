@@ -642,4 +642,110 @@ describe("Permohonan SKTA - Query Parameters, Filtering, Sorting & Test Cases", 
       expect(res.status).toBe(401);
     });
   });
+
+  // ===============================================================
+  // SEKSI 6: Perpanjangan SK - Reuse Evidence
+  // ===============================================================
+  describe("Service: submitPermohonanSkta (Perpanjangan SK reuse evidence)", () => {
+    it("menggunakan ulang evidenceUploadPath dari pengajuan sebelumnya jika tidak upload file baru pada Perpanjangan SK", async () => {
+      const findFirstSpy = vi
+        .spyOn(prisma.permohonanSkta, "findFirst")
+        // 1. existingRecord
+        .mockResolvedValueOnce({
+          id: "draft-perpanjangan-id",
+          mahasiswaId: "mhs-1",
+          isDraft: true,
+          isEdit: null,
+          evidenceUploadPath: null,
+          deletedAt: null,
+        })
+        // 2. checkSktaEditable
+        .mockResolvedValueOnce({
+          id: "draft-perpanjangan-id",
+          mahasiswaId: "mhs-1",
+          isDraft: true,
+          isEdit: null,
+          deletedAt: null,
+        })
+        // 3. previousSktaWithEvidence
+        .mockResolvedValueOnce({
+          evidenceUploadPath: "uploads/berkas-evidence/prev-evidence.pdf",
+        });
+
+      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
+        id: "mhs-1",
+      });
+      vi.spyOn(prisma.dosen, "findUnique")
+        .mockResolvedValueOnce({ id: "dosen-1", researchGroupId: "rg-1" })
+        .mockResolvedValueOnce({ id: "dosen-2" });
+
+      let updatedData = null;
+      vi.spyOn(prisma.permohonanSkta, "update").mockImplementation((args) => {
+        updatedData = args.data;
+        return Promise.resolve({ id: "draft-perpanjangan-id", ...args.data });
+      });
+
+      const result = await permohonanSktaService.submitPermohonanSkta({
+        id: "draft-perpanjangan-id",
+        mahasiswaId: "mhs-1",
+        category: "Perpanjangan SK",
+        judulProposalIndonesia: "Judul TA",
+        judulProposalInggris: "Thesis Title",
+        dosenPembimbing1Id: "dosen-1",
+        dosenPembimbing2Id: "dosen-2",
+        evidenceFile: null,
+        currentUser: { id: "admin-1", role: "ADMIN" },
+      });
+
+      expect(findFirstSpy).toHaveBeenCalledTimes(3);
+      expect(updatedData.evidenceUploadPath).toBe(
+        "uploads/berkas-evidence/prev-evidence.pdf",
+      );
+      expect(updatedData.isDraft).toBe(false);
+      expect(result.evidenceUploadPath).toBe(
+        "uploads/berkas-evidence/prev-evidence.pdf",
+      );
+    });
+
+    it("tetap menolak submit (400) jika Perpanjangan SK tanpa evidence dan belum ada evidence sebelumnya", async () => {
+      vi.spyOn(prisma.permohonanSkta, "findFirst")
+        .mockResolvedValueOnce({
+          id: "draft-perpanjangan-id",
+          mahasiswaId: "mhs-1",
+          isDraft: true,
+          isEdit: null,
+          evidenceUploadPath: null,
+          deletedAt: null,
+        })
+        .mockResolvedValueOnce({
+          id: "draft-perpanjangan-id",
+          mahasiswaId: "mhs-1",
+          isDraft: true,
+          isEdit: null,
+          deletedAt: null,
+        })
+        .mockResolvedValueOnce(null);
+
+      vi.spyOn(prisma.mahasiswa, "findFirst").mockResolvedValue({
+        id: "mhs-1",
+      });
+      vi.spyOn(prisma.dosen, "findUnique")
+        .mockResolvedValueOnce({ id: "dosen-1", researchGroupId: "rg-1" })
+        .mockResolvedValueOnce({ id: "dosen-2" });
+
+      await expect(
+        permohonanSktaService.submitPermohonanSkta({
+          id: "draft-perpanjangan-id",
+          mahasiswaId: "mhs-1",
+          category: "Perpanjangan SK",
+          judulProposalIndonesia: "Judul TA",
+          judulProposalInggris: "Thesis Title",
+          dosenPembimbing1Id: "dosen-1",
+          dosenPembimbing2Id: "dosen-2",
+          evidenceFile: null,
+          currentUser: { id: "admin-1", role: "ADMIN" },
+        }),
+      ).rejects.toThrow("Berkas evidence wajib diunggah");
+    });
+  });
 });

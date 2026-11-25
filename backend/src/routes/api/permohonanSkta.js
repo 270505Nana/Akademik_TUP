@@ -279,7 +279,6 @@ router.post(
  *               - judulProposalInggris
  *               - dosenPembimbing1Id
  *               - dosenPembimbing2Id
- *               - evidence
  *             properties:
  *               id:
  *                 type: string
@@ -299,7 +298,7 @@ router.post(
  *               evidence:
  *                 type: string
  *                 format: binary
- *                 description: Berkas evidence
+ *                 description: Berkas evidence (wajib diunggah kecuali untuk kategori "Perpanjangan SK", yang akan menggunakan ulang berkas evidence dari pengajuan sebelumnya jika tidak diunggah)
  *     responses:
  *       200:
  *         description: Permohonan SKTA berhasil diajukan
