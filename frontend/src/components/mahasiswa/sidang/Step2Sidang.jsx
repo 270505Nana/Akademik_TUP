@@ -1452,12 +1452,12 @@ export default function Step2({
         {data.testBahasaPersyaratan === "Sudah" && (
           <DocUploadPanel
             {...commonPanelProps}
-            sectionTitle="Dokumen Persyaratan Test Bahasa"
+            sectionTitle="Dokumen Persyaratan Test Bahasa (Sudah Memenuhi)"
             documents={getSectionDocs(SECTIONS.TEST_BAHASA_SUDAH)}
             activeDocId={activeDocIds[SECTIONS.TEST_BAHASA_SUDAH]}
             onSetActive={(id) => handleSetActive(SECTIONS.TEST_BAHASA_SUDAH, id)}
             showLinkInput={false}
-            showTemplateBox={false}
+            //showTemplateBox={false}
           />
         )}
 

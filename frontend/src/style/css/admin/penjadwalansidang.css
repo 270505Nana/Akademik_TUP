@@ -229,12 +229,13 @@
 }
 .col-no { width: 3%; }
 .col-mhs { width: 13%; }
-.col-pembimbing { width: 14%; }
-.col-penguji { width: 13%; }
-.col-tanggal { width: 11%; } 
-.col-waktu { width: 9%; }    
-.col-ruang { width: 17%; }   
-.col-aksi { width: 8%; }    
+.col-pembimbing { width: 12%; }
+.col-penguji { width: 11%; }
+.col-tanggal { width: 10%; } 
+.col-waktu { width: 8%; }    
+.col-ruang { width: 12%; }   
+.col-nota { width: 11%; }
+.col-aksi { width: 9%; }   
 
 .ps-table th {
   background: #F8FAFC;
@@ -350,13 +351,17 @@
 }
 
 .ps-btn-lock {
-  padding: 4px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border-radius: 4px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .ps-btn-lock.locked {
@@ -379,6 +384,41 @@
 .ps-btn-lock:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.ps-btn-edit {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.ps-btn-edit.active {
+  background: #EFF6FF;
+  color: #2563EB;
+  border-color: #BFDBFE;
+}
+
+.ps-btn-edit.active:hover {
+  background: #DBEAFE;
+  border-color: #93C5FD;
+  transform: translateY(-1px);
+}
+
+.ps-btn-edit.disabled,
+.ps-btn-edit:disabled {
+  background: #F1F5F9;
+  color: #94A3B8;
+  border-color: #E2E8F0;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .ps-btn-save-sm {
@@ -453,4 +493,87 @@
   bottom: 24px;
   right: 24px;
   z-index: 9999;
+}
+
+
+/* ==================== NOTA DINAS ==================== */
+.col-nota {
+  min-width: 150px;
+}
+
+.nd-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.nd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #CBD5E1;
+  background: #F8FAFC;
+  color: #334155;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: background 0.15s;
+}
+
+.nd-btn--primary {
+  background: #C0182A;
+  color: #fff;
+  border-color: #C0182A;
+}
+
+.nd-btn--primary:hover:not(:disabled) {
+  background: #A01423;
+}
+
+.nd-btn--icon {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nd-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nd-hint {
+  font-size: 11px;
+  color: #94A3B8;
+  font-style: italic;
+}
+
+.nd-btn-link-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #C0182A;
+  font-size: 11px;
+  font-weight: 600;
+  height: 28px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nd-btn-link-pdf:hover {
+  text-decoration: underline;
+  color: #A01423;
 }

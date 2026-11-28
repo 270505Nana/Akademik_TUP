@@ -84,17 +84,17 @@ export const submitSKTARequest = async ({ proposalTitleId, proposalTitleEn, stud
 
   if (proposalTitleId) formData.append("judulProposalIndonesia", proposalTitleId);
   if (proposalTitleEn) formData.append("judulProposalInggris", proposalTitleEn);
-  
-  formData.append("mahasiswaId", String(mahasiswaId || studentId)); 
-  
+
+  formData.append("mahasiswaId", String(mahasiswaId || studentId));
+
   if (dosenPembimbing1Id) formData.append("dosenPembimbing1Id", String(dosenPembimbing1Id));
-  if (dosenPembimbing2Id) formData.append("dosenPembimbing2Id", String(  dosenPembimbing2Id));
+  if (dosenPembimbing2Id) formData.append("dosenPembimbing2Id", String(dosenPembimbing2Id));
   if (researchGroupId) formData.append("researchGroupId", String(researchGroupId));
-  
+
   if (evidence) formData.append("evidence", evidence);
-  
-  const endpoint = category 
-    ? `/api/permohonan-skta?category=${encodeURIComponent(category)}` 
+
+  const endpoint = category
+    ? `/api/permohonan-skta?category=${encodeURIComponent(category)}`
     : "/api/permohonan-skta";
 
   const response = await api.post(endpoint, formData, {
@@ -113,7 +113,7 @@ export const submitFinalSKTARequest = async (payload) => {
 export const resubmitSKTARequest = async ({ sktaRequestId, studentId, mahasiswaId, proposalTitleId, proposalTitleEn, dosenPembimbing1Id, dosenPembimbing2Id, researchGroupId, evidence }) => {
   const formData = new FormData();
   const activeStudentId = mahasiswaId || studentId;
-  
+
   if (activeStudentId) formData.append("mahasiswaId", String(activeStudentId));
   if (proposalTitleId) formData.append("judulProposalIndonesia", proposalTitleId);
   if (proposalTitleEn) formData.append("judulProposalInggris", proposalTitleEn);
@@ -226,8 +226,8 @@ export const getAcademicStaffData = async (userId) => {
 
 export const getAllSktaRequests = async (params = {}) => {
   try {
-    const response = await api.get("/api/permohonan-skta", { params }); 
-    return response.data?.data ?? response.data;            
+    const response = await api.get("/api/permohonan-skta", { params });
+    return response.data?.data ?? response.data;
   } catch (err) {
     console.error("Error fetching all SKTA requests:", err);
     throw err;
@@ -235,7 +235,7 @@ export const getAllSktaRequests = async (params = {}) => {
 };
 
 export const getSktaRequestById = async (id) => {
-  const response = await api.get(`/api/permohonan-skta/${id}`); 
+  const response = await api.get(`/api/permohonan-skta/${id}`);
   return response.data;
 };
 
@@ -263,7 +263,7 @@ export const createOrUpdateSktaResponse = async (payload) => {
   if (payload instanceof FormData) {
     const existingId = payload.get('id');
     if (existingId) {
-      payload.delete('id'); 
+      payload.delete('id');
       return api.put(`/api/permohonan-skta/${existingId}`, payload, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -302,7 +302,7 @@ export const downloadEvidence = async (id) => {
 
 export const getEvidenceUploadsByStudentId = async (studentId) => {
   try {
-    const response = await api.get(`/api/permohonan-skta/${studentId}`); 
+    const response = await api.get(`/api/permohonan-skta/${studentId}`);
     const requestData = response.data?.data ?? response.data;
     return requestData?.evidenceUploadPath ? [requestData] : [];
   } catch (err) {
@@ -357,7 +357,7 @@ export const rejectPermohonanSK = async (permohonanId, payload) => {
   const response = await api.put(`/api/permohonan-skta/${permohonanId}/reject`, {
     message: payload.message,
     adminId: payload.adminId,
-    isEdit: payload.isEdit, 
+    isEdit: payload.isEdit,
   });
   return response.data?.data ?? response.data;
 };
@@ -463,7 +463,7 @@ export const approveYudisiumRegistration = async (registrationId, payload) => {
 
 export const rejectYudisiumRegistration = async (registrationId, payload) => {
   const response = await api.put(`/api/yudisium-registrations/${registrationId}/reject`, payload);
-  return response.data?.data ?? response. data;
+  return response.data?.data ?? response.data;
 };
 
 export const downloadYudisiumRegistrationUpload = async (uploadId) => {
@@ -531,7 +531,7 @@ export const getSidangRegistrationResponseById = async (id) => {
 
 export const createSidangRegistrationResponse = async (sidangRegistrationId, payload) => {
   const response = await api.post('/api/sidang-registration-responses', {
-    sidangRegistrationId, 
+    sidangRegistrationId,
     ...payload
   });
   return response.data?.data ?? response.data;
@@ -581,6 +581,19 @@ export const toggleLockJadwalAdmin = async (id) => {
   return response.data;
 };
 
+export const uploadNotaDinas = async (id, file) => {
+  const formData = new FormData();
+  formData.append('notaDinasFile', file);
+  const response = await api.post(`/api/penjadwalan-sidang/${id}/nota-dinas`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+export const downloadNotaDinas = async (id) => {
+  const response = await api.get(`/api/penjadwalan-sidang/${id}/nota-dinas`);
+  return response;
+};
+
 
 // ------------------------------------------- ETC-------------------------------------------
 export const getLecturers = async (params = { limit: 100, sortBy: "name" }) => {
@@ -617,7 +630,7 @@ export const getFaculties = async () =>
 export const getStudyPrograms = async (params = {}) => {
   const safeParams = { ...params };
   if (safeParams.limit === 'all' || safeParams.limit > 100) safeParams.limit = 100;
-  
+
   const response = await api.get("/api/study-programs", { params: safeParams });
   return response.data?.data ?? response.data;
 };
@@ -855,7 +868,7 @@ export const createTemplate = async (payload) => {
   formData.append("category", payload.category);
   formData.append("isPublish", payload.isPublish);
   formData.append("isRequired", payload.isRequired);
-  
+
   if (payload.templateFile) {
     formData.append("templateFile", payload.templateFile);
   }
@@ -869,12 +882,12 @@ export const createTemplate = async (payload) => {
 // Memperbarui template persyaratan
 export const updateTemplate = async (id, payload) => {
   const formData = new FormData();
-  
+
   if (payload.name) formData.append("name", payload.name);
   if (payload.category) formData.append("category", payload.category);
   if (payload.isPublish !== undefined) formData.append("isPublish", payload.isPublish);
   if (payload.isRequired !== undefined) formData.append("isRequired", payload.isRequired);
-  
+
   if (payload.templateFile instanceof File) {
     formData.append("templateFile", payload.templateFile);
   }
@@ -894,7 +907,7 @@ export const deleteTemplate = async (id) => {
 // Toggle Publish Status
 export const toggleTemplatePublish = async (id) => {
   const response = await api.patch(`/api/templates/${id}/toggle-publish`);
-  return response.data?.data ?? response.data; 
+  return response.data?.data ?? response.data;
 };
 
 // Toggle Required Status
@@ -985,7 +998,7 @@ export const deleteRuangan = async (id) => {
 export const getCLOs = async (params = {}) => {
   const safeParams = { ...params };
   if (safeParams.limit === 'all' || safeParams.limit > 100) safeParams.limit = 100;
-  
+
   const response = await api.get('/api/clo', { params: safeParams });
   return response.data?.data ?? response.data;
 };
