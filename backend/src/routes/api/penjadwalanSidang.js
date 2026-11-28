@@ -24,6 +24,7 @@ import {
   togglePublishSidangPeriod,
   uploadNotaDinasController,
   getNotaDinasController,
+  getUsersTerlibatSidang,
 } from "../../controllers/penjadwalanSidangController.js";
 
 const router = express.Router();
@@ -67,6 +68,14 @@ router.get(
   verifyToken,
   authorize("ADMIN", "DOSEN_KETUAKK"),
   exportJadwalSidang,
+);
+
+// GET /api/penjadwalan-sidang/users
+router.get(
+  "/users",
+  verifyToken,
+  authorize("ADMIN"),
+  getUsersTerlibatSidang,
 );
 
 // PUT /api/penjadwalan-sidang/set-penguji/batch

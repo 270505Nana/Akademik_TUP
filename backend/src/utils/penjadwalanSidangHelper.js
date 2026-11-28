@@ -309,64 +309,6 @@ export const generateJadwalSidangWorkbook = (jadwalList) => {
 
   return workbook;
 };
-
-/**
- * Membuat Workbook Excel untuk ekspor data jadwal sidang format Bandung (Yudisium Student)
- */
-export const generateJadwalBandungWorkbook = (jadwalList) => {
-  const workbook = new excel.Workbook();
-  const worksheet = workbook.addWorksheet("Yudisium & Sidang");
-
-  worksheet.columns = [
-    { header: "NIM", key: "nim", width: 15 },
-    { header: "TANGGAL SIDANG AKAD", key: "tglSidangAkad", width: 20 },
-    { header: "BULAN SIDANG AKAD", key: "blnSidangAkad", width: 20 },
-    { header: "TAHUN SIDANG AKAD", key: "thnSidangAkad", width: 20 },
-    { header: "TANGGAL SIDANG TA/PA", key: "tglSidangTa", width: 20 },
-    { header: "BULAN SIDANG TA/PA", key: "blnSidangTa", width: 20 },
-    { header: "TAHUN SIDANG  TA/PA", key: "thnSidangTa", width: 20 },
-    { header: "TANGGAL SURAT", key: "tglSurat", width: 15 },
-    { header: "BULAN SURAT", key: "blnSurat", width: 15 },
-    { header: "TAHUN SURAT", key: "thnSurat", width: 15 },
-    { header: "NOMOR SURAT", key: "noSurat", width: 20 },
-    { header: "KODE DOSEN WALI", key: "kodeWali", width: 18 },
-    { header: "PREDIKAT YUDISIUM", key: "predikat", width: 18 },
-    { header: "STATUS", key: "status", width: 12 },
-    { header: "MEDIA JURNAL", key: "mediaJurnal", width: 18 },
-    { header: "TANGGAL UPLOAD JURNAL", key: "tglUpload", width: 22 },
-    { header: "BULAN UPLOAD JURNAL", key: "blnUpload", width: 20 },
-    { header: "TAHUN UPLOAD JURNAL", key: "thnUpload", width: 20 },
-    { header: "AKUN GOOGLE SCHOOLAR", key: "scholar", width: 25 },
-  ];
-
-  jadwalList.forEach((jadwal) => {
-    const tgl = jadwal.tglSidang ? new Date(jadwal.tglSidang) : null;
-    worksheet.addRow({
-      nim: jadwal.mahasiswa?.nim || "",
-      tglSidangAkad: tgl ? tgl.getDate() : "",
-      blnSidangAkad: tgl ? tgl.getMonth() + 1 : "",
-      thnSidangAkad: tgl ? tgl.getFullYear() : "",
-      tglSidangTa: tgl ? tgl.getDate() : "",
-      blnSidangTa: tgl ? tgl.getMonth() + 1 : "",
-      thnSidangTa: tgl ? tgl.getFullYear() : "",
-      tglSurat: tgl ? tgl.getDate() : "",
-      blnSurat: tgl ? tgl.getMonth() + 1 : "",
-      thnSurat: tgl ? tgl.getFullYear() : "",
-      noSurat: "",
-      kodeWali: jadwal.mahasiswa?.dosenWali?.kodeDosen || "",
-      predikat: "",
-      status: jadwal.statusPenjadwalan || "",
-      mediaJurnal: "",
-      tglUpload: "",
-      blnUpload: "",
-      thnUpload: "",
-      scholar: "",
-    });
-  });
-
-  return workbook;
-};
-
 /**
  * Menghasilkan nama file Excel ekspor jadwal sidang yang tersanitasi
  */
@@ -432,3 +374,155 @@ export const getActiveOrUpcomingPelaksanaanSidangPeriod = async () => {
 };
 
 export const getActiveOrLatestPelaksanaanSidangPeriod = getActiveOrUpcomingPelaksanaanSidangPeriod;
+
+/**
+ * Mengekstrak daftar unik Mahasiswa dan Dosen yang terlibat pada jadwal sidang
+ */
+export const extractUsersTerlibatSidang = (jadwalList) => {
+  const mahasiswaMap = new Map();
+  const dosenMap = new Map();
+
+  const upsertDosen = (dosen, roleLabel) => {
+    if (!dosen || dosen.deletedAt || dosen.user?.deletedAt) return;
+    const key = dosen.id || dosen.kodeDosen;
+    if (!key) return;
+
+    if (!dosenMap.has(key)) {
+      dosenMap.set(key, {
+        id: dosen.id,
+        userId: dosen.userId,
+        kodeDosen: dosen.kodeDosen || "",
+        nama: dosen.name || "",
+        email: dosen.user?.email || "",
+        roles: new Set([roleLabel]),
+      });
+    } else {
+      dosenMap.get(key).roles.add(roleLabel);
+    }
+  };
+
+  jadwalList.forEach((jadwal) => {
+    // 1. Mahasiswa
+    const mhs = jadwal.mahasiswa;
+    if (mhs && !mhs.deletedAt && !mhs.user?.deletedAt) {
+      const mhsKey = mhs.id || mhs.nim;
+      if (mhsKey && !mahasiswaMap.has(mhsKey)) {
+        mahasiswaMap.set(mhsKey, {
+          id: mhs.id,
+          userId: mhs.userId,
+          nim: mhs.nim || "",
+          nama: mhs.name || "",
+          email: mhs.user?.email || "",
+          peran: "Mahasiswa",
+        });
+      }
+    }
+
+    // 2. Dosen terlibat sidang (Pembimbing 1 & 2, Penguji 1 & 2)
+    upsertDosen(jadwal.dosenPembimbing1, "Dosen Pembimbing");
+    upsertDosen(jadwal.dosenPembimbing2, "Dosen Pembimbing");
+    upsertDosen(jadwal.dosenPenguji1, "Dosen Penguji");
+    upsertDosen(jadwal.dosenPenguji2, "Dosen Penguji");
+  });
+
+  const mahasiswaList = Array.from(mahasiswaMap.values()).sort((a, b) =>
+    a.nim.localeCompare(b.nim),
+  );
+
+  const dosenList = Array.from(dosenMap.values())
+    .map((d) => ({
+      id: d.id,
+      userId: d.userId,
+      kodeDosen: d.kodeDosen,
+      nama: d.nama,
+      email: d.email,
+      peran: "Dosen",
+      detailPeran: Array.from(d.roles).join(", "),
+    }))
+    .sort((a, b) => a.kodeDosen.localeCompare(b.kodeDosen));
+
+  return { mahasiswaList, dosenList };
+};
+
+/**
+ * Workbook Excel Data User (2 sheet: Mahasiswa & Dosen)
+ */
+export const generateDataUserWorkbook = (mahasiswaList, dosenList) => {
+  const workbook = new excel.Workbook();
+
+  // Sheet 1: Mahasiswa (NIM | Nama | Email)
+  const sheetMahasiswa = workbook.addWorksheet("Mahasiswa");
+  sheetMahasiswa.columns = [
+    { header: "NIM", key: "nim", width: 18 },
+    { header: "Nama", key: "nama", width: 32 },
+    { header: "Email", key: "email", width: 35 },
+  ];
+
+  mahasiswaList.forEach((mhs) => {
+    sheetMahasiswa.addRow({
+      nim: mhs.nim,
+      nama: mhs.nama,
+      email: mhs.email,
+    });
+  });
+
+  // Sheet 2: Dosen (Kode Dosen | Nama Dosen | Email)
+  const sheetDosen = workbook.addWorksheet("Dosen");
+  sheetDosen.columns = [
+    { header: "Kode Dosen", key: "kodeDosen", width: 15 },
+    { header: "Nama Dosen", key: "namaDosen", width: 35 },
+    { header: "Email", key: "email", width: 35 },
+  ];
+
+  dosenList.forEach((dosen) => {
+    sheetDosen.addRow({
+      kodeDosen: dosen.kodeDosen,
+      namaDosen: dosen.nama,
+      email: dosen.email,
+    });
+  });
+
+  return workbook;
+};
+
+/**
+ * Nama file Excel Data User yang tersanitasi
+ */
+export const generateDataUserFilename = (selectedPeriod) => {
+  if (!selectedPeriod) {
+    return "Data_User.xlsx";
+  }
+
+  const sanitizePart = (str) =>
+    (str || "")
+      .replace(/[/\\]/g, "")
+      .replace(/[:*?"<>|]/g, "")
+      .replace(/\s+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+  const tahunAjaran = sanitizePart(selectedPeriod.period);
+  const namaPeriode = sanitizePart(selectedPeriod.name);
+  return `Data_User_${tahunAjaran}_${namaPeriode}.xlsx`;
+};
+
+/**
+ * Nama file ZIP gabungan (Jadwal Sidang + Data User)
+ */
+export const generateExportSidangZipFilename = (selectedPeriod) => {
+  if (!selectedPeriod) {
+    return "Export_Sidang.zip";
+  }
+
+  const sanitizePart = (str) =>
+    (str || "")
+      .replace(/[/\\]/g, "")
+      .replace(/[:*?"<>|]/g, "")
+      .replace(/\s+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+  const tahunAjaran = sanitizePart(selectedPeriod.period);
+  const namaPeriode = sanitizePart(selectedPeriod.name);
+  return `Export_Sidang_${tahunAjaran}_${namaPeriode}.zip`;
+};

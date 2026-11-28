@@ -9,8 +9,11 @@ import {
   validateBatchJadwalInternalConflict,
   generateJadwalSidangWorkbook,
   generateJadwalSidangFilename,
-  generateJadwalBandungWorkbook,
   getActiveOrUpcomingPelaksanaanSidangPeriod,
+  extractUsersTerlibatSidang,
+  generateDataUserWorkbook,
+  generateDataUserFilename,
+  generateExportSidangZipFilename,
 } from "../utils/penjadwalanSidangHelper.js";
 
 export const resolveStatusSidang = (penguji1, penguji2, tglSidang, ruangan) => {
@@ -752,9 +755,8 @@ export const batchSetJadwalSidang = async (items) => {
   });
 };
 
-/**
- * Mengekspor data jadwal sidang ke Excel
- */
+
+//Mengekspor jadwal sidang dan data user ke dalam 1 arsip ZIP
 export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
   let targetPeriodId = sidangPeriodId;
   let selectedPeriod = null;
@@ -813,15 +815,15 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
       })
     : [];
 
-  // Workbook Format Awal
-  const workbookAwal = generateJadwalSidangWorkbook(jadwalList);
-  const bufferAwal = await workbookAwal.xlsx.writeBuffer();
+  const jadwalWorkbook = generateJadwalSidangWorkbook(jadwalList);
+  const jadwalBuffer = await jadwalWorkbook.xlsx.writeBuffer();
+  const jadwalFilename = generateJadwalSidangFilename(selectedPeriod);
 
-  //Workbook Format Bandung
-  const workbookBandung = generateJadwalBandungWorkbook(jadwalList);
-  const bufferBandung = await workbookBandung.xlsx.writeBuffer();
+  const { mahasiswaList, dosenList } = extractUsersTerlibatSidang(jadwalList);
+  const dataUserWorkbook = generateDataUserWorkbook(mahasiswaList, dosenList);
+  const dataUserBuffer = await dataUserWorkbook.xlsx.writeBuffer();
+  const dataUserFilename = generateDataUserFilename(selectedPeriod);
 
-  //keduanya dalam arsip ZIP
   const archive = new ZipArchive({ zlib: { level: 9 } });
   const stream = new PassThrough();
 
@@ -830,21 +832,14 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
   });
 
   archive.pipe(stream);
-  archive.append(Buffer.from(bufferAwal), {
-    name: "Jadwal_Sidang_Format_Awal.xlsx",
-  });
-  archive.append(Buffer.from(bufferBandung), {
-    name: "Jadwal_Sidang_Format_Bandung.xlsx",
-  });
+  archive.append(Buffer.from(jadwalBuffer), { name: jadwalFilename });
+  archive.append(Buffer.from(dataUserBuffer), { name: dataUserFilename });
 
   await archive.finalize();
 
-  const baseFilename = generateJadwalSidangFilename(selectedPeriod);
-  const zipFilename = baseFilename.endsWith(".xlsx")
-    ? baseFilename.replace(".xlsx", ".zip")
-    : `${baseFilename}.zip`;
+  const filename = generateExportSidangZipFilename(selectedPeriod);
 
-  return { stream, filename: zipFilename };
+  return { stream, filename };
 };
 
 /**
@@ -1159,4 +1154,124 @@ export const getNotaDinas = async ({ id, user, dosen }) => {
   }
 
   return registration;
+};
+
+// Helper internal untuk mengambil pendaftaran sidang pada periode terkait (kecuali Non Sidang)
+const fetchSidangRegistrationsForUsers = async (sidangPeriodId) => {
+  let targetPeriodId = sidangPeriodId;
+  let selectedPeriod = null;
+
+  if (
+    targetPeriodId &&
+    typeof targetPeriodId === "string" &&
+    targetPeriodId.trim() !== ""
+  ) {
+    targetPeriodId = targetPeriodId.trim();
+    selectedPeriod = await prisma.sidangPeriod.findFirst({
+      where: { id: targetPeriodId, deletedAt: null },
+    });
+  } else {
+    selectedPeriod = await getActiveOrUpcomingPelaksanaanSidangPeriod();
+    if (selectedPeriod) {
+      targetPeriodId = selectedPeriod.id;
+    }
+  }
+
+  if (!targetPeriodId) {
+    return { jadwalList: [], selectedPeriod: null };
+  }
+
+  const jadwalList = await prisma.sidangRegistration.findMany({
+    where: {
+      isDraft: false,
+      deletedAt: null,
+      sidangPeriodId: targetPeriodId,
+      AND: [
+        {
+          OR: [
+            { skemaSidangFinal: null },
+            {
+              NOT: {
+                skemaSidangFinal: {
+                  equals: "Non Sidang",
+                  mode: "insensitive",
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    include: penjadwalanSidangInclude,
+    orderBy: { createdAt: "asc" },
+  });
+
+  return { jadwalList, selectedPeriod };
+};
+
+/**
+ * Mendapatkan daftar user (email, nama, peran) yang terlibat sidang (Admin Akademik)
+ */
+export const getUsersTerlibatSidang = async ({
+  sidangPeriodId,
+  search,
+  peran,
+  skip,
+  take,
+}) => {
+  const { jadwalList } = await fetchSidangRegistrationsForUsers(sidangPeriodId);
+  const { mahasiswaList, dosenList } = extractUsersTerlibatSidang(jadwalList);
+
+  let combinedUsers = [
+    ...mahasiswaList.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      nim: m.nim,
+      kodeDosen: null,
+      nama: m.nama,
+      email: m.email,
+      peran: m.peran, // "Mahasiswa"
+      detailPeran: "Mahasiswa",
+    })),
+    ...dosenList.map((d) => ({
+      id: d.id,
+      userId: d.userId,
+      nim: null,
+      kodeDosen: d.kodeDosen,
+      nama: d.nama,
+      email: d.email,
+      peran: d.peran, // "Dosen"
+      detailPeran: d.detailPeran, // "Dosen Pembimbing", "Dosen Penguji", atau keduanya
+    })),
+  ];
+
+  // Filter berdasarkan peran (mahasiswa / dosen / pembimbing / penguji)
+  if (peran && typeof peran === "string" && peran.trim() !== "") {
+    const roleFilter = peran.trim().toLowerCase();
+    combinedUsers = combinedUsers.filter(
+      (u) =>
+        u.peran.toLowerCase().includes(roleFilter) ||
+        u.detailPeran.toLowerCase().includes(roleFilter),
+    );
+  }
+
+  // Filter pencarian (nama, email, NIM, atau kode dosen)
+  if (search && typeof search === "string" && search.trim() !== "") {
+    const keyword = search.trim().toLowerCase();
+    combinedUsers = combinedUsers.filter(
+      (u) =>
+        (u.nama && u.nama.toLowerCase().includes(keyword)) ||
+        (u.email && u.email.toLowerCase().includes(keyword)) ||
+        (u.nim && u.nim.toLowerCase().includes(keyword)) ||
+        (u.kodeDosen && u.kodeDosen.toLowerCase().includes(keyword)),
+    );
+  }
+
+  const total = combinedUsers.length;
+  const users =
+    typeof skip === "number" && typeof take === "number"
+      ? combinedUsers.slice(skip, skip + take)
+      : combinedUsers;
+
+  return { total, users };
 };

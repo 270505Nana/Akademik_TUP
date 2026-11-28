@@ -191,6 +191,7 @@ export const exportYudisium = asyncHandler(async (req, res) => {
   const { workbook, filename } =
     await yudisiumRegistrationService.exportYudisiumWorkbook({
       yudisiumPeriodId: req.query.yudisiumPeriodId,
+      yudisiumRegistrationPeriodId: req.query.yudisiumRegistrationPeriodId,
     });
 
   res.setHeader(

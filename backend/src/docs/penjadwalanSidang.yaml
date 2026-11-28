@@ -314,8 +314,8 @@ paths:
 
   /api/penjadwalan-sidang/export:
     get:
-      summary: Export data jadwal sidang
-      description: Mengunduh arsip ZIP yang berisi file Excel jadwal sidang (Format Awal dan Format Bandung).
+      summary: Export jadwal sidang & data user (ZIP)
+      description: Mengunduh arsip ZIP yang berisi dua file Excel (.xlsx), yaitu jadwal sidang (TAPA_Sidang) dan data user (Data_User dengan sheet Mahasiswa & sheet Dosen).
       tags:
         - Penjadwalan Sidang
       security:
@@ -326,10 +326,10 @@ paths:
           schema:
             type: string
             format: uuid
-          description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor jadwal pada periode sidang yang saat ini aktif.
+          description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor jadwal dan data user pada periode sidang yang saat ini aktif.
       responses:
         "200":
-          description: Berhasil mengunduh file ZIP jadwal sidang
+          description: Berhasil mengunduh file ZIP jadwal sidang dan data user
           content:
             application/zip:
               schema:
@@ -339,6 +339,86 @@ paths:
           description: Unauthorized
         "403":
           description: Access denied (Hanya Admin dan Dosen Ketua KK yang dapat mengakses)
+
+  /api/penjadwalan-sidang/users:
+    get:
+      summary: Get data user (Admin only)
+      description: |
+        Mengambil daftar unik data user (Mahasiswa, Dosen Pembimbing 1 & 2, serta Dosen Penguji 1 & 2) pada pelaksanaan sidang di periode terkait.
+      tags:
+        - Penjadwalan Sidang
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: sidangPeriodId
+          schema:
+            type: string
+            format: uuid
+          description: ID Periode Sidang. Jika dikosongkan, otomatis mengambil data pada periode pelaksanaan sidang yang sedang aktif/mendatang.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Keyword pencarian berdasarkan nama, email, NIM, atau kode dosen
+        - in: query
+          name: peran
+          schema:
+            type: string
+          description: Filter berdasarkan peran (contoh Mahasiswa, Dosen, Dosen Pembimbing, Dosen Penguji)
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Nomor halaman
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Jumlah data per halaman
+      responses:
+        "200":
+          description: Data user berhasil diambil
+          content:
+            application/json:
+              example:
+                data:
+                  - id: m1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    userId: u1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    nim: "1202200001"
+                    kodeDosen: null
+                    nama: Ahmad Dani
+                    email: ahmaddani@student.telkomuniversity.ac.id
+                    peran: Mahasiswa
+                    detailPeran: Mahasiswa
+                  - id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    userId: u2a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                    nim: null
+                    kodeDosen: RDN
+                    nama: Dr. Ridwan Pandiya, S.Si., M.Sc.
+                    email: ridwanp@telkomuniversity.ac.id
+                    peran: Dosen
+                    detailPeran: Dosen Pembimbing, Dosen Penguji
+                pagination:
+                  page: 1
+                  limit: 10
+                  total: 2
+                  totalPages: 1
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserTerlibatSidangItem"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Access denied (Hanya admin yang dapat mengakses)
 
   /api/penjadwalan-sidang/set-penguji/batch:
     put:
@@ -1104,3 +1184,33 @@ components:
         isInfoPenjadwalanReaded:
           type: boolean
           example: false
+    UserTerlibatSidangItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        nim:
+          type: string
+          nullable: true
+          example: "1202200001"
+        kodeDosen:
+          type: string
+          nullable: true
+          example: RDN
+        nama:
+          type: string
+          example: Dr. Ridwan Pandiya, S.Si., M.Sc.
+        email:
+          type: string
+          example: ridwanp@telkomuniversity.ac.id
+        peran:
+          type: string
+          example: Dosen
+        detailPeran:
+          type: string
+          example: Dosen Pembimbing, Dosen Penguji
+    

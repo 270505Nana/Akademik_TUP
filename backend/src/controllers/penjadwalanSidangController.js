@@ -100,7 +100,7 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
   });
 });
 
-// Export Jadwal Sidang
+// Export Jadwal Sidang & Data User (ZIP)
 const exportJadwalSidang = asyncHandler(async (req, res) => {
   const { stream, filename } =
     await penjadwalanSidangService.exportJadwalSidang({
@@ -242,6 +242,21 @@ const getNotaDinasController = asyncHandler(async (req, res) => {
     },
   });
 });
+// Get Data User Terlibat Sidang (Admin Akademik)
+const getUsersTerlibatSidang = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
+
+  const { total, users } =
+    await penjadwalanSidangService.getUsersTerlibatSidang({
+      sidangPeriodId: req.query.sidangPeriodId,
+      search: req.query.search,
+      peran: req.query.peran || req.query.role,
+      ...paginationParams,
+    });
+
+  res.json(formatPaginationResponse(users, total, paginationParams));
+});
+
 
 export {
   listPenjadwalanSidang,
@@ -256,4 +271,5 @@ export {
   togglePublishSidangPeriod,
   uploadNotaDinasController,
   getNotaDinasController,
+  getUsersTerlibatSidang,
 };
