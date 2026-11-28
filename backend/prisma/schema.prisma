@@ -445,6 +445,7 @@ model YudisiumRegistration {
   dosenWaliId                  String?                      @map("dosen_wali_id")
   judulTugasAkhirIndonesia     String?                      @map("judul_tugas_akhir_indonesia")
   judulTugasAkhirInggris       String?                      @map("judul_tugas_akhir_inggris")
+  ipk                          Float?
   tak                          Int?
   tglSidang                    DateTime?                    @map("tgl_sidang")
   skemaSidang                  String?                      @map("skema_sidang") // Reguler, Non Sidang, Capstone, Sidang Khusus Prodi

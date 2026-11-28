@@ -348,9 +348,9 @@ export const listYudisiumRegistrations = async ({ query = {}, req } = {}) => {
   } else if (sortParam === "nimdesc") {
     orderBy = { mahasiswa: { nim: "desc" } };
   } else if (sortParam === "ipkasc") {
-    orderBy = { mahasiswa: { ipk: "asc" } };
+    orderBy = { ipk: "asc" };
   } else if (sortParam === "ipkdesc") {
-    orderBy = { mahasiswa: { ipk: "desc" } };
+    orderBy = { ipk: "desc" };
   } else if (sortParam === "takasc") {
     orderBy = { tak: "asc" };
   } else if (sortParam === "takdesc") {
@@ -447,6 +447,7 @@ export const getYudisiumRegistrationByMahasiswaId = async (
 export const saveYudisiumRegistration = async (body, req) => {
   const {
     id,
+    ipk,
     tak,
     tglSidang,
     mahasiswaId,
@@ -563,6 +564,7 @@ export const saveYudisiumRegistration = async (body, req) => {
 
   const upsertData = {
     program: program !== undefined ? program : undefined,
+    ipk: ipk !== undefined && ipk !== null ? parseFloat(ipk) : undefined,
     tak: tak !== undefined && tak !== null ? parseInt(tak, 10) : undefined,
     tglSidang:
       tglSidang !== undefined
@@ -695,6 +697,7 @@ export const saveYudisiumRegistration = async (body, req) => {
 export const submitYudisiumRegistration = async (body, req) => {
   const {
     id,
+    ipk,
     tak,
     tglSidang,
     mahasiswaId,
@@ -763,6 +766,7 @@ export const submitYudisiumRegistration = async (body, req) => {
 
   const updateData = {
     program: program !== undefined ? program : undefined,
+    ipk: ipk !== undefined && ipk !== null ? parseFloat(ipk) : undefined,
     tak: tak !== undefined && tak !== null ? parseInt(tak, 10) : undefined,
     tglSidang: tglSidang ? new Date(tglSidang) : undefined,
     judulTugasAkhirIndonesia:
@@ -837,6 +841,7 @@ export const submitYudisiumRegistration = async (body, req) => {
 
   const requiredFields = [
     "program",
+    "ipk",
     "tak",
     "tglSidang",
     "judulTugasAkhirIndonesia",

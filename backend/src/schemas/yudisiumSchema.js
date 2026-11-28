@@ -76,6 +76,10 @@ export const saveYudisiumDraftSchema = z.object({
   id: z.string({ invalid_type_error: "ID harus berupa string" }).uuid("ID harus berupa string").optional().nullable(),
   program: z.string({ invalid_type_error: "Program harus berupa string" }).trim().optional().nullable(),
   programType: z.string({ invalid_type_error: "Program harus berupa string" }).trim().optional().nullable(),
+  ipk: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+    z.number({ invalid_type_error: "IPK harus berupa float" }).min(0, "IPK minimal 0").max(4, "IPK maksimal 4").optional().nullable()
+  ),
   tak: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
     z.number({ invalid_type_error: "TAK harus berupa integer" }).int("TAK harus berupa integer").min(0).optional().nullable()
@@ -125,6 +129,13 @@ export const submitYudisiumSchema = z
       .min(1, "ID wajib diisi untuk submit"),
     program: z.string({ invalid_type_error: "Program harus berupa string" }).trim().optional(),
     programType: z.string({ invalid_type_error: "Program harus berupa string" }).trim().optional(),
+    ipk: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+      z
+        .number({ required_error: "IPK wajib diisi", invalid_type_error: "IPK harus berupa float" })
+        .min(0, "IPK minimal 0")
+        .max(4, "IPK maksimal 4")
+    ),
     tak: z.preprocess(
       (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
       z

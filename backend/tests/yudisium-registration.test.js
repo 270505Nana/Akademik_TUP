@@ -202,6 +202,7 @@ describe("Yudisium Registration - List & Filter by Periode", () => {
         message: null,
         yudisiumRegistrationPeriodId: period1Closed.id,
         program: "Reguler",
+        ipk: 3.75,
         tak: 45,
         tglSidang: new Date("2026-08-15T09:30:00.000Z"),
         judulTugasAkhirIndonesia: "Implementasi Sistem Informasi Akademik",
@@ -234,6 +235,7 @@ describe("Yudisium Registration - List & Filter by Periode", () => {
       const submitPayload = {
         id: "yud-reg-draft-1",
         program: "Reguler",
+        ipk: 3.75,
         tak: 45,
         tglSidang: "2026-08-15T09:30:00.000Z",
         judulTugasAkhirIndonesia: "Implementasi Sistem Informasi Akademik",
@@ -291,6 +293,7 @@ describe("Yudisium Registration - List & Filter by Periode", () => {
         message: null,
         yudisiumRegistrationPeriodId: "period-1-closed-uuid",
         program: "Reguler",
+        ipk: 3.75,
         tak: 45,
         tglSidang: "2026-08-15T09:30:00.000Z",
         judulTugasAkhirIndonesia: "Implementasi Sistem Informasi Akademik",
@@ -319,6 +322,7 @@ describe("Yudisium Registration - List & Filter by Periode", () => {
       const submitBody = {
         id: "yud-draft-http",
         program: "Reguler",
+        ipk: 3.75,
         tak: 45,
         tglSidang: "2026-08-15T09:30:00.000Z",
         judulTugasAkhirIndonesia: "Implementasi Sistem Informasi Akademik",
@@ -335,6 +339,80 @@ describe("Yudisium Registration - List & Filter by Periode", () => {
       expect(res.body.message).toBe("Yudisium registration submitted successfully");
       expect(res.body.data.yudisiumRegistrationPeriodId).toBe("period-2-active-uuid");
       expect(res.body.data.isDraft).toBe(false);
+    });
+
+    it("saveYudisiumRegistration: menyimpan ipk pada draft pendaftaran yudisium", async () => {
+      const activePeriod = {
+        id: "period-active-uuid",
+        category: "pendaftaran",
+        isOpen: true,
+      };
+
+      vi.spyOn(prisma.yudisiumPeriod, "findFirst").mockResolvedValue(activePeriod);
+      vi.spyOn(prisma.yudisiumRegistration, "findUnique")
+        .mockResolvedValueOnce({ id: "yud-draft-ipk", isDraft: true })
+        .mockResolvedValueOnce({ isDraft: true });
+
+      const updateSpy = vi.spyOn(prisma.yudisiumRegistration, "update").mockResolvedValue({
+        id: "yud-draft-ipk",
+        isDraft: true,
+        ipk: 3.82,
+        yudisiumRegistrationPeriodId: activePeriod.id,
+      });
+
+      const result = await saveYudisiumRegistration({
+        id: "yud-draft-ipk",
+        ipk: 3.82,
+      });
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "yud-draft-ipk" },
+          data: expect.objectContaining({
+            ipk: 3.82,
+          }),
+        })
+      );
+      expect(result.ipk).toBe(3.82);
+    });
+
+    it("endpoint POST /api/yudisium-registrations/submit menolak (400) jika ipk tidak diisi atau di luar rentang 0-4", async () => {
+      const token = jwt.sign(
+        { id: "mhs-uuid", role: "MAHASISWA", email: "mhs@student.telkomuniversity.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      const resMissing = await request(app)
+        .post("/api/yudisium-registrations/submit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          id: "yud-draft-http",
+          program: "Reguler",
+          tak: 45,
+          tglSidang: "2026-08-15T09:30:00.000Z",
+          judulTugasAkhirIndonesia: "Implementasi Sistem Informasi Akademik",
+          judulTugasAkhirInggris: "Implementation of Academic Information System",
+          mahasiswaId: "mhs-uuid",
+        });
+
+      expect(resMissing.status).toBe(400);
+
+      const resOutOfRange = await request(app)
+        .post("/api/yudisium-registrations/submit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          id: "yud-draft-http",
+          program: "Reguler",
+          ipk: 4.5,
+          tak: 45,
+          tglSidang: "2026-08-15T09:30:00.000Z",
+          judulTugasAkhirIndonesia: "Implementasi Sistem Informasi Akademik",
+          judulTugasAkhirInggris: "Implementation of Academic Information System",
+          mahasiswaId: "mhs-uuid",
+        });
+
+      expect(resOutOfRange.status).toBe(400);
     });
   });
 });

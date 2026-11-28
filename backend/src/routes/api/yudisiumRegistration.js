@@ -236,6 +236,10 @@ router.get(
  *               program:
  *                 type: string
  *                 example: Reguler
+ *               ipk:
+ *                 type: number
+ *                 format: float
+ *                 example: 3.75
  *               tak:
  *                 type: integer
  *                 example: 45
@@ -320,6 +324,7 @@ router.post(
  *             required:
  *               - id
  *               - program
+ *               - ipk
  *               - tak
  *               - tglSidang
  *               - judulTugasAkhirIndonesia
@@ -332,6 +337,10 @@ router.post(
  *               program:
  *                 type: string
  *                 example: Reguler
+ *               ipk:
+ *                 type: number
+ *                 format: float
+ *                 example: 3.75
  *               tak:
  *                 type: integer
  *                 example: 45
