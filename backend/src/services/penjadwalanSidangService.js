@@ -11,9 +11,9 @@ import {
   generateJadwalSidangFilename,
   getActiveOrUpcomingPelaksanaanSidangPeriod,
   extractUsersTerlibatSidang,
-  generateUserMahasiswaWorkbook,
-  generateUserDosenWorkbook,
-  generateUserSidangZipFilename,
+  generateDataUserWorkbook,
+  generateDataUserFilename,
+  generateExportSidangZipFilename,
 } from "../utils/penjadwalanSidangHelper.js";
 
 export const resolveStatusSidang = (penguji1, penguji2, tglSidang, ruangan) => {
@@ -755,9 +755,8 @@ export const batchSetJadwalSidang = async (items) => {
   });
 };
 
-/**
- * Mengekspor data jadwal sidang ke Excel (format tapasidang iGracias)
- */
+
+//Mengekspor jadwal sidang dan data user ke dalam 1 arsip ZIP
 export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
   let targetPeriodId = sidangPeriodId;
   let selectedPeriod = null;
@@ -816,10 +815,31 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
       })
     : [];
 
-  const workbook = generateJadwalSidangWorkbook(jadwalList);
-  const filename = generateJadwalSidangFilename(selectedPeriod);
+  const jadwalWorkbook = generateJadwalSidangWorkbook(jadwalList);
+  const jadwalBuffer = await jadwalWorkbook.xlsx.writeBuffer();
+  const jadwalFilename = generateJadwalSidangFilename(selectedPeriod);
 
-  return { workbook, filename };
+  const { mahasiswaList, dosenList } = extractUsersTerlibatSidang(jadwalList);
+  const dataUserWorkbook = generateDataUserWorkbook(mahasiswaList, dosenList);
+  const dataUserBuffer = await dataUserWorkbook.xlsx.writeBuffer();
+  const dataUserFilename = generateDataUserFilename(selectedPeriod);
+
+  const archive = new ZipArchive({ zlib: { level: 9 } });
+  const stream = new PassThrough();
+
+  archive.on("error", (err) => {
+    throw err;
+  });
+
+  archive.pipe(stream);
+  archive.append(Buffer.from(jadwalBuffer), { name: jadwalFilename });
+  archive.append(Buffer.from(dataUserBuffer), { name: dataUserFilename });
+
+  await archive.finalize();
+
+  const filename = generateExportSidangZipFilename(selectedPeriod);
+
+  return { stream, filename };
 };
 
 /**
@@ -1254,40 +1274,4 @@ export const getUsersTerlibatSidang = async ({
       : combinedUsers;
 
   return { total, users };
-};
-
-/**
- * Mengekspor data user terlibat sidang ke arsip ZIP (berisi xlsx Mahasiswa & xlsx Dosen)
- */
-export const exportUsersTerlibatSidang = async ({ sidangPeriodId }) => {
-  const { jadwalList, selectedPeriod } =
-    await fetchSidangRegistrationsForUsers(sidangPeriodId);
-  const { mahasiswaList, dosenList } = extractUsersTerlibatSidang(jadwalList);
-
-  const workbookMahasiswa = generateUserMahasiswaWorkbook(mahasiswaList);
-  const bufferMahasiswa = await workbookMahasiswa.xlsx.writeBuffer();
-
-  const workbookDosen = generateUserDosenWorkbook(dosenList);
-  const bufferDosen = await workbookDosen.xlsx.writeBuffer();
-
-  const archive = new ZipArchive({ zlib: { level: 9 } });
-  const stream = new PassThrough();
-
-  archive.on("error", (err) => {
-    throw err;
-  });
-
-  archive.pipe(stream);
-  archive.append(Buffer.from(bufferMahasiswa), {
-    name: "Data_Mahasiswa_Sidang.xlsx",
-  });
-  archive.append(Buffer.from(bufferDosen), {
-    name: "Data_Dosen_Sidang.xlsx",
-  });
-
-  await archive.finalize();
-
-  const filename = generateUserSidangZipFilename(selectedPeriod);
-
-  return { stream, filename };
 };

@@ -314,8 +314,8 @@ paths:
 
   /api/penjadwalan-sidang/export:
     get:
-      summary: Export data jadwal sidang
-      description: Mengunduh arsip ZIP yang berisi file Excel jadwal sidang (Format Awal dan Format Bandung).
+      summary: Export jadwal sidang & data user (ZIP)
+      description: Mengunduh arsip ZIP yang berisi dua file Excel (.xlsx), yaitu jadwal sidang (TAPA_Sidang) dan data user (Data_User dengan sheet Mahasiswa & sheet Dosen).
       tags:
         - Penjadwalan Sidang
       security:
@@ -326,10 +326,10 @@ paths:
           schema:
             type: string
             format: uuid
-          description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor jadwal pada periode sidang yang saat ini aktif.
+          description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor jadwal dan data user pada periode sidang yang saat ini aktif.
       responses:
         "200":
-          description: Berhasil mengunduh file ZIP jadwal sidang
+          description: Berhasil mengunduh file ZIP jadwal sidang dan data user
           content:
             application/zip:
               schema:
@@ -342,9 +342,9 @@ paths:
 
   /api/penjadwalan-sidang/users:
     get:
-      summary: Get data user (email, nama, peran) yang terlibat sidang (Admin only)
+      summary: Get data user (Admin only)
       description: |
-        Mengambil daftar unik user (Mahasiswa, Dosen Pembimbing 1 & 2, serta Dosen Penguji 1 & 2) yang terlibat pada pelaksanaan sidang di periode terkait.
+        Mengambil daftar unik data user (Mahasiswa, Dosen Pembimbing 1 & 2, serta Dosen Penguji 1 & 2) pada pelaksanaan sidang di periode terkait.
       tags:
         - Penjadwalan Sidang
       security:
@@ -380,7 +380,7 @@ paths:
           description: Jumlah data per halaman
       responses:
         "200":
-          description: Data user terlibat sidang berhasil diambil
+          description: Data user berhasil diambil
           content:
             application/json:
               example:
@@ -415,34 +415,6 @@ paths:
                       $ref: "#/components/schemas/UserTerlibatSidangItem"
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
-        "401":
-          description: Unauthorized
-        "403":
-          description: Access denied (Hanya admin yang dapat mengakses)
-
-  /api/penjadwalan-sidang/users/export:
-    get:
-      summary: Export data user terlibat sidang ke arsip ZIP (Admin only)
-      description: Mengunduh arsip ZIP yang berisi dua file Excel (.xlsx), yaitu Data_Mahasiswa_Sidang.xlsx (sheet Mahasiswa) dan Data_Dosen_Sidang.xlsx (sheet Dosen).
-      tags:
-        - Penjadwalan Sidang
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: sidangPeriodId
-          schema:
-            type: string
-            format: uuid
-          description: ID Periode Sidang. Jika dikosongkan, otomatis mengekspor data pada periode pelaksanaan sidang yang sedang aktif/mendatang.
-      responses:
-        "200":
-          description: Berhasil mengunduh file ZIP data user terlibat sidang
-          content:
-            application/zip:
-              schema:
-                type: string
-                format: binary
         "401":
           description: Unauthorized
         "403":

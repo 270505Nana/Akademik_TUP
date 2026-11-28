@@ -445,44 +445,37 @@ export const extractUsersTerlibatSidang = (jadwalList) => {
 };
 
 /**
- * Workbook Excel Mahasiswa terlibat sidang (Sheet: Mahasiswa | NIM | Nama | Email)
+ * Workbook Excel Data User (2 sheet: Mahasiswa & Dosen)
  */
-export const generateUserMahasiswaWorkbook = (mahasiswaList) => {
+export const generateDataUserWorkbook = (mahasiswaList, dosenList) => {
   const workbook = new excel.Workbook();
-  const worksheet = workbook.addWorksheet("Mahasiswa");
 
-  worksheet.columns = [
+  // Sheet 1: Mahasiswa (NIM | Nama | Email)
+  const sheetMahasiswa = workbook.addWorksheet("Mahasiswa");
+  sheetMahasiswa.columns = [
     { header: "NIM", key: "nim", width: 18 },
     { header: "Nama", key: "nama", width: 32 },
     { header: "Email", key: "email", width: 35 },
   ];
 
   mahasiswaList.forEach((mhs) => {
-    worksheet.addRow({
+    sheetMahasiswa.addRow({
       nim: mhs.nim,
       nama: mhs.nama,
       email: mhs.email,
     });
   });
 
-  return workbook;
-};
-
-/**
- * Workbook Excel Dosen terlibat sidang (Sheet: Dosen | Kode Dosen | Nama Dosen | Email)
- */
-export const generateUserDosenWorkbook = (dosenList) => {
-  const workbook = new excel.Workbook();
-  const worksheet = workbook.addWorksheet("Dosen");
-
-  worksheet.columns = [
+  // Sheet 2: Dosen (Kode Dosen | Nama Dosen | Email)
+  const sheetDosen = workbook.addWorksheet("Dosen");
+  sheetDosen.columns = [
     { header: "Kode Dosen", key: "kodeDosen", width: 15 },
     { header: "Nama Dosen", key: "namaDosen", width: 35 },
     { header: "Email", key: "email", width: 35 },
   ];
 
   dosenList.forEach((dosen) => {
-    worksheet.addRow({
+    sheetDosen.addRow({
       kodeDosen: dosen.kodeDosen,
       namaDosen: dosen.nama,
       email: dosen.email,
@@ -493,11 +486,11 @@ export const generateUserDosenWorkbook = (dosenList) => {
 };
 
 /**
- * Nama file ZIP ekspor data user terlibat sidang
+ * Nama file Excel Data User yang tersanitasi
  */
-export const generateUserSidangZipFilename = (selectedPeriod) => {
+export const generateDataUserFilename = (selectedPeriod) => {
   if (!selectedPeriod) {
-    return "User_Terlibat_Sidang.zip";
+    return "Data_User.xlsx";
   }
 
   const sanitizePart = (str) =>
@@ -510,5 +503,26 @@ export const generateUserSidangZipFilename = (selectedPeriod) => {
 
   const tahunAjaran = sanitizePart(selectedPeriod.period);
   const namaPeriode = sanitizePart(selectedPeriod.name);
-  return `User_Terlibat_Sidang_${tahunAjaran}_${namaPeriode}.zip`;
+  return `Data_User_${tahunAjaran}_${namaPeriode}.xlsx`;
+};
+
+/**
+ * Nama file ZIP gabungan (Jadwal Sidang + Data User)
+ */
+export const generateExportSidangZipFilename = (selectedPeriod) => {
+  if (!selectedPeriod) {
+    return "Export_Sidang.zip";
+  }
+
+  const sanitizePart = (str) =>
+    (str || "")
+      .replace(/[/\\]/g, "")
+      .replace(/[:*?"<>|]/g, "")
+      .replace(/\s+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+  const tahunAjaran = sanitizePart(selectedPeriod.period);
+  const namaPeriode = sanitizePart(selectedPeriod.name);
+  return `Export_Sidang_${tahunAjaran}_${namaPeriode}.zip`;
 };

@@ -100,23 +100,19 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
   });
 });
 
-// Export Jadwal Sidang
+// Export Jadwal Sidang & Data User (ZIP)
 const exportJadwalSidang = asyncHandler(async (req, res) => {
-  const { workbook, filename } =
+  const { stream, filename } =
     await penjadwalanSidangService.exportJadwalSidang({
       user: req.user,
       dosen: req.dosen,
       sidangPeriodId: req.query.sidangPeriodId,
     });
 
-  res.setHeader(
-    "Content-Type",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  );
+  res.setHeader("Content-Type", "application/zip");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
-  await workbook.xlsx.write(res);
-  res.end();
+  stream.pipe(res);
 });
 
 // Toggle Lock Sidang Registration (Admin Only)
@@ -261,18 +257,6 @@ const getUsersTerlibatSidang = asyncHandler(async (req, res) => {
   res.json(formatPaginationResponse(users, total, paginationParams));
 });
 
-// Export Data User Terlibat Sidang ke ZIP (Admin Akademik)
-const exportUsersTerlibatSidang = asyncHandler(async (req, res) => {
-  const { stream, filename } =
-    await penjadwalanSidangService.exportUsersTerlibatSidang({
-      sidangPeriodId: req.query.sidangPeriodId,
-    });
-
-  res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-  stream.pipe(res);
-});
 
 export {
   listPenjadwalanSidang,
@@ -288,5 +272,4 @@ export {
   uploadNotaDinasController,
   getNotaDinasController,
   getUsersTerlibatSidang,
-  exportUsersTerlibatSidang,
 };
