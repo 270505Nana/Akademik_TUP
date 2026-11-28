@@ -69,95 +69,37 @@ paths:
               example:
                 data:
                   - id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                    createdAt: "2026-11-10T08:00:00.000Z"
-                    updatedAt: "2026-11-10T09:00:00.000Z"
-                    mahasiswa:
-                      id: m1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                      nim: "1202200001"
-                      kelasAsal: SI-44-01
-                      tahunAngkatan: 2022
-                      sks: 140
-                      ipk: 3.75
-                      tak: 45
-                      studyProgramId: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                      dosenWaliId: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                      name: Ahmad Dani
-                      email: ahmaddani@student.telkomuniversity.ac.id
-                      phone: "081234567890"
-                      studyProgram:
-                        id: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                        name: S1 Sistem Informasi
-                        isActive: true
-                        facultyId: f1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
                     judulTugasAkhirIndonesia: Rancang Bangun Sistem Monitoring IoT
                     judulTugasAkhirInggris: Design and Build of IoT Monitoring System
                     skemaSidang: Reguler
                     skemaSidangFinal: Reguler
+                    tglSidang: "2026-11-20T09:00:00.000Z"
+                    status: Siap Sidang
+                    statusPenjadwalan: Siap Sidang
+                    isLocked: false
+                    isPublished: false
+                    isInfoPenjadwalanReaded: false
+                    notaDinasUrl: null
+                    mahasiswa:
+                      name: Ahmad Dani
+                      nim: "1202200001"
+                      studyProgram:
+                        name: S1 Sistem Informasi
                     dosenPembimbing1:
                       id: d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                      nip: "197501012000121001"
-                      nidn: "0401017501"
-                      kodeDosen: DPS
-                      isKetuaKK: false
-                      isKetuaProdi: false
-                      isKepalaUrusanAkademik: false
-                      signature: null
-                      researchGroupId: rg-01
-                      studyProgramId: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                      userId: u1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
                       name: Dr. Pembimbing Satu, M.T.
-                      email: pembimbing1@telkomuniversity.ac.id
-                      phone: "081234567891"
-                      researchGroup:
-                        id: rg-01
-                        name: Enterprise Systems
-                        isActive: true
-                      studyProgram:
-                        id: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                        name: S1 Sistem Informasi
-                        isActive: true
-                        facultyId: f1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      kodeDosen: DPS
+                      researchGroupId: rg-01
                     dosenPembimbing2: null
                     dosenPenguji1:
                       id: d2a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                      nip: "198002022005012002"
-                      nidn: "0402028001"
-                      kodeDosen: DPJ
-                      isKetuaKK: false
-                      isKetuaProdi: false
-                      isKepalaUrusanAkademik: false
-                      signature: null
-                      researchGroupId: rg-01
-                      studyProgramId: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                      userId: u2a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
                       name: Dr. Penguji Satu, M.Kom.
-                      email: penguji1@telkomuniversity.ac.id
-                      phone: "081234567892"
-                      researchGroup:
-                        id: rg-01
-                        name: Enterprise Systems
-                        isActive: true
-                      studyProgram:
-                        id: p1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
-                        name: S1 Sistem Informasi
-                        isActive: true
-                        facultyId: f1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+                      kodeDosen: DPJ
                     dosenPenguji2: null
-                    tglSidang: "2026-11-20T09:00:00.000Z"
                     ruanganSidang:
                       id: r1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
                       name: Ruang 101
                       gedung: Gedung Cacuk
-                      isActive: true
-                      createdAt: "2026-11-01T08:00:00.000Z"
-                      updatedAt: "2026-11-01T08:00:00.000Z"
-                      deletedAt: null
-                    isLocked: false
-                    notaDinasUrl: null
-                    status: Siap Sidang
-                    statusPenjadwalan: Siap Sidang
-                    isPublished: false
-                    isInfoPenjadwalanReaded: false
                 pagination:
                   page: 1
                   limit: 10

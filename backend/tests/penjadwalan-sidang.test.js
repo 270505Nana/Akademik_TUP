@@ -563,6 +563,13 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
       expect(mapped.skemaSidang).toBe("Capstone");
       expect(mapped.skemaSidangFinal).toBe("Capstone");
       expect(mapped.isInfoPenjadwalanReaded).toBe(true);
+      expect(mapped.createdAt).toBeUndefined();
+      expect(mapped.updatedAt).toBeUndefined();
+      expect(mapped.mahasiswa).toEqual({
+        name: "Ahmad",
+        nim: null,
+        studyProgram: null,
+      });
     });
 
     it("harus mengembalikan null jika item bernilai falsy", () => {
