@@ -10,7 +10,7 @@ paths:
         Mengambil daftar pendaftaran sidang untuk penjadwalan.
         - **Admin**: Dapat melihat seluruh data penjadwalan pada periode aktif (atau periode yang dipilih).
         - **Dosen Ketua KK**: Hanya dapat melihat data penjadwalan di mana Dosen Pembimbing 1 berasal dari Research Group (KK) yang dipimpinnya.
-        - Pendaftaran dengan skema `Non Sidang` (`skemaSidangFinal = "Non Sidang"`) otomatis dikecualikan dari penjadwalan.
+        - Pendaftaran dengan skema `Non Sidang` (`skemaSidangFinal = "Non Sidang"`) dan `Capstone` (`skemaSidangFinal = "Capstone"`) otomatis dikecualikan dari penjadwalan.
       tags:
         - Penjadwalan Sidang
       security:
@@ -48,7 +48,7 @@ paths:
           name: skemaSidang
           schema:
             type: string
-          description: Filter berdasarkan skema sidang final (skemaSidangFinal, contoh Reguler, Capstone, Sidang Khusus Prodi). Skema "Non Sidang" tidak ditampilkan pada endpoint ini.
+          description: Filter berdasarkan skema sidang final (skemaSidangFinal, contoh Reguler, Sidang Khusus Prodi). Skema "Non Sidang" dan "Capstone" tidak ditampilkan pada endpoint ini.
         - in: query
           name: page
           schema:

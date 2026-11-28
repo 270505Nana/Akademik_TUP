@@ -655,18 +655,38 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
         .mockResolvedValue([]);
 
       const res = await request(app)
-        .get("/api/penjadwalan-sidang?skemaSidang=Capstone")
+        .get("/api/penjadwalan-sidang?skemaSidang=Reguler")
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
       const findArgs = findManySpy.mock.calls[0][0];
       expect(findArgs.where.skemaSidangFinal).toEqual({
-        equals: "Capstone",
+        equals: "Reguler",
         mode: "insensitive",
       });
     });
 
-    it("secara default harus mengecualikan skemaSidangFinal = 'Non Sidang'", async () => {
+    it("mengembalikan data kosong jika query skemaSidang=Capstone pada GET /api/penjadwalan-sidang", async () => {
+      const adminToken = jwt.sign(
+        { id: "admin-uuid", role: "ADMIN", email: "admin@univ.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+      );
+
+      vi.spyOn(prisma.sidangPeriod, "findFirst").mockResolvedValue({ id: "period-1" });
+      const findManySpy = vi.spyOn(prisma.sidangRegistration, "findMany");
+
+      const res = await request(app)
+        .get("/api/penjadwalan-sidang?skemaSidang=Capstone")
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+      expect(res.body.pagination.total).toBe(0);
+      expect(findManySpy).not.toHaveBeenCalled();
+    });
+
+    it("secara default harus mengecualikan skemaSidangFinal = 'Non Sidang' dan 'Capstone'", async () => {
       vi.spyOn(prisma.sidangRegistration, "count").mockResolvedValue(0);
       const findManySpy = vi
         .spyOn(prisma.sidangRegistration, "findMany")
@@ -686,12 +706,24 @@ describe("Penjadwalan Sidang - Skema Capstone & Validasi Konflik", () => {
             OR: [
               { skemaSidangFinal: null },
               {
-                NOT: {
-                  skemaSidangFinal: {
-                    equals: "Non Sidang",
-                    mode: "insensitive",
+                AND: [
+                  {
+                    NOT: {
+                      skemaSidangFinal: {
+                        equals: "Non Sidang",
+                        mode: "insensitive",
+                      },
+                    },
                   },
-                },
+                  {
+                    NOT: {
+                      skemaSidangFinal: {
+                        equals: "Capstone",
+                        mode: "insensitive",
+                      },
+                    },
+                  },
+                ],
               },
             ],
           },

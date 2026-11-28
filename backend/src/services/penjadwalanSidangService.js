@@ -119,7 +119,8 @@ export const getPenjadwalanSidangList = async ({
     typeof skemaSidang === "string" &&
     skemaSidang.trim() !== ""
   ) {
-    if (skemaSidang.trim().toLowerCase() === "non sidang") {
+    const normalizedSkema = skemaSidang.trim().toLowerCase();
+    if (normalizedSkema === "non sidang" || normalizedSkema === "capstone") {
       return { total: 0, registrations: [] };
     }
     where.skemaSidangFinal = {
@@ -133,12 +134,24 @@ export const getPenjadwalanSidangList = async ({
         OR: [
           { skemaSidangFinal: null },
           {
-            NOT: {
-              skemaSidangFinal: {
-                equals: "Non Sidang",
-                mode: "insensitive",
+            AND: [
+              {
+                NOT: {
+                  skemaSidangFinal: {
+                    equals: "Non Sidang",
+                    mode: "insensitive",
+                  },
+                },
               },
-            },
+              {
+                NOT: {
+                  skemaSidangFinal: {
+                    equals: "Capstone",
+                    mode: "insensitive",
+                  },
+                },
+              },
+            ],
           },
         ],
       },
