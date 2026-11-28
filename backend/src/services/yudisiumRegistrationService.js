@@ -1306,34 +1306,83 @@ export const rejectYudisiumRegistration = async (
   return mapYudisiumRegistrationToFrontend(updatedRegistration, req);
 };
 
+const extractWibDateParts = (dateValue) => {
+  if (!dateValue) return { day: "", month: "", year: "" };
+  const d = new Date(dateValue);
+  if (isNaN(d.getTime())) return { day: "", month: "", year: "" };
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jakarta",
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+  }).formatToParts(d);
+
+  return {
+    day: Number(parts.find((p) => p.type === "day")?.value) || "",
+    month: Number(parts.find((p) => p.type === "month")?.value) || "",
+    year: Number(parts.find((p) => p.type === "year")?.value) || "",
+  };
+};
+
 /**
  * Mengekspor data pendaftaran yudisium ke format Excel Workbook
  */
-export const exportYudisiumWorkbook = async ({ yudisiumPeriodId } = {}) => {
-  let targetPeriodId = yudisiumPeriodId;
+export const exportYudisiumWorkbook = async ({
+  yudisiumPeriodId,
+  yudisiumRegistrationPeriodId,
+} = {}) => {
   let selectedPeriod = null;
+  const whereClause = {
+    deletedAt: null,
+    isDraft: false,
+  };
 
-  if (targetPeriodId) {
+  if (yudisiumRegistrationPeriodId) {
+    whereClause.yudisiumRegistrationPeriodId =
+      yudisiumRegistrationPeriodId.trim();
     selectedPeriod = await prisma.yudisiumPeriod.findUnique({
-      where: { id: targetPeriodId },
+      where: { id: yudisiumRegistrationPeriodId.trim() },
     });
-  } else {
-    selectedPeriod = await prisma.yudisiumPeriod.findFirst({
-      where: {
-        category: { in: ["pelaksanaan", "yudisium"] },
-        deletedAt: null,
-      },
-      orderBy: { endDate: "desc" },
-    });
-
-    if (selectedPeriod) {
-      targetPeriodId = selectedPeriod.id;
-    }
   }
 
-  const whereClause = { deletedAt: null };
-  if (targetPeriodId) {
-    whereClause.yudisiumPeriodId = targetPeriodId;
+  if (yudisiumPeriodId) {
+    whereClause.yudisiumPeriodId = yudisiumPeriodId.trim();
+    selectedPeriod = await prisma.yudisiumPeriod.findUnique({
+      where: { id: yudisiumPeriodId.trim() },
+    });
+  }
+
+  if (!yudisiumRegistrationPeriodId && !yudisiumPeriodId) {
+    const now = new Date();
+    selectedPeriod =
+      (await prisma.yudisiumPeriod.findFirst({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+          isOpen: true,
+          deletedAt: null,
+        },
+        orderBy: { updatedAt: "desc" },
+      })) ||
+      (await prisma.yudisiumPeriod.findFirst({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+          endDate: { lte: now },
+          deletedAt: null,
+        },
+        orderBy: [{ endDate: "desc" }, { createdAt: "desc" }],
+      })) ||
+      (await prisma.yudisiumPeriod.findFirst({
+        where: {
+          category: { in: ["pendaftaran", "pendaftaran yudisium"] },
+          deletedAt: null,
+        },
+        orderBy: [{ startDate: "asc" }, { createdAt: "desc" }],
+      }));
+
+    if (selectedPeriod) {
+      whereClause.yudisiumRegistrationPeriodId = selectedPeriod.id;
+    }
   }
 
   const yudisiumList = await prisma.yudisiumRegistration.findMany({
@@ -1355,7 +1404,7 @@ export const exportYudisiumWorkbook = async ({ yudisiumPeriodId } = {}) => {
   });
 
   const workbook = new excel.Workbook();
-  const worksheet = workbook.addWorksheet("Yudisium Registrations");
+  const worksheet = workbook.addWorksheet("Sheet1");
 
   worksheet.columns = [
     { header: "NIM", key: "nim", width: 15 },
@@ -1364,8 +1413,8 @@ export const exportYudisiumWorkbook = async ({ yudisiumPeriodId } = {}) => {
     { header: "TAHUN SIDANG AKAD", key: "thnAkad", width: 20 },
     { header: "TANGGAL SIDANG TA/PA", key: "tglTa", width: 22 },
     { header: "BULAN SIDANG TA/PA", key: "blnTa", width: 20 },
-    { header: "TAHUN SIDANG TA/PA", key: "thnTa", width: 20 },
-    { header: "TANGGAL SURAT", key: "tglSurat", width: 15 },
+    { header: "TAHUN SIDANG  TA/PA", key: "thnTa", width: 20 },
+    { header: "TANGGAL SURAT ", key: "tglSurat", width: 15 },
     { header: "BULAN SURAT", key: "blnSurat", width: 20 },
     { header: "TAHUN SURAT", key: "thnSurat", width: 20 },
     { header: "NOMOR SURAT", key: "noSurat", width: 30 },
@@ -1376,30 +1425,13 @@ export const exportYudisiumWorkbook = async ({ yudisiumPeriodId } = {}) => {
     { header: "TANGGAL UPLOAD JURNAL", key: "tglJurnal", width: 25 },
     { header: "BULAN UPLOAD JURNAL", key: "blnJurnal", width: 25 },
     { header: "TAHUN UPLOAD JURNAL", key: "thnJurnal", width: 25 },
-    { header: "AKUN GOOGLE SCHOLAR", key: "scholar", width: 30 },
+    { header: "AKUN GOOGLE SCHOOLAR", key: "scholar", width: 30 },
   ];
 
   yudisiumList.forEach((yudisium) => {
-    let tglAkad = "",
-      blnAkad = "",
-      thnAkad = "";
-    if (yudisium.tglSidang) {
-      const d = new Date(yudisium.tglSidang);
-      tglAkad = d.getDate();
-      blnAkad = d.getMonth() + 1;
-      thnAkad = d.getFullYear();
-    }
-
-    let tglTa = "",
-      blnTa = "",
-      thnTa = "";
+    const akad = extractWibDateParts(yudisium.tglSidang);
     const sidangTA = yudisium.mahasiswa?.sidangRegistrations?.[0];
-    if (sidangTA?.tglSidang) {
-      const d = new Date(sidangTA.tglSidang);
-      tglTa = d.getDate();
-      blnTa = d.getMonth() + 1;
-      thnTa = d.getFullYear();
-    }
+    const ta = extractWibDateParts(sidangTA?.tglSidang);
 
     const kodeDosenWali =
       yudisium.mahasiswa?.dosenWali?.kodeDosen ||
@@ -1408,12 +1440,12 @@ export const exportYudisiumWorkbook = async ({ yudisiumPeriodId } = {}) => {
 
     worksheet.addRow({
       nim: yudisium.mahasiswa?.nim || "",
-      tglAkad,
-      blnAkad,
-      thnAkad,
-      tglTa,
-      blnTa,
-      thnTa,
+      tglAkad: akad.day,
+      blnAkad: akad.month,
+      thnAkad: akad.year,
+      tglTa: ta.day,
+      blnTa: ta.month,
+      thnTa: ta.year,
       tglSurat: "",
       blnSurat: "",
       thnSurat: "",
