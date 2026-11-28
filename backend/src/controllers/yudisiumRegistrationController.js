@@ -54,6 +54,22 @@ export const saveYudisiumRegistration = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Admin Edit Yudisium Registration (without changing status)
+ * PUT /api/yudisium-registrations/:id/admin-edit
+ */
+export const editYudisiumRegistrationByAdmin = asyncHandler(async (req, res) => {
+  const data = await yudisiumRegistrationService.editYudisiumRegistrationByAdmin(
+    req.params.id,
+    req.body,
+    req
+  );
+  res.json({
+    message: "Yudisium registration updated successfully",
+    data,
+  });
+});
+
+/**
  * Submit Yudisium Registration (Update isDraft to false with Validation)
  * POST /api/yudisium-registrations/submit
  */

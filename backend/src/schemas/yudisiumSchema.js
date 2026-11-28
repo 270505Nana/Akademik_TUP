@@ -226,3 +226,104 @@ export const rejectYudisiumSchema = z.object({
     .optional()
     .nullable(),
 });
+
+/**
+ * Schema untuk edit pendaftaran yudisium oleh admin
+ * PUT /api/yudisium-registrations/:id/admin-edit
+ */
+export const adminEditYudisiumSchema = z
+  .object({
+    mahasiswaId: z.preprocess(
+      (val) =>
+        val === "" || val === null || val === undefined
+          ? undefined
+          : typeof val === "number"
+            ? String(val)
+            : typeof val === "string"
+              ? val.trim()
+              : val,
+      z
+        .string({ invalid_type_error: "ID mahasiswa tidak valid" })
+        .min(1, "ID mahasiswa tidak valid")
+        .optional()
+        .nullable()
+    ),
+    program: z
+      .string({ invalid_type_error: "Program harus berupa string" })
+      .trim()
+      .optional()
+      .nullable(),
+    dosenWaliId: z
+      .string({ invalid_type_error: "ID dosen wali harus berupa string" })
+      .trim()
+      .min(1)
+      .optional()
+      .nullable(),
+    dosenPembimbing1Id: z
+      .string({ invalid_type_error: "ID dosen pembimbing 1 harus berupa string" })
+      .trim()
+      .min(1)
+      .optional()
+      .nullable(),
+    dosenPembimbing2Id: z
+      .string({ invalid_type_error: "ID dosen pembimbing 2 harus berupa string" })
+      .trim()
+      .min(1)
+      .optional()
+      .nullable(),
+    judulTugasAkhirIndonesia: z
+      .string({ invalid_type_error: "Judul TA (Indonesia) harus berupa string" })
+      .trim()
+      .optional()
+      .nullable(),
+    judulTugasAkhirInggris: z
+      .string({ invalid_type_error: "Judul TA (Inggris) harus berupa string" })
+      .trim()
+      .optional()
+      .nullable(),
+    ipk: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+      z
+        .number({ invalid_type_error: "IPK harus berupa float" })
+        .min(0, "IPK minimal 0")
+        .max(4, "IPK maksimal 4")
+        .optional()
+        .nullable()
+    ),
+    tak: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+      z
+        .number({ invalid_type_error: "TAK harus berupa integer" })
+        .int("TAK harus berupa integer")
+        .min(0)
+        .optional()
+        .nullable()
+    ),
+    tglSidang: z
+      .string({ invalid_type_error: "Tanggal sidang tidak valid" })
+      .refine(isValidDateString, { message: "Tanggal sidang tidak valid" })
+      .optional()
+      .nullable(),
+    skemaSidang: z
+      .string({ invalid_type_error: "Skema sidang harus berupa string" })
+      .trim()
+      .optional()
+      .nullable(),
+    pengajuanCumlaude: z
+      .string({ invalid_type_error: "Pengajuan cumlaude harus berupa string" })
+      .trim()
+      .optional()
+      .nullable(),
+    skemaCumlaude: z
+      .union([z.string().trim(), z.array(z.string().trim())], {
+        invalid_type_error: "Skema cumlaude harus berupa string atau array string",
+      })
+      .optional()
+      .nullable(),
+    evidenCumlaude: z
+      .string({ invalid_type_error: "Eviden cumlaude harus berupa string" })
+      .trim()
+      .optional()
+      .nullable(),
+  })
+  .strict();

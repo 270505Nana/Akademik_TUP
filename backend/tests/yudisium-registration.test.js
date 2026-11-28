@@ -415,4 +415,114 @@ describe("Yudisium Registration - List & Filter by Periode", () => {
       expect(resOutOfRange.status).toBe(400);
     });
   });
+
+  describe("Admin Edit Yudisium Registration (PUT /api/yudisium-registrations/:id/admin-edit)", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("berhasil mengedit data pendaftaran yudisium oleh admin tanpa mengubah status", async () => {
+      const token = jwt.sign(
+        { id: "admin-uuid", role: "ADMIN", email: "admin@telkomuniversity.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      vi.spyOn(prisma.yudisiumRegistration, "findUnique").mockResolvedValue({
+        id: "yud-reg-1",
+        status: "Dalam Proses",
+        isDraft: false,
+      });
+
+      const updateSpy = vi.spyOn(prisma.yudisiumRegistration, "update").mockResolvedValue({
+        id: "yud-reg-1",
+        status: "Dalam Proses",
+        isDraft: false,
+        program: "Alih Jenjang",
+        ipk: 3.85,
+        tak: 60,
+        pengajuanCumlaude: "Cumlaude",
+      });
+
+      const res = await request(app)
+        .put("/api/yudisium-registrations/yud-reg-1/admin-edit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          program: "Alih Jenjang",
+          ipk: 3.85,
+          tak: 60,
+          pengajuanCumlaude: "Cumlaude",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Yudisium registration updated successfully");
+      expect(res.body.data.ipk).toBe(3.85);
+      expect(res.body.data.status).toBe("Dalam Proses");
+      expect(updateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "yud-reg-1" },
+          data: expect.objectContaining({
+            program: "Alih Jenjang",
+            ipk: 3.85,
+            tak: 60,
+            pengajuanCumlaude: "Cumlaude",
+          }),
+        })
+      );
+    });
+
+    it("menolak (403) jika diakses oleh role selain ADMIN", async () => {
+      const token = jwt.sign(
+        { id: "mhs-uuid", role: "MAHASISWA", email: "mhs@student.telkomuniversity.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      const res = await request(app)
+        .put("/api/yudisium-registrations/yud-reg-1/admin-edit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ ipk: 3.5 });
+
+      expect(res.status).toBe(403);
+    });
+
+    it("menolak (400) jika mengirim field yang tidak diizinkan (strict) atau ipk tidak valid", async () => {
+      const token = jwt.sign(
+        { id: "admin-uuid", role: "ADMIN", email: "admin@telkomuniversity.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      const resUnknown = await request(app)
+        .put("/api/yudisium-registrations/yud-reg-1/admin-edit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ status: "Disetujui" });
+
+      expect(resUnknown.status).toBe(400);
+
+      const resInvalidIpk = await request(app)
+        .put("/api/yudisium-registrations/yud-reg-1/admin-edit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ ipk: 4.5 });
+
+      expect(resInvalidIpk.status).toBe(400);
+    });
+
+    it("mengembalikan 404 jika pendaftaran yudisium tidak ditemukan", async () => {
+      const token = jwt.sign(
+        { id: "admin-uuid", role: "ADMIN", email: "admin@telkomuniversity.ac.id" },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      vi.spyOn(prisma.yudisiumRegistration, "findUnique").mockResolvedValue(null);
+
+      const res = await request(app)
+        .put("/api/yudisium-registrations/tidak-ada/admin-edit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ ipk: 3.7 });
+
+      expect(res.status).toBe(404);
+    });
+  });
 });

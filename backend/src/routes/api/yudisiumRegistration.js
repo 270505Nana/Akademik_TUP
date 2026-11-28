@@ -8,6 +8,7 @@ import {
   listYudisiumQuerySchema,
   exportYudisiumQuerySchema,
   saveYudisiumDraftSchema,
+  adminEditYudisiumSchema,
   submitYudisiumSchema,
   approveYudisiumSchema,
   rejectYudisiumSchema,
@@ -17,6 +18,7 @@ import {
   getYudisiumRegistrationById,
   getYudisiumRegistrationByMahasiswaId,
   saveYudisiumRegistration,
+  editYudisiumRegistrationByAdmin,
   submitYudisiumRegistration,
   deleteYudisiumRegistration,
   uploadYudisiumRegistrationFile,
@@ -305,6 +307,92 @@ router.post(
   authorize("MAHASISWA"),
   validate(saveYudisiumDraftSchema),
   saveYudisiumRegistration,
+);
+
+/**
+ * @swagger
+ * /api/yudisium-registrations/{id}/admin-edit:
+ *   put:
+ *     summary: Edit yudisium registration by admin (without changing status)
+ *     tags: [Yudisium Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Yudisium registration ID (UUID)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               mahasiswaId:
+ *                 type: string
+ *                 format: uuid
+ *               program:
+ *                 type: string
+ *                 example: Reguler
+ *               dosenWaliId:
+ *                 type: string
+ *                 format: uuid
+ *               dosenPembimbing1Id:
+ *                 type: string
+ *                 format: uuid
+ *               dosenPembimbing2Id:
+ *                 type: string
+ *                 format: uuid
+ *               judulTugasAkhirIndonesia:
+ *                 type: string
+ *                 example: Implementasi Sistem Informasi Akademik
+ *               judulTugasAkhirInggris:
+ *                 type: string
+ *                 example: Implementation of Academic Information System
+ *               ipk:
+ *                 type: number
+ *                 format: float
+ *                 example: 3.75
+ *               tak:
+ *                 type: integer
+ *                 example: 45
+ *               tglSidang:
+ *                 type: string
+ *                 format: date-time
+ *                 example: 2026-08-15T09:30:00.000Z
+ *               skemaSidang:
+ *                 type: string
+ *                 example: Reguler
+ *               pengajuanCumlaude:
+ *                 type: string
+ *                 example: Cumlaude
+ *               skemaCumlaude:
+ *                 type: string
+ *                 example: Publikasi Jurnal
+ *               evidenCumlaude:
+ *                 type: string
+ *                 example: Publikasi IEEE International Conference on Software Engineering 2026
+ *     responses:
+ *       200:
+ *         description: Yudisium registration updated successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied (Admin only)
+ *       404:
+ *         description: Yudisium registration or referenced entity not found
+ */
+router.put(
+  "/:id/admin-edit",
+  verifyToken,
+  authorize("ADMIN"),
+  validate(adminEditYudisiumSchema),
+  editYudisiumRegistrationByAdmin,
 );
 
 /**
