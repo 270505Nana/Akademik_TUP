@@ -8,7 +8,9 @@ import {
   listYudisiumRegistrations,
   saveYudisiumRegistration,
   submitYudisiumRegistration,
+  approveYudisiumRegistration,
 } from "../src/services/yudisiumRegistrationService.js";
+import { generatePredikatYudisium } from "../src/utils/yudisiumRegistrationHelper.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "akademiktup";
 
@@ -523,6 +525,55 @@ describe("Yudisium Registration - List & Filter by Periode", () => {
         .send({ ipk: 3.7 });
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe("Generate Otomatis predikatYudisium", () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("generatePredikatYudisium menghasilkan predikat sesuai ketentuan", () => {
+      expect(generatePredikatYudisium("Summa Cumlaude", 3.95)).toBe("Sempurna");
+      expect(generatePredikatYudisium("Cumlaude", 3.8)).toBe("Dengan Pujian");
+      expect(generatePredikatYudisium("Non Cumlaude", 3.01)).toBe("Sangat Memuaskan");
+      expect(generatePredikatYudisium("Non Cumlaude", 3.5)).toBe("Sangat Memuaskan");
+      expect(generatePredikatYudisium("Non Cumlaude", 3.0)).toBe("Memuaskan");
+      expect(generatePredikatYudisium("Non Cumlaude", null)).toBe("Memuaskan");
+      expect(generatePredikatYudisium(null, 3.8)).toBeNull();
+    });
+
+    it("approveYudisiumRegistration otomatis mengisi predikatYudisium berdasarkan pengajuanCumlaudeFinal dan ipk", async () => {
+      vi.spyOn(prisma.yudisiumRegistration, "findUnique").mockResolvedValue({
+        id: "yud-approve-1",
+        ipk: 3.25,
+        mahasiswa: { ipk: 3.25 },
+      });
+      vi.spyOn(prisma.admin, "findFirst").mockResolvedValue({ id: "admin-1" });
+      vi.spyOn(prisma.yudisiumPeriod, "findUnique").mockResolvedValue({ id: "period-1" });
+
+      const updateSpy = vi.spyOn(prisma.yudisiumRegistration, "update").mockResolvedValue({
+        id: "yud-approve-1",
+        ipk: 3.25,
+        pengajuanCumlaudeFinal: "Non Cumlaude",
+        predikatYudisium: "Sangat Memuaskan",
+      });
+
+      const result = await approveYudisiumRegistration({
+        id: "yud-approve-1",
+        adminId: "admin-1",
+        yudisiumPeriodId: "period-1",
+        pengajuanCumlaudeFinal: "Non Cumlaude",
+      });
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            predikatYudisium: "Sangat Memuaskan",
+          }),
+        })
+      );
+      expect(result.predikatYudisium).toBe("Sangat Memuaskan");
     });
   });
 });

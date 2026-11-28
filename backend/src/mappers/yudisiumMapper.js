@@ -28,7 +28,7 @@ export const mapYudisiumRegistrationToFrontend = (item, req) => {
     pengajuanCumlaude: item.pengajuanCumlaude,
     skemaCumlaude: item.skemaCumlaude,
     evidenCumlaude: item.evidenCumlaude,
-    predikat: item.predikat,
+    predikatYudisium: item.predikatYudisium,
     pengajuanCumlaudeFinal: item.pengajuanCumlaudeFinal,
     skemaCumlaudeFinal: item.skemaCumlaudeFinal,
     yudisiumRegistrationPeriodId: item.yudisiumRegistrationPeriodId,

@@ -196,7 +196,6 @@ export const approveYudisiumSchema = z.object({
     .uuid("ID periode yudisium tidak valid"),
   pengajuanCumlaudeFinal: z.string().trim().optional().nullable(),
   skemaCumlaudeFinal: z.string().trim().optional().nullable(),
-  predikat: z.string().trim().optional().nullable(),
   statusKelulusan: z.string().trim().optional().nullable(),
   message: z.string().trim().optional().nullable(),
   yudisiumRegistrationUploadIds: z

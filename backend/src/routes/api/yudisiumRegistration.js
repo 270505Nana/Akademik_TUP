@@ -673,9 +673,6 @@ router.get(
  *               yudisiumPeriodId:
  *                 type: string
  *                 description: ID periode yudisium tujuan (UUID)
- *               predikat:
- *                 type: string
- *                 description: Predikat kelulusan yudisium (misal "MEMUASKAN", "SANGAT MEMUASKAN", "DENGAN PUJIAN") (opsional)
  *               statusKelulusan:
  *                 type: string
  *                 description: Status kelulusan yudisium (misal "LULUS", "TIDAK LULUS") (opsional)

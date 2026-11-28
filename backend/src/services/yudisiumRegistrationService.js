@@ -11,6 +11,7 @@ import {
   DOCUMENT_CATEGORIES,
   CUMLAUDE_CATEGORY_MAP,
 } from "../constants/documentCategories.js";
+import { generatePredikatYudisium } from "../utils/yudisiumRegistrationHelper.js";
 
 export const yudisiumInclude = {
   mahasiswa: {
@@ -806,6 +807,13 @@ export const editYudisiumRegistrationByAdmin = async (id, body, req) => {
     updateData.dosenPembimbing2Id = dosenPembimbing2Id;
   }
 
+  if (ipk !== undefined && existingRegistration.pengajuanCumlaudeFinal) {
+    updateData.predikatYudisium = generatePredikatYudisium(
+      existingRegistration.pengajuanCumlaudeFinal,
+      updateData.ipk,
+    );
+  }
+
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: updateData,
@@ -1265,7 +1273,6 @@ export const approveYudisiumRegistration = async (
     yudisiumRegistrationUploadIds,
     pengajuanCumlaudeFinal,
     skemaCumlaudeFinal,
-    predikat,
     statusKelulusan,
     message,
   },
@@ -1273,6 +1280,11 @@ export const approveYudisiumRegistration = async (
 ) => {
   const registration = await prisma.yudisiumRegistration.findUnique({
     where: { id },
+    include: {
+      mahasiswa: {
+        select: { ipk: true },
+      },
+    },
   });
 
   if (!registration) {
@@ -1339,6 +1351,12 @@ export const approveYudisiumRegistration = async (
     ? "Hasil Sidang Ditetapkan"
     : "Menunggu Sidang Yudisium";
 
+  const effectiveIpk = registration.ipk ?? registration.mahasiswa?.ipk ?? null;
+  const predikatYudisium = generatePredikatYudisium(
+    finalPengajuanCumlaude,
+    effectiveIpk,
+  );
+
   const updatedRegistration = await prisma.yudisiumRegistration.update({
     where: { id },
     data: {
@@ -1347,12 +1365,7 @@ export const approveYudisiumRegistration = async (
       pengajuanCumlaudeFinal: finalPengajuanCumlaude,
       skemaCumlaudeFinal: finalSkemaCumlaude,
       status,
-      predikat:
-        typeof predikat === "string"
-          ? predikat.trim() || null
-          : predikat === null
-            ? null
-            : undefined,
+      predikatYudisium,
       statusKelulusan:
         typeof statusKelulusan === "string"
           ? statusKelulusan.trim() || null
@@ -1580,7 +1593,7 @@ export const exportYudisiumWorkbook = async ({
       thnSurat: "",
       noSurat: "",
       kodeDoswal: kodeDosenWali,
-      predikat: yudisium.predikat || "",
+      predikat: yudisium.predikatYudisium || "",
       status: yudisium.statusKelulusan || "",
       mediaJurnal: "",
       tglJurnal: "",
