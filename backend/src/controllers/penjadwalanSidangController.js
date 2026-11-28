@@ -102,17 +102,21 @@ const batchSetJadwalSidang = asyncHandler(async (req, res) => {
 
 // Export Jadwal Sidang
 const exportJadwalSidang = asyncHandler(async (req, res) => {
-  const { stream, filename } =
+  const { workbook, filename } =
     await penjadwalanSidangService.exportJadwalSidang({
       user: req.user,
       dosen: req.dosen,
       sidangPeriodId: req.query.sidangPeriodId,
     });
 
-  res.setHeader("Content-Type", "application/zip");
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
-  stream.pipe(res);
+  await workbook.xlsx.write(res);
+  res.end();
 });
 
 // Toggle Lock Sidang Registration (Admin Only)
@@ -242,6 +246,33 @@ const getNotaDinasController = asyncHandler(async (req, res) => {
     },
   });
 });
+// Get Data User Terlibat Sidang (Admin Akademik)
+const getUsersTerlibatSidang = asyncHandler(async (req, res) => {
+  const paginationParams = getPaginationParams(req.query);
+
+  const { total, users } =
+    await penjadwalanSidangService.getUsersTerlibatSidang({
+      sidangPeriodId: req.query.sidangPeriodId,
+      search: req.query.search,
+      peran: req.query.peran || req.query.role,
+      ...paginationParams,
+    });
+
+  res.json(formatPaginationResponse(users, total, paginationParams));
+});
+
+// Export Data User Terlibat Sidang ke ZIP (Admin Akademik)
+const exportUsersTerlibatSidang = asyncHandler(async (req, res) => {
+  const { stream, filename } =
+    await penjadwalanSidangService.exportUsersTerlibatSidang({
+      sidangPeriodId: req.query.sidangPeriodId,
+    });
+
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  stream.pipe(res);
+});
 
 export {
   listPenjadwalanSidang,
@@ -256,4 +287,6 @@ export {
   togglePublishSidangPeriod,
   uploadNotaDinasController,
   getNotaDinasController,
+  getUsersTerlibatSidang,
+  exportUsersTerlibatSidang,
 };
