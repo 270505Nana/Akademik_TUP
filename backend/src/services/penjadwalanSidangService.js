@@ -828,7 +828,7 @@ export const exportJadwalSidang = async ({ user, dosen, sidangPeriodId }) => {
   const stream = new PassThrough();
 
   archive.on("error", (err) => {
-    throw err;
+    stream.destroy(err);
   });
 
   archive.pipe(stream);

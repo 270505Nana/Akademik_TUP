@@ -309,26 +309,28 @@ export const generateJadwalSidangWorkbook = (jadwalList) => {
 
   return workbook;
 };
+const sanitizeFilenamePart = (str) =>
+  (str || "")
+    .replace(/[/\\]/g, "")
+    .replace(/[:*?"<>|]/g, "")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const buildPeriodFilename = (prefix, ext, selectedPeriod) => {
+  if (!selectedPeriod) {
+    return `${prefix}.${ext}`;
+  }
+  const tahunAjaran = sanitizeFilenamePart(selectedPeriod.period);
+  const namaPeriode = sanitizeFilenamePart(selectedPeriod.name);
+  return `${prefix}_${tahunAjaran}_${namaPeriode}.${ext}`;
+};
+
 /**
  * Menghasilkan nama file Excel ekspor jadwal sidang yang tersanitasi
  */
-export const generateJadwalSidangFilename = (selectedPeriod) => {
-  if (!selectedPeriod) {
-    return "TAPA_Sidang.xlsx";
-  }
-
-  const sanitizePart = (str) =>
-    (str || "")
-      .replace(/[/\\]/g, "")
-      .replace(/[:*?"<>|]/g, "")
-      .replace(/\s+/g, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_+|_+$/g, "");
-
-  const tahunAjaran = sanitizePart(selectedPeriod.period);
-  const namaPeriode = sanitizePart(selectedPeriod.name);
-  return `TAPA_Sidang_${tahunAjaran}_${namaPeriode}.xlsx`;
-};
+export const generateJadwalSidangFilename = (selectedPeriod) =>
+  buildPeriodFilename("TAPA_Sidang", "xlsx", selectedPeriod);
 
 /**
  * Mencari periode pelaksanaan sidang yang aktif (isOpen: true) atau yang mendatang (upcoming) terdekat
@@ -488,41 +490,11 @@ export const generateDataUserWorkbook = (mahasiswaList, dosenList) => {
 /**
  * Nama file Excel Data User yang tersanitasi
  */
-export const generateDataUserFilename = (selectedPeriod) => {
-  if (!selectedPeriod) {
-    return "Data_User.xlsx";
-  }
-
-  const sanitizePart = (str) =>
-    (str || "")
-      .replace(/[/\\]/g, "")
-      .replace(/[:*?"<>|]/g, "")
-      .replace(/\s+/g, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_+|_+$/g, "");
-
-  const tahunAjaran = sanitizePart(selectedPeriod.period);
-  const namaPeriode = sanitizePart(selectedPeriod.name);
-  return `Data_User_${tahunAjaran}_${namaPeriode}.xlsx`;
-};
+export const generateDataUserFilename = (selectedPeriod) =>
+  buildPeriodFilename("Data_User", "xlsx", selectedPeriod);
 
 /**
  * Nama file ZIP gabungan (Jadwal Sidang + Data User)
  */
-export const generateExportSidangZipFilename = (selectedPeriod) => {
-  if (!selectedPeriod) {
-    return "Export_Sidang.zip";
-  }
-
-  const sanitizePart = (str) =>
-    (str || "")
-      .replace(/[/\\]/g, "")
-      .replace(/[:*?"<>|]/g, "")
-      .replace(/\s+/g, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_+|_+$/g, "");
-
-  const tahunAjaran = sanitizePart(selectedPeriod.period);
-  const namaPeriode = sanitizePart(selectedPeriod.name);
-  return `Export_Sidang_${tahunAjaran}_${namaPeriode}.zip`;
-};
+export const generateExportSidangZipFilename = (selectedPeriod) =>
+  buildPeriodFilename("Export_Sidang", "zip", selectedPeriod);

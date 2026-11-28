@@ -260,3 +260,14 @@ export const listPenjadwalanSidangQuerySchema = z.object({
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),
 });
+
+/**
+ * Schema untuk Query Parameter List User Terlibat Sidang (GET /api/penjadwalan-sidang/users)
+ */
+export const listUsersTerlibatSidangQuerySchema = z.object({
+  sidangPeriodId: z.string().trim().optional(),
+  search: z.string().trim().optional(),
+  peran: z.string().trim().optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
+});

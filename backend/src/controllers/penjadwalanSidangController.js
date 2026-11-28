@@ -250,7 +250,7 @@ const getUsersTerlibatSidang = asyncHandler(async (req, res) => {
     await penjadwalanSidangService.getUsersTerlibatSidang({
       sidangPeriodId: req.query.sidangPeriodId,
       search: req.query.search,
-      peran: req.query.peran || req.query.role,
+      peran: req.query.peran,
       ...paginationParams,
     });
 

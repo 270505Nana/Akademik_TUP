@@ -10,6 +10,7 @@ import {
   batchSetJadwalSidangSchema,
   setPengujiJadwalSidangSchema,
   listPenjadwalanSidangQuerySchema,
+  listUsersTerlibatSidangQuerySchema,
 } from "../../schemas/penjadwalanSidangSchema.js";
 import {
   listPenjadwalanSidang,
@@ -75,6 +76,7 @@ router.get(
   "/users",
   verifyToken,
   authorize("ADMIN"),
+  validate(listUsersTerlibatSidangQuerySchema, "query"),
   getUsersTerlibatSidang,
 );
 
